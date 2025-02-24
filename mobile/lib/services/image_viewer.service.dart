@@ -68,6 +68,7 @@ class ImageViewerService {
           entity = await PhotoManager.editor.saveImage(
             imageResponse.bodyBytes,
             title: asset.fileName,
+            filename: asset.fileName
           );
         }
 
@@ -87,6 +88,7 @@ class ImageViewerService {
           entity = await PhotoManager.editor.saveImage(
             res.bodyBytes,
             title: asset.fileName,
+            filename: asset.fileName
           );
         } else {
           final tempDir = await getTemporaryDirectory();
