@@ -30,7 +30,7 @@ class ExifBottomSheet extends HookConsumerWidget {
     final date = DateFormat.yMMMEd().format(dt);
     final time = DateFormat.jm().format(dt);
 
-    String formattedDateTime = '$date â€¢ $time GMT${timeZone.formatAsOffset()}';
+    String formattedDateTime = '$date â€? $time GMT${timeZone.formatAsOffset()}';
 
     final dateWidget = Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -94,16 +94,16 @@ class ExifBottomSheet extends HookConsumerWidget {
                       Expanded(
                         child: Padding(
                           padding: const EdgeInsets.only(right: 8.0),
-                          child: ExifLocation(
-                            asset: asset,
-                            exifInfo: exifInfo,
-                            editLocation: () => handleEditLocation(
-                              ref,
-                              context,
-                              [assetWithExif.value ?? asset],
-                            ),
-                            formattedDateTime: formattedDateTime,
-                          ),
+                          // child: ExifLocation(
+                          //   asset: asset,
+                          //   exifInfo: exifInfo,
+                          //   editLocation: () => handleEditLocation(
+                          //     ref,
+                          //     context,
+                          //     [assetWithExif.value ?? asset],
+                          //   ),
+                          //   formattedDateTime: formattedDateTime,
+                          // ),
                         ),
                       ),
                       ConstrainedBox(
@@ -135,16 +135,16 @@ class ExifBottomSheet extends HookConsumerWidget {
                     if (asset.isRemote) DescriptionInput(asset: asset),
                     Padding(
                       padding: EdgeInsets.only(top: asset.isRemote ? 0 : 16.0),
-                      child: ExifLocation(
-                        asset: asset,
-                        exifInfo: exifInfo,
-                        editLocation: () => handleEditLocation(
-                          ref,
-                          context,
-                          [assetWithExif.value ?? asset],
-                        ),
-                        formattedDateTime: formattedDateTime,
-                      ),
+                      // child: ExifLocation(
+                      //   asset: asset,
+                      //   exifInfo: exifInfo,
+                      //   editLocation: () => handleEditLocation(
+                      //     ref,
+                      //     context,
+                      //     [assetWithExif.value ?? asset],
+                      //   ),
+                      //   formattedDateTime: formattedDateTime,
+                      // ),
                     ),
                   ],
                 ),

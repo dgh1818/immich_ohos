@@ -10,9 +10,9 @@ import 'package:immich_mobile/services/asset.service.dart';
 import 'package:immich_mobile/services/share.service.dart';
 import 'package:immich_mobile/widgets/common/date_time_picker.dart';
 import 'package:immich_mobile/widgets/common/immich_toast.dart';
-import 'package:immich_mobile/widgets/common/location_picker.dart';
+// import 'package:immich_mobile/widgets/common/location_picker.dart';
 import 'package:immich_mobile/widgets/common/share_dialog.dart';
-import 'package:maplibre_gl/maplibre_gl.dart';
+// import 'package:maplibre_gl/maplibre_gl.dart';
 
 void handleShareAssets(
   WidgetRef ref,
@@ -122,30 +122,30 @@ Future<void> handleEditDateTime(
   ref.read(assetServiceProvider).changeDateTime(selection.toList(), dateTime);
 }
 
-Future<void> handleEditLocation(
-  WidgetRef ref,
-  BuildContext context,
-  List<Asset> selection,
-) async {
-  LatLng? initialLatLng;
-  if (selection.length == 1) {
-    final asset = selection.first;
-    final assetWithExif = await ref.watch(assetServiceProvider).loadExif(asset);
-    if (assetWithExif.exifInfo?.latitude != null &&
-        assetWithExif.exifInfo?.longitude != null) {
-      initialLatLng = LatLng(
-        assetWithExif.exifInfo!.latitude!,
-        assetWithExif.exifInfo!.longitude!,
-      );
-    }
-  }
-  final location = await showLocationPicker(
-    context: context,
-    initialLatLng: initialLatLng,
-  );
-  if (location == null) {
-    return;
-  }
+// Future<void> handleEditLocation(
+//   WidgetRef ref,
+//   BuildContext context,
+//   List<Asset> selection,
+// ) async {
+//   LatLng? initialLatLng;
+//   if (selection.length == 1) {
+//     final asset = selection.first;
+//     final assetWithExif = await ref.watch(assetServiceProvider).loadExif(asset);
+//     if (assetWithExif.exifInfo?.latitude != null &&
+//         assetWithExif.exifInfo?.longitude != null) {
+//       initialLatLng = LatLng(
+//         assetWithExif.exifInfo!.latitude!,
+//         assetWithExif.exifInfo!.longitude!,
+//       );
+//     }
+//   }
+//   final location = await showLocationPicker(
+//     context: context,
+//     initialLatLng: initialLatLng,
+//   );
+//   if (location == null) {
+//     return;
+//   }
 
-  ref.read(assetServiceProvider).changeLocation(selection.toList(), location);
-}
+//   ref.read(assetServiceProvider).changeLocation(selection.toList(), location);
+// }

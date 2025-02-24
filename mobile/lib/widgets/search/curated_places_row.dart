@@ -6,7 +6,7 @@ import 'package:immich_mobile/widgets/search/curated_row.dart';
 import 'package:immich_mobile/widgets/search/thumbnail_with_info.dart';
 import 'package:immich_mobile/routing/router.dart';
 import 'package:immich_mobile/entities/store.entity.dart';
-import 'package:maplibre_gl/maplibre_gl.dart';
+// import 'package:maplibre_gl/maplibre_gl.dart';
 
 class CuratedPlacesRow extends CuratedRow {
   final bool isMapEnabled;
@@ -14,7 +14,7 @@ class CuratedPlacesRow extends CuratedRow {
   const CuratedPlacesRow({
     super.key,
     required super.content,
-    this.isMapEnabled = true,
+    this.isMapEnabled = false,
     super.imageSize,
     super.onTap,
   });
@@ -26,25 +26,24 @@ class CuratedPlacesRow extends CuratedRow {
     final int actualContentIndex = isMapEnabled ? 1 : 0;
     Widget buildMapThumbnail() {
       return GestureDetector(
-        onTap: () => context.pushRoute(
-          const MapRoute(),
-        ),
+        onTap: () => debugPrint("enter gesture detector"),
+        
         child: SizedBox.square(
           dimension: imageSize,
           child: Stack(
             children: [
               Padding(
                 padding: const EdgeInsets.only(right: 10.0),
-                child: MapThumbnail(
-                  zoom: 2,
-                  centre: const LatLng(
-                    47,
-                    5,
-                  ),
-                  height: imageSize,
-                  width: imageSize,
-                  showAttribution: false,
-                ),
+                // child: MapThumbnail(
+                //   zoom: 2,
+                //   centre: const LatLng(
+                //     47,
+                //     5,
+                //   ),
+                //   height: imageSize,
+                //   width: imageSize,
+                //   showAttribution: false,
+                // ),
               ),
               Padding(
                 padding: const EdgeInsets.only(right: 10.0),
@@ -84,7 +83,7 @@ class CuratedPlacesRow extends CuratedRow {
       );
     }
 
-    // Return empty thumbnail
+    //Return empty thumbnail
     if (!isMapEnabled && content.isEmpty) {
       return Align(
         alignment: Alignment.centerLeft,

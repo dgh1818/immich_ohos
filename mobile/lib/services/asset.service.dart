@@ -15,7 +15,7 @@ import 'package:immich_mobile/services/sync.service.dart';
 import 'package:immich_mobile/services/user.service.dart';
 import 'package:isar/isar.dart';
 import 'package:logging/logging.dart';
-import 'package:maplibre_gl/maplibre_gl.dart';
+// import 'package:maplibre_gl/maplibre_gl.dart';
 import 'package:openapi/api.dart';
 
 final assetServiceProvider = Provider(
@@ -257,30 +257,30 @@ class AssetService {
     }
   }
 
-  Future<List<Asset?>> changeLocation(
-    List<Asset> assets,
-    LatLng location,
-  ) async {
-    try {
-      await updateAssets(
-        assets,
-        UpdateAssetDto(
-          latitude: location.latitude,
-          longitude: location.longitude,
-        ),
-      );
+  // Future<List<Asset?>> changeLocation(
+  //   List<Asset> assets,
+  //   LatLng location,
+  // ) async {
+  //   try {
+  //     await updateAssets(
+  //       assets,
+  //       UpdateAssetDto(
+  //         latitude: location.latitude,
+  //         longitude: location.longitude,
+  //       ),
+  //     );
 
-      for (var element in assets) {
-        element.exifInfo?.lat = location.latitude;
-        element.exifInfo?.long = location.longitude;
-      }
+  //     for (var element in assets) {
+  //       element.exifInfo?.lat = location.latitude;
+  //       element.exifInfo?.long = location.longitude;
+  //     }
 
-      await _syncService.upsertAssetsWithExif(assets);
+  //     await _syncService.upsertAssetsWithExif(assets);
 
-      return assets;
-    } catch (error, stack) {
-      log.severe("Error while changing location status", error, stack);
-      return Future.value(null);
-    }
-  }
+  //     return assets;
+  //   } catch (error, stack) {
+  //     log.severe("Error while changing location status", error, stack);
+  //     return Future.value(null);
+  //   }
+  // }
 }
