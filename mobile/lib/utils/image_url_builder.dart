@@ -60,7 +60,7 @@ String getImageUrl(final Asset asset) {
 }
 
 String getImageUrlFromId(final String id) {
-  return '${Store.get(StoreKey.serverEndpoint)}/assets/$id/thumbnail?size=preview';
+  return '${Store.get(StoreKey.serverEndpoint)}/assets/$id/original';
 }
 
 String getImageCacheKey(final Asset asset) {
