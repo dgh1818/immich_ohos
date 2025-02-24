@@ -1,0 +1,10 @@
+{
+  "app": {
+    "bundleName": "com.example.immich_mobile",
+    "vendor": "example",
+    "versionCode": 141,
+    "versionName": "1.106.0",
+    "icon": "$media:app_icon",
+    "label": "$string:app_name"
+  }
+}

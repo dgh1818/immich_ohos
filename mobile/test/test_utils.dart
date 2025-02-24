@@ -16,6 +16,7 @@ import 'package:immich_mobile/entities/store.entity.dart';
 import 'package:immich_mobile/entities/user.entity.dart';
 import 'package:isar/isar.dart';
 import 'package:mocktail/mocktail.dart';
+import 'dart:ffi';
 
 import 'mock_http_override.dart';
 
@@ -29,7 +30,7 @@ final class TestUtils {
 
   /// Downloads Isar binaries (if required) and initializes a new Isar db
   static Future<Isar> initIsar() async {
-    await Isar.initializeIsarCore(download: true);
+    await Isar.initializeIsarCore(libraries: {Abi.linuxX64: "lib/libisar.so"});
 
     final instance = Isar.getInstance();
     if (instance != null) {

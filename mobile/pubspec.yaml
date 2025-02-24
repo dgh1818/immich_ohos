@@ -6,7 +6,7 @@ version: 1.106.0+141
 
 environment:
   sdk: '>=3.3.0 <4.0.0'
-  flutter: 3.22.1
+  flutter: 3.22.1-0.0.pre.28
 
 dependencies:
   flutter:
@@ -15,24 +15,24 @@ dependencies:
   path_provider_ios:
   # TODO: upgrade to stable after 3.0.1 is released. 3.0.0 is broken
   # https://github.com/fluttercandies/flutter_photo_manager/pull/990#issuecomment-2058066427
-  photo_manager: ^3.0.0-dev.5
-  photo_manager_image_provider: ^2.1.0
-  flutter_hooks: ^0.20.4
-  hooks_riverpod: ^2.4.9
-  riverpod_annotation: ^2.3.3
-  cached_network_image: ^3.3.1
-  flutter_cache_manager: ^3.3.1
-  intl: ^0.19.0
-  auto_route: ^8.0.2
-  fluttertoast: ^8.2.4
-  video_player: ^2.8.2
-  chewie: ^1.7.4
-  socket_io_client: ^2.0.3+1
+  photo_manager: ^3.0.0-dev.5    #1
+  photo_manager_image_provider: ^2.1.0 #1
+  flutter_hooks: ^0.20.4      #2
+  hooks_riverpod: ^2.4.9      #2
+  riverpod_annotation: ^2.3.3 #2
+  cached_network_image: ^3.3.1 #2
+  flutter_cache_manager: ^3.3.1 #2
+  intl: ^0.19.0                #2
+  auto_route: ^8.0.2          #2
+  fluttertoast: ^8.2.4      #ok
+  video_player: ^2.8.2      #remain
+  chewie: ^1.7.4            #2 remain modify
+  socket_io_client: ^2.0.3+1    #2
   # TODO: Update it to tag once next stable release
-  maplibre_gl:
-    git:
-      url: https://github.com/maplibre/flutter-maplibre-gl.git
-      ref: acb428a005efd9832a0a8e7ef0945f899dfb3ca5
+  # maplibre_gl:
+  #   git:
+  #     url: https://github.com/maplibre/flutter-maplibre-gl.git
+  #     ref: acb428a005efd9832a0a8e7ef0945f899dfb3ca5
   geolocator: ^11.0.0 # used to move to current location in map view
   flutter_udid: ^3.0.0
   flutter_svg: ^2.0.9
@@ -40,20 +40,24 @@ dependencies:
   url_launcher: ^6.2.4
   http: ^0.13.6
   cancellation_token_http: ^2.0.0
-  easy_localization: ^3.0.3
-  share_plus: ^7.2.2
+  share_plus:
+    git:
+      url: "https://gitee.com/openharmony-sig/flutter_plus_plugins.git"
+      path: "packages/share_plus/share_plus"
+      ref: master
   flutter_displaymode: ^0.6.0
   scrollable_positioned_list: ^0.3.8
   path: ^1.8.3
   path_provider: ^2.1.2
+  path_provider_platform_interface: ^2.0.0
   collection: ^1.18.0
   http_parser: ^4.0.2
   flutter_web_auth: ^0.5.0
   easy_image_viewer: ^1.4.0
-  isar: ^3.1.0+1
-  isar_flutter_libs: ^3.1.0+1
+  isar: ^3.1.0+1                       #ok
+  isar_flutter_libs: ^3.1.0+1           #ok
   permission_handler: ^11.2.0
-  device_info_plus: ^9.1.1
+  device_info_plus: ^9.1.0
   connectivity_plus: ^5.0.2
   wakelock_plus: ^1.1.4
   flutter_local_notifications: ^16.3.2
@@ -61,6 +65,8 @@ dependencies:
   octo_image: ^2.0.0
   thumbhash: 0.1.0+1
   async: ^2.11.0
+  easy_localization: ^3.0.3
+  # huawei_map: ^6.11.2+304
 
   openapi:
     path: openapi
@@ -78,11 +84,121 @@ dependency_overrides:
   meta: ^1.11.0
   # TODO: remove once analyzer override is removed
   analyzer_plugin: ^0.11.3
+  path_provider:
+    git:
+      url: https://gitee.com/openharmony-sig/flutter_packages.git
+      path: "packages/path_provider/path_provider"
+      ref: 8c61f19e816168efc212cca5c4fbf9ac183ee90e
+  package_info_plus:
+    git:
+      url: https://gitee.com/openharmony-sig/flutter_plus_plugins.git
+      path: packages/package_info_plus/package_info_plus
+      ref: c361adfe56bd39e43521929c88aef80e096b1243
+      # ref: a1347adcca3a46346a6ddd127cebcec9970cad6c
+  permission_handler:
+    git:
+      url: https://gitee.com/openharmony-sig/flutter_permission_handler.git
+      path: permission_handler
+      ref: 14bec9c520874b8bb3392f85bf7364b9a966c2de
+  device_info_plus:
+    git:
+      url: https://gitee.com/openharmony-sig/flutter_plus_plugins.git
+      path: packages/device_info_plus/device_info_plus
+      ref: c361adfe56bd39e43521929c88aef80e096b1243
+  connectivity_plus:
+    git:
+      url: https://gitee.com/openharmony-sig/flutter_plus_plugins
+      path: packages/connectivity_plus/connectivity_plus
+      ref: c361adfe56bd39e43521929c88aef80e096b1243
+  fluttertoast:
+    git:
+      url: https://gitee.com/openharmony-sig/flutter_fluttertoast
+      path: ./
+      ref: master
+  video_player:
+    git:
+      url: https://gitee.com/openharmony-sig/flutter_packages.git
+      path: "packages/video_player/video_player"
+      ref: 8c61f19e816168efc212cca5c4fbf9ac183ee90e
+  geolocator:
+    git:
+      url: https://gitee.com/openharmony-sig/fluttertpc_geolocator.git
+      path: "geolocator"
+      ref: master
+  flutter_udid:
+    git:
+      url: https://gitee.com/openharmony-sig/fluttertpc_flutter_udid.git
+      path: ./
+      ref: master
+  url_launcher:
+    git:
+      url: https://gitee.com/openharmony-sig/flutter_packages.git
+      path: "packages/url_launcher/url_launcher"
+      ref: 8c61f19e816168efc212cca5c4fbf9ac183ee90e
+  path_provider_platform_interface:
+    git:
+      url: https://gitee.com/openharmony-sig/flutter_packages.git
+      path: "packages/path_provider/path_provider_platform_interface"
+      ref: 8c61f19e816168efc212cca5c4fbf9ac183ee90e
+  wakelock_plus:
+    git:
+      url: https://gitee.com/du_guang/fluttertpc_wakelock_plus.git
+      path: "wakelock_plus"
+      ref: master
+  flutter_local_notifications:
+    git:
+      url: https://gitee.com/openharmony-sig/fluttertpc_flutter_local_notifications.git
+      path: "flutter_local_notifications"
+      ref: master
+  image_picker:
+    git:
+      url: https://gitee.com/openharmony-sig/flutter_packages.git
+      path: "packages/image_picker/image_picker"
+      ref: 8c61f19e816168efc212cca5c4fbf9ac183ee90e
+  isar:
+    git:
+      url: https://gitee.com/du_guang/isar.git
+      path: "packages/isar"
+      ref: dev3.1.0+1
+  isar_flutter_libs:
+    git:
+      url: https://gitee.com/du_guang/isar.git
+      path: "packages/isar_flutter_libs"
+      ref: dev3.1.0+1
+  easy_localization:
+    git:
+      url: https://gitee.com/du_guang/easy_localization_ohos.git
+      ref: master
+      path: ./
+  chewie:
+    git:
+      url: https://gitee.com/du_guang/chew_ohos.git
+      path: "./"
+      ref: master
+
+
+  # maplibre_gl:
+  #   git:
+  #     url: https://github.com/maplibre/flutter-maplibre-gl.git
+  #     ref: acb428a005efd9832a0a8e7ef0945f899dfb3ca5
+  # maplibre_gl_platform_interface:
+  #   git:
+  #     url: https://github.com/maplibre/flutter-maplibre-gl.git
+  #     path: "maplibre_gl_platform_interface"
+
+
+
+  # package_info_plus:
+  #   git:
+  #     url: https://gitee.com/openharmony-sig/flutter_plus_plugins.git
+  #     path: "package_info_plus"
+
 #f  geolocator_android:
 #f    git:
 #f      url: https://github.com/Zverik/flutter-geolocator.git
 #f      ref: floss
 #f      path: geolocator_android
+
 
 dev_dependencies:
   flutter_test:
@@ -100,11 +216,22 @@ dev_dependencies:
   riverpod_generator: ^2.3.9
   mocktail: ^1.0.3
 
+
+dev_dependency_overrides:
+  isar_generator:
+    git:
+      url: https://gitee.com/openharmony-sig/fluttertpc_isar.git
+      path: "packages/isar_generator"
+
+
+
 flutter:
   uses-material-design: true
   assets:
     - assets/
     - assets/i18n/
+    - assets/productfontconfig.json
+    - assets/icons/notification_icon.png
   fonts:
     - family: Inconsolata
       fonts:
@@ -124,6 +251,11 @@ flutter:
     - family: OverpassMono
       fonts:
         - asset: fonts/overpass/OverpassMono.ttf
+    - family: Noto Sans
+      fonts:
+        - asset: fonts/Noto-Sans-CJK-JP/NotoSansCJKjp-Regular.ttf
+
+
 
 flutter_launcher_icons:
   image_path_android: 'assets/immich-logo.png'

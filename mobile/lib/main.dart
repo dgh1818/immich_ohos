@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:ui' as ui;
+import 'dart:convert';
 
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:easy_localization/easy_localization.dart';
@@ -36,6 +38,8 @@ import 'package:immich_mobile/utils/migration.dart';
 import 'package:isar/isar.dart';
 import 'package:logging/logging.dart';
 import 'package:path_provider/path_provider.dart';
+import 'dart:ffi';
+import 'package:isar_flutter_libs/isar_flutter_libs.dart';
 
 void main() async {
   ImmichWidgetsBinding();
@@ -100,8 +104,7 @@ Future<Isar> loadDb() async {
       DuplicatedAssetSchema,
       LoggerMessageSchema,
       ETagSchema,
-      if (Platform.isAndroid) AndroidDeviceAssetSchema,
-      if (Platform.isIOS) IOSDeviceAssetSchema,
+      IOSDeviceAssetSchema,
     ],
     directory: dir.path,
     maxSizeMiB: 256,

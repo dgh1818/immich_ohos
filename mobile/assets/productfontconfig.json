@@ -1,0 +1,47 @@
+{
+  "default_family": {
+    "name": "HarmonyOS Sans",
+    "fonts": [
+      {
+        "name": "HarmonyOS_Sans_Regular",
+        "weight": 400
+      },
+      {
+        "name": "HarmonyOS_Sans_Bold",
+        "weight": 700
+      },
+      {
+        "name": "HarmonyOS_Sans_Medium",
+        "weight": 500
+      }
+    ]
+  },
+  "fallback_families": [
+    {
+      "name": "Noto Sans",
+      "fonts": [
+        {
+          "name": "NotoSans-Regular",
+          "weight": 400
+        },
+        {
+          "name": "NotoSans-Bold",
+          "weight": 700
+        }
+      ]
+    },
+    {
+      "name": "Roboto",
+      "fonts": [
+        {
+          "name": "Roboto-Regular",
+          "weight": 400
+        },
+        {
+          "name": "Roboto-Bold",
+          "weight": 700
+        }
+      ]
+    }
+  ]
+}
