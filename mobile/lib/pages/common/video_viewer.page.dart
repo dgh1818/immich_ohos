@@ -8,7 +8,7 @@ import 'package:immich_mobile/providers/asset_viewer/video_player_controls_provi
 import 'package:immich_mobile/providers/asset_viewer/video_player_value_provider.dart';
 import 'package:immich_mobile/widgets/asset_viewer/video_player.dart';
 import 'package:immich_mobile/widgets/common/delayed_loading_indicator.dart';
-import 'package:wakelock_plus/wakelock_plus.dart';
+//import 'package:wakelock_plus/wakelock_plus.dart';
 
 class VideoViewerPage extends HookConsumerWidget {
   final Asset asset;
@@ -81,13 +81,13 @@ class VideoViewerPage extends HookConsumerWidget {
       final state = videoPlayback.state;
 
       // Enable the WakeLock while the video is playing
-      if (state == VideoPlaybackState.playing) {
-        // Sync with the controls playing
-        WakelockPlus.enable();
-      } else {
-        // Sync with the controls pause
-        WakelockPlus.disable();
-      }
+      // if (state == VideoPlaybackState.playing) {
+      //   // Sync with the controls playing
+      //   WakelockPlus.enable();
+      // } else {
+      //   // Sync with the controls pause
+      //   WakelockPlus.disable();
+      // }
     }
 
     // Adds and removes the listener to the video player
