@@ -50,6 +50,13 @@ class ImmichImage extends StatelessWidget {
         asset: asset,
       );
     } else {
+      if(!asset.isImage) {
+        return ImmichRemoteImageProvider(
+        assetId: asset.remoteId!,
+        is_image: asset.isImage!,
+        );
+      }
+
       return ImmichRemoteImageProvider(
         assetId: asset.remoteId!,
       );

@@ -251,9 +251,6 @@ flutter:
     - family: OverpassMono
       fonts:
         - asset: fonts/overpass/OverpassMono.ttf
-    - family: Noto Sans
-      fonts:
-        - asset: fonts/Noto-Sans-CJK-JP/NotoSansCJKjp-Regular.ttf
 
 
 

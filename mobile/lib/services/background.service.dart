@@ -110,6 +110,15 @@ class BackgroundService {
     }
   }
 
+  Future<bool> setHdr(int hdr) async {
+    try {
+      final ok = await _foregroundChannel.invokeMethod('disable');
+      return ok;
+    } catch (error) {
+      return false;
+    }
+  }
+
   /// Returns `true` if the background service is enabled
   Future<bool> isBackgroundBackupEnabled() async {
     try {

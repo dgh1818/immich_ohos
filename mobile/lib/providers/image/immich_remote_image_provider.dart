@@ -19,6 +19,7 @@ class ImmichRemoteImageProvider
     extends ImageProvider<ImmichRemoteImageProvider> {
   /// The [Asset.remoteId] of the asset to fetch
   final String assetId;
+  final bool? is_image;
 
   /// The image cache manager
   final CacheManager? cacheManager;
@@ -26,6 +27,7 @@ class ImmichRemoteImageProvider
   ImmichRemoteImageProvider({
     required this.assetId,
     this.cacheManager,
+    this.is_image,
   });
 
   /// Converts an [ImageProvider]'s settings plus an [ImageConfiguration] to a key
@@ -70,7 +72,7 @@ class ImmichRemoteImageProvider
     ImageDecoderCallback decode,
     StreamController<ImageChunkEvent> chunkEvents,
   ) async* {
-    // Load a preview to the chunk events
+    // //Load a preview to the chunk events
     // if (_loadPreview) {
     //   final preview = getThumbnailUrlForRemoteId(
     //     key.assetId,
@@ -85,7 +87,7 @@ class ImmichRemoteImageProvider
     //   );
     // }
 
-    // Load the higher resolution version of the image
+    // //Load the higher resolution version of the image
     // final url = getThumbnailUrlForRemoteId(
     //   key.assetId,
     //   type: api.AssetMediaSize.preview,
@@ -101,7 +103,7 @@ class ImmichRemoteImageProvider
     // Load the final remote image
     if (_useOriginal) {
       // Load the original image
-      final url = getImageUrlFromId(key.assetId);
+      final url = getImageUrlFromId(key.assetId, is_image: this.is_image);
       final codec = await ImageLoader.loadImageFromCache(
         url,
         cache: cache,

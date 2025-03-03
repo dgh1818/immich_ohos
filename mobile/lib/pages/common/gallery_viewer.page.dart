@@ -30,6 +30,8 @@ import 'package:immich_mobile/widgets/photo_view/src/photo_view_computed_scale.d
 import 'package:immich_mobile/widgets/photo_view/src/photo_view_scale_state.dart';
 import 'package:immich_mobile/widgets/photo_view/src/utils/photo_view_hero_attributes.dart';
 import 'package:isar/isar.dart';
+import 'package:immich_mobile/services/background.service.dart';
+backgroundServiceProvider
 
 @RoutePage()
 // ignore: must_be_immutable
