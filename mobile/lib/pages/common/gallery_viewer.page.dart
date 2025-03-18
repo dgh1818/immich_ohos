@@ -31,7 +31,6 @@ import 'package:immich_mobile/widgets/photo_view/src/photo_view_scale_state.dart
 import 'package:immich_mobile/widgets/photo_view/src/utils/photo_view_hero_attributes.dart';
 import 'package:isar/isar.dart';
 import 'package:immich_mobile/services/background.service.dart';
-backgroundServiceProvider
 
 @RoutePage()
 // ignore: must_be_immutable
@@ -124,6 +123,39 @@ class GalleryViewerPage extends HookConsumerWidget {
       }
     }
 
+    Future<ui.ColorSpace?> getImageColorSpace(ImageProvider provider, BuildContext context) async {
+      final Completer<ui.ColorSpace?> completer = Completer();
+  
+      ImageStream stream = provider.resolve(ImageConfiguration.empty);
+      late final ImageStreamListener listener;
+      listener = ImageStreamListener((ImageInfo info, bool synchronousCall) {
+        completer.complete(info.image.colorSpace);
+        stream.removeListener(listener);
+      });
+
+      stream.addListener(listener);
+      return completer.future;
+    }
+
+    void setDisplayMode(ImageProvider provider, BuildContext context) async {
+      ui.ColorSpace? colorSpace = await getImageColorSpace(provider, context);
+      if (colorSpace != null) {
+        debugPrint("Image Color Space: ${colorSpace.toString()}");
+
+        if(colorSpace == ui.ColorSpace.extendedSRGB) {
+          ui.ImageFilter.setHdr(
+            hdr: 1,
+            is_image: true,
+          );
+        } else {
+          ui.ImageFilter.setHdr(
+            hdr: 0,
+            is_image: true,
+          );
+        }
+      }
+    }
+
     void showInfo() {
       showModalBottomSheet(
         shape: const RoundedRectangleBorder(
@@ -184,6 +216,26 @@ class GalleryViewerPage extends HookConsumerWidget {
 
     useEffect(
       () {
+        final a = asset;
+        final ImageProvider provider =
+          ImmichImage.imageProvider(asset: a);
+        if (a.isImage) {
+          ui.ImageFilter.setHdr(
+            hdr: 1,
+            is_image: true,
+          );
+          setDisplayMode(provider, context);
+        } else {
+          ui.ImageFilter.setHdr(
+            hdr: 0,
+            is_image: true
+          );
+          ui.ImageFilter.setHdr(
+            hdr: -1,
+            is_image: false,
+          );
+         }
+
         if (ref.read(showControlsProvider)) {
           SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
         } else {
@@ -312,9 +364,32 @@ class GalleryViewerPage extends HookConsumerWidget {
                 stackIndex.value = -1;
                 isPlayingVideo.value = false;
 
+                final a = loadAsset(currentIndex.value);
+                final ImageProvider provider =
+                ImmichImage.imageProvider(asset: a);
+                //if (a.isImage && !isPlayingVideo.value) {
+                if (a.isImage) {
+                  ui.ImageFilter.setHdr(
+                    hdr: 1,
+                    is_image: true,
+                  );
+                  setDisplayMode(provider, context);
+                } else {
+                  ui.ImageFilter.setHdr(
+                    hdr: 0,
+                    is_image: true,
+                  );
+                }
+
                 // Wait for page change animation to finish
                 await Future.delayed(const Duration(milliseconds: 400));
                 // Then precache the next image
+                if (!a.isImage) {
+                  ui.ImageFilter.setHdr(
+                    hdr: -1,
+                    is_image: false,
+                  );
+                }
                 unawaited(precacheNextImage(next));
               },
               builder: (context, index) {

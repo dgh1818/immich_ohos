@@ -40,6 +40,7 @@ import 'package:logging/logging.dart';
 import 'package:path_provider/path_provider.dart';
 import 'dart:ffi';
 import 'package:isar_flutter_libs/isar_flutter_libs.dart';
+final RouteObserver<ModalRoute> routeObserver = RouteObserver<ModalRoute>();
 
 void main() async {
   ImmichWidgetsBinding();
@@ -204,7 +205,10 @@ class ImmichAppState extends ConsumerState<ImmichApp>
         theme: immichLightTheme,
         routeInformationParser: router.defaultRouteParser(),
         routerDelegate: router.delegate(
-          navigatorObservers: () => [TabNavigationObserver(ref: ref)],
+          navigatorObservers: () => [
+            TabNavigationObserver(ref: ref),
+            routeObserver,
+          ]
         ),
       ),
     );
