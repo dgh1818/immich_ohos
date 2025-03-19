@@ -5,13 +5,13 @@
         "name": "default",
         "type": "HarmonyOS",
         "material": {
-          "certpath": "/home/dgh18/.ohos/config/default_ohos_1Jl_akN_YGYIVdr9Zt5j7_rv67Pr-sKT9PlCoFiGa6o=.cer",
-          "storePassword": "0000001B0ECDF8C968331D28126778DBA0341BFB5874F7827136EC16E31D3FBB985BABA30B23B8EB5BE359",
+          "certpath": "C:\\Users\\duguanghao\\.ohos\\config\\default_ohos_LEBIM_u7GVsyRlAZmUOcijZRnZ-zKO-tCb-H0R62Ez0=.cer",
+          "storePassword": "000000180536689596CAA3D36727E8DEB4F56E92EFD480DA3D300197AEE92B2340A60156FFB6C752",
           "keyAlias": "debugKey",
-          "keyPassword": "0000001B100A7EA3FB6A3AA7C7182DFB8797D566230191BE4372BB0D6DEA075676AFE60B85ADB39787AFE7",
-          "profile": "/home/dgh18/.ohos/config/default_ohos_1Jl_akN_YGYIVdr9Zt5j7_rv67Pr-sKT9PlCoFiGa6o=.p7b",
+          "keyPassword": "0000001857C2D77C02CD29C4F13E9304AF7113DF6CC7C113BBD6B6CF51B49560133FA41CBD8E5D92",
+          "profile": "C:\\Users\\duguanghao\\.ohos\\config\\default_ohos_LEBIM_u7GVsyRlAZmUOcijZRnZ-zKO-tCb-H0R62Ez0=.p7b",
           "signAlg": "SHA256withECDSA",
-          "storeFile": "/home/dgh18/.ohos/config/default_ohos_1Jl_akN_YGYIVdr9Zt5j7_rv67Pr-sKT9PlCoFiGa6o=.p12"
+          "storeFile": "C:\\Users\\duguanghao\\.ohos\\config\\default_ohos_LEBIM_u7GVsyRlAZmUOcijZRnZ-zKO-tCb-H0R62Ez0=.p12"
         }
       }
     ],
