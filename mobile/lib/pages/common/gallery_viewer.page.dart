@@ -125,7 +125,7 @@ class GalleryViewerPage extends HookConsumerWidget {
 
     Future<ui.ColorSpace?> getImageColorSpace(ImageProvider provider, BuildContext context) async {
       final Completer<ui.ColorSpace?> completer = Completer();
-  
+
       ImageStream stream = provider.resolve(ImageConfiguration.empty);
       late final ImageStreamListener listener;
       listener = ImageStreamListener((ImageInfo info, bool synchronousCall) {
@@ -221,7 +221,7 @@ class GalleryViewerPage extends HookConsumerWidget {
           ImmichImage.imageProvider(asset: a);
         if (a.isImage) {
           ui.ImageFilter.setHdr(
-            hdr: 1,
+            hdr: 0,
             is_image: true,
           );
           setDisplayMode(provider, context);
@@ -369,10 +369,6 @@ class GalleryViewerPage extends HookConsumerWidget {
                 ImmichImage.imageProvider(asset: a);
                 //if (a.isImage && !isPlayingVideo.value) {
                 if (a.isImage) {
-                  ui.ImageFilter.setHdr(
-                    hdr: 1,
-                    is_image: true,
-                  );
                   setDisplayMode(provider, context);
                 } else {
                   ui.ImageFilter.setHdr(
