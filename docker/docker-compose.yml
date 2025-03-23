@@ -20,6 +20,8 @@ services:
       - /etc/localtime:/etc/localtime:ro
     env_file:
       - .env
+    # devices:
+    #   - /dev/dri:/dev/dri    #gpu硬件加速开启
     ports:
       - 2283:3001
     depends_on:
