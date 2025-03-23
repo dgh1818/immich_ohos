@@ -45,7 +45,8 @@ To Do：
 
 1.  华为动态照片的播放显示（修改 Server 端？）
 2.  替换地图
-3.  当前 flutter 版本受限，无法使用最新 flutter 版本，后续更新
+3.  AI HDR
+4.  当前 flutter 版本受限，无法使用最新 flutter 版本，后续更新
 
 ## Disclaimer
 
