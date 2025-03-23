@@ -3,6 +3,7 @@ import { ExifDateTime, Tags } from 'exiftool-vendored';
 import { firstDateTime } from 'exiftool-vendored/dist/FirstDateTime';
 import _ from 'lodash';
 import { Duration } from 'luxon';
+import { createReadStream, promises as fs } from 'node:fs';
 import { constants } from 'node:fs/promises';
 import path from 'node:path';
 import { Subscription } from 'rxjs';
@@ -364,6 +365,9 @@ export class MetadataService {
     const hasMotionPhotoVideo = tags.MotionPhotoVideo;
     const hasEmbeddedVideoFile = tags.EmbeddedVideoType === 'MotionPhoto_Data' && tags.EmbeddedVideoFile;
     const directory = Array.isArray(rawDirectory) ? (rawDirectory as DirectoryEntry[]) : null;
+    const { hasOhosLivePhoto, metadataBuffer, ohosFileSize, videoSize } = await this.CheckOhosLivePhoto(
+      asset.originalPath,
+    );
 
     let length = 0;
     let padding = 0;
@@ -382,7 +386,11 @@ export class MetadataService {
       length = videoOffset;
     }
 
-    if (!length && !hasEmbeddedVideoFile && !hasMotionPhotoVideo) {
+    if (hasOhosLivePhoto) {
+      length = videoSize;
+    }
+
+    if (!length && !hasEmbeddedVideoFile && !hasMotionPhotoVideo && !hasOhosLivePhoto) {
       return;
     }
 
@@ -392,9 +400,12 @@ export class MetadataService {
       const stat = await this.storageRepository.stat(asset.originalPath);
       const position = stat.size - length - padding;
       let video: Buffer;
+      if (hasOhosLivePhoto) {
+        video = await this.processOhosLivePhoto(asset.originalPath, metadataBuffer, ohosFileSize);
+      }
       // Samsung MotionPhoto video extraction
       //     HEIC-encoded
-      if (hasMotionPhotoVideo) {
+      else if (hasMotionPhotoVideo) {
         video = await this.repository.extractBinaryTag(asset.originalPath, 'MotionPhotoVideo');
       }
       //     JPEG-encoded; HEIC also contains these tags, so this conditional must come second
@@ -632,5 +643,136 @@ export class MetadataService {
     await this.assetRepository.update({ id: asset.id, sidecarPath: null });
 
     return JobStatus.SUCCESS;
+  }
+
+  private async processOhosLivePhoto(filePath: string, buffer: Buffer, fileSize: number): Promise<Buffer> {
+    const numberStr = this.extractNumber(buffer);
+    const number = this.parseNumber(numberStr);
+    this.logger.log(`numberStr is ${numberStr} `);
+    this.logger.log(`number is ${number} `);
+
+    if (number < 0) {
+      throw new Error(`Invalid livephoto metadata`);
+    }
+
+    const { start, end } = this.calculateRange(fileSize, number);
+
+    let video: Buffer;
+
+    video = await this.extractVideoData(filePath, start, end);
+
+    return video;
+  }
+
+  private async CheckOhosLivePhoto(
+    filePath: string,
+  ): Promise<{ hasOhosLivePhoto: number; metadataBuffer: Buffer; ohosFileSize: number; videoSize: number }> {
+    const stats = await fs.stat(filePath);
+    const ohosFileSize = stats.size;
+    let OhosLiveMetaDate_OFFSET = 16;
+    let hasOhosLivePhoto = 0;
+    let metadataBuffer = Buffer.alloc(64);
+    let videoSize = 0;
+
+    const isValidateFileSize = this.validateFileSize(ohosFileSize);
+    if (isValidateFileSize) {
+      const fiveFPosition = ohosFileSize - OhosLiveMetaDate_OFFSET;
+      //metadataBuffer = Buffer.alloc(64); // 读取尾部64字节足够处理
+      const fd = await fs.open(filePath, 'r');
+
+      try {
+        await fd.read(metadataBuffer, 0, 64, ohosFileSize - 64);
+      } finally {
+        await fd.close();
+      }
+      hasOhosLivePhoto = this.validate5FPosition(metadataBuffer);
+    } else {
+      hasOhosLivePhoto = 0;
+    }
+
+    if (hasOhosLivePhoto) {
+      const numberStr = this.extractNumber(metadataBuffer);
+      //this.logger.log(`numberStr is ${numberStr} `);
+      videoSize = this.parseNumber(numberStr);
+      //this.logger.log(`videoSize is ${videoSize} `);
+    }
+
+    return { hasOhosLivePhoto, metadataBuffer, ohosFileSize, videoSize };
+  }
+
+  private validateFileSize(fileSize: number): number {
+    let OhosLiveMetaDate_OFFSET = 16;
+    let OhosVideoEndOffset = 40;
+    const minSize = OhosLiveMetaDate_OFFSET + OhosVideoEndOffset + 1;
+    if (fileSize < minSize) {
+      return 0;
+    } else {
+      return 1;
+    }
+  }
+
+  private validate5FPosition(buffer: Buffer): number {
+    let OhosLiveMetaDate_OFFSET = 16;
+    //let OhosVideoEndOffset = 40;
+    const fiveFByte = buffer.readUInt8(buffer.length - OhosLiveMetaDate_OFFSET);
+    this.logger.log(`fiveByte is ${fiveFByte} `);
+    if (fiveFByte !== 0x5f) {
+      return 0;
+    } else {
+      return 1;
+    }
+  }
+
+  private extractNumber(buffer: Buffer): string {
+    let OhosLiveMetaDate_OFFSET = 16;
+    let OhosVideoEndOffset = 40;
+    let numberStr = '';
+    const startPos = buffer.length - OhosLiveMetaDate_OFFSET + 1;
+
+    for (let i = startPos; i < buffer.length; i++) {
+      const byte = buffer.readUInt8(i);
+      if (byte === 0x20) continue; // Skip spaces
+      if (byte >= 0x30 && byte <= 0x39) {
+        numberStr += String.fromCharCode(byte);
+      } else {
+        break;
+      }
+    }
+
+    return numberStr;
+  }
+
+  private parseNumber(numberStr: string): number {
+    const number = parseInt(numberStr, 10);
+    if (isNaN(number)) {
+      return -1;
+    }
+    return number;
+  }
+
+  private calculateRange(fileSize: number, number: number) {
+    //let OhosLiveMetaDate_OFFSET = 16;
+    let OhosVideoEndOffset = 40;
+    const end = fileSize - OhosVideoEndOffset;
+    const start = end - number;
+
+    if (start < 0 || start >= end) {
+      throw new Error(`Invalid data range: start=${start}, end=${end}`);
+    }
+
+    return { start, end };
+  }
+
+  private async extractVideoData(inputPath: string, start: number, end: number): Promise<Buffer> {
+    const videoLength = end - start + 1;
+    const fd = await fs.open(inputPath, 'r');
+
+    try {
+      const buffer = Buffer.alloc(end - start + 1);
+      await fd.read(buffer, 0, videoLength, start);
+      return buffer;
+    } finally {
+      await fd.close();
+    }
   }
 }

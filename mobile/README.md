@@ -1,6 +1,13 @@
- **IMMICH 1.106.0 搭配1.106.1 server使用** 
+**IMMICH 1.106.0 搭配 1.106.1 server 使用**
 
+Harmonyos Next 端的 Immich
+实现了 HDR 图片和视频的显示
 
+To Do：
+
+1.  华为动态照片的播放显示（修改 Server 端？）
+2.  替换地图
+3.  当前 flutter 版本受限，无法使用最新 flutter 版本，后续更新
 
 # Immich Mobile Application - Flutter
 
@@ -19,6 +26,7 @@ Below are the directory inside the `lib` directory:
 - `extensions`: Extensions enhancing various existing functionalities within the app, such as asset_extensions.dart, string_extensions.dart, and more.
 
 - `module_template`: Provides a template structure for different modules within the app, including subdivisions like models, providers, services, UI, and views.
+
   - `models`: Placeholder for storing module-specific models.
   - `providers`: Section to define module-specific Riverpod providers.
   - `services`: Houses services tailored to the module's functionality.

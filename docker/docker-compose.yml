@@ -11,7 +11,7 @@ name: immich
 services:
   immich-server:
     container_name: immich_server
-    image: ghcr.io/immich-app/immich-server:${IMMICH_VERSION:-release}
+    image: docker.io/dgh18/ohos_immich:v0.0.1
     # extends:
     #   file: hwaccel.transcoding.yml
     #   service: cpu # set to one of [nvenc, quicksync, rkmpp, vaapi, vaapi-wsl] for accelerated transcoding
@@ -63,7 +63,22 @@ services:
       interval: 5m
       start_interval: 30s
       start_period: 5m
-    command: ["postgres", "-c" ,"shared_preload_libraries=vectors.so", "-c", 'search_path="$$user", public, vectors', "-c", "logging_collector=on", "-c", "max_wal_size=2GB", "-c", "shared_buffers=512MB", "-c", "wal_compression=on"]
+    command:
+      [
+        'postgres',
+        '-c',
+        'shared_preload_libraries=vectors.so',
+        '-c',
+        'search_path="$$user", public, vectors',
+        '-c',
+        'logging_collector=on',
+        '-c',
+        'max_wal_size=2GB',
+        '-c',
+        'shared_buffers=512MB',
+        '-c',
+        'wal_compression=on',
+      ]
     restart: always
 
 volumes:
