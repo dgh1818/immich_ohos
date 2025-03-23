@@ -35,6 +35,19 @@
   <a href="readme_i18n/README_ar_JO.md">العربية</a>
 </p>
 
+## Harmonyos Next适配
+**IMMICH 1.106.0 搭配 1.106.1 server 使用**
+
+Harmonyos Next 端的 Immich
+实现了 HDR 图片和视频的显示
+
+To Do：
+
+1.  华为动态照片的播放显示（修改 Server 端？）
+2.  替换地图
+3.  AI HDR
+4.  当前 flutter 版本受限，无法使用最新 flutter 版本，后续更新
+
 ## Disclaimer
 
 - ⚠️ The project is under **very active** development.
