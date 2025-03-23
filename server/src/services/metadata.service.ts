@@ -388,6 +388,7 @@ export class MetadataService {
 
     if (hasOhosLivePhoto) {
       length = videoSize;
+      this.logger.debug(`Is Ohos JPEG-encoded livephoto (${asset.id})`);
     }
 
     if (!length && !hasEmbeddedVideoFile && !hasMotionPhotoVideo && !hasOhosLivePhoto) {
@@ -648,8 +649,8 @@ export class MetadataService {
   private async processOhosLivePhoto(filePath: string, buffer: Buffer, fileSize: number): Promise<Buffer> {
     const numberStr = this.extractNumber(buffer);
     const number = this.parseNumber(numberStr);
-    this.logger.log(`numberStr is ${numberStr} `);
-    this.logger.log(`number is ${number} `);
+    // this.logger.log(`numberStr is ${numberStr} `);
+    // this.logger.log(`number is ${number} `);
 
     if (number < 0) {
       throw new Error(`Invalid livephoto metadata`);
@@ -713,9 +714,8 @@ export class MetadataService {
 
   private validate5FPosition(buffer: Buffer): number {
     let OhosLiveMetaDate_OFFSET = 16;
-    //let OhosVideoEndOffset = 40;
     const fiveFByte = buffer.readUInt8(buffer.length - OhosLiveMetaDate_OFFSET);
-    this.logger.log(`fiveByte is ${fiveFByte} `);
+    //this.logger.log(`fiveByte is ${fiveFByte} `);
     if (fiveFByte !== 0x5f) {
       return 0;
     } else {
@@ -725,7 +725,6 @@ export class MetadataService {
 
   private extractNumber(buffer: Buffer): string {
     let OhosLiveMetaDate_OFFSET = 16;
-    let OhosVideoEndOffset = 40;
     let numberStr = '';
     const startPos = buffer.length - OhosLiveMetaDate_OFFSET + 1;
 
