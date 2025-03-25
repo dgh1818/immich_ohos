@@ -6,9 +6,9 @@
         "type": "HarmonyOS",
         "material": {
           "certpath": "C:\\Users\\duguanghao\\.ohos\\config\\default_ohos_LEBIM_u7GVsyRlAZmUOcijZRnZ-zKO-tCb-H0R62Ez0=.cer",
-          "storePassword": "000000180536689596CAA3D36727E8DEB4F56E92EFD480DA3D300197AEE92B2340A60156FFB6C752",
+          "storePassword": "0000001B3F884A7ADAD672ABCEE94D561A9BA762750D72BED2A742CDCECBD33CFF872B16B37B894E35188E",
           "keyAlias": "debugKey",
-          "keyPassword": "0000001857C2D77C02CD29C4F13E9304AF7113DF6CC7C113BBD6B6CF51B49560133FA41CBD8E5D92",
+          "keyPassword": "0000001B308B1132D0DD85453E143E1FD5CCAA3408059B89D1B476E561EB04A00C17677AC279CFD6D62882",
           "profile": "C:\\Users\\duguanghao\\.ohos\\config\\default_ohos_LEBIM_u7GVsyRlAZmUOcijZRnZ-zKO-tCb-H0R62Ez0=.p7b",
           "signAlg": "SHA256withECDSA",
           "storeFile": "C:\\Users\\duguanghao\\.ohos\\config\\default_ohos_LEBIM_u7GVsyRlAZmUOcijZRnZ-zKO-tCb-H0R62Ez0=.p12"
