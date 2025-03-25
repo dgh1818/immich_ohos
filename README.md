@@ -19,23 +19,25 @@
 <br/>
 <p align="center">
 
-  <a href="readme_i18n/README_ca_ES.md">Català</a>
-  <a href="readme_i18n/README_es_ES.md">Español</a>
-  <a href="readme_i18n/README_fr_FR.md">Français</a>
-  <a href="readme_i18n/README_it_IT.md">Italiano</a>
-  <a href="readme_i18n/README_ja_JP.md">日本語</a>
-  <a href="readme_i18n/README_ko_KR.md">한국어</a>
-  <a href="readme_i18n/README_de_DE.md">Deutsch</a>
-  <a href="readme_i18n/README_nl_NL.md">Nederlands</a>
-  <a href="readme_i18n/README_tr_TR.md">Türkçe</a>
-  <a href="readme_i18n/README_zh_CN.md">中文</a>
-  <a href="readme_i18n/README_ru_RU.md">Русский</a>
-  <a href="readme_i18n/README_pt_BR.md">Português Brasileiro</a>
-  <a href="readme_i18n/README_sv_SE.md">Svenska</a>
-  <a href="readme_i18n/README_ar_JO.md">العربية</a>
+<a href="readme_i18n/README_ca_ES.md">Català</a>
+<a href="readme_i18n/README_es_ES.md">Español</a>
+<a href="readme_i18n/README_fr_FR.md">Français</a>
+<a href="readme_i18n/README_it_IT.md">Italiano</a>
+<a href="readme_i18n/README_ja_JP.md">日本語</a>
+<a href="readme_i18n/README_ko_KR.md">한국어</a>
+<a href="readme_i18n/README_de_DE.md">Deutsch</a>
+<a href="readme_i18n/README_nl_NL.md">Nederlands</a>
+<a href="readme_i18n/README_tr_TR.md">Türkçe</a>
+<a href="readme_i18n/README_zh_CN.md">中文</a>
+<a href="readme_i18n/README_ru_RU.md">Русский</a>
+<a href="readme_i18n/README_pt_BR.md">Português Brasileiro</a>
+<a href="readme_i18n/README_sv_SE.md">Svenska</a>
+<a href="readme_i18n/README_ar_JO.md">العربية</a>
+
 </p>
 
-## Harmonyos Next适配
+## Harmonyos Next 适配
+
 **IMMICH 1.106.0 搭配 1.106.1 server 使用**
 
 Harmonyos Next 端的 Immich
@@ -43,10 +45,11 @@ Harmonyos Next 端的 Immich
 
 To Do：
 
-1.  华为动态照片的播放显示（修改 Server 端？）初步完成！使用https://github.com/dgh1818/immich_ohos/docker 下的docker-compose
+1.  华为动态照片的播放显示（修改 Server 端？）初步完成！使用https://github.com/dgh1818/immich_ohos/docker 下的 docker-compose
 2.  替换地图
 3.  AI HDR
-4.  当前 flutter 版本受限，无法使用最新 flutter 版本，后续更新
+4.  地理反向编码中文
+5.  当前 flutter 版本受限，无法使用最新 flutter 版本，后续更新
 
 ## Disclaimer
 
@@ -91,9 +94,8 @@ Spec: Free-tier Oracle VM - Amsterdam - 2.4Ghz quad-core ARM64 CPU, 24GB RAM
 
 ## Features
 
-
 | Features                                     | Mobile | Web |
-| :--------------------------------------------- | -------- | ----- |
+| :------------------------------------------- | ------ | --- |
 | Upload and view videos and photos            | Yes    | Yes |
 | Auto backup when the app is opened           | Yes    | N/A |
 | Prevent duplication of assets                | Yes    | Yes |
