@@ -365,9 +365,7 @@ export class MetadataService {
     const hasMotionPhotoVideo = tags.MotionPhotoVideo;
     const hasEmbeddedVideoFile = tags.EmbeddedVideoType === 'MotionPhoto_Data' && tags.EmbeddedVideoFile;
     const directory = Array.isArray(rawDirectory) ? (rawDirectory as DirectoryEntry[]) : null;
-    const { hasOhosLivePhoto, metadataBuffer, ohosFileSize, videoSize } = await this.CheckOhosLivePhoto(
-      asset.originalPath,
-    );
+    const { hasOhosLivePhoto, ohosFileSize, ohosVideoOffset } = await this.checkOhosLivePhoto(asset.originalPath);
 
     let length = 0;
     let padding = 0;
@@ -387,8 +385,8 @@ export class MetadataService {
     }
 
     if (hasOhosLivePhoto) {
-      length = videoSize;
-      this.logger.debug(`Is Ohos JPEG-encoded livephoto (${asset.id})`);
+      length = ohosVideoOffset;
+      this.logger.log(`Is Ohos JPEG-encoded livephoto (${asset.id})`);
     }
 
     if (!length && !hasEmbeddedVideoFile && !hasMotionPhotoVideo && !hasOhosLivePhoto) {
@@ -401,17 +399,18 @@ export class MetadataService {
       const stat = await this.storageRepository.stat(asset.originalPath);
       const position = stat.size - length - padding;
       let video: Buffer;
-      if (hasOhosLivePhoto) {
-        video = await this.processOhosLivePhoto(asset.originalPath, metadataBuffer, ohosFileSize);
-      }
       // Samsung MotionPhoto video extraction
       //     HEIC-encoded
-      else if (hasMotionPhotoVideo) {
+      if (hasMotionPhotoVideo) {
         video = await this.repository.extractBinaryTag(asset.originalPath, 'MotionPhotoVideo');
       }
       //     JPEG-encoded; HEIC also contains these tags, so this conditional must come second
       else if (hasEmbeddedVideoFile) {
         video = await this.repository.extractBinaryTag(asset.originalPath, 'EmbeddedVideoFile');
+      }
+      //     Ohos LivePhoto video extraction; JPEG-encoded
+      else if (hasOhosLivePhoto) {
+        video = await this.processOhosLivePhoto(asset.originalPath, ohosFileSize, ohosVideoOffset);
       }
       // Default video extraction
       else {
@@ -646,132 +645,90 @@ export class MetadataService {
     return JobStatus.SUCCESS;
   }
 
-  private async processOhosLivePhoto(filePath: string, buffer: Buffer, fileSize: number): Promise<Buffer> {
-    const numberStr = this.extractNumber(buffer);
-    const number = this.parseNumber(numberStr);
-    // this.logger.log(`numberStr is ${numberStr} `);
-    // this.logger.log(`number is ${number} `);
-
-    if (number < 0) {
-      throw new Error(`Invalid livephoto metadata`);
+  private async processOhosLivePhoto(filePath: string, fileSize: number, offset: number): Promise<Buffer> {
+    if (offset < 0) {
+      throw new Error(`Invalid Ohoslivephoto metadata`);
     }
 
-    const { start, end } = this.calculateRange(fileSize, number);
-
-    let video: Buffer;
-
-    video = await this.extractVideoData(filePath, start, end);
-
-    return video;
-  }
-
-  private async CheckOhosLivePhoto(
-    filePath: string,
-  ): Promise<{ hasOhosLivePhoto: number; metadataBuffer: Buffer; ohosFileSize: number; videoSize: number }> {
-    const stats = await fs.stat(filePath);
-    const ohosFileSize = stats.size;
-    let OhosLiveMetaDate_OFFSET = 16;
-    let hasOhosLivePhoto = 0;
-    let metadataBuffer = Buffer.alloc(64);
-    let videoSize = 0;
-
-    const isValidateFileSize = this.validateFileSize(ohosFileSize);
-    if (isValidateFileSize) {
-      const fiveFPosition = ohosFileSize - OhosLiveMetaDate_OFFSET;
-      //metadataBuffer = Buffer.alloc(64); // 读取尾部64字节足够处理
-      const fd = await fs.open(filePath, 'r');
-
-      try {
-        await fd.read(metadataBuffer, 0, 64, ohosFileSize - 64);
-      } finally {
-        await fd.close();
-      }
-      hasOhosLivePhoto = this.validate5FPosition(metadataBuffer);
-    } else {
-      hasOhosLivePhoto = 0;
-    }
-
-    if (hasOhosLivePhoto) {
-      const numberStr = this.extractNumber(metadataBuffer);
-      //this.logger.log(`numberStr is ${numberStr} `);
-      videoSize = this.parseNumber(numberStr);
-      //this.logger.log(`videoSize is ${videoSize} `);
-    }
-
-    return { hasOhosLivePhoto, metadataBuffer, ohosFileSize, videoSize };
-  }
-
-  private validateFileSize(fileSize: number): number {
-    let OhosLiveMetaDate_OFFSET = 16;
-    let OhosVideoEndOffset = 40;
-    const minSize = OhosLiveMetaDate_OFFSET + OhosVideoEndOffset + 1;
-    if (fileSize < minSize) {
-      return 0;
-    } else {
-      return 1;
-    }
-  }
-
-  private validate5FPosition(buffer: Buffer): number {
-    let OhosLiveMetaDate_OFFSET = 16;
-    const fiveFByte = buffer.readUInt8(buffer.length - OhosLiveMetaDate_OFFSET);
-    //this.logger.log(`fiveByte is ${fiveFByte} `);
-    if (fiveFByte !== 0x5f) {
-      return 0;
-    } else {
-      return 1;
-    }
-  }
-
-  private extractNumber(buffer: Buffer): string {
-    let OhosLiveMetaDate_OFFSET = 16;
-    let numberStr = '';
-    const startPos = buffer.length - OhosLiveMetaDate_OFFSET + 1;
-
-    for (let i = startPos; i < buffer.length; i++) {
-      const byte = buffer.readUInt8(i);
-      if (byte === 0x20) continue; // Skip spaces
-      if (byte >= 0x30 && byte <= 0x39) {
-        numberStr += String.fromCharCode(byte);
-      } else {
-        break;
-      }
-    }
-
-    return numberStr;
-  }
-
-  private parseNumber(numberStr: string): number {
-    const number = parseInt(numberStr, 10);
-    if (isNaN(number)) {
-      return -1;
-    }
-    return number;
-  }
-
-  private calculateRange(fileSize: number, number: number) {
-    //let OhosLiveMetaDate_OFFSET = 16;
     let OhosVideoEndOffset = 40;
     const end = fileSize - OhosVideoEndOffset;
-    const start = end - number;
+    const start = end - offset;
 
     if (start < 0 || start >= end) {
       throw new Error(`Invalid data range: start=${start}, end=${end}`);
     }
 
-    return { start, end };
-  }
-
-  private async extractVideoData(inputPath: string, start: number, end: number): Promise<Buffer> {
+    let video: Buffer;
     const videoLength = end - start + 1;
-    const fd = await fs.open(inputPath, 'r');
+    const fd = await fs.open(filePath, 'r');
 
     try {
-      const buffer = Buffer.alloc(end - start + 1);
-      await fd.read(buffer, 0, videoLength, start);
-      return buffer;
+      video = Buffer.alloc(end - start + 1);
+      await fd.read(video, 0, videoLength, start);
     } finally {
       await fd.close();
     }
+
+    return video;
+  }
+
+  private async checkOhosLivePhoto(
+    filePath: string,
+  ): Promise<{ hasOhosLivePhoto: number; ohosFileSize: number; ohosVideoOffset: number }> {
+    const stats = await fs.stat(filePath);
+    const ohosFileSize = stats.size;
+    let ohosLiveMetaDataOFFSET = 20;
+    let ohosVideoEndOffset = 40;
+    let hasOhosLivePhoto = 0;
+    let metadataBuffer = Buffer.alloc(ohosLiveMetaDataOFFSET);
+    let ohosVideoOffset = -1;
+
+    const minSize = ohosVideoEndOffset + 1;
+    if (ohosFileSize < minSize) {
+      return { hasOhosLivePhoto, ohosFileSize, ohosVideoOffset };
+    }
+
+    const fd = await fs.open(filePath, 'r');
+    try {
+      await fd.read(metadataBuffer, 0, ohosLiveMetaDataOFFSET, ohosFileSize - ohosLiveMetaDataOFFSET);
+    } finally {
+      await fd.close();
+    }
+
+    let liveStr = '';
+    for (let i = 0; i < 5; i++) {
+      const byte = metadataBuffer.readUInt8(i);
+      liveStr += String.fromCharCode(byte);
+    }
+    if (liveStr != 'LIVE_') {
+      return { hasOhosLivePhoto, ohosFileSize, ohosVideoOffset };
+    } else {
+      hasOhosLivePhoto = 1;
+    }
+
+    let numberStr = '';
+    if (hasOhosLivePhoto) {
+      const startPos = 5;
+      for (let i = startPos; i < metadataBuffer.length; i++) {
+        const byte = metadataBuffer.readUInt8(i);
+        if (byte === 0x20) continue; // Skip spaces
+        if (byte >= 0x30 && byte <= 0x39) {
+          numberStr += String.fromCharCode(byte);
+        } else {
+          break;
+        }
+      }
+      const ohosVideoOffset = parseInt(numberStr, 10);
+      this.logger.log(`numberStr is ${numberStr} `);
+
+      if (isNaN(ohosVideoOffset)) {
+        hasOhosLivePhoto = 0;
+        return { hasOhosLivePhoto, ohosFileSize, ohosVideoOffset };
+      } else {
+        return { hasOhosLivePhoto, ohosFileSize, ohosVideoOffset };
+      }
+    }
+
+    return { hasOhosLivePhoto, ohosFileSize, ohosVideoOffset };
   }
 }
