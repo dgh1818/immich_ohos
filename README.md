@@ -46,7 +46,8 @@ To Do：
 1.  华为动态照片的播放显示（修改 Server 端？）初步完成！使用https://github.com/dgh1818/immich_ohos/docker 下的docker-compose
 2.  替换地图
 3.  AI HDR
-4.  当前 flutter 版本受限，无法使用最新 flutter 版本，后续更新
+4.  地理反向编码中文化
+5.  当前 flutter 版本受限，无法使用最新 flutter 版本，后续更新
 
 ## Disclaimer
 
