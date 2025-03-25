@@ -10,7 +10,15 @@
     },
     {
       "name": "EntryAbility_label",
-      "value": "immich_mobile"
+      "value": "Immich"
+    },
+    {
+      "name": "backup_desc",
+      "value": "Need to backup photos"
+    },
+    {
+      "name": "video_play",
+      "value": "play video"
     }
   ]
 }
