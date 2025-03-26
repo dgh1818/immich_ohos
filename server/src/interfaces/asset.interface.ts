@@ -156,7 +156,7 @@ export interface IAssetRepository {
   getByChecksums(userId: string, checksums: Buffer[]): Promise<AssetEntity[]>;
   getUploadAssetIdByChecksum(ownerId: string, checksum: Buffer): Promise<string | undefined>;
   getByAlbumId(pagination: PaginationOptions, albumId: string): Paginated<AssetEntity>;
-  getByDeviceIds(ownerId: string, deviceId: string, deviceAssetIds: string[]): Promise<AssetEntity[]>;
+  getByDeviceIds(ownerId: string, deviceId: string, deviceAssetIds: string[]): Promise<string[]>;
   getByUserId(pagination: PaginationOptions, userId: string, options?: AssetSearchOptions): Paginated<AssetEntity>;
   getById(
     id: string,
@@ -173,6 +173,7 @@ export interface IAssetRepository {
   deleteAll(ownerId: string): Promise<void>;
   getAll(pagination: PaginationOptions, options?: AssetSearchOptions): Paginated<AssetEntity>;
   getAllByDeviceId(userId: string, deviceId: string): Promise<string[]>;
+  getLivePhotoCount(motionId: string): Promise<number>;
   updateAll(ids: string[], options: Partial<AssetUpdateAllOptions>): Promise<void>;
   updateDuplicates(options: AssetUpdateDuplicateOptions): Promise<void>;
   update(asset: AssetUpdateOptions): Promise<void>;

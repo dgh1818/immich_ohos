@@ -32,9 +32,9 @@
       $preferences.emailNotifications.albumInvite = data.emailNotifications.albumInvite;
       $preferences.emailNotifications.albumUpdate = data.emailNotifications.albumUpdate;
 
-      notificationController.show({ message: 'Saved settings', type: NotificationType.Info });
+      notificationController.show({ message: $t('saved_settings'), type: NotificationType.Info });
     } catch (error) {
-      handleError(error, 'Unable to update settings');
+      handleError(error, $t('errors.unable_to_update_settings'));
     }
   };
 </script>
@@ -45,8 +45,7 @@
       <div class="ml-4 mt-4 flex flex-col gap-4">
         <div class="ml-4">
           <SettingSwitch
-            title={$t('enable')}
-            subtitle={$t('notification_toggle_setting_description')}
+            title={$t('notification_toggle_setting_description')}
             bind:checked={emailNotificationsEnabled}
           />
         </div>
@@ -68,7 +67,7 @@
         </div>
 
         <div class="flex justify-end">
-          <Button type="submit" size="sm" on:click={() => handleSave()}>Save</Button>
+          <Button type="submit" size="sm" on:click={() => handleSave()}>{$t('save')}</Button>
         </div>
       </div>
     </form>

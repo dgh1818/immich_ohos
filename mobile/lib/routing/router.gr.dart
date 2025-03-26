@@ -183,12 +183,17 @@ abstract class _$AppRouter extends RootStackRouter {
         routeData: routeData,
         child: GalleryViewerPage(
           key: args.key,
+          renderList: args.renderList,
           initialIndex: args.initialIndex,
-          loadAsset: args.loadAsset,
-          totalAssets: args.totalAssets,
           heroOffset: args.heroOffset,
           showStack: args.showStack,
         ),
+      );
+    },
+    HeaderSettingsRoute.name: (routeData) {
+      return AutoRoutePage<dynamic>(
+        routeData: routeData,
+        child: const HeaderSettingsPage(),
       );
     },
     LibraryRoute.name: (routeData) {
@@ -864,9 +869,8 @@ class FavoritesRoute extends PageRouteInfo<void> {
 class GalleryViewerRoute extends PageRouteInfo<GalleryViewerRouteArgs> {
   GalleryViewerRoute({
     Key? key,
-    required int initialIndex,
-    required Asset Function(int) loadAsset,
-    required int totalAssets,
+    required RenderList renderList,
+    int initialIndex = 0,
     int heroOffset = 0,
     bool showStack = false,
     List<PageRouteInfo>? children,
@@ -874,9 +878,8 @@ class GalleryViewerRoute extends PageRouteInfo<GalleryViewerRouteArgs> {
           GalleryViewerRoute.name,
           args: GalleryViewerRouteArgs(
             key: key,
+            renderList: renderList,
             initialIndex: initialIndex,
-            loadAsset: loadAsset,
-            totalAssets: totalAssets,
             heroOffset: heroOffset,
             showStack: showStack,
           ),
@@ -892,20 +895,17 @@ class GalleryViewerRoute extends PageRouteInfo<GalleryViewerRouteArgs> {
 class GalleryViewerRouteArgs {
   const GalleryViewerRouteArgs({
     this.key,
-    required this.initialIndex,
-    required this.loadAsset,
-    required this.totalAssets,
+    required this.renderList,
+    this.initialIndex = 0,
     this.heroOffset = 0,
     this.showStack = false,
   });
 
   final Key? key;
 
+  final RenderList renderList;
+
   final int initialIndex;
-
-  final Asset Function(int) loadAsset;
-
-  final int totalAssets;
 
   final int heroOffset;
 
@@ -913,8 +913,22 @@ class GalleryViewerRouteArgs {
 
   @override
   String toString() {
-    return 'GalleryViewerRouteArgs{key: $key, initialIndex: $initialIndex, loadAsset: $loadAsset, totalAssets: $totalAssets, heroOffset: $heroOffset, showStack: $showStack}';
+    return 'GalleryViewerRouteArgs{key: $key, renderList: $renderList, initialIndex: $initialIndex, heroOffset: $heroOffset, showStack: $showStack}';
   }
+}
+
+/// generated route for
+/// [HeaderSettingsPage]
+class HeaderSettingsRoute extends PageRouteInfo<void> {
+  const HeaderSettingsRoute({List<PageRouteInfo>? children})
+      : super(
+          HeaderSettingsRoute.name,
+          initialChildren: children,
+        );
+
+  static const String name = 'HeaderSettingsRoute';
+
+  static const PageInfo<void> page = PageInfo<void>(name);
 }
 
 /// generated route for

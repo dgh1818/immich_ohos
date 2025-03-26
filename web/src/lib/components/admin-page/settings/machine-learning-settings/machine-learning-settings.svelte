@@ -13,6 +13,7 @@
   import SettingSwitch from '$lib/components/shared-components/settings/setting-switch.svelte';
   import { featureFlags } from '$lib/stores/server-config.store';
   import { t } from 'svelte-i18n';
+  import FormatMessage from '$lib/components/i18n/format-message.svelte';
 
   export let savedConfig: SystemConfigDto;
   export let defaultConfig: SystemConfigDto;
@@ -27,7 +28,7 @@
     <form autocomplete="off" on:submit|preventDefault class="mx-4 mt-4">
       <div class="flex flex-col gap-4">
         <SettingSwitch
-          title={$t('enabled').toUpperCase()}
+          title={$t('admin.machine_learning_enabled')}
           subtitle={$t('admin.machine_learning_enabled_description')}
           {disabled}
           bind:checked={config.machineLearning.enabled}
@@ -37,7 +38,7 @@
 
         <SettingInputField
           inputType={SettingInputFieldType.TEXT}
-          label={$t('url').toUpperCase()}
+          label={$t('url')}
           desc={$t('admin.machine_learning_url_description')}
           bind:value={config.machineLearning.url}
           required={true}
@@ -53,7 +54,7 @@
       >
         <div class="ml-4 mt-4 flex flex-col gap-4">
           <SettingSwitch
-            title={$t('enabled').toUpperCase()}
+            title={$t('admin.machine_learning_smart_search_enabled')}
             subtitle={$t('admin.machine_learning_smart_search_enabled_description')}
             bind:checked={config.machineLearning.clip.enabled}
             disabled={disabled || !config.machineLearning.enabled}
@@ -63,15 +64,16 @@
 
           <SettingInputField
             inputType={SettingInputFieldType.TEXT}
-            label={$t('admin.machine_learning_clip_model').toUpperCase()}
+            label={$t('admin.machine_learning_clip_model')}
             bind:value={config.machineLearning.clip.modelName}
             required={true}
             disabled={disabled || !config.machineLearning.enabled || !config.machineLearning.clip.enabled}
             isEdited={config.machineLearning.clip.modelName !== savedConfig.machineLearning.clip.modelName}
           >
             <p slot="desc" class="immich-form-label pb-2 text-sm">
-              The name of a CLIP model listed <a href="https://huggingface.co/immich-app"><u>here</u></a>. Note that you
-              must re-run the 'Smart Search' job for all images upon changing a model.
+              <FormatMessage key="admin.machine_learning_clip_model_description" let:message>
+                <a href="https://huggingface.co/immich-app"><u>{message}</u></a>
+              </FormatMessage>
             </p>
           </SettingInputField>
         </div>
@@ -84,7 +86,7 @@
       >
         <div class="ml-4 mt-4 flex flex-col gap-4">
           <SettingSwitch
-            title={$t('enabled').toUpperCase()}
+            title={$t('admin.machine_learning_duplicate_detection_enabled')}
             subtitle={$t('admin.machine_learning_duplicate_detection_enabled_description')}
             bind:checked={config.machineLearning.duplicateDetection.enabled}
             disabled={disabled || !config.machineLearning.enabled || !config.machineLearning.clip.enabled}
@@ -94,7 +96,7 @@
 
           <SettingInputField
             inputType={SettingInputFieldType.NUMBER}
-            label={$t('admin.machine_learning_max_detection_distance').toUpperCase()}
+            label={$t('admin.machine_learning_max_detection_distance')}
             bind:value={config.machineLearning.duplicateDetection.maxDistance}
             step="0.0005"
             min={0.001}
@@ -114,7 +116,7 @@
       >
         <div class="ml-4 mt-4 flex flex-col gap-4">
           <SettingSwitch
-            title={$t('enabled').toUpperCase()}
+            title={$t('admin.machine_learning_facial_recognition_setting')}
             subtitle={$t('admin.machine_learning_facial_recognition_setting_description')}
             bind:checked={config.machineLearning.facialRecognition.enabled}
             disabled={disabled || !config.machineLearning.enabled}
@@ -123,7 +125,7 @@
           <hr />
 
           <SettingSelect
-            label={$t('admin.machine_learning_facial_recognition_model').toUpperCase()}
+            label={$t('admin.machine_learning_facial_recognition_model')}
             desc={$t('admin.machine_learning_facial_recognition_model_description')}
             name="facial-recognition-model"
             bind:value={config.machineLearning.facialRecognition.modelName}
@@ -140,7 +142,7 @@
 
           <SettingInputField
             inputType={SettingInputFieldType.NUMBER}
-            label={$t('admin.machine_learning_min_detection_score').toUpperCase()}
+            label={$t('admin.machine_learning_min_detection_score')}
             desc={$t('admin.machine_learning_min_detection_score_description')}
             bind:value={config.machineLearning.facialRecognition.minScore}
             step="0.1"
@@ -153,7 +155,7 @@
 
           <SettingInputField
             inputType={SettingInputFieldType.NUMBER}
-            label={$t('admin.machine_learning_max_recognition_distance').toUpperCase()}
+            label={$t('admin.machine_learning_max_recognition_distance')}
             desc={$t('admin.machine_learning_max_recognition_distance_description')}
             bind:value={config.machineLearning.facialRecognition.maxDistance}
             step="0.1"
@@ -166,7 +168,7 @@
 
           <SettingInputField
             inputType={SettingInputFieldType.NUMBER}
-            label={$t('admin.machine_learning_min_recognized_faces').toUpperCase()}
+            label={$t('admin.machine_learning_min_recognized_faces')}
             desc={$t('admin.machine_learning_min_recognized_faces_description')}
             bind:value={config.machineLearning.facialRecognition.minFaces}
             step="1"

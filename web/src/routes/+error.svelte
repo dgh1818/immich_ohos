@@ -35,7 +35,7 @@
         <div>
           <div class="flex items-center justify-between gap-4 px-4 py-4">
             <h1 class="font-medium text-immich-primary dark:text-immich-dark-primary">
-              🚨 Error - Something went wrong
+              🚨 {$t('error_title')}
             </h1>
             <div class="flex justify-end">
               <CircleIconButton
@@ -64,7 +64,7 @@
           <div class="flex place-content-center place-items-center justify-around">
             <!-- href="https://github.com/immich-app/immich/issues/new" -->
             <a
-              href="https://discord.com/invite/D8JsnBEuKb"
+              href="https://discord.immich.app"
               target="_blank"
               rel="noopener noreferrer"
               class="flex grow basis-0 justify-center p-4"

@@ -107,6 +107,56 @@ describe(MediaService.name, () => {
       ]);
     });
 
+    it('should queue trashed assets when force is true', async () => {
+      assetMock.getAll.mockResolvedValue({
+        items: [assetStub.trashed],
+        hasNextPage: false,
+      });
+      personMock.getAll.mockResolvedValue({
+        items: [],
+        hasNextPage: false,
+      });
+
+      await sut.handleQueueGenerateThumbnails({ force: true });
+
+      expect(assetMock.getAll).toHaveBeenCalledWith(
+        { skip: 0, take: 1000 },
+        expect.objectContaining({ withDeleted: true }),
+      );
+      expect(assetMock.getWithout).not.toHaveBeenCalled();
+      expect(jobMock.queueAll).toHaveBeenCalledWith([
+        {
+          name: JobName.GENERATE_PREVIEW,
+          data: { id: assetStub.trashed.id },
+        },
+      ]);
+    });
+
+    it('should queue archived assets when force is true', async () => {
+      assetMock.getAll.mockResolvedValue({
+        items: [assetStub.archived],
+        hasNextPage: false,
+      });
+      personMock.getAll.mockResolvedValue({
+        items: [],
+        hasNextPage: false,
+      });
+
+      await sut.handleQueueGenerateThumbnails({ force: true });
+
+      expect(assetMock.getAll).toHaveBeenCalledWith(
+        { skip: 0, take: 1000 },
+        expect.objectContaining({ withArchived: true }),
+      );
+      expect(assetMock.getWithout).not.toHaveBeenCalled();
+      expect(jobMock.queueAll).toHaveBeenCalledWith([
+        {
+          name: JobName.GENERATE_PREVIEW,
+          data: { id: assetStub.archived.id },
+        },
+      ]);
+    });
+
     it('should queue all people with missing thumbnail path', async () => {
       assetMock.getWithout.mockResolvedValue({
         items: [assetStub.image],
@@ -294,13 +344,13 @@ describe(MediaService.name, () => {
         '/original/path.ext',
         'upload/thumbs/user-id/as/se/asset-id-preview.jpeg',
         {
-          inputOptions: ['-skip_frame nokey', '-sws_flags accurate_rnd+full_chroma_int'],
+          inputOptions: ['-skip_frame nointra', '-sws_flags accurate_rnd+full_chroma_int'],
           outputOptions: [
             '-fps_mode vfr',
             '-frames:v 1',
             '-update 1',
             '-v verbose',
-            String.raw`-vf fps=12:round=up,thumbnail=12,select=gt(scene\,0.1)-eq(prev_selected_n\,n)+isnan(prev_selected_n)+gt(n\,20),trim=end_frame=2,reverse,scale=-2:1440:flags=lanczos+accurate_rnd+full_chroma_int:out_color_matrix=601:out_range=pc,format=yuv420p`,
+            String.raw`-vf fps=12:eof_action=pass:round=down,thumbnail=12,select=gt(scene\,0.1)-eq(prev_selected_n\,n)+isnan(prev_selected_n)+gt(n\,20),trim=end_frame=2,reverse,scale=-2:1440:flags=lanczos+accurate_rnd+full_chroma_int:out_color_matrix=601:out_range=pc,format=yuv420p`,
           ],
           twoPass: false,
         },
@@ -321,13 +371,13 @@ describe(MediaService.name, () => {
         '/original/path.ext',
         'upload/thumbs/user-id/as/se/asset-id-preview.jpeg',
         {
-          inputOptions: ['-skip_frame nokey', '-sws_flags accurate_rnd+full_chroma_int'],
+          inputOptions: ['-skip_frame nointra', '-sws_flags accurate_rnd+full_chroma_int'],
           outputOptions: [
             '-fps_mode vfr',
             '-frames:v 1',
             '-update 1',
             '-v verbose',
-            String.raw`-vf fps=12:round=up,thumbnail=12,select=gt(scene\,0.1)-eq(prev_selected_n\,n)+isnan(prev_selected_n)+gt(n\,20),trim=end_frame=2,reverse,zscale=t=linear:npl=100,tonemap=hable:desat=0,zscale=p=bt709:t=601:m=bt470bg:range=pc,format=yuv420p`,
+            String.raw`-vf fps=12:eof_action=pass:round=down,thumbnail=12,select=gt(scene\,0.1)-eq(prev_selected_n\,n)+isnan(prev_selected_n)+gt(n\,20),trim=end_frame=2,reverse,zscale=t=linear:npl=100,tonemap=hable:desat=0,zscale=p=bt709:t=601:m=bt470bg:range=pc,format=yuv420p`,
           ],
           twoPass: false,
         },
@@ -350,13 +400,13 @@ describe(MediaService.name, () => {
         '/original/path.ext',
         'upload/thumbs/user-id/as/se/asset-id-preview.jpeg',
         {
-          inputOptions: ['-skip_frame nokey', '-sws_flags accurate_rnd+full_chroma_int'],
+          inputOptions: ['-skip_frame nointra', '-sws_flags accurate_rnd+full_chroma_int'],
           outputOptions: [
             '-fps_mode vfr',
             '-frames:v 1',
             '-update 1',
             '-v verbose',
-            String.raw`-vf fps=12:round=up,thumbnail=12,select=gt(scene\,0.1)-eq(prev_selected_n\,n)+isnan(prev_selected_n)+gt(n\,20),trim=end_frame=2,reverse,zscale=t=linear:npl=100,tonemap=hable:desat=0,zscale=p=bt709:t=601:m=bt470bg:range=pc,format=yuv420p`,
+            String.raw`-vf fps=12:eof_action=pass:round=down,thumbnail=12,select=gt(scene\,0.1)-eq(prev_selected_n\,n)+isnan(prev_selected_n)+gt(n\,20),trim=end_frame=2,reverse,zscale=t=linear:npl=100,tonemap=hable:desat=0,zscale=p=bt709:t=601:m=bt470bg:range=pc,format=yuv420p`,
           ],
           twoPass: false,
         },

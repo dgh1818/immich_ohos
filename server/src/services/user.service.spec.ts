@@ -1,6 +1,8 @@
 import { BadRequestException, InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import { UserMetadataKey } from 'src/entities/user-metadata.entity';
 import { UserEntity } from 'src/entities/user.entity';
 import { IAlbumRepository } from 'src/interfaces/album.interface';
+import { IAssetStackRepository } from 'src/interfaces/asset-stack.interface';
 import { ICryptoRepository } from 'src/interfaces/crypto.interface';
 import { IJobRepository, JobName } from 'src/interfaces/job.interface';
 import { ILoggerRepository } from 'src/interfaces/logger.interface';
@@ -13,6 +15,7 @@ import { authStub } from 'test/fixtures/auth.stub';
 import { systemConfigStub } from 'test/fixtures/system-config.stub';
 import { userStub } from 'test/fixtures/user.stub';
 import { newAlbumRepositoryMock } from 'test/repositories/album.repository.mock';
+import { newAssetStackRepositoryMock } from 'test/repositories/asset-stack.repository.mock';
 import { newCryptoRepositoryMock } from 'test/repositories/crypto.repository.mock';
 import { newJobRepositoryMock } from 'test/repositories/job.repository.mock';
 import { newLoggerRepositoryMock } from 'test/repositories/logger.repository.mock';
@@ -34,6 +37,7 @@ describe(UserService.name, () => {
 
   let albumMock: Mocked<IAlbumRepository>;
   let jobMock: Mocked<IJobRepository>;
+  let stackMock: Mocked<IAssetStackRepository>;
   let storageMock: Mocked<IStorageRepository>;
   let systemMock: Mocked<ISystemMetadataRepository>;
   let loggerMock: Mocked<ILoggerRepository>;
@@ -43,11 +47,21 @@ describe(UserService.name, () => {
     systemMock = newSystemMetadataRepositoryMock();
     cryptoRepositoryMock = newCryptoRepositoryMock();
     jobMock = newJobRepositoryMock();
+    stackMock = newAssetStackRepositoryMock();
     storageMock = newStorageRepositoryMock();
     userMock = newUserRepositoryMock();
     loggerMock = newLoggerRepositoryMock();
 
-    sut = new UserService(albumMock, cryptoRepositoryMock, jobMock, storageMock, systemMock, userMock, loggerMock);
+    sut = new UserService(
+      albumMock,
+      cryptoRepositoryMock,
+      jobMock,
+      stackMock,
+      storageMock,
+      systemMock,
+      userMock,
+      loggerMock,
+    );
 
     userMock.get.mockImplementation((userId) =>
       Promise.resolve([userStub.admin, userStub.user1].find((user) => user.id === userId) ?? null),
@@ -269,6 +283,38 @@ describe(UserService.name, () => {
       const options = { force: true, recursive: true };
 
       expect(storageMock.unlinkDir).toHaveBeenCalledWith('upload/library/admin', options);
+    });
+  });
+
+  describe('setLicense', () => {
+    it('should save license if valid', async () => {
+      userMock.upsertMetadata.mockResolvedValue();
+
+      const license = { licenseKey: 'IMCL-license-key', activationKey: 'activation-key' };
+      await sut.setLicense(authStub.user1, license);
+
+      expect(userMock.upsertMetadata).toHaveBeenCalledWith(authStub.user1.user.id, {
+        key: UserMetadataKey.LICENSE,
+        value: expect.any(Object),
+      });
+    });
+
+    it('should not save license if invalid', async () => {
+      userMock.upsertMetadata.mockResolvedValue();
+
+      const license = { licenseKey: 'license-key', activationKey: 'activation-key' };
+      const call = sut.setLicense(authStub.admin, license);
+      await expect(call).rejects.toThrowError('Invalid license key');
+      expect(userMock.upsertMetadata).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('deleteLicense', () => {
+    it('should delete license', async () => {
+      userMock.upsertMetadata.mockResolvedValue();
+
+      await sut.deleteLicense(authStub.admin);
+      expect(userMock.upsertMetadata).not.toHaveBeenCalled();
     });
   });
 

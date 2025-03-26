@@ -4,9 +4,9 @@ import semver, { SemVer } from 'semver';
 import { isDev, serverVersion } from 'src/constants';
 import { SystemConfigCore } from 'src/cores/system-config.core';
 import { OnServerEvent } from 'src/decorators';
-import { ReleaseNotification, ServerVersionResponseDto } from 'src/dtos/server-info.dto';
+import { ReleaseNotification, ServerVersionResponseDto } from 'src/dtos/server.dto';
 import { SystemMetadataKey, VersionCheckMetadata } from 'src/entities/system-metadata.entity';
-import { ClientEvent, IEventRepository, ServerEvent, ServerEventMap } from 'src/interfaces/event.interface';
+import { ClientEvent, IEventRepository, OnEvents, ServerEvent, ServerEventMap } from 'src/interfaces/event.interface';
 import { IJobRepository, JobName, JobStatus } from 'src/interfaces/job.interface';
 import { ILoggerRepository } from 'src/interfaces/logger.interface';
 import { IServerInfoRepository } from 'src/interfaces/server-info.interface';
@@ -22,7 +22,7 @@ const asNotification = ({ checkedAt, releaseVersion }: VersionCheckMetadata): Re
 };
 
 @Injectable()
-export class VersionService {
+export class VersionService implements OnEvents {
   private configCore: SystemConfigCore;
 
   constructor(
@@ -36,7 +36,7 @@ export class VersionService {
     this.configCore = SystemConfigCore.create(systemMetadataRepository, this.logger);
   }
 
-  async init(): Promise<void> {
+  async onBootstrapEvent(): Promise<void> {
     await this.handleVersionCheck();
   }
 
@@ -56,7 +56,7 @@ export class VersionService {
         return JobStatus.SKIPPED;
       }
 
-      const { newVersionCheck } = await this.configCore.getConfig();
+      const { newVersionCheck } = await this.configCore.getConfig({ withCache: true });
       if (!newVersionCheck.enabled) {
         return JobStatus.SKIPPED;
       }

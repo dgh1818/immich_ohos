@@ -320,17 +320,11 @@ FROM
     FROM
       "assets" "AssetEntity"
       LEFT JOIN "libraries" "AssetEntity__AssetEntity_library" ON "AssetEntity__AssetEntity_library"."id" = "AssetEntity"."libraryId"
-      AND (
-        "AssetEntity__AssetEntity_library"."deletedAt" IS NULL
-      )
     WHERE
       (
-        (
-          ((("AssetEntity__AssetEntity_library"."id" = $1)))
-          AND ("AssetEntity"."originalPath" = $2)
-        )
+        ((("AssetEntity__AssetEntity_library"."id" = $1)))
+        AND ("AssetEntity"."originalPath" = $2)
       )
-      AND ("AssetEntity"."deletedAt" IS NULL)
   ) "distinctAlias"
 ORDER BY
   "AssetEntity_id" ASC
@@ -382,6 +376,14 @@ WHERE
     AND ("AssetEntity"."deviceId" = $2)
     AND ("AssetEntity"."isVisible" = $3)
   )
+
+-- AssetRepository.getLivePhotoCount
+SELECT
+  COUNT(1) AS "cnt"
+FROM
+  "assets" "AssetEntity"
+WHERE
+  (("AssetEntity"."livePhotoVideoId" = $1))
 
 -- AssetRepository.getById
 SELECT

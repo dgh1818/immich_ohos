@@ -155,8 +155,8 @@ export class AssetRepository implements IAssetRepository {
     });
   }
 
-  getByDeviceIds(ownerId: string, deviceId: string, deviceAssetIds: string[]): Promise<AssetEntity[]> {
-    return this.repository.find({
+  async getByDeviceIds(ownerId: string, deviceId: string, deviceAssetIds: string[]): Promise<string[]> {
+    const assets = await this.repository.find({
       select: { deviceAssetId: true },
       where: {
         deviceAssetId: In(deviceAssetIds),
@@ -165,6 +165,8 @@ export class AssetRepository implements IAssetRepository {
       },
       withDeleted: true,
     });
+
+    return assets.map((asset) => asset.deviceAssetId);
   }
 
   getByUserId(
@@ -186,7 +188,8 @@ export class AssetRepository implements IAssetRepository {
   @GenerateSql({ params: [DummyValue.UUID, DummyValue.STRING] })
   getByLibraryIdAndOriginalPath(libraryId: string, originalPath: string): Promise<AssetEntity | null> {
     return this.repository.findOne({
-      where: { library: { id: libraryId }, originalPath: originalPath },
+      where: { library: { id: libraryId }, originalPath },
+      withDeleted: true,
     });
   }
 
@@ -244,6 +247,16 @@ export class AssetRepository implements IAssetRepository {
     });
 
     return items.map((asset) => asset.deviceAssetId);
+  }
+
+  @GenerateSql({ params: [DummyValue.UUID] })
+  getLivePhotoCount(motionId: string): Promise<number> {
+    return this.repository.count({
+      where: {
+        livePhotoVideoId: motionId,
+      },
+      withDeleted: true,
+    });
   }
 
   @GenerateSql({ params: [DummyValue.UUID] })

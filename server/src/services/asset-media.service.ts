@@ -171,6 +171,7 @@ export class AssetMediaService {
         }
         if (motionAsset.isVisible) {
           await this.assetRepository.update({ id: motionAsset.id, isVisible: false });
+          this.eventRepository.clientSend(ClientEvent.ASSET_HIDDEN, auth.user.id, motionAsset.id);
         }
       }
 
@@ -277,14 +278,12 @@ export class AssetMediaService {
     auth: AuthDto,
     checkExistingAssetsDto: CheckExistingAssetsDto,
   ): Promise<CheckExistingAssetsResponseDto> {
-    const assets = await this.assetRepository.getByDeviceIds(
+    const existingIds = await this.assetRepository.getByDeviceIds(
       auth.user.id,
       checkExistingAssetsDto.deviceId,
       checkExistingAssetsDto.deviceAssetIds,
     );
-    return {
-      existingIds: assets.map((asset) => asset.id),
-    };
+    return { existingIds };
   }
 
   async bulkUploadCheck(auth: AuthDto, dto: AssetBulkUploadCheckDto): Promise<AssetBulkUploadCheckResponseDto> {

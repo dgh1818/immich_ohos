@@ -1,6 +1,6 @@
 /**
  * Immich
- * 1.106.0
+ * 1.107.0
  * DO NOT MODIFY - This file has been generated using oazapfts.
  * See https://www.npmjs.com/package/oazapfts
  */
@@ -38,6 +38,11 @@ export type ActivityCreateDto = {
 export type ActivityStatisticsResponseDto = {
     comments: number;
 };
+export type UserLicense = {
+    activatedAt: string;
+    activationKey: string;
+    licenseKey: string;
+};
 export type UserAdminResponseDto = {
     avatarColor: UserAvatarColor;
     createdAt: string;
@@ -45,6 +50,7 @@ export type UserAdminResponseDto = {
     email: string;
     id: string;
     isAdmin: boolean;
+    license: (UserLicense) | null;
     name: string;
     oauthId: string;
     profileImagePath: string;
@@ -78,6 +84,9 @@ export type UserAdminUpdateDto = {
 export type AvatarResponse = {
     color: UserAvatarColor;
 };
+export type DownloadResponse = {
+    archiveSize: number;
+};
 export type EmailNotificationsResponse = {
     albumInvite: boolean;
     albumUpdate: boolean;
@@ -88,11 +97,15 @@ export type MemoryResponse = {
 };
 export type UserPreferencesResponseDto = {
     avatar: AvatarResponse;
+    download: DownloadResponse;
     emailNotifications: EmailNotificationsResponse;
     memories: MemoryResponse;
 };
 export type AvatarUpdate = {
     color?: UserAvatarColor;
+};
+export type DownloadUpdate = {
+    archiveSize?: number;
 };
 export type EmailNotificationsUpdate = {
     albumInvite?: boolean;
@@ -104,6 +117,7 @@ export type MemoryUpdate = {
 };
 export type UserPreferencesUpdateDto = {
     avatar?: AvatarUpdate;
+    download?: DownloadUpdate;
     emailNotifications?: EmailNotificationsUpdate;
     memories?: MemoryUpdate;
 };
@@ -150,6 +164,8 @@ export type PersonWithFacesResponseDto = {
     isHidden: boolean;
     name: string;
     thumbnailPath: string;
+    /** This property was added in v1.107.0 */
+    updatedAt?: string;
 };
 export type SmartInfoResponseDto = {
     objects?: string[] | null;
@@ -182,6 +198,7 @@ export type AssetResponseDto = {
     livePhotoVideoId?: string | null;
     localDateTime: string;
     originalFileName: string;
+    originalMimeType?: string;
     originalPath: string;
     owner?: UserResponseDto;
     ownerId: string;
@@ -423,6 +440,8 @@ export type PersonResponseDto = {
     isHidden: boolean;
     name: string;
     thumbnailPath: string;
+    /** This property was added in v1.107.0 */
+    updatedAt?: string;
 };
 export type AssetFaceResponseDto = {
     boundingBoxX1: number;
@@ -688,7 +707,7 @@ export type MetadataSearchDto = {
     isOffline?: boolean;
     isVisible?: boolean;
     lensModel?: string;
-    libraryId?: string;
+    libraryId?: string | null;
     make?: string;
     model?: string;
     order?: AssetOrder;
@@ -759,7 +778,7 @@ export type SmartSearchDto = {
     isOffline?: boolean;
     isVisible?: boolean;
     lensModel?: string;
-    libraryId?: string;
+    libraryId?: string | null;
     make?: string;
     model?: string;
     page?: number;
@@ -777,6 +796,25 @@ export type SmartSearchDto = {
     withArchived?: boolean;
     withDeleted?: boolean;
     withExif?: boolean;
+};
+export type ServerAboutResponseDto = {
+    build?: string;
+    buildImage?: string;
+    buildImageUrl?: string;
+    buildUrl?: string;
+    exiftool?: string;
+    ffmpeg?: string;
+    imagemagick?: string;
+    libvips?: string;
+    licensed: boolean;
+    nodejs?: string;
+    repository?: string;
+    repositoryUrl?: string;
+    sourceCommit?: string;
+    sourceRef?: string;
+    sourceUrl?: string;
+    version: string;
+    versionUrl: string;
 };
 export type ServerConfigDto = {
     externalDomain: string;
@@ -841,6 +879,15 @@ export type ServerVersionResponseDto = {
     major: number;
     minor: number;
     patch: number;
+};
+export type LicenseKeyDto = {
+    activationKey: string;
+    licenseKey: string;
+};
+export type LicenseResponseDto = {
+    activatedAt: string;
+    activationKey: string;
+    licenseKey: string;
 };
 export type SessionResponseDto = {
     createdAt: string;
@@ -2354,6 +2401,20 @@ export function getSearchSuggestions({ country, make, model, state, $type }: {
         ...opts
     }));
 }
+/**
+ * This property was deprecated in v1.107.0
+ */
+export function getAboutInfo(opts?: Oazapfts.RequestOpts) {
+    return oazapfts.ok(oazapfts.fetchJson<{
+        status: 200;
+        data: ServerAboutResponseDto;
+    }>("/server-info/about", {
+        ...opts
+    }));
+}
+/**
+ * This property was deprecated in v1.107.0
+ */
 export function getServerConfig(opts?: Oazapfts.RequestOpts) {
     return oazapfts.ok(oazapfts.fetchJson<{
         status: 200;
@@ -2362,6 +2423,9 @@ export function getServerConfig(opts?: Oazapfts.RequestOpts) {
         ...opts
     }));
 }
+/**
+ * This property was deprecated in v1.107.0
+ */
 export function getServerFeatures(opts?: Oazapfts.RequestOpts) {
     return oazapfts.ok(oazapfts.fetchJson<{
         status: 200;
@@ -2370,6 +2434,9 @@ export function getServerFeatures(opts?: Oazapfts.RequestOpts) {
         ...opts
     }));
 }
+/**
+ * This property was deprecated in v1.107.0
+ */
 export function getSupportedMediaTypes(opts?: Oazapfts.RequestOpts) {
     return oazapfts.ok(oazapfts.fetchJson<{
         status: 200;
@@ -2378,6 +2445,9 @@ export function getSupportedMediaTypes(opts?: Oazapfts.RequestOpts) {
         ...opts
     }));
 }
+/**
+ * This property was deprecated in v1.107.0
+ */
 export function pingServer(opts?: Oazapfts.RequestOpts) {
     return oazapfts.ok(oazapfts.fetchJson<{
         status: 200;
@@ -2386,6 +2456,9 @@ export function pingServer(opts?: Oazapfts.RequestOpts) {
         ...opts
     }));
 }
+/**
+ * This property was deprecated in v1.107.0
+ */
 export function getServerStatistics(opts?: Oazapfts.RequestOpts) {
     return oazapfts.ok(oazapfts.fetchJson<{
         status: 200;
@@ -2394,6 +2467,9 @@ export function getServerStatistics(opts?: Oazapfts.RequestOpts) {
         ...opts
     }));
 }
+/**
+ * This property was deprecated in v1.107.0
+ */
 export function getStorage(opts?: Oazapfts.RequestOpts) {
     return oazapfts.ok(oazapfts.fetchJson<{
         status: 200;
@@ -2402,6 +2478,9 @@ export function getStorage(opts?: Oazapfts.RequestOpts) {
         ...opts
     }));
 }
+/**
+ * This property was deprecated in v1.107.0
+ */
 export function getTheme(opts?: Oazapfts.RequestOpts) {
     return oazapfts.ok(oazapfts.fetchJson<{
         status: 200;
@@ -2410,6 +2489,9 @@ export function getTheme(opts?: Oazapfts.RequestOpts) {
         ...opts
     }));
 }
+/**
+ * This property was deprecated in v1.107.0
+ */
 export function getServerVersion(opts?: Oazapfts.RequestOpts) {
     return oazapfts.ok(oazapfts.fetchJson<{
         status: 200;
@@ -2417,6 +2499,32 @@ export function getServerVersion(opts?: Oazapfts.RequestOpts) {
     }>("/server-info/version", {
         ...opts
     }));
+}
+export function deleteServerLicense(opts?: Oazapfts.RequestOpts) {
+    return oazapfts.ok(oazapfts.fetchText("/server/license", {
+        ...opts,
+        method: "DELETE"
+    }));
+}
+export function getServerLicense(opts?: Oazapfts.RequestOpts) {
+    return oazapfts.ok(oazapfts.fetchJson<{
+        status: 200;
+        data: object;
+    }>("/server/license", {
+        ...opts
+    }));
+}
+export function setServerLicense({ licenseKeyDto }: {
+    licenseKeyDto: LicenseKeyDto;
+}, opts?: Oazapfts.RequestOpts) {
+    return oazapfts.ok(oazapfts.fetchJson<{
+        status: 200;
+        data: LicenseResponseDto;
+    }>("/server/license", oazapfts.json({
+        ...opts,
+        method: "PUT",
+        body: licenseKeyDto
+    })));
 }
 export function deleteAllSessions(opts?: Oazapfts.RequestOpts) {
     return oazapfts.ok(oazapfts.fetchText("/sessions", {
@@ -2824,6 +2932,32 @@ export function updateMyUser({ userUpdateMeDto }: {
         ...opts,
         method: "PUT",
         body: userUpdateMeDto
+    })));
+}
+export function deleteUserLicense(opts?: Oazapfts.RequestOpts) {
+    return oazapfts.ok(oazapfts.fetchText("/users/me/license", {
+        ...opts,
+        method: "DELETE"
+    }));
+}
+export function getUserLicense(opts?: Oazapfts.RequestOpts) {
+    return oazapfts.ok(oazapfts.fetchJson<{
+        status: 200;
+        data: LicenseResponseDto;
+    }>("/users/me/license", {
+        ...opts
+    }));
+}
+export function setUserLicense({ licenseKeyDto }: {
+    licenseKeyDto: LicenseKeyDto;
+}, opts?: Oazapfts.RequestOpts) {
+    return oazapfts.ok(oazapfts.fetchJson<{
+        status: 200;
+        data: LicenseResponseDto;
+    }>("/users/me/license", oazapfts.json({
+        ...opts,
+        method: "PUT",
+        body: licenseKeyDto
     })));
 }
 export function getMyPreferences(opts?: Oazapfts.RequestOpts) {

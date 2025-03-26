@@ -298,8 +298,12 @@ class ApiClient {
           return DownloadArchiveInfo.fromJson(value);
         case 'DownloadInfoDto':
           return DownloadInfoDto.fromJson(value);
+        case 'DownloadResponse':
+          return DownloadResponse.fromJson(value);
         case 'DownloadResponseDto':
           return DownloadResponseDto.fromJson(value);
+        case 'DownloadUpdate':
+          return DownloadUpdate.fromJson(value);
         case 'DuplicateDetectionConfig':
           return DuplicateDetectionConfig.fromJson(value);
         case 'DuplicateResponseDto':
@@ -344,6 +348,10 @@ class ApiClient {
           return LibraryResponseDto.fromJson(value);
         case 'LibraryStatsResponseDto':
           return LibraryStatsResponseDto.fromJson(value);
+        case 'LicenseKeyDto':
+          return LicenseKeyDto.fromJson(value);
+        case 'LicenseResponseDto':
+          return LicenseResponseDto.fromJson(value);
         case 'LogLevel':
           return LogLevelTypeTransformer().decode(value);
         case 'LoginCredentialDto':
@@ -432,6 +440,8 @@ class ApiClient {
           return SearchResponseDto.fromJson(value);
         case 'SearchSuggestionType':
           return SearchSuggestionTypeTypeTransformer().decode(value);
+        case 'ServerAboutResponseDto':
+          return ServerAboutResponseDto.fromJson(value);
         case 'ServerConfigDto':
           return ServerConfigDto.fromJson(value);
         case 'ServerFeaturesDto':
@@ -550,6 +560,8 @@ class ApiClient {
           return UserAdminUpdateDto.fromJson(value);
         case 'UserAvatarColor':
           return UserAvatarColorTypeTransformer().decode(value);
+        case 'UserLicense':
+          return UserLicense.fromJson(value);
         case 'UserPreferencesResponseDto':
           return UserPreferencesResponseDto.fromJson(value);
         case 'UserPreferencesUpdateDto':

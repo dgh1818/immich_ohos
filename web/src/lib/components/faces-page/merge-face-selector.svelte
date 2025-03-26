@@ -55,7 +55,7 @@
 
     if (selectedPeople.length >= 5) {
       notificationController.show({
-        message: 'You can only merge up to 5 faces at a time',
+        message: $t('merge_people_limit'),
         type: NotificationType.Info,
       });
       return;
@@ -67,7 +67,7 @@
   const handleMerge = async () => {
     const isConfirm = await dialogController.show({
       id: 'merge-people',
-      prompt: 'Do you want to merge these people?',
+      prompt: $t('merge_people_prompt'),
     });
 
     if (!isConfirm) {
@@ -82,7 +82,7 @@
       const mergedPerson = await getPerson({ id: person.id });
       const count = results.filter(({ success }) => success).length;
       notificationController.show({
-        message: `Merged ${count} ${count === 1 ? 'person' : 'people'}`,
+        message: $t('merged_people_count', { values: { count: count } }),
         type: NotificationType.Info,
       });
       dispatch('merge', mergedPerson);
@@ -101,23 +101,23 @@
   <ControlAppBar on:close={onClose}>
     <svelte:fragment slot="leading">
       {#if hasSelection}
-        Selected {selectedPeople.length}
+        {$t('selected_count', { values: { count: selectedPeople.length } })}
       {:else}
-        Merge people
+        {$t('merge_people')}
       {/if}
       <div />
     </svelte:fragment>
     <svelte:fragment slot="trailing">
       <Button size={'sm'} disabled={!hasSelection} on:click={handleMerge}>
         <Icon path={mdiMerge} size={18} />
-        <span class="ml-2"> Merge</span></Button
+        <span class="ml-2">{$t('merge')}</span></Button
       >
     </svelte:fragment>
   </ControlAppBar>
   <section class="bg-immich-bg px-[70px] pt-[100px] dark:bg-immich-dark-bg">
     <section id="merge-face-selector relative">
       <div class="mb-10 h-[200px] place-content-center place-items-center">
-        <p class="mb-4 text-center uppercase dark:text-white">Choose matching people to merge</p>
+        <p class="mb-4 text-center uppercase dark:text-white">{$t('choose_matching_people_to_merge')}</p>
 
         <div class="grid grid-flow-col-dense place-content-center place-items-center gap-4">
           {#each selectedPeople as person (person.id)}

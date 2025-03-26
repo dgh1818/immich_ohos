@@ -17,6 +17,7 @@
   import { onMount } from 'svelte';
   import { fade } from 'svelte/transition';
   import { t, init } from 'svelte-i18n';
+  import { invalidateAll } from '$app/navigation';
 
   let time = new Date();
 
@@ -64,7 +65,14 @@
     $locale = $locale ? undefined : fallbackLocale.code;
   };
 
-  const langOptions = langs.map((lang) => ({ label: lang.name, value: lang.code }));
+  const langOptions = langs
+    .map((lang) => ({ label: lang.name, value: lang.code }))
+    .sort((a, b) => {
+      if (b.label.startsWith('Development')) {
+        return -1;
+      }
+      return a.label.localeCompare(b.label);
+    });
   const defaultLangOption = { label: defaultLang.name, value: defaultLang.code };
 
   const handleLanguageChange = async (newLang: string | undefined) => {
@@ -77,6 +85,7 @@
       }
 
       await init({ fallbackLocale: defaultLang.code, initialLocale: newLang });
+      await invalidateAll();
     }
   };
 
@@ -143,7 +152,7 @@
       </div>
       <div class="ml-4">
         <SettingSwitch
-          title="Play video thumbnail on hover"
+          title={$t('video_hover_setting')}
           subtitle={$t('video_hover_setting_description')}
           bind:checked={$playVideoThumbnailOnHover}
           on:toggle={() => ($playVideoThumbnailOnHover = !$playVideoThumbnailOnHover)}

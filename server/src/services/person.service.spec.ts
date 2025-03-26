@@ -42,6 +42,7 @@ const responseDto: PersonResponseDto = {
   birthDate: null,
   thumbnailPath: '/path/to/thumbnail.jpg',
   isHidden: false,
+  updatedAt: expect.any(Date),
 };
 
 const statistics = { assets: 3 };
@@ -126,6 +127,7 @@ describe(PersonService.name, () => {
             birthDate: null,
             thumbnailPath: '/path/to/thumbnail.jpg',
             isHidden: true,
+            updatedAt: expect.any(Date),
           },
         ],
       });
@@ -255,6 +257,7 @@ describe(PersonService.name, () => {
         birthDate: new Date('1976-06-30'),
         thumbnailPath: '/path/to/thumbnail.jpg',
         isHidden: false,
+        updatedAt: expect.any(Date),
       });
       expect(personMock.update).toHaveBeenCalledWith({ id: 'person-1', birthDate: new Date('1976-06-30') });
       expect(jobMock.queue).not.toHaveBeenCalled();
@@ -407,6 +410,7 @@ describe(PersonService.name, () => {
         id: personStub.noName.id,
         name: personStub.noName.name,
         thumbnailPath: personStub.noName.thumbnailPath,
+        updatedAt: expect.any(Date),
       });
 
       expect(jobMock.queue).not.toHaveBeenCalledWith();
@@ -668,15 +672,18 @@ describe(PersonService.name, () => {
       machineLearningMock.detectFaces.mockResolvedValue(detectFaceMock);
       searchMock.searchFaces.mockResolvedValue([{ face: faceStub.face1, distance: 0.7 }]);
       assetMock.getByIds.mockResolvedValue([assetStub.image]);
+      const faceId = 'face-id';
+      cryptoMock.randomUUID.mockReturnValue(faceId);
       const face = {
+        id: faceId,
         assetId: 'asset-id',
-        embedding: [1, 2, 3, 4],
         boundingBoxX1: 100,
         boundingBoxY1: 100,
         boundingBoxX2: 200,
         boundingBoxY2: 200,
         imageHeight: 500,
         imageWidth: 400,
+        faceSearch: { faceId, embedding: [1, 2, 3, 4] },
       };
 
       await sut.handleDetectFaces({ id: assetStub.image.id });
@@ -917,9 +924,9 @@ describe(PersonService.name, () => {
           colorspace: Colorspace.P3,
           crop: {
             left: 0,
-            top: 428,
-            width: 1102,
-            height: 1102,
+            top: 85,
+            width: 510,
+            height: 510,
           },
         },
       );
@@ -945,6 +952,32 @@ describe(PersonService.name, () => {
             top: 591,
             width: 408,
             height: 408,
+          },
+        },
+      );
+    });
+
+    it('should use preview path for videos', async () => {
+      personMock.getById.mockResolvedValue({ ...personStub.primaryPerson, faceAssetId: faceStub.end.assetId });
+      personMock.getFaceByIdWithAssets.mockResolvedValue(faceStub.end);
+      assetMock.getById.mockResolvedValue(assetStub.video);
+      mediaMock.getImageDimensions.mockResolvedValue({ width: 2560, height: 1440 });
+
+      await sut.handleGeneratePersonThumbnail({ id: personStub.primaryPerson.id });
+
+      expect(mediaMock.generateThumbnail).toHaveBeenCalledWith(
+        assetStub.video.previewPath,
+        'upload/thumbs/admin_id/pe/rs/person-1.jpeg',
+        {
+          format: 'jpeg',
+          size: 250,
+          quality: 80,
+          colorspace: Colorspace.P3,
+          crop: {
+            left: 1741,
+            top: 851,
+            width: 588,
+            height: 588,
           },
         },
       );

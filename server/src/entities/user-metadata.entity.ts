@@ -1,4 +1,5 @@
 import { UserEntity } from 'src/entities/user.entity';
+import { HumanReadableSize } from 'src/utils/bytes';
 import { Column, DeepPartial, Entity, ManyToOne, PrimaryColumn } from 'typeorm';
 
 @Entity('user_metadata')
@@ -41,6 +42,9 @@ export interface UserPreferences {
     albumInvite: boolean;
     albumUpdate: boolean;
   };
+  download: {
+    archiveSize: number;
+  };
 }
 
 export const getDefaultPreferences = (user: { email: string }): UserPreferences => {
@@ -61,13 +65,18 @@ export const getDefaultPreferences = (user: { email: string }): UserPreferences 
       albumInvite: true,
       albumUpdate: true,
     },
+    download: {
+      archiveSize: HumanReadableSize.GiB * 4,
+    },
   };
 };
 
 export enum UserMetadataKey {
   PREFERENCES = 'preferences',
+  LICENSE = 'license',
 }
 
 export interface UserMetadata extends Record<UserMetadataKey, Record<string, any>> {
   [UserMetadataKey.PREFERENCES]: DeepPartial<UserPreferences>;
+  [UserMetadataKey.LICENSE]: { licenseKey: string; activationKey: string; activatedAt: Date };
 }

@@ -15,7 +15,7 @@
     NotificationType,
   } from '$lib/components/shared-components/notification/notification';
   import { ActionQueryParameterValue, AppRoute, QueryParameter } from '$lib/constants';
-  import { getPeopleThumbnailUrl } from '$lib/utils';
+  import { getPeopleThumbnailUrl, handlePromiseError } from '$lib/utils';
   import { handleError } from '$lib/utils/handle-error';
   import { shortcut } from '$lib/actions/shortcut';
   import {
@@ -35,6 +35,7 @@
   import SearchPeople from '$lib/components/faces-page/people-search.svelte';
   import LinkButton from '$lib/components/elements/buttons/link-button.svelte';
   import { t } from 'svelte-i18n';
+  import { websocketEvents } from '$lib/stores/websocket';
 
   export let data: PageData;
 
@@ -79,12 +80,21 @@
     }
   }
 
-  onMount(async () => {
+  onMount(() => {
     const getSearchedPeople = $page.url.searchParams.get(QueryParameter.SEARCHED_PEOPLE);
     if (getSearchedPeople) {
       searchName = getSearchedPeople;
-      await handleSearchPeople(true, searchName);
+      handlePromiseError(handleSearchPeople(true, searchName));
     }
+    return websocketEvents.on('on_person_thumbnail', (personId: string) => {
+      people.map((person) => {
+        if (person.id === personId) {
+          person.updatedAt = Date.now().toString();
+        }
+      });
+      // trigger reactivity
+      people = people;
+    });
   });
 
   const handleSearch = async () => {
@@ -161,21 +171,16 @@
         if (results.length - count > 0) {
           notificationController.show({
             type: NotificationType.Error,
-            message: `Unable to change the visibility for ${results.length - count} ${
-              results.length - count <= 1 ? 'person' : 'people'
-            }`,
+            message: $t('errors.unable_to_change_visibility', { values: { count: results.length - count } }),
           });
         }
         notificationController.show({
           type: NotificationType.Info,
-          message: `Visibility changed for ${count} ${count <= 1 ? 'person' : 'people'}`,
+          message: $t('visibility_changed', { values: { count: count } }),
         });
       }
     } catch (error) {
-      handleError(
-        error,
-        `Unable to change the visibility for ${changed.length} ${changed.length <= 1 ? 'person' : 'people'}`,
-      );
+      handleError(error, $t('errors.unable_to_change_visibility', { values: { count: changed.length } }));
     }
     // Reset variables used on the "Show & hide people" modal
     showLoadingSpinner = false;
@@ -346,7 +351,7 @@
         return person;
       });
       notificationController.show({
-        message: 'Date of birth saved successfully',
+        message: $t('birthdate_saved'),
         type: NotificationType.Info,
       });
     } catch (error) {
@@ -422,7 +427,7 @@
         <LinkButton on:click={() => (selectHidden = !selectHidden)}>
           <div class="flex flex-wrap place-items-center justify-center gap-x-1 text-sm">
             <Icon path={mdiEyeOutline} size="18" />
-            <p class="ml-2">Show & hide people</p>
+            <p class="ml-2">{$t('show_and_hide_people')}</p>
           </div>
         </LinkButton>
       </div>
@@ -447,7 +452,7 @@
       <div class="flex flex-col content-center items-center text-center">
         <Icon path={mdiAccountOff} size="3.5em" />
         <p class="mt-5 text-3xl font-medium max-w-lg line-clamp-2 overflow-hidden">
-          {`No people${searchName ? ` named "${searchName}"` : ''}`}
+          {$t(searchName ? 'search_no_people_named' : 'search_no_people', { values: { name: searchName } })}
         </p>
       </div>
     </div>
@@ -513,7 +518,7 @@
             preload={searchName !== '' || index < 20}
             bind:hidden={person.isHidden}
             shadow
-            url={getPeopleThumbnailUrl(person.id)}
+            url={getPeopleThumbnailUrl(person)}
             altText={person.name}
             widthStyle="100%"
             bind:eyeColor={eyeColorMap[person.id]}

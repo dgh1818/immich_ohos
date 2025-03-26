@@ -37,8 +37,7 @@
   const handleEmptyTrash = async () => {
     const isConfirmed = await dialogController.show({
       id: 'empty-trash',
-      prompt:
-        'Are you sure you want to empty the trash? This will remove all the assets in trash permanently from Immich.\nYou cannot undo this action!',
+      prompt: $t('empty_trash_confirmation'),
     });
 
     if (!isConfirmed) {
@@ -53,7 +52,7 @@
       assetStore.removeAssets(deletedAssetIds);
 
       notificationController.show({
-        message: `Permanently deleted ${numberOfAssets} ${numberOfAssets == 1 ? 'asset' : 'assets'}`,
+        message: $t('assets_permanently_deleted_count', { values: { count: numberOfAssets } }),
         type: NotificationType.Info,
       });
     } catch (error) {
@@ -64,7 +63,7 @@
   const handleRestoreTrash = async () => {
     const isConfirmed = await dialogController.show({
       id: 'restore-trash',
-      prompt: 'Are you sure you want to restore all your trashed assets? You cannot undo this action!',
+      prompt: $t('assets_restore_confirmation'),
     });
 
     if (!isConfirmed) {
@@ -78,7 +77,7 @@
       assetStore.removeAssets(restoredAssetIds);
 
       notificationController.show({
-        message: `Restored ${numberOfAssets} ${numberOfAssets == 1 ? 'asset' : 'assets'}`,
+        message: $t('assets_restored_count', { values: { count: numberOfAssets } }),
         type: NotificationType.Info,
       });
     } catch (error) {
@@ -101,20 +100,20 @@
       <LinkButton on:click={handleRestoreTrash} disabled={$isMultiSelectState}>
         <div class="flex place-items-center gap-2 text-sm">
           <Icon path={mdiHistory} size="18" />
-          Restore all
+          {$t('restore_all')}
         </div>
       </LinkButton>
       <LinkButton on:click={() => handleEmptyTrash()} disabled={$isMultiSelectState}>
         <div class="flex place-items-center gap-2 text-sm">
           <Icon path={mdiDeleteForeverOutline} size="18" />
-          Empty trash
+          {$t('empty_trash')}
         </div>
       </LinkButton>
     </div>
 
     <AssetGrid {assetStore} {assetInteractionStore}>
       <p class="font-medium text-gray-500/60 dark:text-gray-300/60 p-4">
-        Trashed items will be permanently deleted after {$serverConfig.trashDays} days.
+        {$t('trashed_items_will_be_permanently_deleted_after', { values: { days: $serverConfig.trashDays } })}
       </p>
       <EmptyPlaceholder text={$t('trash_no_results_message')} src={empty3Url} slot="empty" />
     </AssetGrid>

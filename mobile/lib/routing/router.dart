@@ -24,6 +24,7 @@ import 'package:immich_mobile/pages/common/app_log.page.dart';
 import 'package:immich_mobile/pages/common/app_log_detail.page.dart';
 import 'package:immich_mobile/pages/common/create_album.page.dart';
 import 'package:immich_mobile/pages/common/gallery_viewer.page.dart';
+import 'package:immich_mobile/pages/common/headers_settings.page.dart';
 import 'package:immich_mobile/pages/common/settings.page.dart';
 import 'package:immich_mobile/pages/common/splash_screen.page.dart';
 import 'package:immich_mobile/pages/common/tab_controller.page.dart';
@@ -58,6 +59,7 @@ import 'package:immich_mobile/routing/backup_permission_guard.dart';
 import 'package:immich_mobile/routing/custom_transition_builders.dart';
 import 'package:immich_mobile/routing/duplicate_guard.dart';
 import 'package:immich_mobile/services/api.service.dart';
+import 'package:immich_mobile/widgets/asset_grid/asset_grid_data_structure.dart';
 import 'package:isar/isar.dart';
 // import 'package:maplibre_gl/maplibre_gl.dart';
 import 'package:photo_manager/photo_manager.dart' hide LatLng;
@@ -221,6 +223,10 @@ class AppRouter extends _$AppRouter {
       page: SearchInputRoute.page,
       guards: [_authGuard, _duplicateGuard],
       transitionsBuilder: TransitionsBuilders.noTransition,
+    ),
+    AutoRoute(
+      page: HeaderSettingsRoute.page,
+      guards: [_duplicateGuard],
     ),
   ];
 }

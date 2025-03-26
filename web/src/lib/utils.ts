@@ -1,5 +1,6 @@
 import { NotificationType, notificationController } from '$lib/components/shared-components/notification/notification';
-import { locales } from '$lib/constants';
+import { defaultLang, langs, locales } from '$lib/constants';
+import { lang } from '$lib/stores/preferences.store';
 import { handleError } from '$lib/utils/handle-error';
 import {
   AssetJobName,
@@ -15,9 +16,14 @@ import {
   linkOAuthAccount,
   startOAuth,
   unlinkOAuthAccount,
+  type AssetResponseDto,
+  type PersonResponseDto,
   type SharedLinkResponseDto,
 } from '@immich/sdk';
 import { mdiCogRefreshOutline, mdiDatabaseRefreshOutline, mdiImageRefreshOutline } from '@mdi/js';
+import { sortBy } from 'lodash-es';
+import { init, register, t } from 'svelte-i18n';
+import { derived, get } from 'svelte/store';
 
 interface DownloadRequestOptions<T = unknown> {
   method?: 'GET' | 'POST' | 'PUT' | 'DELETE';
@@ -26,6 +32,15 @@ interface DownloadRequestOptions<T = unknown> {
   signal?: AbortSignal;
   onDownloadProgress?: (event: ProgressEvent<XMLHttpRequestEventTarget>) => void;
 }
+
+export const initApp = async () => {
+  const preferenceLang = get(lang);
+  for (const { code, loader } of langs) {
+    register(code, loader);
+  }
+
+  await init({ fallbackLocale: preferenceLang === 'dev' ? 'dev' : defaultLang.code, initialLocale: preferenceLang });
+};
 
 interface UploadRequestOptions {
   url: string;
@@ -115,26 +130,28 @@ export const downloadRequest = <TBody = unknown>(options: DownloadRequestOptions
   });
 };
 
-export const getJobName = (jobName: JobName) => {
-  const names: Record<JobName, string> = {
-    [JobName.ThumbnailGeneration]: 'Generate Thumbnails',
-    [JobName.MetadataExtraction]: 'Extract Metadata',
-    [JobName.Sidecar]: 'Sidecar Metadata',
-    [JobName.SmartSearch]: 'Smart Search',
-    [JobName.DuplicateDetection]: 'Duplicate Detection',
-    [JobName.FaceDetection]: 'Face Detection',
-    [JobName.FacialRecognition]: 'Facial Recognition',
-    [JobName.VideoConversion]: 'Transcode Videos',
-    [JobName.StorageTemplateMigration]: 'Storage Template Migration',
-    [JobName.Migration]: 'Migration',
-    [JobName.BackgroundTask]: 'Background Tasks',
-    [JobName.Search]: 'Search',
-    [JobName.Library]: 'Library',
-    [JobName.Notifications]: 'Notifications',
-  };
+export const getJobName = derived(t, ($t) => {
+  return (jobName: JobName) => {
+    const names: Record<JobName, string> = {
+      [JobName.ThumbnailGeneration]: $t('admin.thumbnail_generation_job'),
+      [JobName.MetadataExtraction]: $t('admin.metadata_extraction_job'),
+      [JobName.Sidecar]: $t('admin.sidecar_job'),
+      [JobName.SmartSearch]: $t('admin.machine_learning_smart_search'),
+      [JobName.DuplicateDetection]: $t('admin.machine_learning_duplicate_detection'),
+      [JobName.FaceDetection]: $t('admin.face_detection'),
+      [JobName.FacialRecognition]: $t('admin.machine_learning_facial_recognition'),
+      [JobName.VideoConversion]: $t('admin.video_conversion_job'),
+      [JobName.StorageTemplateMigration]: $t('admin.storage_template_migration'),
+      [JobName.Migration]: $t('admin.migration_job'),
+      [JobName.BackgroundTask]: $t('admin.background_task_job'),
+      [JobName.Search]: $t('search'),
+      [JobName.Library]: $t('library'),
+      [JobName.Notifications]: $t('notifications'),
+    };
 
-  return names[jobName];
-};
+    return names[jobName];
+  };
+});
 
 let _key: string | undefined;
 let _sharedLink: SharedLinkResponseDto | undefined;
@@ -189,27 +206,32 @@ export const getAssetPlaybackUrl = (options: string | { id: string; checksum?: s
 
 export const getProfileImageUrl = (userId: string) => createUrl(getUserProfileImagePath(userId));
 
-export const getPeopleThumbnailUrl = (personId: string) => createUrl(getPeopleThumbnailPath(personId));
+export const getPeopleThumbnailUrl = (person: PersonResponseDto, updatedAt?: string) =>
+  createUrl(getPeopleThumbnailPath(person.id), { updatedAt: updatedAt ?? person.updatedAt });
 
-export const getAssetJobName = (job: AssetJobName) => {
-  const names: Record<AssetJobName, string> = {
-    [AssetJobName.RefreshMetadata]: 'Refresh metadata',
-    [AssetJobName.RegenerateThumbnail]: 'Refresh thumbnails',
-    [AssetJobName.TranscodeVideo]: 'Refresh encoded videos',
+export const getAssetJobName = derived(t, ($t) => {
+  return (job: AssetJobName) => {
+    const names: Record<AssetJobName, string> = {
+      [AssetJobName.RefreshMetadata]: $t('refresh_metadata'),
+      [AssetJobName.RegenerateThumbnail]: $t('refresh_thumbnails'),
+      [AssetJobName.TranscodeVideo]: $t('refresh_encoded_videos'),
+    };
+
+    return names[job];
   };
+});
 
-  return names[job];
-};
+export const getAssetJobMessage = derived(t, ($t) => {
+  return (job: AssetJobName) => {
+    const messages: Record<AssetJobName, string> = {
+      [AssetJobName.RefreshMetadata]: $t('refreshing_metadata'),
+      [AssetJobName.RegenerateThumbnail]: $t('regenerating_thumbnails'),
+      [AssetJobName.TranscodeVideo]: $t('refreshing_encoded_video'),
+    };
 
-export const getAssetJobMessage = (job: AssetJobName) => {
-  const messages: Record<AssetJobName, string> = {
-    [AssetJobName.RefreshMetadata]: 'Refreshing metadata',
-    [AssetJobName.RegenerateThumbnail]: `Regenerating thumbnails`,
-    [AssetJobName.TranscodeVideo]: `Refreshing encoded video`,
+    return messages[job];
   };
-
-  return messages[job];
-};
+});
 
 export const getAssetJobIcon = (job: AssetJobName) => {
   const names: Record<AssetJobName, string> = {
@@ -222,11 +244,13 @@ export const getAssetJobIcon = (job: AssetJobName) => {
 };
 
 export const copyToClipboard = async (secret: string) => {
+  const $t = get(t);
+
   try {
     await navigator.clipboard.writeText(secret);
-    notificationController.show({ message: 'Copied to clipboard!', type: NotificationType.Info });
+    notificationController.show({ message: $t('copied_to_clipboard'), type: NotificationType.Info });
   } catch (error) {
-    handleError(error, 'Cannot copy to clipboard, make sure you are accessing the page through https');
+    handleError(error, $t('errors.unable_to_copy_to_clipboard'));
   }
 };
 
@@ -253,13 +277,14 @@ export const oauth = {
     return false;
   },
   authorize: async (location: Location) => {
+    const $t = get(t);
     try {
       const redirectUri = location.href.split('?')[0];
       const { url } = await startOAuth({ oAuthConfigDto: { redirectUri } });
       window.location.href = url;
       return true;
     } catch (error) {
-      handleError(error, 'Unable to login with OAuth');
+      handleError(error, $t('errors.unable_to_login_with_oauth'));
       return false;
     }
   },
@@ -294,4 +319,20 @@ export const handlePromiseError = <T>(promise: Promise<T>): void => {
 
 export const s = (count: number) => (count === 1 ? '' : 's');
 
-export const memoryLaneTitle = (yearsAgo: number) => `${yearsAgo} year${s(yearsAgo)} ago`;
+export const memoryLaneTitle = (yearsAgo: number) => {
+  const $t = get(t);
+  return $t('years_ago', { values: { years: yearsAgo } });
+};
+
+export const withError = async <T>(fn: () => Promise<T>): Promise<[undefined, T] | [unknown, undefined]> => {
+  try {
+    const result = await fn();
+    return [undefined, result];
+  } catch (error) {
+    return [error, undefined];
+  }
+};
+
+export const suggestDuplicateByFileSize = (assets: AssetResponseDto[]): AssetResponseDto | undefined => {
+  return sortBy(assets, (asset) => asset.exifInfo?.fileSizeInByte).pop();
+};

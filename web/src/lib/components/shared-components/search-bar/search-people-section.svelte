@@ -29,7 +29,7 @@
       const res = await getAllPeople({ withHidden: false });
       return orderBySelectedPeopleFirst(res.people);
     } catch (error) {
-      handleError(error, $t('failed_to_get_people'));
+      handleError(error, $t('errors.failed_to_get_people'));
     }
   }
 
@@ -71,13 +71,7 @@
               : 'border-transparent'}"
             on:click={() => togglePersonSelection(person.id)}
           >
-            <ImageThumbnail
-              circle
-              shadow
-              url={getPeopleThumbnailUrl(person.id)}
-              altText={person.name}
-              widthStyle="100%"
-            />
+            <ImageThumbnail circle shadow url={getPeopleThumbnailUrl(person)} altText={person.name} widthStyle="100%" />
             <p class="mt-2 line-clamp-2 text-sm font-medium dark:text-white">{person.name}</p>
           </button>
         {/each}
@@ -93,10 +87,10 @@
           >
             {#if showAllPeople}
               <span><Icon path={mdiClose} ariaHidden /></span>
-              Collapse
+              {$t('collapse')}
             {:else}
               <span><Icon path={mdiArrowRight} ariaHidden /></span>
-              See all people
+              {$t('see_all_people')}
             {/if}
           </Button>
         </div>

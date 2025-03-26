@@ -55,7 +55,9 @@
         message: $t('admin.notification_email_test_email_sent', { values: { email: $user.email } }),
       });
 
-      dispatch('save', { notifications: config.notifications });
+      if (!disabled) {
+        dispatch('save', { notifications: config.notifications });
+      }
     } catch (error) {
       handleError(error, $t('admin.notification_email_test_email_failed'));
     } finally {
@@ -71,8 +73,7 @@
         <SettingAccordion key="email" title={$t('email')} subtitle={$t('admin.notification_email_setting_description')}>
           <div class="ml-4 mt-4 flex flex-col gap-4">
             <SettingSwitch
-              title={$t('enabled')}
-              subtitle={$t('admin.notification_enable_email_notifications')}
+              title={$t('admin.notification_enable_email_notifications')}
               {disabled}
               bind:checked={config.notifications.smtp.enabled}
             />
@@ -139,8 +140,12 @@
             />
 
             <div class="flex gap-2 place-items-center">
-              <Button size="sm" disabled={disabled || !config.notifications.smtp.enabled} on:click={handleSendTestEmail}
-                >{$t('admin.notification_email_sent_test_email_button')}
+              <Button size="sm" disabled={!config.notifications.smtp.enabled} on:click={handleSendTestEmail}>
+                {#if disabled}
+                  {$t('admin.notification_email_test_email')}
+                {:else}
+                  {$t('admin.notification_email_sent_test_email_button')}
+                {/if}
               </Button>
               {#if isSending}
                 <LoadingSpinner />

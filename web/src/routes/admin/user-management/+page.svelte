@@ -19,7 +19,7 @@
   import { user } from '$lib/stores/user.store';
   import { websocketEvents } from '$lib/stores/websocket';
   import { copyToClipboard } from '$lib/utils';
-  import { asByteUnitString } from '$lib/utils/byte-units';
+  import { getByteUnitString } from '$lib/utils/byte-units';
   import { UserStatus, searchUsersAdmin, type UserAdminResponseDto } from '@immich/sdk';
   import { mdiClose, mdiContentCopy, mdiDeleteRestore, mdiPencilOutline, mdiTrashCanOutline } from '@mdi/js';
   import { DateTime } from 'luxon';
@@ -48,7 +48,7 @@
       allUsers = allUsers.filter((user) => user.id !== userId);
       notificationController.show({
         type: NotificationType.Info,
-        message: `User ${user.email} has been successfully removed.`,
+        message: $t('admin.user_successfully_removed', { values: { email: user.email } }),
       });
     }
   };
@@ -59,16 +59,8 @@
     return websocketEvents.on('on_user_delete', onDeleteSuccess);
   });
 
-  const deleteDateFormat: Intl.DateTimeFormatOptions = {
-    month: 'long',
-    day: 'numeric',
-    year: 'numeric',
-  };
-
-  const getDeleteDate = (deletedAt: string): string => {
-    return DateTime.fromISO(deletedAt)
-      .plus({ days: $serverConfig.userDeleteDelay })
-      .toLocaleString(deleteDateFormat, { locale: $locale });
+  const getDeleteDate = (deletedAt: string): Date => {
+    return DateTime.fromISO(deletedAt).plus({ days: $serverConfig.userDeleteDelay }).toJSDate();
   };
 
   const onUserCreated = async () => {
@@ -164,7 +156,7 @@
         >
           <svelte:fragment slot="prompt">
             <div class="flex flex-col gap-4">
-              <p>The user's password has been reset:</p>
+              <p>{$t('admin.user_password_has_been_reset')}</p>
 
               <div class="flex justify-center gap-2">
                 <code
@@ -179,10 +171,7 @@
                 </LinkButton>
               </div>
 
-              <p>
-                Please provide the temporary password to the user and inform them they will need to change the password
-                at their next login.
-              </p>
+              <p>{$t('admin.user_password_reset_description')}</p>
             </div>
           </svelte:fragment>
         </ConfirmDialog>
@@ -218,7 +207,7 @@
                 <td class="hidden xl:block w-3/12 2xl:w-2/12 text-ellipsis break-all px-2 text-sm">
                   <div class="container mx-auto flex flex-wrap justify-center">
                     {#if immichUser.quotaSizeInBytes && immichUser.quotaSizeInBytes > 0}
-                      {asByteUnitString(immichUser.quotaSizeInBytes, $locale)}
+                      {getByteUnitString(immichUser.quotaSizeInBytes, $locale)}
                     {:else}
                       <Icon path={mdiClose} size="16" />
                     {/if}
@@ -248,7 +237,9 @@
                   {#if immichUser.deletedAt && immichUser.status === UserStatus.Deleted}
                     <CircleIconButton
                       icon={mdiDeleteRestore}
-                      title="Restore user - scheduled removal on {getDeleteDate(immichUser.deletedAt)}"
+                      title={$t('admin.user_restore_scheduled_removal', {
+                        values: { date: getDeleteDate(immichUser.deletedAt) },
+                      })}
                       color="primary"
                       size="16"
                       on:click={() => restoreUserHandler(immichUser)}

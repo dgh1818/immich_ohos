@@ -3,6 +3,7 @@ import {
   AssetMediaCreateDto,
   AssetMediaResponseDto,
   AssetResponseDto,
+  CheckExistingAssetsDto,
   CreateAlbumDto,
   CreateLibraryDto,
   MetadataSearchDto,
@@ -10,6 +11,7 @@ import {
   SharedLinkCreateDto,
   UserAdminCreateDto,
   ValidateLibraryDto,
+  checkExistingAssets,
   createAlbum,
   createApiKey,
   createLibrary,
@@ -45,7 +47,7 @@ import { makeRandomImage } from 'src/generators';
 import request from 'supertest';
 
 type CommandResponse = { stdout: string; stderr: string; exitCode: number | null };
-type EventType = 'assetUpload' | 'assetUpdate' | 'assetDelete' | 'userDelete';
+type EventType = 'assetUpload' | 'assetUpdate' | 'assetDelete' | 'userDelete' | 'assetHidden';
 type WaitOptions = { event: EventType; id?: string; total?: number; timeout?: number };
 type AdminSetupOptions = { onboarding?: boolean };
 type AssetData = { bytes?: Buffer; filename: string };
@@ -90,6 +92,7 @@ const executeCommand = (command: string, args: string[]) => {
 let client: pg.Client | null = null;
 
 const events: Record<EventType, Set<string>> = {
+  assetHidden: new Set<string>(),
   assetUpload: new Set<string>(),
   assetUpdate: new Set<string>(),
   assetDelete: new Set<string>(),
@@ -201,6 +204,7 @@ export const utils = {
         .on('connect', () => resolve(websocket))
         .on('on_upload_success', (data: AssetResponseDto) => onEvent({ event: 'assetUpload', id: data.id }))
         .on('on_asset_update', (data: AssetResponseDto) => onEvent({ event: 'assetUpdate', id: data.id }))
+        .on('on_asset_hidden', (assetId: string) => onEvent({ event: 'assetHidden', id: assetId }))
         .on('on_asset_delete', (assetId: string) => onEvent({ event: 'assetDelete', id: assetId }))
         .on('on_user_delete', (userId: string) => onEvent({ event: 'userDelete', id: userId }))
         .connect();
@@ -374,6 +378,9 @@ export const utils = {
 
   getAssetInfo: (accessToken: string, id: string) => getAssetInfo({ id }, { headers: asBearerAuth(accessToken) }),
 
+  checkExistingAssets: (accessToken: string, checkExistingAssetsDto: CheckExistingAssetsDto) =>
+    checkExistingAssets({ checkExistingAssetsDto }, { headers: asBearerAuth(accessToken) }),
+
   metadataSearch: async (accessToken: string, dto: MetadataSearchDto) => {
     return searchMetadata({ metadataSearchDto: dto }, { headers: asBearerAuth(accessToken) });
   },
@@ -393,14 +400,7 @@ export const utils = {
       return;
     }
 
-    const vector = Array.from({ length: 512 }, Math.random);
-    const embedding = `[${vector.join(',')}]`;
-
-    await client.query('INSERT INTO asset_faces ("assetId", "personId", "embedding") VALUES ($1, $2, $3)', [
-      assetId,
-      personId,
-      embedding,
-    ]);
+    await client.query('INSERT INTO asset_faces ("assetId", "personId") VALUES ($1, $2)', [assetId, personId]);
   },
 
   setPersonThumbnail: async (personId: string) => {

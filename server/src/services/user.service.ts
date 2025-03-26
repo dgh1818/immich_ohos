@@ -1,15 +1,18 @@
 import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { DateTime } from 'luxon';
+import { getClientLicensePublicKey } from 'src/config';
 import { SALT_ROUNDS } from 'src/constants';
 import { StorageCore, StorageFolder } from 'src/cores/storage.core';
 import { SystemConfigCore } from 'src/cores/system-config.core';
 import { AuthDto } from 'src/dtos/auth.dto';
-import { UserPreferencesResponseDto, UserPreferencesUpdateDto, mapPreferences } from 'src/dtos/user-preferences.dto';
+import { LicenseKeyDto, LicenseResponseDto } from 'src/dtos/license.dto';
+import { mapPreferences, UserPreferencesResponseDto, UserPreferencesUpdateDto } from 'src/dtos/user-preferences.dto';
 import { CreateProfileImageResponseDto, mapCreateProfileImageResponse } from 'src/dtos/user-profile.dto';
-import { UserAdminResponseDto, UserResponseDto, UserUpdateMeDto, mapUser, mapUserAdmin } from 'src/dtos/user.dto';
-import { UserMetadataKey } from 'src/entities/user-metadata.entity';
+import { mapUser, mapUserAdmin, UserAdminResponseDto, UserResponseDto, UserUpdateMeDto } from 'src/dtos/user.dto';
+import { UserMetadataEntity, UserMetadataKey } from 'src/entities/user-metadata.entity';
 import { UserEntity } from 'src/entities/user.entity';
 import { IAlbumRepository } from 'src/interfaces/album.interface';
+import { IAssetStackRepository } from 'src/interfaces/asset-stack.interface';
 import { ICryptoRepository } from 'src/interfaces/crypto.interface';
 import { IEntityJob, IJobRepository, JobName, JobStatus } from 'src/interfaces/job.interface';
 import { ILoggerRepository } from 'src/interfaces/logger.interface';
@@ -27,6 +30,7 @@ export class UserService {
     @Inject(IAlbumRepository) private albumRepository: IAlbumRepository,
     @Inject(ICryptoRepository) private cryptoRepository: ICryptoRepository,
     @Inject(IJobRepository) private jobRepository: IJobRepository,
+    @Inject(IAssetStackRepository) private stackRepository: IAssetStackRepository,
     @Inject(IStorageRepository) private storageRepository: IStorageRepository,
     @Inject(ISystemMetadataRepository) systemMetadataRepository: ISystemMetadataRepository,
     @Inject(IUserRepository) private userRepository: IUserRepository,
@@ -121,6 +125,47 @@ export class UserService {
     });
   }
 
+  getLicense({ user }: AuthDto): LicenseResponseDto {
+    const license = user.metadata.find(
+      (item): item is UserMetadataEntity<UserMetadataKey.LICENSE> => item.key === UserMetadataKey.LICENSE,
+    );
+    if (!license) {
+      throw new NotFoundException();
+    }
+    return license.value;
+  }
+
+  async deleteLicense({ user }: AuthDto): Promise<void> {
+    await this.userRepository.deleteMetadata(user.id, UserMetadataKey.LICENSE);
+  }
+
+  async setLicense(auth: AuthDto, license: LicenseKeyDto): Promise<LicenseResponseDto> {
+    if (!license.licenseKey.startsWith('IMCL-')) {
+      throw new BadRequestException('Invalid license key');
+    }
+    const licenseValid = this.cryptoRepository.verifySha256(
+      license.licenseKey,
+      license.activationKey,
+      getClientLicensePublicKey(),
+    );
+
+    if (!licenseValid) {
+      throw new BadRequestException('Invalid license key');
+    }
+
+    const licenseData = {
+      ...license,
+      activatedAt: new Date(),
+    };
+
+    await this.userRepository.upsertMetadata(auth.user.id, {
+      key: UserMetadataKey.LICENSE,
+      value: licenseData,
+    });
+
+    return licenseData;
+  }
+
   async handleUserSyncUsage(): Promise<JobStatus> {
     await this.userRepository.syncUsage();
     return JobStatus.SUCCESS;
@@ -128,7 +173,7 @@ export class UserService {
 
   async handleUserDeleteCheck(): Promise<JobStatus> {
     const users = await this.userRepository.getDeletedUsers();
-    const config = await this.configCore.getConfig();
+    const config = await this.configCore.getConfig({ withCache: false });
     await this.jobRepository.queueAll(
       users.flatMap((user) =>
         this.isReadyForDeletion(user, config.user.deleteDelay)
@@ -140,7 +185,7 @@ export class UserService {
   }
 
   async handleUserDelete({ id, force }: IEntityJob): Promise<JobStatus> {
-    const config = await this.configCore.getConfig();
+    const config = await this.configCore.getConfig({ withCache: false });
     const user = await this.userRepository.get(id, { withDeleted: true });
     if (!user) {
       return JobStatus.FAILED;
@@ -168,6 +213,7 @@ export class UserService {
     }
 
     this.logger.warn(`Removing user from database: ${user.id}`);
+    await this.stackRepository.deleteAll(user.id);
     await this.albumRepository.deleteAll(user.id);
     await this.userRepository.delete(user, true);
 
