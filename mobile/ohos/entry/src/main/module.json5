@@ -52,6 +52,13 @@
         },
       },
       {
+        name: "ohos.permission.WRITE_IMAGEVIDEO",
+        reason: "$string:backup_desc",
+        usedScene: {
+          when: "always",
+        },
+      },
+      {
         name: "ohos.permission.SYSTEM_FLOAT_WINDOW",
         reason: "$string:video_play",
         usedScene: {
