@@ -1,11 +1,18 @@
 import { HttpException, HttpStatus, Inject, Injectable } from '@nestjs/common';
+import { isEqual } from 'lodash';
 import { DEFAULT_EXTERNAL_DOMAIN } from 'src/constants';
 import { SystemConfigCore } from 'src/cores/system-config.core';
 import { SystemConfigSmtpDto } from 'src/dtos/system-config.dto';
 import { AlbumEntity } from 'src/entities/album.entity';
 import { IAlbumRepository } from 'src/interfaces/album.interface';
 import { IAssetRepository } from 'src/interfaces/asset.interface';
-import { OnEvents, SystemConfigUpdate } from 'src/interfaces/event.interface';
+import {
+  AlbumInviteEvent,
+  AlbumUpdateEvent,
+  OnEvents,
+  SystemConfigUpdateEvent,
+  UserSignupEvent,
+} from 'src/interfaces/event.interface';
 import {
   IEmailJob,
   IJobRepository,
@@ -38,15 +45,32 @@ export class NotificationService implements OnEvents {
     this.configCore = SystemConfigCore.create(systemMetadataRepository, logger);
   }
 
-  async onConfigValidateEvent({ newConfig }: SystemConfigUpdate) {
+  async onConfigValidateEvent({ oldConfig, newConfig }: SystemConfigUpdateEvent) {
     try {
-      if (newConfig.notifications.smtp.enabled) {
+      if (
+        newConfig.notifications.smtp.enabled &&
+        !isEqual(oldConfig.notifications.smtp, newConfig.notifications.smtp)
+      ) {
         await this.notificationRepository.verifySmtp(newConfig.notifications.smtp.transport);
       }
     } catch (error: Error | any) {
       this.logger.error(`Failed to validate SMTP configuration: ${error}`, error?.stack);
       throw new Error(`Invalid SMTP configuration: ${error}`);
     }
+  }
+
+  async onUserSignupEvent({ notify, id, tempPassword }: UserSignupEvent) {
+    if (notify) {
+      await this.jobRepository.queue({ name: JobName.NOTIFY_SIGNUP, data: { id, tempPassword } });
+    }
+  }
+
+  async onAlbumUpdateEvent({ id, updatedBy }: AlbumUpdateEvent) {
+    await this.jobRepository.queue({ name: JobName.NOTIFY_ALBUM_UPDATE, data: { id, senderId: updatedBy } });
+  }
+
+  async onAlbumInviteEvent({ id, userId }: AlbumInviteEvent) {
+    await this.jobRepository.queue({ name: JobName.NOTIFY_ALBUM_INVITE, data: { id, recipientId: userId } });
   }
 
   async sendTestEmail(id: string, dto: SystemConfigSmtpDto) {

@@ -242,7 +242,7 @@ class SearchInputPage extends HookConsumerWidget {
           onSearch: search,
           onClear: handleClear,
           child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 16.0),
+            padding: const EdgeInsets.all(16.0),
             child: CameraPicker(
               onSelect: handleOnSelect,
               filter: filter.value.camera,

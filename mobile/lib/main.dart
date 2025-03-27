@@ -1,7 +1,5 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:ui' as ui;
-import 'dart:convert';
 
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:easy_localization/easy_localization.dart';
@@ -38,7 +36,6 @@ import 'package:immich_mobile/utils/migration.dart';
 import 'package:isar/isar.dart';
 import 'package:logging/logging.dart';
 import 'package:path_provider/path_provider.dart';
-import 'dart:ffi';
 import 'package:isar_flutter_libs/isar_flutter_libs.dart';
 final RouteObserver<ModalRoute> routeObserver = RouteObserver<ModalRoute>();
 
@@ -196,7 +193,7 @@ class ImmichAppState extends ConsumerState<ImmichApp>
       localizationsDelegates: context.localizationDelegates,
       supportedLocales: context.supportedLocales,
       locale: context.locale,
-      debugShowCheckedModeBanner: false,
+      debugShowCheckedModeBanner: true,
       home: MaterialApp.router(
         title: 'Immich',
         debugShowCheckedModeBanner: false,

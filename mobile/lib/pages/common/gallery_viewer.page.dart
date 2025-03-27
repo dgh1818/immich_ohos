@@ -247,8 +247,7 @@ class GalleryViewerPage extends HookConsumerWidget {
         if (ref.read(showControlsProvider)) {
           SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
         } else {
-          SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
-          //SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersive);
+          SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersive);
         }
         isPlayingVideo.value = false;
         return null;
@@ -275,8 +274,7 @@ class GalleryViewerPage extends HookConsumerWidget {
       if (show) {
         SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
       } else {
-        SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
-        //SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersive);
+        SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersive);
       }
     });
 
@@ -375,12 +373,12 @@ class GalleryViewerPage extends HookConsumerWidget {
                 final a = loadAsset(currentIndex.value);
                 final ImageProvider provider =
                 ImmichImage.imageProvider(asset: a);
-                //if (a.isImage && !isPlayingVideo.value) {
+
                 if (a.isImage) {
                   setDisplayMode(provider, context);
                 } else {
                   ui.ImageFilter.setHdr(
-                    hdr: 0,
+                    hdr: 0,                     //视频预览图为sdr
                     is_image: true,
                   );
                 }

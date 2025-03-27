@@ -76,11 +76,11 @@
             <img
               class="h-full w-full rounded-xl object-cover"
               src={getAssetThumbnailUrl(memory.assets[0].id)}
-              alt={`Memory Lane ${getAltText(memory.assets[0])}`}
+              alt={`Memory Lane ${$getAltText(memory.assets[0])}`}
               draggable="false"
             />
             <p class="absolute bottom-2 left-4 z-10 text-lg text-white">
-              {memoryLaneTitle(memory.yearsAgo)}
+              {$memoryLaneTitle(memory.yearsAgo)}
             </p>
             <div
               class="absolute left-0 top-0 z-0 h-full w-full rounded-xl bg-gradient-to-t from-black/40 via-transparent to-transparent transition-all hover:bg-black/20"
