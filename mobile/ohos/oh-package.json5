@@ -30,6 +30,7 @@
     "photo_manager": "file:./har/photo_manager.har",
     "@ohos/flutter_module": "file:./entry",
     "@ohos/flutter_ohos": "file:./har/flutter.har",
-    "package_info_plus": "file:./har/package_info_plus.har"
+    "package_info_plus": "file:./har/package_info_plus.har",
+    "flutter_geolocator_ohos": "file:./har/flutter_geolocator_ohos.har"
   }
 }

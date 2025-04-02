@@ -150,7 +150,7 @@ class _MyRouteAware extends RouteAware {
   @override
   void didPopNext() {
     super.didPopNext();
-    ui.ImageFilter.setHdr(hdr: 0, is_image: true);
+    ui.SetHdr.setHdrMode(hdr:0, is_image:true);
   }
   // void didPush() { }
   // void didPop() { }

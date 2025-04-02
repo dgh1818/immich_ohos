@@ -151,15 +151,9 @@ class GalleryViewerPage extends HookConsumerWidget {
         debugPrint("Image Color Space: ${colorSpace.toString()}");
 
         if(colorSpace == ui.ColorSpace.extendedSRGB) {
-          ui.ImageFilter.setHdr(
-            hdr: 1,
-            is_image: true,
-          );
+          ui.SetHdr.setHdrMode(hdr: 1 ,is_image:true);
         } else {
-          ui.ImageFilter.setHdr(
-            hdr: 0,
-            is_image: true,
-          );
+          ui.SetHdr.setHdrMode(hdr: 0, is_image:true);
         }
       }
     }
@@ -227,21 +221,13 @@ class GalleryViewerPage extends HookConsumerWidget {
         final a = asset;
         final ImageProvider provider =
           ImmichImage.imageProvider(asset: a);
+        ui.SetHdr.enableHdr(enable_hdr:true);
         if (a.isImage) {
-          ui.ImageFilter.setHdr(
-            hdr: 0,
-            is_image: true,
-          );
+          ui.SetHdr.setHdrMode(hdr: 0,is_image: true);
           setDisplayMode(provider, context);
         } else {
-          ui.ImageFilter.setHdr(
-            hdr: 0,
-            is_image: true
-          );
-          ui.ImageFilter.setHdr(
-            hdr: -1,
-            is_image: false,
-          );
+          ui.SetHdr.setHdrMode(hdr: 0,is_image: true);
+          ui.SetHdr.setHdrMode(hdr: -1,is_image: false);
          }
 
         if (ref.read(showControlsProvider)) {
@@ -377,20 +363,14 @@ class GalleryViewerPage extends HookConsumerWidget {
                 if (a.isImage) {
                   setDisplayMode(provider, context);
                 } else {
-                  ui.ImageFilter.setHdr(
-                    hdr: 0,                     //视频预览图为sdr
-                    is_image: true,
-                  );
+                  ui.SetHdr.setHdrMode(hdr:0, is_image:true);
                 }
 
                 // Wait for page change animation to finish
                 await Future.delayed(const Duration(milliseconds: 400));
                 // Then precache the next image
                 if (!a.isImage) {
-                  ui.ImageFilter.setHdr(
-                    hdr: -1,
-                    is_image: false,
-                  );
+                 ui.SetHdr.setHdrMode(hdr: -1, is_image:false);
                 }
                 unawaited(precacheNextImage(next));
               },
