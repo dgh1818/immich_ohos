@@ -38,7 +38,7 @@
 
 ## Harmonyos Next 适配
 
-**IMMICH 1.106.0 搭配 1.106.1 server 使用**
+**IMMICH 1.108.0 搭配 本目录下服务器 使用**
 
 Harmonyos Next 端的 Immich
 实现了 HDR 图片和视频的显示
