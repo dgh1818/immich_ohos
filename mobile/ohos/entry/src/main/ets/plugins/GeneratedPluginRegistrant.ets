@@ -8,6 +8,7 @@ import FluttertoastPlugin from 'fluttertoast';
 import ImagePickerPlugin from 'image_picker_ohos';
 import IntegrationTestPlugin from 'integration_test';
 import IsarFlutterLibsPlugin from 'isar_flutter_libs';
+import MapLibreMapsPlugin from 'maplibre_gl';
 import PackageInfoPlugin from 'package_info_plus';
 import PathProviderPlugin from 'path_provider_ohos';
 import PermissionHandlerPlugin from 'permission_handler_ohos';
@@ -38,6 +39,7 @@ export class GeneratedPluginRegistrant {
       flutterEngine.getPlugins()?.add(new ImagePickerPlugin());
       flutterEngine.getPlugins()?.add(new IntegrationTestPlugin());
       flutterEngine.getPlugins()?.add(new IsarFlutterLibsPlugin());
+      flutterEngine.getPlugins()?.add(new MapLibreMapsPlugin());
       flutterEngine.getPlugins()?.add(new PackageInfoPlugin());
       flutterEngine.getPlugins()?.add(new PathProviderPlugin());
       flutterEngine.getPlugins()?.add(new PermissionHandlerPlugin());

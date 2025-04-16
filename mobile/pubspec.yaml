@@ -6,7 +6,7 @@ version: 1.108.0+148
 
 environment:
   sdk: '>=3.3.0 <4.0.0'
-  flutter: 3.22.1-0.0.pre.28
+  flutter: 3.22.0
 
 dependencies:
   flutter:
@@ -15,7 +15,7 @@ dependencies:
   path_provider_ios:
   # TODO: upgrade to stable after 3.0.1 is released. 3.0.0 is broken
   # https://github.com/fluttercandies/flutter_photo_manager/pull/990#issuecomment-2058066427
-  photo_manager: ^3.2.0 #ohos开发中
+  photo_manager: ^3.6.4 #ohos开发中
   photo_manager_image_provider: ^2.1.0
   flutter_hooks: ^0.20.4
   hooks_riverpod: ^2.4.9
@@ -29,10 +29,10 @@ dependencies:
   chewie: ^1.7.4
   socket_io_client: ^2.0.3+1
   # TODO: Update it to tag once next stable release
-  # maplibre_gl:
-  #   git:
-  #     url: https://github.com/maplibre/flutter-maplibre-gl.git
-  #     ref: acb428a005efd9832a0a8e7ef0945f899dfb3ca5
+  maplibre_gl:
+    git:
+      url: https://github.com/maplibre/flutter-maplibre-gl.git
+      ref: acb428a005efd9832a0a8e7ef0945f899dfb3ca5
   geolocator: ^11.0.0 # used to move to current location in map view
   flutter_udid: ^3.0.0
   flutter_svg: ^2.0.9
@@ -175,16 +175,15 @@ dependency_overrides:
       url: https://gitee.com/du_guang/chew_ohos.git
       path: './'
       ref: master
+  photo_manager:
+    path: ./flutter_photo_manager
 
-  # maplibre_gl:
-  #   git:
-  #     url: https://github.com/maplibre/flutter-maplibre-gl.git
-  #     ref: acb428a005efd9832a0a8e7ef0945f899dfb3ca5
-  # maplibre_gl_platform_interface:
-  #   git:
-  #     url: https://github.com/maplibre/flutter-maplibre-gl.git
-  #     path: "maplibre_gl_platform_interface"
-
+  maplibre_gl:
+    path: ../../package_flutter/flutter-maplibre-gl-ohos/maplibre_gl
+  maplibre_gl_platform_interface:
+    path: ../../package_flutter/flutter-maplibre-gl-ohos/maplibre_gl_platform_interface
+  maplibre_gl_web:
+    path: ../../package_flutter/flutter-maplibre-gl-ohos/maplibre_gl_web
   # package_info_plus:
   #   git:
   #     url: https://gitee.com/openharmony-sig/flutter_plus_plugins.git

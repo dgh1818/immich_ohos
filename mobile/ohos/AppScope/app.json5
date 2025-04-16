@@ -1,7 +1,7 @@
 {
   "app": {
-    "bundleName": "com.example.immich_mobile",
-    "vendor": "example",
+    "bundleName": "com.dgh18.immich",
+    "vendor": "dgh18",
     "versionCode": 148,
     "versionName": "1.108.0",
     "icon": "$media:app_icon",

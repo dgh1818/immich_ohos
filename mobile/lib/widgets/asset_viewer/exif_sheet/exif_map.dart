@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:immich_mobile/widgets/map/map_thumbnail.dart';
 import 'package:immich_mobile/entities/exif_info.entity.dart';
-// import 'package:maplibre_gl/maplibre_gl.dart';
+import 'package:maplibre_gl/maplibre_gl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class ExifMap extends StatelessWidget {
@@ -65,30 +65,30 @@ class ExifMap extends StatelessWidget {
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 16.0),
-      // child: LayoutBuilder(
-      //   builder: (context, constraints) {
-      //     // // return MapThumbnail(
-      //     // //   centre: LatLng(
-      //     // //     exifInfo.latitude ?? 0,
-      //     // //     exifInfo.longitude ?? 0,
-      //     // //   ),
-      //     //   height: 150,
-      //     //   width: constraints.maxWidth,
-      //     //   zoom: 12.0,
-      //     //   assetMarkerRemoteId: markerId,
-      //     //   onTap: (tapPosition, latLong) async {
-      //     //     // Uri? uri = await createCoordinatesUri();
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          return MapThumbnail(
+            centre: LatLng(
+              exifInfo.latitude ?? 0,
+              exifInfo.longitude ?? 0,
+            ),
+            height: 150,
+            width: constraints.maxWidth,
+            zoom: 12.0,
+            assetMarkerRemoteId: markerId,
+            // onTap: (tapPosition, latLong) async {
+            //   Uri? uri = await createCoordinatesUri();
 
-      //     //     // if (uri == null) {
-      //     //     //   return;
-      //     //     // }
+            //   if (uri == null) {
+            //     return;
+            //   }
 
-      //     //     debugPrint('Opening Map Uri: $uri');
-      //     //     //launchUrl(uri);
-      //     //   },
-      //     // );
-      //   },
-      // ),
+            //   debugPrint('Opening Map Uri: $uri');
+            //   launchUrl(uri);
+            //},
+          );
+        },
+      ),
     );
   }
 }

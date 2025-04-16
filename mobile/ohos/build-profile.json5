@@ -5,13 +5,13 @@
         "name": "default",
         "type": "HarmonyOS",
         "material": {
-          "certpath": "C:\\Users\\duguanghao\\.ohos\\config\\default_ohos_LEBIM_u7GVsyRlAZmUOcijZRnZ-zKO-tCb-H0R62Ez0=.cer",
-          "storePassword": "0000001B251502F40347FEA3CAF5BF163091DF3AB8486ACCC82EA5055277ED42D78A8F78D64D9B61D6E2FE",
-          "keyAlias": "debugKey",
-          "keyPassword": "0000001BAC1C45FA4EC6581410432AD6FA2F4C9A2934FA9329661B66E485DE209A902CF10CEE37831C9E5A",
-          "profile": "C:\\Users\\duguanghao\\.ohos\\config\\default_ohos_LEBIM_u7GVsyRlAZmUOcijZRnZ-zKO-tCb-H0R62Ez0=.p7b",
+          "storeFile": "F:/immich_sign/immich_ohos.p12",
+          "storePassword": "0000001B7F13046AD9C2C0D3EC582352AEF3B3A60932ECD5F71784C13059CA659BEB15BF613AC464A526C3",
+          "keyAlias": "dgh18",
+          "keyPassword": "0000001B7C8EB4BEA63EC99931D922E9AE49C1F722C1C883A50DE174B566FFBC5C6A6C6C3E8FC6E6CFD080",
           "signAlg": "SHA256withECDSA",
-          "storeFile": "C:\\Users\\duguanghao\\.ohos\\config\\default_ohos_LEBIM_u7GVsyRlAZmUOcijZRnZ-zKO-tCb-H0R62Ez0=.p12"
+          "profile": "F:/immich_sign/immich_ohosDebug.p7b",
+          "certpath": "F:/immich_sign/immich_ohos.cer"
         }
       }
     ],

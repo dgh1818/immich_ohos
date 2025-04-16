@@ -44,27 +44,33 @@
     requestPermissions: [
       { name: "ohos.permission.INTERNET" },
       { name: "ohos.permission.VIBRATE" },
-//      {
-//        name: "ohos.permission.READ_IMAGEVIDEO",
-//        reason: "$string:backup_desc",
-//        usedScene: {
-//          when: "always",
-//        },
-//      },
-//      {
-//        name: "ohos.permission.WRITE_IMAGEVIDEO",
-//        reason: "$string:backup_desc",
-//        usedScene: {
-//          when: "always",
-//        },
-//      },
-//      {
-//        name: "ohos.permission.SYSTEM_FLOAT_WINDOW",
-//        reason: "$string:video_play",
-//        usedScene: {
-//          when: "always",
-//        },
-//      },
+      //      {
+      //        name: "ohos.permission.READ_IMAGEVIDEO",
+      //        reason: "$string:backup_desc",
+      //        usedScene: {
+      //          when: "always",
+      //        },
+      //      },
+      //      {
+      //        name: "ohos.permission.WRITE_IMAGEVIDEO",
+      //        reason: "$string:backup_desc",
+      //        usedScene: {
+      //          when: "always",
+      //        },
+      //      },
+      //      {
+      //        name: "ohos.permission.SYSTEM_FLOAT_WINDOW",
+      //        reason: "$string:video_play",
+      //        usedScene: {
+      //          when: "always",
+      //        },
+      //      },
+    ],
+    metadata: [
+      {
+        name: "client_id",
+        value: "6917569592630582305", // 配置为获取的Client ID
+      },
     ],
   },
 }
