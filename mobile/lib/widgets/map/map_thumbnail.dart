@@ -10,6 +10,7 @@ import 'package:immich_mobile/widgets/map/map_theme_override.dart';
 import 'package:immich_mobile/widgets/map/positioned_asset_marker_icon.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 import 'package:flutter/foundation.dart';
+import 'package:coordtransform_dart/coordtransform_dart.dart';
 
 // /// A non-interactive thumbnail of a map in the given coordinates with optional markers
 // ///
@@ -35,14 +36,20 @@ class MapThumbnail extends HookConsumerWidget {
     this.onTap,
     this.zoom = 8,
     this.assetMarkerRemoteId,
-    this.showMarkerPin = true,
+    this.showMarkerPin = false,
     this.themeMode,
     this.showAttribution = true,
   });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final offsettedCentre = LatLng(centre.latitude + 0.002, centre.longitude);
+    final outLngLat =
+        CoordinateTransformUtil.gcj02ToWgs84(centre.latitude, centre.longitude);
+    final LatLng centreProcessed = LatLng(outLngLat[0], outLngLat[1]);
+    // final offsettedCentre =
+    //     LatLng(centreProcessed.latitude + 0.002, centreProcessed.longitude);
+    final offsettedCentre =
+        LatLng(centreProcessed.latitude, centreProcessed.longitude);
     final controller = useRef<MapLibreMapController?>(null);
     final position = useValueNotifier<Point<num>?>(null);
 
@@ -50,6 +57,7 @@ class MapThumbnail extends HookConsumerWidget {
       controller.value = mapController;
       if (defaultTargetPlatform == TargetPlatform.android ||
           defaultTargetPlatform == TargetPlatform.iOS) {
+        // The Ohos need to wait for the PetalMap View to return
         if (assetMarkerRemoteId != null) {
           // The iOS impl returns wrong toScreenLocation without the delay
           Future.delayed(
@@ -62,21 +70,19 @@ class MapThumbnail extends HookConsumerWidget {
     }
 
     Future<void> onStyleLoaded() async {
+      if (defaultTargetPlatform == TargetPlatform.ohos) {
+        position.value = await controller.value?.toScreenLocation(centre);
+      }
+      //The Ohos PetalMap View get
       if (showMarkerPin && controller.value != null) {
         if (defaultTargetPlatform == TargetPlatform.android ||
             defaultTargetPlatform == TargetPlatform.iOS) {
           await controller.value?.addMarkerAtLatLng(centre);
         } else if (defaultTargetPlatform == TargetPlatform.ohos) {
           if (assetMarkerRemoteId != null) {
-            // The iOS impl returns wrong toScreenLocation without the delay
-            Future.delayed(
-              const Duration(milliseconds: 100),
-              () async => position.value =
-                  await controller.value?.toScreenLocation(centre),
-            );
+            await controller.value?.addMarkerAtLatLng_Ohos(
+                centreProcessed, "assets/location-pin.png", 0.15);
           }
-          await controller.value
-              ?.addMarkerAtLatLng_Ohos(centre, "assets/location-pin.png", 0.15);
         }
       }
     }

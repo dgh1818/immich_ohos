@@ -66,6 +66,7 @@ dependencies:
   thumbhash: 0.1.0+1
   async: ^2.11.0
   easy_localization: ^3.0.3
+  coordtransform_dart: ^1.0.4
   # huawei_map: ^6.11.2+304
 
   openapi:

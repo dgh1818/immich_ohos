@@ -84,7 +84,7 @@ export class Convert {
           //self.trackCameraPosition = trackCameraPosition
           delegate.setTrackCameraPosition(trackCameraPosition);
           break;
-        case 'tiltGesturesEnabled':
+        case 'zoomGesturesEnabled':
           let zoomGesturesEnabled = options_converted.get("zoomGesturesEnabled") as boolean;
           delegate.setZoomGesturesEnabled(zoomGesturesEnabled);
           break;

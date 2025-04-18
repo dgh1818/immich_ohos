@@ -50,6 +50,7 @@ export class MapLibreMapController extends PlatformView implements MethodCallHan
   pixelMap? : image.PixelMap;
   public mapController_link?: SubscribedAbstractProperty<map.MapComponentController>;
   public mapLibreMapController_link?: SubscribedAbstractProperty<MapLibreMapController>;
+  projection?: map.Projection;
 
   constructor(context: common.Context, viewId: number, args: ESObject, message: BinaryMessenger) {
     super();
@@ -142,7 +143,7 @@ export class MapLibreMapController extends PlatformView implements MethodCallHan
   }
 
   public setZoomGesturesEnabled(zoomGesturesEnabled: boolean): void {
-    this.mapController?.setZoomControlsEnabled(zoomGesturesEnabled);
+    this.mapController?.setZoomGesturesEnabled(zoomGesturesEnabled);
   }
 
   public setMyLocationEnabled(myLocationEnabled: boolean): void {
@@ -261,7 +262,6 @@ export class MapLibreMapController extends PlatformView implements MethodCallHan
   onMethodCall(call: MethodCall, result: MethodResult): void {
     // 接受Dart侧发来的消息
     let method: string = call.method;
-    let projection: map.Projection;
     let call_args: Map<string, ESObject> = call.args as Map<string, ESObject>;
     console.error("enter method:" + method);
     switch (method) {
@@ -341,8 +341,8 @@ export class MapLibreMapController extends PlatformView implements MethodCallHan
 
       case "map#getVisibleRegion":
         //var reply = [String: NSObject]()
-        projection = this.mapController!.getProjection();
-        let visibleRegion: mapCommon.VisibleRegion = projection.getVisibleRegion();
+        this.projection = this.mapController!.getProjection();
+        let visibleRegion: mapCommon.VisibleRegion = this.projection.getVisibleRegion();
         let reply_sw: ESObject = [visibleRegion.nearLeft.latitude, visibleRegion.nearLeft.longitude] as ESObject
         let reply_ne: ESObject = [visibleRegion.farRight.latitude, visibleRegion.farRight.longitude] as ESObject
         result.success({
@@ -353,26 +353,26 @@ export class MapLibreMapController extends PlatformView implements MethodCallHan
       case "map#toScreenLocation":
         let longitude: number = call_args.get('longitude') as number;
         let latitude: number = call_args.get('latitude') as number;
-        console.error("longitude=" + longitude);
-        console.error("latitude=" + latitude);
-        let currentPoint: mapCommon.MapPoint = {
-          positionX: longitude,
-          positionY: latitude
+        // console.error("longitude=" + longitude);
+        // console.error("latitude=" + latitude);
+        let currentLatLng: mapCommon.LatLng = {
+          latitude: latitude,
+          longitude: longitude
         };
         console.error("enter projection");
         if (this.mapController==undefined) {
           console.error("this.mapController = undefined");
         }
-        projection = this.mapController?.getProjection()!;
+        this.projection = this.mapController?.getProjection()!;
 
 
         console.error("leave projection");
-        let latLng: mapCommon.LatLng = projection.fromScreenLocation(currentPoint);
+        let currentPoint: mapCommon.MapPoint = this.projection.toScreenLocation(currentLatLng);
         console.error("leave fromScreenLocation");
 
         result.success({
-          "x": latLng.latitude,
-          "y": latLng.longitude
+          "x": currentPoint.positionX as ESObject,
+          "y": currentPoint.positionY as ESObject
         });
         break;
       // case "style#addImageSource":
