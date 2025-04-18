@@ -23,9 +23,10 @@ export class MapLibreMapController extends PlatformView implements MethodCallHan
   TAG: string = "MapLibreMapController";
   public mapController?: map.MapComponentController;
   public mapEventManager?: map.MapEventManager; // 存储事件管理器
+  public cameraUpdate?: map.CameraUpdate;
   longitude: number = 39.9;
   latitude: number = 116.4;
-  methodChannel: MethodChannel;
+  public methodChannel: MethodChannel;
   context?: common.Context;
   viewId?: number;
   args?: Object;
@@ -46,9 +47,17 @@ export class MapLibreMapController extends PlatformView implements MethodCallHan
   scrollingEnabled: boolean = true;
   args_input: Map<string, ESObject>;
   args_options: ESObject;
+  pixelMap? : image.PixelMap;
+  public mapController_link?: SubscribedAbstractProperty<map.MapComponentController>;
+  public mapLibreMapController_link?: SubscribedAbstractProperty<MapLibreMapController>;
 
   constructor(context: common.Context, viewId: number, args: ESObject, message: BinaryMessenger) {
     super();
+    AppStorage.setOrCreate('mapController', undefined);
+    AppStorage.setOrCreate('mapLibreMapController', this);
+    this.mapLibreMapController_link?.set(this);
+    this.mapController_link = AppStorage.link('mapController');
+
     // 注册消息通道
     this.methodChannel =
       new MethodChannel(message, `plugins.flutter.io/maplibre_gl_${viewId}`, StandardMethodCodec.INSTANCE);
@@ -203,6 +212,8 @@ export class MapLibreMapController extends PlatformView implements MethodCallHan
   }
 
   public init(): void {
+    this.mapController = this.mapController_link!.get();
+
     if (this.args_input.get('options') == undefined) {
       console.error("this.args_input is undefined");
     } else {
@@ -233,8 +244,8 @@ export class MapLibreMapController extends PlatformView implements MethodCallHan
             bearing: bearing
           };
 
-          let cameraUpdate: map.CameraUpdate = map.newCameraPosition(cameraPosition);
-          this.mapController?.moveCamera(cameraUpdate);
+          this.cameraUpdate = map.newCameraPosition(cameraPosition);
+          this.mapController?.moveCamera(this.cameraUpdate);
         }
 
         if (this.args_input.get("dragEnabled") != undefined) {
@@ -255,20 +266,24 @@ export class MapLibreMapController extends PlatformView implements MethodCallHan
     console.error("enter method:" + method);
     switch (method) {
       case "map#waitForMap":
+
+        //this.startWaitCallback(result);
         if (this.mapController != undefined) {
           console.error("success map#waitForMap");
           result.success(true);
-          if (this.isFirstStyleLoad) {
-            this.isFirstStyleLoad = false
-
-            this.onStyleLoadedCalled = true
-            this.methodChannel.invokeMethod("map#onStyleLoaded", "");
-            console.error("success map#waitForMap");
-
-          }
+          // if (this.isFirstStyleLoad) {
+          //   this.isFirstStyleLoad = false
+          //
+          //   this.onStyleLoadedCalled = true
+          //   this.methodChannel.invokeMethod("map#onStyleLoaded", "");
+          //   console.error("success map#waitForMap");
+          //
+          // }
           return;
         }
-
+        //result.success(true);
+        console.error("this.mapController underfined");
+        result.success(true);
         this.mapReadyResult = result;
         break;
       case 'map#addMarkerAtLatLng':
@@ -276,11 +291,29 @@ export class MapLibreMapController extends PlatformView implements MethodCallHan
 
         let mark_longitude: number = call_args.get('longitude') as number;
         let mark_latitude: number = call_args.get('latitude') as number;
+        let factor: number = call_args.get('iconSize') as number;
         let file = call_args.get('path') as string;
+        let bytes = call_args.get('bytes') as Uint8Array;
+        let image_data: image.ImageSource = image.createImageSource(bytes.buffer);
+        let imageInfo = image_data.getImageInfoSync(0);
+        imageInfo.size.height*factor
+        let mark_size:image.Size = {
+          height: imageInfo.size.height*factor,
+          width: imageInfo.size.width*factor
+        }
+        let decodingOptions : image.DecodingOptions = {
+          editable: true,
+          desiredPixelFormat: 3,
+          desiredSize: mark_size
+        }
+        // 创建pixelMap
+        this.pixelMap  = image_data.createPixelMapSync(decodingOptions);
 
         if (mark_longitude == undefined || mark_latitude == undefined || file == undefined) {
           console.error("marker undefined")
         }
+
+        console.error("latitude=" + mark_latitude + "longitude" + mark_longitude);
 
         let markerOptions: mapCommon.MarkerOptions = {
           position: {
@@ -297,7 +330,7 @@ export class MapLibreMapController extends PlatformView implements MethodCallHan
           draggable: false,
           flat: false,
           // 图标存放在resources/rawfile
-          icon: file
+          icon: this.pixelMap
         };
 
         console.error("enter controller marker");
@@ -318,19 +351,28 @@ export class MapLibreMapController extends PlatformView implements MethodCallHan
         });
         break;
       case "map#toScreenLocation":
-        let coordinate: ESObject = call.args;
-        let longitude: number = coordinate['longitude'] as number;
-        let latitude: number = coordinate['latitude'] as number;
+        let longitude: number = call_args.get('longitude') as number;
+        let latitude: number = call_args.get('latitude') as number;
+        console.error("longitude=" + longitude);
+        console.error("latitude=" + latitude);
         let currentPoint: mapCommon.MapPoint = {
           positionX: longitude,
           positionY: latitude
         };
-        projection = this.mapController!.getProjection();
+        console.error("enter projection");
+        if (this.mapController==undefined) {
+          console.error("this.mapController = undefined");
+        }
+        projection = this.mapController?.getProjection()!;
+
+
+        console.error("leave projection");
         let latLng: mapCommon.LatLng = projection.fromScreenLocation(currentPoint);
+        console.error("leave fromScreenLocation");
 
         result.success({
-          latitude: latLng.latitude,
-          longitude: latLng.longitude
+          "x": latLng.latitude,
+          "y": latLng.longitude
         });
         break;
       // case "style#addImageSource":
@@ -405,11 +447,7 @@ export class MapLibreMapController extends PlatformView implements MethodCallHan
   }
 
   getView(): WrappedBuilder<[Params]> {
-    return new WrappedBuilder(MapOhosMapBuilder)
-  }
-
-  public getController(): map.MapComponentController {
-    return this.mapController!;
+    return new WrappedBuilder(MapOhosMapBuilder);
   }
 
   dispose(): void {

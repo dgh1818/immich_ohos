@@ -14,7 +14,6 @@ export class MapLibreMapFactory extends PlatformViewFactory {
   }
 
   public create(context: common.Context, viewId: number, args: Object): PlatformView {
-
     return new MapLibreMapController(context, viewId, args, this.message);  // 导出自定义的原生视图
   }
 }

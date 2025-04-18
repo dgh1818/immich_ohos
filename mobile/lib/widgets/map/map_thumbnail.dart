@@ -48,13 +48,16 @@ class MapThumbnail extends HookConsumerWidget {
 
     Future<void> onMapCreated(MapLibreMapController mapController) async {
       controller.value = mapController;
-      if (assetMarkerRemoteId != null) {
-        // The iOS impl returns wrong toScreenLocation without the delay
-        Future.delayed(
-          const Duration(milliseconds: 100),
-          () async =>
-              position.value = await mapController.toScreenLocation(centre),
-        );
+      if (defaultTargetPlatform == TargetPlatform.android ||
+          defaultTargetPlatform == TargetPlatform.iOS) {
+        if (assetMarkerRemoteId != null) {
+          // The iOS impl returns wrong toScreenLocation without the delay
+          Future.delayed(
+            const Duration(milliseconds: 100),
+            () async =>
+                position.value = await mapController.toScreenLocation(centre),
+          );
+        }
       }
     }
 
@@ -64,8 +67,16 @@ class MapThumbnail extends HookConsumerWidget {
             defaultTargetPlatform == TargetPlatform.iOS) {
           await controller.value?.addMarkerAtLatLng(centre);
         } else if (defaultTargetPlatform == TargetPlatform.ohos) {
-          await controller.value?.addMarkerAtLatLng_Ohos(
-              centre, "flutter_assets/assets/location-pin.png");
+          if (assetMarkerRemoteId != null) {
+            // The iOS impl returns wrong toScreenLocation without the delay
+            Future.delayed(
+              const Duration(milliseconds: 100),
+              () async => position.value =
+                  await controller.value?.toScreenLocation(centre),
+            );
+          }
+          await controller.value
+              ?.addMarkerAtLatLng_Ohos(centre, "assets/location-pin.png", 0.15);
         }
       }
     }
