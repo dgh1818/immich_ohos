@@ -44,8 +44,8 @@ class MapThumbnail extends HookConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final outLngLat =
-        CoordinateTransformUtil.gcj02ToWgs84(centre.latitude, centre.longitude);
-    final LatLng centreProcessed = LatLng(outLngLat[0], outLngLat[1]);
+        CoordinateTransformUtil.wgs84ToGcj02(centre.longitude, centre.latitude);
+    final LatLng centreProcessed = LatLng(outLngLat[1], outLngLat[0]);
     // final offsettedCentre =
     //     LatLng(centreProcessed.latitude + 0.002, centreProcessed.longitude);
     final offsettedCentre =
@@ -71,7 +71,8 @@ class MapThumbnail extends HookConsumerWidget {
 
     Future<void> onStyleLoaded() async {
       if (defaultTargetPlatform == TargetPlatform.ohos) {
-        position.value = await controller.value?.toScreenLocation(centre);
+        position.value =
+            await controller.value?.toScreenLocation(centreProcessed);
       }
       //The Ohos PetalMap View get
       if (showMarkerPin && controller.value != null) {
@@ -100,7 +101,7 @@ class MapThumbnail extends HookConsumerWidget {
               style.widgetWhen(
                 onData: (style) => MapLibreMap(
                   initialCameraPosition:
-                      CameraPosition(target: offsettedCentre, zoom: zoom),
+                      CameraPosition(target: centreProcessed, zoom: zoom),
                   styleString: style,
                   onMapCreated: onMapCreated,
                   onStyleLoadedCallback: onStyleLoaded,

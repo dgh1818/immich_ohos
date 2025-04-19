@@ -283,10 +283,11 @@ packages:
   coordtransform_dart:
     dependency: "direct main"
     description:
-      name: coordtransform_dart
-      sha256: "9b4c1c2a8dee2b3e2d61f2f33400bea16253c41ed87c6a798ad1743f4ea7bc6f"
-      url: "https://pub.flutter-io.cn"
-    source: hosted
+      path: "."
+      ref: master
+      resolved-ref: ed6220dfff1316507161caa3ba08c258e8f1c7af
+      url: "https://github.com/dgh1818/coordtransform_dart.git"
+    source: git
     version: "1.0.4"
   cross_file:
     dependency: transitive

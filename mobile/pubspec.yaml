@@ -178,6 +178,11 @@ dependency_overrides:
       ref: master
   photo_manager:
     path: ./flutter_photo_manager
+  coordtransform_dart:
+    git:
+      url: https://github.com/dgh1818/coordtransform_dart.git
+      ref: master
+      path: ./
 
   maplibre_gl:
     path: ../../package_flutter/flutter-maplibre-gl-ohos/maplibre_gl
