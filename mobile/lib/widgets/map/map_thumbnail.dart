@@ -11,6 +11,7 @@ import 'package:immich_mobile/widgets/map/positioned_asset_marker_icon.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 import 'package:flutter/foundation.dart';
 import 'package:coordtransform_dart/coordtransform_dart.dart';
+import 'package:immich_mobile/widgets/asset_viewer/exif_sheet/exif_bottom_sheet.dart';
 
 // /// A non-interactive thumbnail of a map in the given coordinates with optional markers
 // ///
@@ -52,7 +53,7 @@ class MapThumbnail extends HookConsumerWidget {
         LatLng(centreProcessed.latitude, centreProcessed.longitude);
     final controller = useRef<MapLibreMapController?>(null);
     final position = useValueNotifier<Point<num>?>(null);
-
+    final reverseLocation = useValueNotifier<String?>(null);
     Future<void> onMapCreated(MapLibreMapController mapController) async {
       controller.value = mapController;
       if (defaultTargetPlatform == TargetPlatform.android ||
@@ -69,10 +70,20 @@ class MapThumbnail extends HookConsumerWidget {
       }
     }
 
+    Future<void> onLocationChanged() async {
+      reverseLocation.value = controller.value?.reverseLocation;
+      ref.read(exifLocationTextProvider.notifier).state =
+          reverseLocation.value!;
+    }
+
     Future<void> onStyleLoaded() async {
       if (defaultTargetPlatform == TargetPlatform.ohos) {
+        controller.value?.addListener(onLocationChanged);
+
         position.value =
             await controller.value?.toScreenLocation(centreProcessed);
+
+        await controller.value?.reverseGeo(centreProcessed);
       }
       //The Ohos PetalMap View get
       if (showMarkerPin && controller.value != null) {

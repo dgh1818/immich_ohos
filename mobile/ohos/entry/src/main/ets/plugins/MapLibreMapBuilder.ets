@@ -66,9 +66,7 @@ export struct MapOhosMap {
   build() {
     Stack() {
       // 调用MapComponent组件初始化地图 const map_view2:MapComponent
-      //
-      //this.map_view.build()
-      MapComponent({ mapOptions: this.mapOptions, mapCallback: this.callback });
+      MapComponent({ mapOptions: this.mapOptions, mapCallback: this.callback }).width('100%').height('100%');
     }
   }
 }

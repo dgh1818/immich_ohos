@@ -14,6 +14,8 @@ import 'package:immich_mobile/entities/exif_info.entity.dart';
 import 'package:immich_mobile/providers/asset.provider.dart';
 import 'package:immich_mobile/utils/selection_handlers.dart';
 
+final exifLocationTextProvider = StateProvider<String>((ref) => " ");
+
 class ExifBottomSheet extends HookConsumerWidget {
   final Asset asset;
 
@@ -29,6 +31,11 @@ class ExifBottomSheet extends HookConsumerWidget {
         (assetWithExif.value ?? asset).getTZAdjustedTimeAndOffset();
     final date = DateFormat.yMMMEd().format(dt);
     final time = DateFormat.jm().format(dt);
+
+    if (!exifInfo!.hasCoordinates) {
+      ref.read(exifLocationTextProvider.notifier).state = '';
+    }
+    final location_text = ref.watch(exifLocationTextProvider);
 
     String formattedDateTime = '$date • $time GMT${timeZone.formatAsOffset()}';
 
@@ -117,6 +124,10 @@ class ExifBottomSheet extends HookConsumerWidget {
                     ],
                   ),
                 ),
+                Padding(
+                    padding:
+                        EdgeInsets.symmetric(horizontal: horizontalPadding),
+                    child: Text(location_text)),
               ],
             );
           }

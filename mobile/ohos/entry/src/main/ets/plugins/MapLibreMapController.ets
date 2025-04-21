@@ -1,4 +1,4 @@
-import { MapComponent, mapCommon, map} from '@kit.MapKit';
+import { MapComponent, mapCommon, map, site} from '@kit.MapKit';
 import { AsyncCallback } from '@kit.BasicServicesKit'
 import { Params } from '@ohos/flutter_ohos/src/main/ets/plugin/platform/PlatformView';
 import { BinaryMessenger,
@@ -51,6 +51,7 @@ export class MapLibreMapController extends PlatformView implements MethodCallHan
   public mapController_link?: SubscribedAbstractProperty<map.MapComponentController>;
   public mapLibreMapController_link?: SubscribedAbstractProperty<MapLibreMapController>;
   projection?: map.Projection;
+  public reverse_location?:String
 
   constructor(context: common.Context, viewId: number, args: ESObject, message: BinaryMessenger) {
     super();
@@ -190,6 +191,37 @@ export class MapLibreMapController extends PlatformView implements MethodCallHan
     };
 
     this.mapController?.setLogoPadding(padding);
+  }
+
+  public async getReverseLocation(reverseInput: site.ReverseGeocodeParams) : Promise<void> {
+    let result = await site.reverseGeocode(reverseInput);
+    let location_result = result.addressDescription;
+    let info = result.addressComponent;
+    if (info == undefined) {
+      return;
+    }
+    let location_output = '';
+
+    this.reverse_location = location_result;
+    console.error("reverse_location" + this.reverse_location);
+    if(info.city?.cityName!=undefined) {
+      location_output += info.city?.cityName + ' ';
+    }
+    if(info.adminLevel3!=undefined) {
+      if(info.adminLevel3!=info.city?.cityName)
+      location_output += info.adminLevel3 + ' ';
+    }
+    if(info.adminLevel4!=undefined) {
+      if(info.adminLevel4!=info.adminLevel3)
+        location_output += info.adminLevel4 + ' ';
+    }
+    if(info.subLocality1!=undefined) {
+      if(info.subLocality1!=info.adminLevel4)
+        location_output += info.subLocality1;
+    }
+    this.methodChannel.invokeMethod("map#onMapReverseLocationCallback", {
+      "result": location_output
+    });
   }
 
   public setCompassViewPosition(position: number): void {
@@ -374,6 +406,22 @@ export class MapLibreMapController extends PlatformView implements MethodCallHan
           "x": currentPoint.positionX as ESObject,
           "y": currentPoint.positionY as ESObject
         });
+        break;
+      case "map#reverseGeo":
+        let reverseLongitude: number = call_args.get('longitude') as number;
+        let reverselatitude: number = call_args.get('latitude') as number;
+        let reverseInput: site.ReverseGeocodeParams = {
+            // 位置经纬度
+          location: {
+            latitude: reverselatitude,
+            longitude: reverseLongitude
+          },
+          language: "zh_CN",
+          radius: 200
+        };
+
+        this.getReverseLocation(reverseInput);
+        result.success({});
         break;
       // case "style#addImageSource":
       //   //let argument:ESObject = call.args as ESObject;
