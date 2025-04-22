@@ -206,10 +206,11 @@ export class MapRepository implements IMapRepository {
       city = data.regeocode.addressComponent.province;
     }
     const district = data.regeocode.addressComponent.district;
-    this.logger.error(`district: ${district}`);
-    const address = data.regeocode.formatted_address;
 
-    return { country: state, state: city, city: district };
+    const address = data.regeocode.formatted_address;
+    this.logger.error(`district: ${address}`);
+
+    return { country: country, state: state, city: city };
   }
 
   async reverseGeocode(point: GeoPoint): Promise<ReverseGeocodeResult | null> {
