@@ -120,8 +120,104 @@ export class MapRepository implements IMapRepository {
     }
   }
 
+  // async reverseGeocodeWithPetalap(point: GeoPoint): Promise<ReverseGeocodeResult> {
+  //   this.logger.debug(`Request: ${point.latitude},${point.longitude}`);
+
+  //   // read key list from env,AMAP_GEOCODE_KEYS, then random select one key
+  //   const keys = process.env.AMAP_GEOCODE_KEYS?.split(',') ?? [];
+  //   const key = keys[Math.floor(Math.random() * keys.length)];
+  //   const url = `https://restapi.amap.com/v3/geocode/regeo`;
+  //   const params = {
+  //     key: key,
+  //     location: `${point.longitude},${point.latitude}`,
+  //     radius: '1000',
+  //     extensions: 'base',
+  //     roadlevel: '0',
+  //   };
+
+  //   const response = await fetch(`${url}?${new URLSearchParams(params)}`);
+  //   if (!response.ok) {
+  //     this.logger.error(`Request failed with status ${response.status}`);
+  //     return { country: null, state: null, city: null, district: null, address: null };
+  //   }
+
+  //   const data = await response.json();
+  //   const country = data.regeocode.addressComponent.country;
+  //   const state = data.regeocode.addressComponent.province;
+  //   let city = data.regeocode.addressComponent.city;
+  //   if (city == '' || city == null) {
+  //     city = data.regeocode.addressComponent.province;
+  //   }
+  //   const district = data.regeocode.addressComponent.district;
+  //   const address = data.regeocode.formatted_address;
+
+  //   return { country, state, city, district, address };
+  // }
+
+  async reverseGeocodeWithAmap(point: GeoPoint): Promise<ReverseGeocodeResult> {
+    this.logger.debug(`Request: ${point.latitude},${point.longitude}`);
+
+    // read key list from env,AMAP_GEOCODE_KEYS, then random select one key
+    const keys = process.env.AMAP_GEOCODE_KEYS?.split(',') ?? [];
+    const key = keys[Math.floor(Math.random() * keys.length)];
+    //const url = `https://locationapi.cloud.huawei.com`;
+    const url = `https://restapi.amap.com/v3/geocode/regeo`;
+
+    // const headers = {
+    //   'Content-Type': 'application/json',
+    //   Authorization: `Bearer ${key}`, // 如果 API 要求 token 放在 Authorization
+    //   // 你可以按实际情况加入更多 header，比如 cookie 或自定义头
+    // };
+
+    // const reverseGeocode = {
+    //   language: 'zh_CN',
+    //   radius: 300,
+    //   returnPoi: '1'
+    // }
+
+    // const body = JSON.stringify({
+    //   needAddress: '1',
+    //   reverseGeocode: reverseGeocode,
+    //   location: `${point.longitude},${point.latitude}`,
+    //   radius: '1000',
+    //   extensions: 'base',
+    //   roadlevel: '0',
+    // });
+
+    const params = {
+      key: key,
+      location: `${point.longitude},${point.latitude}`,
+      radius: '1000',
+      extensions: 'base',
+      roadlevel: '0',
+    };
+
+    const response = await fetch(`${url}?${new URLSearchParams(params)}`);
+    if (!response.ok) {
+      this.logger.error(`Request failed with status ${response.status}`);
+      return { country: null, state: null, city: null };
+    }
+
+    const data = await response.json();
+    const country = data.regeocode.addressComponent.country;
+    const state = data.regeocode.addressComponent.province;
+    let city = data.regeocode.addressComponent.city;
+    if (city == '' || city == null) {
+      city = data.regeocode.addressComponent.province;
+    }
+    const district = data.regeocode.addressComponent.district;
+    const address = data.regeocode.formatted_address;
+
+    return { country: state, state: city, city: district };
+  }
+
   async reverseGeocode(point: GeoPoint): Promise<ReverseGeocodeResult | null> {
     this.logger.debug(`Request: ${point.latitude},${point.longitude}`);
+
+    // if (process.env.GEOCODE_WITH_AMAP === 'true') {
+    //   this.logger.log('Using Amap for reverse geocoding');
+    //   return this.reverseGeocodeWithAmap(point);
+    // }
 
     const response = await this.geodataPlacesRepository
       .createQueryBuilder('geoplaces')

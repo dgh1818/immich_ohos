@@ -15,7 +15,7 @@ import 'package:immich_mobile/services/sync.service.dart';
 import 'package:immich_mobile/services/user.service.dart';
 import 'package:isar/isar.dart';
 import 'package:logging/logging.dart';
-// import 'package:maplibre_gl/maplibre_gl.dart';
+import 'package:maplibre_gl/maplibre_gl.dart';
 import 'package:openapi/api.dart';
 
 final assetServiceProvider = Provider(
