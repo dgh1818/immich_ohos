@@ -206,6 +206,7 @@ export class MapRepository implements IMapRepository {
       city = data.regeocode.addressComponent.province;
     }
     const district = data.regeocode.addressComponent.district;
+    this.logger.error(`district: ${district}`);
     const address = data.regeocode.formatted_address;
 
     return { country: state, state: city, city: district };
@@ -214,10 +215,10 @@ export class MapRepository implements IMapRepository {
   async reverseGeocode(point: GeoPoint): Promise<ReverseGeocodeResult | null> {
     this.logger.debug(`Request: ${point.latitude},${point.longitude}`);
 
-    // if (process.env.GEOCODE_WITH_AMAP === 'true') {
-    //   this.logger.log('Using Amap for reverse geocoding');
-    //   return this.reverseGeocodeWithAmap(point);
-    // }
+    if (process.env.GEOCODE_WITH_AMAP === 'true') {
+      this.logger.log('Using Amap for reverse geocoding');
+      return this.reverseGeocodeWithAmap(point);
+    }
 
     const response = await this.geodataPlacesRepository
       .createQueryBuilder('geoplaces')
