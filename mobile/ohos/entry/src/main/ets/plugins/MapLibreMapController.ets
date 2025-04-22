@@ -212,11 +212,11 @@ export class MapLibreMapController extends PlatformView implements MethodCallHan
       location_output += info.adminLevel3 + ' ';
     }
     if(info.adminLevel4!=undefined) {
-      if(info.adminLevel4!=info.adminLevel3)
+      if(info.adminLevel4!=info.adminLevel3 && info.adminLevel4!=info.city?.cityName)
         location_output += info.adminLevel4 + ' ';
     }
     if(info.subLocality1!=undefined) {
-      if(info.subLocality1!=info.adminLevel4)
+      if(info.subLocality1!=info.adminLevel4 && info.subLocality1!=info.adminLevel3 && info.subLocality1!=info.city?.cityName)
         location_output += info.subLocality1;
     }
     this.methodChannel.invokeMethod("map#onMapReverseLocationCallback", {
