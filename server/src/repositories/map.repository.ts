@@ -138,6 +138,7 @@ export class MapRepository implements IMapRepository {
     const url = `https://siteapi.cloud.huawei.com/mapApi/v1/siteService/reverseGeocode`;
 
     const headers = {
+      method: 'POST',
       'Content-Type': 'application/json',
       Authorization: `Bearer ${key}`, // 如果 API 要求 token 放在 Authorization
       // 你可以按实际情况加入更多 header，比如 cookie 或自定义头
