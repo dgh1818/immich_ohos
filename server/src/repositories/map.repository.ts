@@ -171,6 +171,7 @@ export class MapRepository implements IMapRepository {
     }
     const district = data.Site.AddressDetail.subLocality;
     const address = data.Site.formatAddress;
+    this.logger.log(`address: ${address}`);
 
     //return { country, state, city, district, address };
 
