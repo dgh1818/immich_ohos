@@ -164,13 +164,13 @@ export class MapRepository implements IMapRepository {
     }
 
     const data = await response.json();
-    const country = data.sites[0].AddressDetail.country;
-    const state = data.sites[0].AddressDetail.province;
-    let city = data.sites[0].AddressDetail.city;
+    const country = data.sites[0].address.country;
+    const state = data.sites[0].address.adminArea;
+    let city = data.sites[0].address.city;
     if (city == '' || city == null) {
-      city = data.regeocode.addressComponent.province;
+      city = data.sites[0].address.adminArea;
     }
-    const district = data.sites[0].AddressDetail.subLocality;
+    const district = data.sites[0].address.subLocality;
     const address = data.sites[0].formatAddress;
     this.logger.log(`address: ${address}`);
 
