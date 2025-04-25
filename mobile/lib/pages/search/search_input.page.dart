@@ -12,7 +12,7 @@ import 'package:immich_mobile/widgets/asset_grid/multiselect_grid.dart';
 import 'package:immich_mobile/widgets/search/search_filter/camera_picker.dart';
 import 'package:immich_mobile/widgets/search/search_filter/display_option_picker.dart';
 import 'package:immich_mobile/widgets/search/search_filter/filter_bottom_sheet_scaffold.dart';
-// import 'package:immich_mobile/widgets/search/search_filter/location_picker.dart';
+import 'package:immich_mobile/widgets/search/search_filter/location_picker.dart';
 import 'package:immich_mobile/widgets/search/search_filter/media_type_picker.dart';
 import 'package:immich_mobile/widgets/search/search_filter/people_picker.dart';
 import 'package:immich_mobile/widgets/search/search_filter/search_filter_chip.dart';
@@ -147,67 +147,67 @@ class SearchInputPage extends HookConsumerWidget {
       );
     }
 
-    // showLocationPicker() {
-    //   handleOnSelect(Map<String, String?> value) {
-    //     filter.value = filter.value.copyWith(
-    //       location: SearchLocationFilter(
-    //         country: value['country'],
-    //         city: value['city'],
-    //         state: value['state'],
-    //       ),
-    //     );
+    showLocationPicker() {
+      handleOnSelect(Map<String, String?> value) {
+        filter.value = filter.value.copyWith(
+          location: SearchLocationFilter(
+            country: value['country'],
+            city: value['city'],
+            state: value['state'],
+          ),
+        );
 
-    //     final locationText = <String>[];
-    //     if (value['country'] != null) {
-    //       locationText.add(value['country']!);
-    //     }
+        final locationText = <String>[];
+        if (value['country'] != null) {
+          locationText.add(value['country']!);
+        }
 
-    //     if (value['state'] != null) {
-    //       locationText.add(value['state']!);
-    //     }
+        if (value['state'] != null) {
+          locationText.add(value['state']!);
+        }
 
-    //     if (value['city'] != null) {
-    //       locationText.add(value['city']!);
-    //     }
+        if (value['city'] != null) {
+          locationText.add(value['city']!);
+        }
 
-    //     locationCurrentFilterWidget.value = Text(
-    //       locationText.join(', '),
-    //       style: context.textTheme.labelLarge,
-    //     );
-    //   }
+        locationCurrentFilterWidget.value = Text(
+          locationText.join(', '),
+          style: context.textTheme.labelLarge,
+        );
+      }
 
-    //   handleClear() {
-    //     filter.value = filter.value.copyWith(
-    //       location: SearchLocationFilter(),
-    //     );
+      handleClear() {
+        filter.value = filter.value.copyWith(
+          location: SearchLocationFilter(),
+        );
 
-    //     locationCurrentFilterWidget.value = null;
-    //     search();
-    //   }
+        locationCurrentFilterWidget.value = null;
+        search();
+      }
 
-    //   showFilterBottomSheet(
-    //     context: context,
-    //     isScrollControlled: true,
-    //     isDismissible: false,
-    //     child: FilterBottomSheetScaffold(
-    //       title: 'Select location',
-    //       onSearch: search,
-    //       onClear: handleClear,
-    //       child: Padding(
-    //         padding: const EdgeInsets.symmetric(vertical: 16.0),
-    //         child: Container(
-    //           padding: EdgeInsets.only(
-    //             bottom: MediaQuery.of(context).viewInsets.bottom,
-    //           ),
-    //           child: LocationPicker(
-    //             onSelected: handleOnSelect,
-    //             filter: filter.value.location,
-    //           ),
-    //         ),
-    //       ),
-    //     ),
-    //   );
-    // }
+      showFilterBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        isDismissible: false,
+        child: FilterBottomSheetScaffold(
+          title: 'Select location',
+          onSearch: search,
+          onClear: handleClear,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 16.0),
+            child: Container(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom,
+              ),
+              child: LocationPicker(
+                onSelected: handleOnSelect,
+                filter: filter.value.location,
+              ),
+            ),
+          ),
+        ),
+      );
+    }
 
     showCameraPicker() {
       handleOnSelect(Map<String, String?> value) {
@@ -519,13 +519,13 @@ class SearchInputPage extends HookConsumerWidget {
                     label: 'People',
                     currentFilter: peopleCurrentFilterWidget.value,
                   ),
-                  // SearchFilterChip(
-                  //   icon: Icons.location_pin,
-                  //   onTap: debugPrint("searchfilter"),
-                  //   // onTap: showLocationPicker,
-                  //   label: 'Location',
-                  //   currentFilter: locationCurrentFilterWidget.value,
-                  // ),
+                  SearchFilterChip(
+                    icon: Icons.location_pin,
+                    //onTap: debugPrint("searchfilter"),
+                    onTap: showLocationPicker,
+                    label: 'Location',
+                    currentFilter: locationCurrentFilterWidget.value,
+                  ),
                   SearchFilterChip(
                     icon: Icons.camera_alt_rounded,
                     onTap: showCameraPicker,

@@ -32,8 +32,12 @@ class ExifBottomSheet extends HookConsumerWidget {
     final date = DateFormat.yMMMEd().format(dt);
     final time = DateFormat.jm().format(dt);
 
-    if (!exifInfo!.hasCoordinates) {
+    if (exifInfo == null) {
       ref.read(exifLocationTextProvider.notifier).state = '';
+    } else {
+      if (!exifInfo!.hasCoordinates) {
+        ref.read(exifLocationTextProvider.notifier).state = '';
+      }
     }
     final location_text = ref.watch(exifLocationTextProvider);
 
@@ -105,11 +109,11 @@ class ExifBottomSheet extends HookConsumerWidget {
                           child: ExifLocation(
                             asset: asset,
                             exifInfo: exifInfo,
-                            // editLocation: () => handleEditLocation(
-                            //   ref,
-                            //   context,
-                            //   [assetWithExif.value ?? asset],
-                            // ),
+                            editLocation: () => handleEditLocation(
+                              ref,
+                              context,
+                              [assetWithExif.value ?? asset],
+                            ),
                             formattedDateTime: formattedDateTime,
                           ),
                         ),
@@ -151,11 +155,11 @@ class ExifBottomSheet extends HookConsumerWidget {
                       child: ExifLocation(
                         asset: asset,
                         exifInfo: exifInfo,
-                        // editLocation: () => handleEditLocation(
-                        //   ref,
-                        //   context,
-                        //   [assetWithExif.value ?? asset],
-                        // ),
+                        editLocation: () => handleEditLocation(
+                          ref,
+                          context,
+                          [assetWithExif.value ?? asset],
+                        ),
                         formattedDateTime: formattedDateTime,
                       ),
                     ),

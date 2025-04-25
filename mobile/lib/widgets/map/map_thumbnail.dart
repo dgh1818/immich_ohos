@@ -79,9 +79,10 @@ class MapThumbnail extends HookConsumerWidget {
     Future<void> onStyleLoaded() async {
       if (defaultTargetPlatform == TargetPlatform.ohos) {
         controller.value?.addListener(onLocationChanged);
-
-        position.value =
-            await controller.value?.toScreenLocation(centreProcessed);
+        if (assetMarkerRemoteId != null) {
+          position.value =
+              await controller.value?.toScreenLocation(centreProcessed);
+        }
 
         await controller.value?.reverseGeo(centreProcessed);
       }
@@ -91,10 +92,10 @@ class MapThumbnail extends HookConsumerWidget {
             defaultTargetPlatform == TargetPlatform.iOS) {
           await controller.value?.addMarkerAtLatLng(centre);
         } else if (defaultTargetPlatform == TargetPlatform.ohos) {
-          if (assetMarkerRemoteId != null) {
-            await controller.value?.addMarkerAtLatLng_Ohos(
-                centreProcessed, "assets/location-pin.png", 0.15);
-          }
+          ByteData mapMarkData =
+              await rootBundle.load("assets/location-pin.png");
+          await controller.value
+              ?.addMarkerAtLatLng_Ohos(centreProcessed, mapMarkData, 0.15);
         }
       }
     }

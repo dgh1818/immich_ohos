@@ -170,9 +170,22 @@ export class MapRepository implements IMapRepository {
     if (city == '' || city == null) {
       city = data.sites[0].address.adminArea;
     }
-    const district = data.sites[0].address.subLocality;
-    const address = data.sites[0].formatAddress;
+
+    let district = data.sites[0].address.tertiaryAdminArea;
+    let town = data.sites[0].address.subLocality;
+    let address = data.sites[0].formatAddress;
+
+    if ((district = '')) {
+      district = null;
+    }
+    if ((town = '')) {
+      town = null;
+    }
     this.logger.log(`address: ${address}`);
+    if (state == city) {
+      city = district;
+      district = town;
+    }
 
     //return { country, state, city, district, address };
 

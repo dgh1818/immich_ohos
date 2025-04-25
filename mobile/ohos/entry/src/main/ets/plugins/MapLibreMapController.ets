@@ -17,6 +17,18 @@ import { MapLibreMapOptionsSink } from './MapLibreMapOptionsSink'
 import { image } from '@kit.ImageKit';
 import { BusinessError } from '@kit.BasicServicesKit';
 import { resourceManager } from '@kit.LocalizationKit';
+import { ArrayList } from '@kit.ArkTS';
+import { display } from '@kit.ArkUI';
+import { fileIo as fs } from '@kit.CoreFileKit';
+class Feature {
+  fatureString:string;
+  featureObj:ESObject;
+
+  constructor(fatureString:string, featureObj:ESObject) {
+    this.fatureString = fatureString;
+    this.featureObj = featureObj;
+  }
+}
 
 @Observed      //相当于widgetView
 export class MapLibreMapController extends PlatformView implements MethodCallHandler {
@@ -52,6 +64,8 @@ export class MapLibreMapController extends PlatformView implements MethodCallHan
   public mapLibreMapController_link?: SubscribedAbstractProperty<MapLibreMapController>;
   projection?: map.Projection;
   public reverse_location?:String
+  addedFeature?:ArrayList<Feature>
+  styleImage?:Map<string,image.ImageSource>
 
   constructor(context: common.Context, viewId: number, args: ESObject, message: BinaryMessenger) {
     super();
@@ -264,9 +278,12 @@ export class MapLibreMapController extends PlatformView implements MethodCallHan
           console.error("bearing == undefined")
           bearing = 0;
         }
-        let latitude = target[0]
-        let longitude = target[1]
-        if (target != null && zoom != null && tilt != null) {
+
+        if (target != undefined && zoom != undefined && tilt != undefined) {
+          let latitude = target[0]
+          let longitude = target[1]
+          console.error('latitude='+latitude+' longitude='+longitude);
+          console.error('tilt='+tilt);
           let cameraPosition: mapCommon.CameraPosition = {
             target: {
               latitude: latitude,
@@ -279,6 +296,7 @@ export class MapLibreMapController extends PlatformView implements MethodCallHan
 
           this.cameraUpdate = map.newCameraPosition(cameraPosition);
           this.mapController?.moveCamera(this.cameraUpdate);
+
         }
 
         if (this.args_input.get("dragEnabled") != undefined) {
@@ -286,9 +304,68 @@ export class MapLibreMapController extends PlatformView implements MethodCallHan
           this.dragEnabled = enabled;
         }
       }
+      this.mapController.on("mapClick", (position) => {
+        this.handleMapTap(position);
+        console.info("mapClick", `on-mapClick position = ${position.longitude}`);
+      });
     }
     console.info("Map Init Finished");
   }
+
+  public handleMapTap(position: mapCommon.LatLng) {
+    // Get the CGPoint where the user tapped.
+    //mapController
+    let coordinate: mapCommon.MapPoint = this.mapController!.getProjection().toScreenLocation(position);
+
+    this.methodChannel.invokeMethod("map#onMapClick", {
+      "x": coordinate.positionX,
+      "y": coordinate.positionY,
+      "lng": position.longitude,
+      "lat": position.latitude,
+    });
+  }
+
+  //   let result = firstFeatureOnLayers(at: point)
+  //   // if let feature = result.feature {
+  //   //   channel?.invokeMethod("feature#onTap", arguments: [
+  //   //   "id": feature.identifier,
+  //   //   "x": point.x,
+  //   //   "y": point.y,
+  //   //   "lng": coordinate.longitude,
+  //   //   "lat": coordinate.latitude,
+  //   //   "layerId": result.layerId,
+  //   //   ])
+  //   // } else {
+  //   //   channel?.invokeMethod("map#onMapClick", arguments: [
+  //   //   "x": point.x,
+  //   //   "y": point.y,
+  //   //   "lng": coordinate.longitude,
+  //   //   "lat": coordinate.latitude,
+  //   //   ])
+  //   // }
+  // }
+
+//   firstFeatureOnLayers(at:mapCommon.MapPoint):[string,string] {
+//     this.mapController.
+//   guard let style = mapView.style else { return (nil, nil) }
+//
+// // get layers in order (interactiveFeatureLayerIds is unordered)
+// let clickableLayers = style.layers.filter { layer in
+// interactiveFeatureLayerIds.contains(layer.identifier)
+// }
+//
+// for layer in clickableLayers.reversed() {
+//   let features = mapView.visibleFeatures(
+//     at: at,
+//   styleLayerIdentifiers: [layer.identifier]
+//   )
+//   if let feature = features.first {
+//     return (feature, layer.identifier)
+//   }
+// }
+// return (nil, nil)
+// }
+
 
 
   onMethodCall(call: MethodCall, result: MethodResult): void {
@@ -324,7 +401,7 @@ export class MapLibreMapController extends PlatformView implements MethodCallHan
         let mark_longitude: number = call_args.get('longitude') as number;
         let mark_latitude: number = call_args.get('latitude') as number;
         let factor: number = call_args.get('iconSize') as number;
-        let file = call_args.get('path') as string;
+        //let file = call_args.get('path') as string;
         let bytes = call_args.get('bytes') as Uint8Array;
         let image_data: image.ImageSource = image.createImageSource(bytes.buffer);
         let imageInfo = image_data.getImageInfoSync(0);
@@ -341,7 +418,7 @@ export class MapLibreMapController extends PlatformView implements MethodCallHan
         // 创建pixelMap
         this.pixelMap  = image_data.createPixelMapSync(decodingOptions);
 
-        if (mark_longitude == undefined || mark_latitude == undefined || file == undefined) {
+        if (mark_longitude == undefined || mark_latitude == undefined) {
           console.error("marker undefined")
         }
 
@@ -423,10 +500,29 @@ export class MapLibreMapController extends PlatformView implements MethodCallHan
         this.getReverseLocation(reverseInput);
         result.success({});
         break;
-      // case "style#addImageSource":
+      case "camera#animate":
+        let targetInput:ArrayList<ESObject> = call_args.get("cameraUpdate") as ArrayList<ESObject>;
+        let displayClass: display.Display | null = null;
+        displayClass=display.getDefaultDisplaySync();
+
+        let cameraUpdate:map.CameraUpdate|undefined = Convert.parseCameraUpdate(targetInput,this,displayClass.densityDPI);
+        if(cameraUpdate==undefined) {
+          console.error("cameraUpdate is undefined")
+          return result.success(false);
+        }
+
+        this.mapController?.animateCamera(cameraUpdate);
+        return result.success({});
+        break;
+      case "style#addImage":
       //   //let argument:ESObject = call.args as ESObject;
       //   let imageSourceId = call.args["imageSourceId"] as String
-      //   let bytes = call.args["bytes"] as Uint8Array
+        let styleBytes = call_args.get("bytes") as Uint8Array
+        let styleName = call_args.get("name") as string
+        let styleImageData: image.ImageSource = image.createImageSource(styleBytes.buffer);
+        this.styleImage!.set(styleName,styleImageData);
+        return result.success({});
+        break;
       //   //bytes.buffer
       //   let image_data: image.ImageSource = image.createImageSource(bytes.buffer);
       //   let width:number

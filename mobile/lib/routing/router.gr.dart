@@ -208,17 +208,17 @@ abstract class _$AppRouter extends RootStackRouter {
         child: const LoginPage(),
       );
     },
-    // MapLocationPickerRoute.name: (routeData) {
-    //   final args = routeData.argsAs<MapLocationPickerRouteArgs>(
-    //       orElse: () => const MapLocationPickerRouteArgs());
-    //   return AutoRoutePage<LatLng?>(
-    //     routeData: routeData,
-    //     child: MapLocationPickerPage(
-    //       key: args.key,
-    //       initialLatLng: args.initialLatLng,
-    //     ),
-    //   );
-    // },
+    MapLocationPickerRoute.name: (routeData) {
+      final args = routeData.argsAs<MapLocationPickerRouteArgs>(
+          orElse: () => const MapLocationPickerRouteArgs());
+      return AutoRoutePage<LatLng?>(
+        routeData: routeData,
+        child: MapLocationPickerPage(
+          key: args.key,
+          initialLatLng: args.initialLatLng,
+        ),
+      );
+    },
     // MapRoute.name: (routeData) {
     //   return AutoRoutePage<dynamic>(
     //     routeData: routeData,
@@ -961,41 +961,41 @@ class LoginRoute extends PageRouteInfo<void> {
 
 /// generated route for
 /// [MapLocationPickerPage]
-// class MapLocationPickerRoute extends PageRouteInfo<MapLocationPickerRouteArgs> {
-//   MapLocationPickerRoute({
-//     Key? key,
-//     //LatLng initialLatLng = const LatLng(0, 0),
-//     List<PageRouteInfo>? children,
-//   }) : super(
-//           // MapLocationPickerRoute.name,
-//           // args: MapLocationPickerRouteArgs(
-//           //   key: key,
-//           //   initialLatLng: initialLatLng,
-//           // ),
-//           initialChildren: children,
-//         );
+class MapLocationPickerRoute extends PageRouteInfo<MapLocationPickerRouteArgs> {
+  MapLocationPickerRoute({
+    Key? key,
+    LatLng initialLatLng = const LatLng(0, 0),
+    List<PageRouteInfo>? children,
+  }) : super(
+          MapLocationPickerRoute.name,
+          args: MapLocationPickerRouteArgs(
+            key: key,
+            initialLatLng: initialLatLng,
+          ),
+          initialChildren: children,
+        );
 
-//   static const String name = 'MapLocationPickerRoute';
+  static const String name = 'MapLocationPickerRoute';
 
-//   static const PageInfo<MapLocationPickerRouteArgs> page =
-//       PageInfo<MapLocationPickerRouteArgs>(name);
-// }
+  static const PageInfo<MapLocationPickerRouteArgs> page =
+      PageInfo<MapLocationPickerRouteArgs>(name);
+}
 
-// class MapLocationPickerRouteArgs {
-//   const MapLocationPickerRouteArgs({
-//     this.key,
-//     //this.initialLatLng = const LatLng(0, 0),
-//   });
+class MapLocationPickerRouteArgs {
+  const MapLocationPickerRouteArgs({
+    this.key,
+    this.initialLatLng = const LatLng(0, 0),
+  });
 
-//   final Key? key;
+  final Key? key;
 
-//   //final LatLng initialLatLng;
+  final LatLng initialLatLng;
 
-//   @override
-//   String toString() {
-//     return 'MapLocationPickerRouteArgs{key: $key, initialLatLng: $initialLatLng}';
-//   }
-// }
+  @override
+  String toString() {
+    return 'MapLocationPickerRouteArgs{key: $key, initialLatLng: $initialLatLng}';
+  }
+}
 
 /// generated route for
 /// [MapPage]

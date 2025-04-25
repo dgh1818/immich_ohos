@@ -8,14 +8,14 @@ import 'package:immich_mobile/entities/exif_info.entity.dart';
 class ExifLocation extends StatelessWidget {
   final Asset asset;
   final ExifInfo? exifInfo;
-  //final void Function() editLocation;
+  final void Function() editLocation;
   final String formattedDateTime;
 
   const ExifLocation({
     super.key,
     required this.asset,
     required this.exifInfo,
-    //required this.editLocation,
+    required this.editLocation,
     required this.formattedDateTime,
   });
 
@@ -36,7 +36,7 @@ class ExifLocation extends StatelessWidget {
                   color: context.primaryColor,
                 ),
               ).tr(),
-              //onTap: editLocation,
+              onTap: editLocation,
             )
           : const SizedBox.shrink();
     }
@@ -57,12 +57,12 @@ class ExifLocation extends StatelessWidget {
                     fontWeight: FontWeight.w600,
                   ),
                 ).tr(),
-                // if (asset.isRemote)
-                //   IconButton(
-                //     //onPressed: editLocation,
-                //     icon: const Icon(Icons.edit_outlined),
-                //     iconSize: 20,
-                //   ),
+                if (asset.isRemote)
+                  IconButton(
+                    onPressed: editLocation,
+                    icon: const Icon(Icons.edit_outlined),
+                    iconSize: 20,
+                  ),
               ],
             ),
             ExifMap(

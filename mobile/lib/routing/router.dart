@@ -42,7 +42,7 @@ import 'package:immich_mobile/pages/search/all_people.page.dart';
 import 'package:immich_mobile/pages/search/all_places.page.dart';
 import 'package:immich_mobile/pages/search/all_videos.page.dart';
 // import 'package:immich_mobile/pages/search/map/map.page.dart';
-// import 'package:immich_mobile/pages/search/map/map_location_picker.page.dart';
+import 'package:immich_mobile/pages/search/map/map_location_picker.page.dart';
 import 'package:immich_mobile/pages/search/person_result.page.dart';
 import 'package:immich_mobile/pages/search/recently_added.page.dart';
 import 'package:immich_mobile/pages/search/search.page.dart';
@@ -61,7 +61,7 @@ import 'package:immich_mobile/routing/duplicate_guard.dart';
 import 'package:immich_mobile/services/api.service.dart';
 import 'package:immich_mobile/widgets/asset_grid/asset_grid_data_structure.dart';
 import 'package:isar/isar.dart';
-// import 'package:maplibre_gl/maplibre_gl.dart';
+import 'package:maplibre_gl/maplibre_gl.dart';
 import 'package:photo_manager/photo_manager.dart' hide LatLng;
 
 part 'router.gr.dart';
@@ -211,10 +211,10 @@ class AppRouter extends _$AppRouter {
       transitionsBuilder: TransitionsBuilders.slideLeft,
       durationInMilliseconds: 200,
     ),
-    // CustomRoute(
-    //   page: MapLocationPickerRoute.page,
-    //   guards: [_authGuard, _duplicateGuard],
-    // ),
+    CustomRoute(
+      page: MapLocationPickerRoute.page,
+      guards: [_authGuard, _duplicateGuard],
+    ),
     AutoRoute(
       page: BackupOptionsRoute.page,
       guards: [_authGuard, _duplicateGuard],

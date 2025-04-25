@@ -16,8 +16,6 @@ export interface ReverseGeocodeResult {
   country: string | null;
   state: string | null;
   city: string | null;
-  // address: string | null;
-  // district: string | null;
 }
 
 export interface MapMarker extends ReverseGeocodeResult {
