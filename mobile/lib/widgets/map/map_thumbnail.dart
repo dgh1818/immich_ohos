@@ -28,6 +28,7 @@ class MapThumbnail extends HookConsumerWidget {
   final double width;
   final ThemeMode? themeMode;
   final bool showAttribution;
+  final bool isZoomControlsEnabled;
 
   const MapThumbnail({
     super.key,
@@ -40,6 +41,7 @@ class MapThumbnail extends HookConsumerWidget {
     this.showMarkerPin = false,
     this.themeMode,
     this.showAttribution = true,
+    this.isZoomControlsEnabled = true,
   });
 
   @override
@@ -120,7 +122,7 @@ class MapThumbnail extends HookConsumerWidget {
                   onMapClick: onTap,
                   doubleClickZoomEnabled: false,
                   dragEnabled: false,
-                  zoomGesturesEnabled: false,
+                  zoomGesturesEnabled: isZoomControlsEnabled,
                   tiltGesturesEnabled: false,
                   scrollGesturesEnabled: false,
                   rotateGesturesEnabled: false,

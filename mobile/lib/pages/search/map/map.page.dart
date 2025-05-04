@@ -29,13 +29,13 @@
 // import 'package:immich_mobile/utils/debounce.dart';
 // import 'package:maplibre_gl/maplibre_gl.dart';
 
-// @RoutePage()
-// class MapPage extends HookConsumerWidget {
-//   const MapPage({super.key});
+// // @RoutePage()
+// // class MapPage extends HookConsumerWidget {
+// //   const MapPage({super.key});
 
 //   @override
 //   Widget build(BuildContext context, WidgetRef ref) {
-//     final mapController = useRef<MaplibreMapController?>(null);
+//     final mapController = useRef<MapLibreMapController?>(null);
 //     final markers = useRef<List<MapMarker>>([]);
 //     final markersInBounds = useRef<List<MapMarker>>([]);
 //     final bottomSheetStreamController = useStreamController<MapEvent>();

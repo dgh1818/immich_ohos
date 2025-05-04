@@ -3,11 +3,6 @@ import 'package:immich_mobile/models/search/search_curated_content.model.dart';
 import 'package:immich_mobile/widgets/search/search_map_thumbnail.dart';
 import 'package:immich_mobile/widgets/search/thumbnail_with_info.dart';
 import 'package:immich_mobile/entities/store.entity.dart';
-// import 'package:maplibre_gl/maplibre_gl.dart';
-
-// class CuratedPlacesRow extends CuratedRow {
-//   final bool isMapEnabled;
-
 class CuratedPlacesRow extends StatelessWidget {
   const CuratedPlacesRow({
     super.key,
@@ -41,10 +36,10 @@ class CuratedPlacesRow extends StatelessWidget {
         itemBuilder: (context, index) {
           // Injecting Map thumbnail as the first element
           if (isMapEnabled && index == 0) {
-            // return SizedBox.square(
-            //   dimension: imageSize,
-            //   child: SearchMapThumbnail(size: imageSize),
-            // );
+            return SizedBox.square(
+              dimension: imageSize,
+              child: SearchMapThumbnail(size: imageSize),
+            );
           }
           final actualIndex = index - actualContentIndex;
           final object = content[actualIndex];

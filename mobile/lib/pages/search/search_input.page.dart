@@ -18,6 +18,8 @@ import 'package:immich_mobile/widgets/search/search_filter/people_picker.dart';
 import 'package:immich_mobile/widgets/search/search_filter/search_filter_chip.dart';
 import 'package:immich_mobile/widgets/search/search_filter/search_filter_utils.dart';
 import 'package:openapi/api.dart';
+import 'dart:ui' as ui;
+import 'package:immich_mobile/main.dart';
 
 @RoutePage()
 class SearchInputPage extends HookConsumerWidget {
@@ -57,6 +59,22 @@ class SearchInputPage extends HookConsumerWidget {
     final currentPage = useState(1);
     final searchProvider = ref.watch(paginatedSearchProvider);
     final searchResultCount = useState(0);
+
+    final routeAware = useMemoized(() => _MyRouteAware());
+
+    useEffect(() {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+
+        final modalRoute = ModalRoute.of(context);
+        if (modalRoute is PageRoute) {
+          routeObserver.subscribe(routeAware, modalRoute);
+        }
+      });
+
+      return () {
+        routeObserver.unsubscribe(routeAware);
+      };
+    }, [context]);
 
     search() async {
       if (prefilter == null && filter.value == previousFilter.value) return;
@@ -559,4 +577,15 @@ class SearchInputPage extends HookConsumerWidget {
       ),
     );
   }
+}
+
+class _MyRouteAware extends RouteAware {
+  @override
+  void didPopNext() {
+    super.didPopNext();
+    ui.SetHdr.setHdrMode(hdr:0, is_image:true);
+  }
+  // void didPush() { }
+  // void didPop() { }
+  // void didPushNext() { }
 }

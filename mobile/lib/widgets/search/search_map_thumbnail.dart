@@ -31,6 +31,7 @@ class SearchMapThumbnail extends StatelessWidget {
           height: size,
           width: size,
           showAttribution: false,
+          isZoomControlsEnabled: false,
         ),
       ),
     );
