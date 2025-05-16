@@ -173,7 +173,7 @@ dependency_overrides:
       path: ./
   chewie:
     git:
-      url: https://gitee.com/du_guang/chew_ohos.git
+      url: https://gitcode.com/openharmony-sig/fluttertpc_chewie.git
       path: './'
       ref: master
   photo_manager:

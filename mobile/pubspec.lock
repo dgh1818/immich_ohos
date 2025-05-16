@@ -211,10 +211,10 @@ packages:
     description:
       path: "."
       ref: master
-      resolved-ref: "06f5876edb6399c66fc289d4f6c038a160b931de"
-      url: "https://gitee.com/du_guang/chew_ohos.git"
+      resolved-ref: "1bf62fd6513c09af18d2c4166dfeb48ab4f95c3c"
+      url: "https://gitcode.com/openharmony-sig/fluttertpc_chewie.git"
     source: git
-    version: "1.8.7"
+    version: "1.8.5"
   ci:
     dependency: transitive
     description:

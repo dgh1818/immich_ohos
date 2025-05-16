@@ -20,13 +20,34 @@ import { resourceManager } from '@kit.LocalizationKit';
 import { ArrayList } from '@kit.ArkTS';
 import { display } from '@kit.ArkUI';
 import { fileIo as fs } from '@kit.CoreFileKit';
+import {SourcePropertyConverter} from './SourcePropertyConverter'
+
 class Feature {
-  fatureString:string;
+  fetureString:string;
   featureObj:ESObject;
 
-  constructor(fatureString:string, featureObj:ESObject) {
-    this.fatureString = fatureString;
+  constructor(fetureString:string, featureObj:ESObject) {
+    this.fetureString = fetureString;
     this.featureObj = featureObj;
+  }
+}
+
+class Layer {
+  layerId?:number;
+  public collection?:ArrayList<map.BaseOverlay>;
+
+  constructor(layerId?:number, addedFeature?:ArrayList<map.BaseOverlay>) {
+    this.layerId = layerId;
+    this.collection = addedFeature;
+  }
+
+  Layer(layerId?:number,) {
+    this.layerId = layerId;
+  }
+
+  public addFeature(fetureString:string,featureObj:map.BaseOverlay) :number{
+    this.collection?.add(featureObj);
+    return this.collection!.length;
   }
 }
 
@@ -64,8 +85,10 @@ export class MapLibreMapController extends PlatformView implements MethodCallHan
   public mapLibreMapController_link?: SubscribedAbstractProperty<MapLibreMapController>;
   projection?: map.Projection;
   public reverse_location?:String
-  addedFeature?:ArrayList<Feature>
+  addedFeature?:ArrayList<map.BaseOverlay>
   styleImage?:Map<string,image.ImageSource>
+  stylelayer?:Map<string,ArrayList<map.BaseOverlay>>;
+  sourceCommon?:Map<string,ESObject>;
 
   constructor(context: common.Context, viewId: number, args: ESObject, message: BinaryMessenger) {
     super();
@@ -159,6 +182,7 @@ export class MapLibreMapController extends PlatformView implements MethodCallHan
 
   public setZoomGesturesEnabled(zoomGesturesEnabled: boolean): void {
     this.mapController?.setZoomGesturesEnabled(zoomGesturesEnabled);
+    this.mapController?.setZoomControlsEnabled(zoomGesturesEnabled);
   }
 
   public setMyLocationEnabled(myLocationEnabled: boolean): void {
@@ -325,6 +349,44 @@ export class MapLibreMapController extends PlatformView implements MethodCallHan
     });
   }
 
+  public addSource(sourceId: string, properties: Map<String,ESObject>) {
+    let sourceType = properties.get("type") as String
+    if(sourceType!=undefined) {
+
+      //var source: MLNSource?
+
+        switch (sourceType) {
+      // case "vector":
+      // source = SourcePropertyConverter.buildVectorTileSource(
+      //   identifier: sourceId,
+      // properties: properties
+      // )
+      // case "raster":
+      // source = SourcePropertyConverter.buildRasterTileSource(
+      //   identifier: sourceId,
+      // properties: properties
+      // )
+      // case "raster-dem":
+      // source = SourcePropertyConverter.buildRasterDemSource(
+      //   identifier: sourceId,
+      // properties: properties
+      // )
+      // case "image":
+      // source = SourcePropertyConverter.buildImageSource(
+      //   identifier: sourceId,
+      // properties: properties
+      // )
+      case "geojson":
+        this.sourceCommon?.set(sourceId,properties)
+
+      default:
+      // unsupported source type
+
+    }
+
+  }
+}
+
   //   let result = firstFeatureOnLayers(at: point)
   //   // if let feature = result.feature {
   //   //   channel?.invokeMethod("feature#onTap", arguments: [
@@ -443,9 +505,13 @@ export class MapLibreMapController extends PlatformView implements MethodCallHan
         };
 
         console.error("enter controller marker");
-        this.mapController?.addMarker(markerOptions);
-        console.error("leave controller marker");
-        result.success(true);
+        this.mapController?.addMarker(markerOptions)
+             .then((result: map.Marker) => {
+               this.addedFeature?.add(result);
+             })
+        // let result:map.Marker|undefined = this.mapController?.addMarker(markerOptions);
+        // console.error("leave controller marker");
+        // result.success(true);
         break;
 
       case "map#getVisibleRegion":
@@ -523,6 +589,70 @@ export class MapLibreMapController extends PlatformView implements MethodCallHan
         this.styleImage!.set(styleName,styleImageData);
         return result.success({});
         break;
+      case "style#getLayerIds":
+        let layerIds:ArrayList<string>;
+        this.stylelayer!.forEach((value:ArrayList<map.BaseOverlay>,key:string) => {
+          layerIds.add(key);
+          console.error("list" + key);
+        })
+
+        result.success({"layers": layerIds!});
+        break;
+      case "style#getSourceIds":
+        let sourceIds:ArrayList<string>;
+        this.styleImage!.forEach((value:image.ImageSource,key:string) => {
+          sourceIds.add(key);
+          console.error("Imagelist:" + key);
+        })
+
+        result.success({"sources": sourceIds!});
+        break;
+      case "style#removeLayer":
+
+        let removelayerId = call_args.get("layerId") as string
+        if(removelayerId==undefined) {
+          result.notImplemented();
+        }
+        if(!this.stylelayer?.has(removelayerId)) {
+          result.notImplemented();
+          return;
+        }
+        this.stylelayer.get(removelayerId)!.forEach((value:map.BaseOverlay,index:number) => {
+          value.remove();
+          console.error("removed layer:" + removelayerId + ':' + index);
+        })
+
+        //let layer:ArrayList<map.BaseOverlay> = this.stylelayer?.get(removelayerId)!
+        this.stylelayer.delete(removelayerId);
+        return result.success({});
+      case "style#removeSource":
+
+        let removeSourceId = call_args.get("sourceId") as string
+        if(removeSourceId==undefined) {
+          result.notImplemented();
+        }
+        if(!this.styleImage?.has(removeSourceId)) {
+          result.notImplemented();
+          return;
+        }
+        //let layer:ArrayList<map.BaseOverlay> = this.stylelayer?.get(removelayerId)!
+        this.styleImage.delete(removeSourceId);
+        return result.success({});
+      case "style#addSource":
+        let id:string = call_args.get("sourceId") as string;
+        let properties:Map<string, ESObject> = call_args.get("properties") as Map<string, ESObject>;
+        SourcePropertyConverter.addSource(id, properties, this);
+        result.success(null);
+        //this.mapController.add
+        break;
+
+    // result(nil)
+    // return
+    //
+    // interactiveFeatureLayerIds.remove(layerId)
+    // mapView.style?.removeLayer(layer)
+    // result(nil)
+
       //   //bytes.buffer
       //   let image_data: image.ImageSource = image.createImageSource(bytes.buffer);
       //   let width:number
