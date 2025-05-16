@@ -473,7 +473,7 @@ class GalleryViewerPage extends HookConsumerWidget {
                     showStack: showStack,
                     stackIndex: stackIndex.value,
                     asset: asset,
-                    assetIndex: currentIndex.value,
+                    assetIndex: currentIndex,
                     showVideoPlayerControls: !asset.isImage && !isMotionPhoto,
                   ),
                 ],

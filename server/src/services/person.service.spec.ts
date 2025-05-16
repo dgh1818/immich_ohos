@@ -115,9 +115,13 @@ describe(PersonService.name, () => {
 
   describe('getAll', () => {
     it('should get all hidden and visible people with thumbnails', async () => {
-      personMock.getAllForUser.mockResolvedValue([personStub.withName, personStub.hidden]);
+      personMock.getAllForUser.mockResolvedValue({
+        items: [personStub.withName, personStub.hidden],
+        hasNextPage: false,
+      });
       personMock.getNumberOfPeople.mockResolvedValue({ total: 2, hidden: 1 });
-      await expect(sut.getAll(authStub.admin, { withHidden: true })).resolves.toEqual({
+      await expect(sut.getAll(authStub.admin, { withHidden: true, page: 1, size: 10 })).resolves.toEqual({
+        hasNextPage: false,
         total: 2,
         hidden: 1,
         people: [
@@ -132,7 +136,7 @@ describe(PersonService.name, () => {
           },
         ],
       });
-      expect(personMock.getAllForUser).toHaveBeenCalledWith(authStub.admin.user.id, {
+      expect(personMock.getAllForUser).toHaveBeenCalledWith({ skip: 0, take: 10 }, authStub.admin.user.id, {
         minimumFaceCount: 3,
         withHidden: true,
       });
@@ -958,6 +962,7 @@ describe(PersonService.name, () => {
             width: 274,
             height: 274,
           },
+          processInvalidImages: false,
         },
       );
       expect(personMock.update).toHaveBeenCalledWith({
@@ -987,6 +992,7 @@ describe(PersonService.name, () => {
             width: 510,
             height: 510,
           },
+          processInvalidImages: false,
         },
       );
     });
@@ -1012,6 +1018,7 @@ describe(PersonService.name, () => {
             width: 408,
             height: 408,
           },
+          processInvalidImages: false,
         },
       );
     });
@@ -1038,6 +1045,7 @@ describe(PersonService.name, () => {
             width: 588,
             height: 588,
           },
+          processInvalidImages: false,
         },
       );
     });
