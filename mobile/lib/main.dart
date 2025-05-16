@@ -37,6 +37,7 @@ import 'package:isar/isar.dart';
 import 'package:logging/logging.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:isar_flutter_libs/isar_flutter_libs.dart';
+
 final RouteObserver<ModalRoute> routeObserver = RouteObserver<ModalRoute>();
 
 void main() async {
@@ -105,7 +106,7 @@ Future<Isar> loadDb() async {
       IOSDeviceAssetSchema,
     ],
     directory: dir.path,
-    maxSizeMiB: 256,
+    maxSizeMiB: 1024,
   );
   Store.init(db);
   return db;
@@ -202,11 +203,10 @@ class ImmichAppState extends ConsumerState<ImmichApp>
         theme: immichLightTheme,
         routeInformationParser: router.defaultRouteParser(),
         routerDelegate: router.delegate(
-          navigatorObservers: () => [
-            TabNavigationObserver(ref: ref),
-            routeObserver,
-          ]
-        ),
+            navigatorObservers: () => [
+                  TabNavigationObserver(ref: ref),
+                  routeObserver,
+                ]),
       ),
     );
   }

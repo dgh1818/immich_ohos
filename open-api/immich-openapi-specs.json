@@ -7007,7 +7007,7 @@
   "info": {
     "title": "Immich",
     "description": "Immich API",
-    "version": "1.108.0",
+    "version": "1.109.0",
     "contact": {}
   },
   "tags": [],
@@ -11030,6 +11030,9 @@
           "mobileRedirectUri": {
             "type": "string"
           },
+          "profileSigningAlgorithm": {
+            "type": "string"
+          },
           "scope": {
             "type": "string"
           },
@@ -11054,6 +11057,7 @@
           "issuerUrl",
           "mobileOverrideEnabled",
           "mobileRedirectUri",
+          "profileSigningAlgorithm",
           "scope",
           "signingAlgorithm",
           "storageLabelClaim",

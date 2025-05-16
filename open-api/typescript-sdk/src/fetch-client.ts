@@ -1,6 +1,6 @@
 /**
  * Immich
- * 1.108.0
+ * 1.109.0
  * DO NOT MODIFY - This file has been generated using oazapfts.
  * See https://www.npmjs.com/package/oazapfts
  */
@@ -1063,6 +1063,7 @@ export type SystemConfigOAuthDto = {
     issuerUrl: string;
     mobileOverrideEnabled: boolean;
     mobileRedirectUri: string;
+    profileSigningAlgorithm: string;
     scope: string;
     signingAlgorithm: string;
     storageLabelClaim: string;
