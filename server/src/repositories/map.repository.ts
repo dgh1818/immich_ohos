@@ -186,6 +186,8 @@ export class MapRepository implements IMapRepository {
       town = null;
     }
     this.logger.log(`address: ${address}`);
+    this.logger.log(`tertiaryAdminArea: ${district}`);
+    this.logger.log(`subLocality: ${town}`);
     if (state == city) {
       city = town;
       //district = town;
