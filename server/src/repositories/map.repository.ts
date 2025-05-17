@@ -179,17 +179,17 @@ export class MapRepository implements IMapRepository {
     let town = data.sites[0].address.subLocality;
     let address = data.sites[0].formatAddress;
 
-    if ((district = '')) {
+    if (district == '') {
       district = null;
     }
-    if ((town = '')) {
+    if (town == '') {
       town = null;
     }
     this.logger.log(`address: ${address}`);
     this.logger.log(`tertiaryAdminArea: ${district}`);
     this.logger.log(`subLocality: ${town}`);
     if (state == city) {
-      city = town;
+      city = district;
       //district = town;
     }
 
