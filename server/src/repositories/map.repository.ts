@@ -185,12 +185,15 @@ export class MapRepository implements IMapRepository {
     if (town == '') {
       town = null;
     }
+    this.logger.log(`country: ${country}`);
     this.logger.log(`address: ${address}`);
     this.logger.log(`tertiaryAdminArea: ${district}`);
     this.logger.log(`subLocality: ${town}`);
-    if (state == city) {
-      city = district;
-      //district = town;
+    if (country == '中国') {
+      if (state == city) {
+        city = district;
+        //district = town;
+      }
     }
 
     //return { country, state, city, district, address };
