@@ -187,8 +187,8 @@ export class MapRepository implements IMapRepository {
     }
     this.logger.log(`address: ${address}`);
     if (state == city) {
-      city = district;
-      district = town;
+      city = town;
+      //district = town;
     }
 
     //return { country, state, city, district, address };
