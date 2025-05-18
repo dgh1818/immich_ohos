@@ -1,6 +1,6 @@
 /**
  * Immich
- * 1.110.0
+ * 1.111.0
  * DO NOT MODIFY - This file has been generated using oazapfts.
  * See https://www.npmjs.com/package/oazapfts
  */
@@ -552,6 +552,11 @@ export type MapMarkerResponseDto = {
     id: string;
     lat: number;
     lon: number;
+    state: string | null;
+};
+export type MapReverseGeocodeResponseDto = {
+    city: string | null;
+    country: string | null;
     state: string | null;
 };
 export type OnThisDayDto = {
@@ -1987,6 +1992,20 @@ export function getMapMarkers({ fileCreatedAfter, fileCreatedBefore, isArchived,
         isFavorite,
         withPartners,
         withSharedAlbums
+    }))}`, {
+        ...opts
+    }));
+}
+export function reverseGeocode({ lat, lon }: {
+    lat: number;
+    lon: number;
+}, opts?: Oazapfts.RequestOpts) {
+    return oazapfts.ok(oazapfts.fetchJson<{
+        status: 200;
+        data: MapReverseGeocodeResponseDto[];
+    }>(`/map/reverse-geocode${QS.query(QS.explode({
+        lat,
+        lon
     }))}`, {
         ...opts
     }));

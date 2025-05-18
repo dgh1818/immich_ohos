@@ -2,7 +2,7 @@ name: immich_mobile
 description: Immich - selfhosted backup media file on mobile phone
 
 publish_to: 'none'
-version: 1.110.0+151
+version: 1.111.0+152
 
 environment:
   sdk: '>=3.3.0 <4.0.0'
@@ -69,6 +69,8 @@ dependencies:
   coordtransform_dart: ^1.0.4
   # huawei_map: ^6.11.2+304
 
+  #image editing packages
+  crop_image: ^1.0.13
   openapi:
     path: openapi
 
