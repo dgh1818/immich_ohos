@@ -289,6 +289,14 @@ packages:
       url: "https://github.com/dgh1818/coordtransform_dart.git"
     source: git
     version: "1.0.4"
+  crop_image:
+    dependency: "direct main"
+    description:
+      name: crop_image
+      sha256: "4fdebd00d0c7d1a6e3abeb1e3843efbc202204b867f3e377fcebcf77aaf69a17"
+      url: "https://pub.flutter-io.cn"
+    source: hosted
+    version: "1.0.16"
   cross_file:
     dependency: transitive
     description:

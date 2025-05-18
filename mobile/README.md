@@ -11,6 +11,12 @@ To Do：
 4. 地理反向编码中文化 初步完成！当前仅在 App 端实时逆地理编码
 5. 当前 flutter 版本受限，无法使用最新 flutter 版本，后续更新
 
+当前存在的一些问题：
+
+1. video player 不支持获取 isFinished 状态
+2. edit image 模块依赖的 photo manager 插件无法保存照片，暂时屏蔽
+3. 足迹热力图待官方支持
+
 # Immich Mobile Application - Flutter
 
 The Immich mobile app is a Flutter-based solution leveraging the Isar Database for local storage and Riverpod for state management. This structure optimizes functionality and maintainability, allowing for efficient development and robust performance.

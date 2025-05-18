@@ -97,8 +97,8 @@ class EditImagePage extends ConsumerWidget {
                     gravity: ToastGravity.CENTER,
                   );
 
-                  await PhotoManager.editor
-                      .saveImage(imageData, title: "_edited.jpg");
+                  // await PhotoManager.editor
+                  //     .saveImage(imageData, title: "_edited.jpg");
                   await ref.read(albumProvider.notifier).getDeviceAlbums();
                   Navigator.of(context).popUntil((route) => route.isFirst);
                 } catch (e) {
