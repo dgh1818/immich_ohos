@@ -19,7 +19,7 @@ class ImageViewerService {
 
   ImageViewerService(this._apiService);
 
-  Future<bool> downloadAssetToDevice(Asset asset) async {
+  Future<bool> downloadAsset(Asset asset) async {
     File? imageFile;
     File? videoFile;
     try {
@@ -65,11 +65,8 @@ class ImageViewerService {
             "Asset cannot be saved as a live photo. This is most likely a motion photo. Saving only the image file",
           );
 
-          entity = await PhotoManager.editor.saveImage(
-            imageResponse.bodyBytes,
-            title: asset.fileName,
-            filename: asset.fileName
-          );
+          entity = await PhotoManager.editor.saveImage(imageResponse.bodyBytes,
+              title: asset.fileName, filename: asset.fileName);
         }
 
         return entity != null;
@@ -83,19 +80,23 @@ class ImageViewerService {
         }
 
         final AssetEntity? entity;
+        final relativePath = Platform.isAndroid ? 'DCIM/Immich' : null;
 
         if (asset.isImage) {
           entity = await PhotoManager.editor.saveImage(
             res.bodyBytes,
             title: asset.fileName,
-            filename: asset.fileName
+            relativePath: relativePath,
           );
         } else {
           final tempDir = await getTemporaryDirectory();
           videoFile = await File('${tempDir.path}/${asset.fileName}').create();
           videoFile.writeAsBytesSync(res.bodyBytes);
-          entity = await PhotoManager.editor
-              .saveVideo(videoFile, title: asset.fileName);
+          entity = await PhotoManager.editor.saveVideo(
+            videoFile,
+            title: asset.fileName,
+            relativePath: relativePath,
+          );
         }
         return entity != null;
       }
