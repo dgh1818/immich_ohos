@@ -1,22 +1,22 @@
 import { FlutterEngine, Log } from '@ohos/flutter_ohos';
-import ConnectivityPlugin from 'connectivity_plus';
-import DeviceInfoPlusOhosPlugin from 'device_info_plus';
-import GeolocatorOhosPlugin from 'flutter_geolocator_ohos';
-import FlutterLocalNotificationsPlugin from 'flutter_local_notifications';
-import FlutterUdidPlugin from 'flutter_udid';
+import IntegrationTestPlugin from 'integration_test';
+import PhotoManagerPlugin from 'photo_manager';
+import MapLibreMapsPlugin from 'maplibre_gl';
 import FluttertoastPlugin from 'fluttertoast';
 import ImagePickerPlugin from 'image_picker_ohos';
-import IntegrationTestPlugin from 'integration_test';
-import IsarFlutterLibsPlugin from 'isar_flutter_libs';
-import MapLibreMapsPlugin from 'maplibre_gl';
-import PackageInfoPlugin from 'package_info_plus';
 import PathProviderPlugin from 'path_provider_ohos';
-import PermissionHandlerPlugin from 'permission_handler_ohos';
-import PhotoManagerPlugin from 'photo_manager';
-import SharePlusOhosPlugin from 'share_plus';
-import SharedPreferencesPlugin from 'shared_preferences_ohos';
 import UrlLauncherPlugin from 'url_launcher_ohos';
 import VideoPlayerPlugin from 'video_player_ohos';
+import PermissionHandlerPlugin from 'permission_handler_ohos';
+import ConnectivityPlugin from 'connectivity_plus';
+import PackageInfoPlugin from 'package_info_plus';
+import DeviceInfoPlusOhosPlugin from 'device_info_plus';
+import SharePlusOhosPlugin from 'share_plus';
+import FlutterLocalNotificationsPlugin from 'flutter_local_notifications';
+import FlutterUdidPlugin from 'flutter_udid';
+import GeolocatorOhosPlugin from 'flutter_geolocator_ohos';
+import IsarFlutterLibsPlugin from 'isar_flutter_libs';
+import SharedPreferencesPlugin from 'shared_preferences_ohos';
 
 /**
  * Generated file. Do not edit.
@@ -30,24 +30,24 @@ export class GeneratedPluginRegistrant {
 
   static registerWith(flutterEngine: FlutterEngine) {
     try {
-      flutterEngine.getPlugins()?.add(new ConnectivityPlugin());
-      flutterEngine.getPlugins()?.add(new DeviceInfoPlusOhosPlugin());
-      flutterEngine.getPlugins()?.add(new GeolocatorOhosPlugin());
-      flutterEngine.getPlugins()?.add(new FlutterLocalNotificationsPlugin());
-      flutterEngine.getPlugins()?.add(new FlutterUdidPlugin());
+      flutterEngine.getPlugins()?.add(new IntegrationTestPlugin());
+      flutterEngine.getPlugins()?.add(new PhotoManagerPlugin());
+      flutterEngine.getPlugins()?.add(new MapLibreMapsPlugin());
       flutterEngine.getPlugins()?.add(new FluttertoastPlugin());
       flutterEngine.getPlugins()?.add(new ImagePickerPlugin());
-      flutterEngine.getPlugins()?.add(new IntegrationTestPlugin());
-      flutterEngine.getPlugins()?.add(new IsarFlutterLibsPlugin());
-      flutterEngine.getPlugins()?.add(new MapLibreMapsPlugin());
-      flutterEngine.getPlugins()?.add(new PackageInfoPlugin());
       flutterEngine.getPlugins()?.add(new PathProviderPlugin());
-      flutterEngine.getPlugins()?.add(new PermissionHandlerPlugin());
-      flutterEngine.getPlugins()?.add(new PhotoManagerPlugin());
-      flutterEngine.getPlugins()?.add(new SharePlusOhosPlugin());
-      flutterEngine.getPlugins()?.add(new SharedPreferencesPlugin());
       flutterEngine.getPlugins()?.add(new UrlLauncherPlugin());
       flutterEngine.getPlugins()?.add(new VideoPlayerPlugin());
+      flutterEngine.getPlugins()?.add(new PermissionHandlerPlugin());
+      flutterEngine.getPlugins()?.add(new ConnectivityPlugin());
+      flutterEngine.getPlugins()?.add(new PackageInfoPlugin());
+      flutterEngine.getPlugins()?.add(new DeviceInfoPlusOhosPlugin());
+      flutterEngine.getPlugins()?.add(new SharePlusOhosPlugin());
+      flutterEngine.getPlugins()?.add(new FlutterLocalNotificationsPlugin());
+      flutterEngine.getPlugins()?.add(new FlutterUdidPlugin());
+      flutterEngine.getPlugins()?.add(new GeolocatorOhosPlugin());
+      flutterEngine.getPlugins()?.add(new IsarFlutterLibsPlugin());
+      flutterEngine.getPlugins()?.add(new SharedPreferencesPlugin());
     } catch (e) {
       Log.e(
         TAG,
