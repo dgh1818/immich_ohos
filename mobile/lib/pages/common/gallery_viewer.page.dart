@@ -31,7 +31,6 @@ import 'package:immich_mobile/widgets/photo_view/src/photo_view_computed_scale.d
 import 'package:immich_mobile/widgets/photo_view/src/photo_view_scale_state.dart';
 import 'package:immich_mobile/widgets/photo_view/src/utils/photo_view_hero_attributes.dart';
 import 'package:isar/isar.dart';
-import 'package:immich_mobile/services/background.service.dart';
 
 @RoutePage()
 // ignore: must_be_immutable
@@ -131,7 +130,8 @@ class GalleryViewerPage extends HookConsumerWidget {
       }
     }
 
-    Future<ui.ColorSpace?> getImageColorSpace(ImageProvider provider, BuildContext context) async {
+    Future<ui.ColorSpace?> getImageColorSpace(
+        ImageProvider provider, BuildContext context) async {
       final Completer<ui.ColorSpace?> completer = Completer();
 
       ImageStream stream = provider.resolve(ImageConfiguration.empty);
@@ -150,10 +150,10 @@ class GalleryViewerPage extends HookConsumerWidget {
       if (colorSpace != null) {
         debugPrint("Image Color Space: ${colorSpace.toString()}");
 
-        if(colorSpace == ui.ColorSpace.extendedSRGB) {
-          ui.SetHdr.setHdrMode(hdr: 1 ,is_image:true);
+        if (colorSpace == ui.ColorSpace.extendedSRGB) {
+          ui.SetHdr.setHdrMode(hdr: 1, is_image: true);
         } else {
-          ui.SetHdr.setHdrMode(hdr: 0, is_image:true);
+          ui.SetHdr.setHdrMode(hdr: 0, is_image: true);
         }
       }
     }
@@ -219,16 +219,15 @@ class GalleryViewerPage extends HookConsumerWidget {
     useEffect(
       () {
         final a = asset;
-        final ImageProvider provider =
-          ImmichImage.imageProvider(asset: a);
-        ui.SetHdr.enableHdr(enable_hdr:true);
+        final ImageProvider provider = ImmichImage.imageProvider(asset: a);
+        ui.SetHdr.enableHdr(enable_hdr: true);
         if (a.isImage) {
-          ui.SetHdr.setHdrMode(hdr: 0,is_image: true);
+          ui.SetHdr.setHdrMode(hdr: 0, is_image: true);
           setDisplayMode(provider, context);
         } else {
-          ui.SetHdr.setHdrMode(hdr: 0,is_image: true);
-          ui.SetHdr.setHdrMode(hdr: -1,is_image: false);
-         }
+          ui.SetHdr.setHdrMode(hdr: 0, is_image: true);
+          ui.SetHdr.setHdrMode(hdr: -1, is_image: false);
+        }
 
         if (ref.read(showControlsProvider)) {
           SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
@@ -358,19 +357,19 @@ class GalleryViewerPage extends HookConsumerWidget {
 
                 final a = loadAsset(currentIndex.value);
                 final ImageProvider provider =
-                ImmichImage.imageProvider(asset: a);
+                    ImmichImage.imageProvider(asset: a);
 
                 if (a.isImage) {
                   setDisplayMode(provider, context);
                 } else {
-                  ui.SetHdr.setHdrMode(hdr:0, is_image:true);
+                  ui.SetHdr.setHdrMode(hdr: 0, is_image: true);
                 }
 
                 // Wait for page change animation to finish
                 await Future.delayed(const Duration(milliseconds: 400));
                 // Then precache the next image
                 if (!a.isImage) {
-                 ui.SetHdr.setHdrMode(hdr: -1, is_image:false);
+                  ui.SetHdr.setHdrMode(hdr: -1, is_image: false);
                 }
                 unawaited(precacheNextImage(next));
               },

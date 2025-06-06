@@ -14,7 +14,7 @@ import 'package:immich_mobile/utils/map_utils.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
-@RoutePage<LatLng?>()
+@RoutePage()
 class MapLocationPickerPage extends HookConsumerWidget {
   final LatLng initialLatLng;
 

@@ -104,7 +104,10 @@ class AssetLocation extends HookConsumerWidget {
           ),
           const SizedBox(height: 16),
           getLocationName(),
-          Text(locationText),
+          Text(
+            locationText,
+            style: context.textTheme.labelLarge,
+          ),
           Text(
             "${exifInfo.latitude!.toStringAsFixed(4)}, ${exifInfo.longitude!.toStringAsFixed(4)}",
             style: context.textTheme.labelMedium?.copyWith(

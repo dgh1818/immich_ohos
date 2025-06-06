@@ -11,7 +11,7 @@ import 'package:immich_mobile/widgets/map/positioned_asset_marker_icon.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 import 'package:flutter/foundation.dart';
 import 'package:coordtransform_dart/coordtransform_dart.dart';
-import 'package:immich_mobile/widgets/asset_viewer/exif_sheet/exif_bottom_sheet.dart';
+import 'package:immich_mobile/widgets/asset_viewer/detail_panel/asset_location.dart';
 
 // /// A non-interactive thumbnail of a map in the given coordinates with optional markers
 // ///
