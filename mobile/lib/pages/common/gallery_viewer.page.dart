@@ -55,8 +55,6 @@ class GalleryViewerPage extends HookConsumerWidget {
     final settings = ref.watch(appSettingsServiceProvider);
     final loadAsset = renderList.loadAsset;
     final totalAssets = useState(renderList.totalAssets);
-    final isLoadPreview = useState(AppSettingsEnum.loadPreview.defaultValue);
-    final isLoadOriginal = useState(AppSettingsEnum.loadOriginal.defaultValue);
     final shouldLoopVideo = useState(AppSettingsEnum.loopVideo.defaultValue);
     final isZoomed = useState(false);
     final isPlayingVideo = useState(false);
@@ -70,7 +68,7 @@ class GalleryViewerPage extends HookConsumerWidget {
     });
 
     final stackIndex = useState(-1);
-    final stack = showStack && currentAsset.stackChildrenCount > 0
+    final stack = showStack && currentAsset.stackCount > 0
         ? ref.watch(assetStackStateProvider(currentAsset))
         : <Asset>[];
     final stackElements = showStack ? [currentAsset, ...stack] : <Asset>[];
@@ -97,10 +95,6 @@ class GalleryViewerPage extends HookConsumerWidget {
 
     useEffect(
       () {
-        isLoadPreview.value =
-            settings.getSetting<bool>(AppSettingsEnum.loadPreview);
-        isLoadOriginal.value =
-            settings.getSetting<bool>(AppSettingsEnum.loadOriginal);
         shouldLoopVideo.value =
             settings.getSetting<bool>(AppSettingsEnum.loopVideo);
         return null;
@@ -309,7 +303,7 @@ class GalleryViewerPage extends HookConsumerWidget {
 
     return PopScope(
       // Change immersive mode back to normal "edgeToEdge" mode
-      onPopInvoked: (_) =>
+      onPopInvokedWithResult: (didPop, _) =>
           SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge),
       child: Scaffold(
         backgroundColor: Colors.black,
@@ -376,6 +370,7 @@ class GalleryViewerPage extends HookConsumerWidget {
               builder: (context, index) {
                 final a =
                     index == currentIndex.value ? asset : loadAsset(index);
+
                 final ImageProvider provider =
                     ImmichImage.imageProvider(asset: a);
 

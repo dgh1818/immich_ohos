@@ -103,7 +103,7 @@ class ImmichRemoteImageProvider
     // Load the final remote image
     if (_useOriginal) {
       // Load the original image
-      final url = getImageUrlFromId(key.assetId, is_image: this.is_image);
+      final url = getOriginalUrlForRemoteId(key.assetId);
       final codec = await ImageLoader.loadImageFromCache(
         url,
         cache: cache,

@@ -42,7 +42,6 @@ final RouteObserver<ModalRoute> routeObserver = RouteObserver<ModalRoute>();
 
 void main() async {
   ImmichWidgetsBinding();
-
   final db = await loadDb();
   await initApp();
   await migrateDatabaseIfNeeded(db);
@@ -76,6 +75,7 @@ Future<void> initApp() async {
   var log = Logger("ImmichErrorLogger");
 
   FlutterError.onError = (details) {
+    debugPrint("FlutterError - Catch all: $details");
     FlutterError.presentError(details);
     log.severe(
       'FlutterError - Catch all',
@@ -105,7 +105,9 @@ Future<Isar> loadDb() async {
       DuplicatedAssetSchema,
       LoggerMessageSchema,
       ETagSchema,
-      IOSDeviceAssetSchema,
+      if (Platform.isAndroid) AndroidDeviceAssetSchema,
+      if (Platform.isIOS) IOSDeviceAssetSchema,
+      if (defaultTargetPlatform == TargetPlatform.ohos) IOSDeviceAssetSchema,
     ],
     directory: dir.path,
     maxSizeMiB: 1024,
