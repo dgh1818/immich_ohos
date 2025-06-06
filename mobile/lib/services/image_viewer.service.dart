@@ -85,7 +85,8 @@ class ImageViewerService {
         if (asset.isImage) {
           entity = await PhotoManager.editor.saveImage(
             res.bodyBytes,
-            title: asset.fileName,
+            //title: asset.fileName,
+            filename: asset.fileName,
             relativePath: relativePath,
           );
         } else {
