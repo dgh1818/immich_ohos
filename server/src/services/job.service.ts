@@ -231,6 +231,7 @@ export class JobService {
           name: JobName.METADATA_EXTRACTION,
           data: { id: item.data.id, source: 'sidecar-write' },
         });
+        break;
       }
 
       case JobName.METADATA_EXTRACTION: {
@@ -289,7 +290,7 @@ export class JobService {
       }
 
       case JobName.GENERATE_THUMBNAIL: {
-        if (item.data.source !== 'upload') {
+        if (!(item.data.notify || item.data.source === 'upload')) {
           break;
         }
 

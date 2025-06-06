@@ -6,7 +6,7 @@ import { SystemConfigSmtpDto } from 'src/dtos/system-config.dto';
 import { AlbumEntity } from 'src/entities/album.entity';
 import { IAlbumRepository } from 'src/interfaces/album.interface';
 import { IAssetRepository } from 'src/interfaces/asset.interface';
-import { ArgOf } from 'src/interfaces/event.interface';
+import { ArgOf, ClientEvent, IEventRepository } from 'src/interfaces/event.interface';
 import {
   IEmailJob,
   IJobRepository,
@@ -30,6 +30,7 @@ export class NotificationService {
   private configCore: SystemConfigCore;
 
   constructor(
+    @Inject(IEventRepository) private eventRepository: IEventRepository,
     @Inject(ISystemMetadataRepository) systemMetadataRepository: ISystemMetadataRepository,
     @Inject(INotificationRepository) private notificationRepository: INotificationRepository,
     @Inject(IUserRepository) private userRepository: IUserRepository,
@@ -57,6 +58,17 @@ export class NotificationService {
     }
   }
 
+  @OnEmit({ event: 'asset.hide' })
+  onAssetHide({ assetId, userId }: ArgOf<'asset.hide'>) {
+    // Notify clients to hide the linked live photo asset
+    this.eventRepository.clientSend(ClientEvent.ASSET_HIDDEN, userId, assetId);
+  }
+
+  @OnEmit({ event: 'asset.show' })
+  async onAssetShow({ assetId }: ArgOf<'asset.show'>) {
+    await this.jobRepository.queue({ name: JobName.GENERATE_THUMBNAIL, data: { id: assetId, notify: true } });
+  }
+
   @OnEmit({ event: 'user.signup' })
   async onUserSignup({ notify, id, tempPassword }: ArgOf<'user.signup'>) {
     if (notify) {
@@ -72,6 +84,12 @@ export class NotificationService {
   @OnEmit({ event: 'album.invite' })
   async onAlbumInvite({ id, userId }: ArgOf<'album.invite'>) {
     await this.jobRepository.queue({ name: JobName.NOTIFY_ALBUM_INVITE, data: { id, recipientId: userId } });
+  }
+
+  @OnEmit({ event: 'session.delete' })
+  onSessionDelete({ sessionId }: ArgOf<'session.delete'>) {
+    // after the response is sent
+    setTimeout(() => this.eventRepository.clientSend(ClientEvent.SESSION_DELETE, sessionId, sessionId), 500);
   }
 
   async sendTestEmail(id: string, dto: SystemConfigSmtpDto) {

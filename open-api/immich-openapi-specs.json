@@ -7394,7 +7394,7 @@
   "info": {
     "title": "Immich",
     "description": "Immich API",
-    "version": "1.114.0",
+    "version": "1.115.0",
     "contact": {}
   },
   "tags": [],
@@ -7927,6 +7927,9 @@
           },
           "id": {
             "type": "string"
+          },
+          "isTrashed": {
+            "type": "boolean"
           },
           "reason": {
             "enum": [
@@ -12237,6 +12240,11 @@
           },
           "latitude": {
             "type": "number"
+          },
+          "livePhotoVideoId": {
+            "format": "uuid",
+            "nullable": true,
+            "type": "string"
           },
           "longitude": {
             "type": "number"
