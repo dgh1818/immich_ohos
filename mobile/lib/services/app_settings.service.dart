@@ -2,8 +2,8 @@ import 'package:immich_mobile/constants/immich_colors.dart';
 import 'package:immich_mobile/entities/store.entity.dart';
 
 enum AppSettingsEnum<T> {
-  loadPreview<bool>(StoreKey.loadPreview, "loadPreview", true),
-  loadOriginal<bool>(StoreKey.loadOriginal, "loadOriginal", false),
+  loadPreview<bool>(StoreKey.loadPreview, "loadPreview", false),
+  loadOriginal<bool>(StoreKey.loadOriginal, "loadOriginal", true),
   themeMode<String>(
     StoreKey.themeMode,
     "themeMode",
@@ -24,7 +24,7 @@ enum AppSettingsEnum<T> {
     "colorfulInterface",
     true,
   ),
-  tilesPerRow<int>(StoreKey.tilesPerRow, "tilesPerRow", 4),
+  tilesPerRow<int>(StoreKey.tilesPerRow, "tilesPerRow", 6),
   dynamicLayout<bool>(StoreKey.dynamicLayout, "dynamicLayout", false),
   groupAssetsBy<int>(StoreKey.groupAssetsBy, "groupBy", 0),
   uploadErrorNotificationGracePeriod<int>(
