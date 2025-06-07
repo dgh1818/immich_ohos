@@ -2,7 +2,7 @@ name: immich_mobile
 description: Immich - selfhosted backup media file on mobile phone
 
 publish_to: 'none'
-version: 1.118.0+163
+version: 1.119.0+164
 
 environment:
   sdk: '>=3.3.0 <4.0.0'
@@ -16,7 +16,7 @@ dependencies:
   # TODO: upgrade to stable after 3.0.1 is released. 3.0.0 is broken
   # https://github.com/fluttercandies/flutter_photo_manager/pull/990#issuecomment-2058066427
   photo_manager: ^3.6.4 #ohos开发中
-  photo_manager_image_provider: ^2.1.1
+  photo_manager_image_provider: ^2.2.0
   flutter_hooks: ^0.20.4
   hooks_riverpod: ^2.4.9
   riverpod_annotation: ^2.3.3
@@ -53,7 +53,7 @@ dependencies:
   isar: ^3.1.0+1 #ok
   isar_flutter_libs: ^3.1.0+1 #ok
   permission_handler: ^11.2.0
-  device_info_plus: ^10.0.0
+  device_info_plus: ^11.0.0
   connectivity_plus: ^6.0.0
   wakelock_plus: ^1.1.4
   flutter_local_notifications: ^17.2.1+2
