@@ -34,15 +34,16 @@ class PlacesCollectionPage extends HookConsumerWidget {
               height: 200,
               width: context.width,
               child: MapThumbnail(
-                onTap: (_, __) => context.pushRoute(const MapRoute()),
+                //onTap: (_, __) => context.pushRoute(const MapRoute()), //map OHOS暂时屏蔽
                 zoom: 8,
                 centre: const LatLng(
-                  21.44950,
-                  -157.91959,
+                  31.1019,
+                  121.3259,
                 ),
                 showAttribution: false,
                 themeMode:
                     context.isDarkTheme ? ThemeMode.dark : ThemeMode.light,
+                isZoomControlsEnabled: false,
               ),
             ),
           ),
