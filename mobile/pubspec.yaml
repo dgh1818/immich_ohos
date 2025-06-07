@@ -145,9 +145,9 @@ dependency_overrides:
       #ref: 8c61f19e816168efc212cca5c4fbf9ac183ee90e
   wakelock_plus:
     git:
-      url: https://gitee.com/du_guang/fluttertpc_wakelock_plus.git
+      url: https://gitcode.com/openharmony-sig/fluttertpc_wakelock_plus.git
       path: 'wakelock_plus'
-      #ref: master
+      ref: br_wakelock_plus_1.2.8_ohos
   flutter_local_notifications:
     git:
       url: git@gitcode.com:openharmony-sig/fluttertpc_flutter_local_notifications.git
@@ -175,9 +175,9 @@ dependency_overrides:
       path: ./
   chewie:
     git:
-      url: https://gitcode.com/openharmony-sig/fluttertpc_chewie.git
+      url: https://github.com/dgh1818/chewie_ohos.git
       path: './'
-      ref: master
+      ref: chewie_ohos_main
   photo_manager:
     path: ./flutter_photo_manager
   coordtransform_dart:
