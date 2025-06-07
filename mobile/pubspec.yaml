@@ -107,12 +107,12 @@ dependency_overrides:
     git:
       url: git@gitcode.com:openharmony-sig/flutter_plus_plugins.git
       path: packages/device_info_plus/device_info_plus
-      #ref: c361adfe56bd39e43521929c88aef80e096b1243
+      #ref: br_device_info_plus-v11.1.0_ohos
   connectivity_plus:
     git:
       url: git@gitcode.com:openharmony-sig/flutter_plus_plugins.git
       path: packages/connectivity_plus/connectivity_plus
-      #ref: c361adfe56bd39e43521929c88aef80e096b1243
+      ref: br_connectivity_plus-v6.1.0_ohos
   fluttertoast:
     git:
       url: git@gitcode.com:openharmony-sig/flutter_fluttertoast.git
@@ -122,7 +122,7 @@ dependency_overrides:
     git:
       url: git@gitcode.com:openharmony-sig/flutter_packages.git
       path: 'packages/video_player/video_player'
-      #ref: 8c61f19e816168efc212cca5c4fbf9ac183ee90e
+      ref: br_video_player-v2.9.2_ohos
   geolocator:
     git:
       url: git@gitcode.com:openharmony-sig/fluttertpc_geolocator.git
@@ -177,7 +177,7 @@ dependency_overrides:
     git:
       url: https://github.com/dgh1818/chewie_ohos.git
       path: './'
-      ref: chewie_ohos_main
+      ref: ohos_dev
   photo_manager:
     path: ./flutter_photo_manager
   coordtransform_dart:
