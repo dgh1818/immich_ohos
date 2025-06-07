@@ -474,7 +474,7 @@ class GalleryViewerPage extends HookConsumerWidget {
                 ],
               ),
             ),
-            const DownloadPanel(),
+            //const DownloadPanel(),
           ],
         ),
       ),

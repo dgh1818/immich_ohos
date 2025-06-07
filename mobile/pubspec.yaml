@@ -64,8 +64,8 @@ dependencies:
   easy_localization: ^3.0.3
   coordtransform_dart: ^1.0.4
   # huawei_map: ^6.11.2+304
-  dynamic_color: ^1.7.0 #package to apply system theme
-  background_downloader: ^8.5.5
+  dynamic_color: ^1.7.0 #package to apply system theme  OHOS待适配
+  background_downloader: ^8.5.5 # OHOS待适配
 
   #image editing packages
   crop_image: ^1.0.13

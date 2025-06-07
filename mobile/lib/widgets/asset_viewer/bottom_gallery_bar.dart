@@ -9,7 +9,7 @@ import 'package:immich_mobile/extensions/build_context_extensions.dart';
 import 'package:immich_mobile/providers/album/current_album.provider.dart';
 import 'package:immich_mobile/providers/album/shared_album.provider.dart';
 import 'package:immich_mobile/providers/asset_viewer/asset_stack.provider.dart';
-import 'package:immich_mobile/providers/asset_viewer/download.provider.dart';
+//import 'package:immich_mobile/providers/asset_viewer/download.provider.dart';
 import 'package:immich_mobile/providers/asset_viewer/show_controls.provider.dart';
 import 'package:immich_mobile/services/stack.service.dart';
 import 'package:immich_mobile/widgets/asset_grid/asset_grid_data_structure.dart';
@@ -181,7 +181,7 @@ class BottomGalleryBar extends ConsumerWidget {
         );
         return;
       }
-      ref.read(downloadStateProvider.notifier).shareAsset(asset, context);
+      //ref.read(downloadStateProvider.notifier).shareAsset(asset, context);
     }
 
     void handleEdit() async {
@@ -207,25 +207,25 @@ class BottomGalleryBar extends ConsumerWidget {
       removeAssetFromStack();
     }
 
-    handleDownload() {
-      if (asset.isLocal) {
-        return;
-      }
-      if (asset.isOffline) {
-        ImmichToast.show(
-          durationInSecond: 1,
-          context: context,
-          msg: 'asset_action_share_err_offline'.tr(),
-          gravity: ToastGravity.BOTTOM,
-        );
-        return;
-      }
+    // handleDownload() {
+    //   if (asset.isLocal) {
+    //     return;
+    //   }
+    //   if (asset.isOffline) {
+    //     ImmichToast.show(
+    //       durationInSecond: 1,
+    //       context: context,
+    //       msg: 'asset_action_share_err_offline'.tr(),
+    //       gravity: ToastGravity.BOTTOM,
+    //     );
+    //     return;
+    //   }
 
-      ref.read(downloadStateProvider.notifier).downloadAsset(
-            asset,
-            context,
-          );
-    }
+    //   ref.read(downloadStateProvider.notifier).downloadAsset(
+    //         asset,
+    //         context,
+    //       );
+    // }
 
     handleRemoveFromAlbum() async {
       final album = ref.read(currentAlbumProvider);
@@ -307,14 +307,14 @@ class BottomGalleryBar extends ConsumerWidget {
             tooltip: 'control_bottom_app_bar_delete'.tr(),
           ): (_) => handleDelete(),
         },
-      if (!isOwner)
-        {
-          BottomNavigationBarItem(
-            icon: const Icon(Icons.download_outlined),
-            label: 'control_bottom_app_bar_download'.tr(),
-            tooltip: 'control_bottom_app_bar_download'.tr(),
-          ): (_) => handleDownload(),
-        },
+      // if (!isOwner)
+      //   {
+      //     BottomNavigationBarItem(
+      //       icon: const Icon(Icons.download_outlined),
+      //       label: 'control_bottom_app_bar_download'.tr(),
+      //       tooltip: 'control_bottom_app_bar_download'.tr(),
+      //     ): (_) => handleDownload(),
+      //   },
       if (isInAlbum)
         {
           BottomNavigationBarItem(

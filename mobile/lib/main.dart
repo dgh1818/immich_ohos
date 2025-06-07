@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:background_downloader/background_downloader.dart';
+// import 'package:background_downloader/background_downloader.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/foundation.dart';
@@ -94,22 +94,22 @@ Future<void> initApp() async {
 
   initializeTimeZones();
 
-  FileDownloader().configureNotification(
-    running: TaskNotification(
-      'downloading_media'.tr(),
-      'file: {filename}',
-    ),
-    complete: TaskNotification(
-      'download_finished'.tr(),
-      'file: {filename}',
-    ),
-    progressBar: true,
-  );
+  // FileDownloader().configureNotification(
+  //   running: TaskNotification(
+  //     'downloading_media'.tr(),
+  //     'file: {filename}',
+  //   ),
+  //   complete: TaskNotification(
+  //     'download_finished'.tr(),
+  //     'file: {filename}',
+  //   ),
+  //   progressBar: true,
+  // );
 
-  FileDownloader().trackTasksInGroup(
-    downloadGroupLivePhoto,
-    markDownloadedComplete: false,
-  );
+  // FileDownloader().trackTasksInGroup(
+  //   downloadGroupLivePhoto,
+  //   markDownloadedComplete: false,
+  // );
 }
 
 Future<Isar> loadDb() async {
