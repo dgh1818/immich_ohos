@@ -5,6 +5,7 @@ import { ChunkedArray, DummyValue, GenerateSql } from 'src/decorators';
 import { AssetFaceEntity } from 'src/entities/asset-face.entity';
 import { AssetJobStatusEntity } from 'src/entities/asset-job-status.entity';
 import { AssetEntity } from 'src/entities/asset.entity';
+import { FaceSearchEntity } from 'src/entities/face-search.entity';
 import { PersonEntity } from 'src/entities/person.entity';
 import { PaginationMode, SourceType } from 'src/enum';
 import {
@@ -31,6 +32,7 @@ export class PersonRepository implements IPersonRepository {
     @InjectRepository(AssetEntity) private assetRepository: Repository<AssetEntity>,
     @InjectRepository(PersonEntity) private personRepository: Repository<PersonEntity>,
     @InjectRepository(AssetFaceEntity) private assetFaceRepository: Repository<AssetFaceEntity>,
+    @InjectRepository(FaceSearchEntity) private faceSearchRepository: Repository<FaceSearchEntity>,
     @InjectRepository(AssetJobStatusEntity) private jobStatusRepository: Repository<AssetJobStatusEntity>,
   ) {}
 
@@ -59,10 +61,6 @@ export class PersonRepository implements IPersonRepository {
 
   async delete(entities: PersonEntity[]): Promise<void> {
     await this.personRepository.remove(entities);
-  }
-
-  async deleteAll(): Promise<void> {
-    await this.personRepository.clear();
   }
 
   async deleteFaces({ sourceType }: DeleteFacesOptions): Promise<void> {
@@ -233,30 +231,6 @@ export class PersonRepository implements IPersonRepository {
   }
 
   @GenerateSql({ params: [DummyValue.UUID] })
-  getAssets(personId: string): Promise<AssetEntity[]> {
-    return this.assetRepository.find({
-      where: {
-        faces: {
-          personId,
-        },
-        isVisible: true,
-        isArchived: false,
-      },
-      relations: {
-        faces: {
-          person: true,
-        },
-        exifInfo: true,
-      },
-      order: {
-        fileCreatedAt: 'desc',
-      },
-      // TODO: remove after either (1) pagination or (2) time bucket is implemented for this query
-      take: 1000,
-    });
-  }
-
-  @GenerateSql({ params: [DummyValue.UUID] })
   async getNumberOfPeople(userId: string): Promise<PeopleStatistics> {
     const items = await this.personRepository
       .createQueryBuilder('person')
@@ -291,17 +265,32 @@ export class PersonRepository implements IPersonRepository {
     return results.map((person) => person.id);
   }
 
-  async createFaces(entities: AssetFaceEntity[]): Promise<string[]> {
-    const res = await this.assetFaceRepository.save(entities);
-    return res.map((row) => row.id);
-  }
+  async refreshFaces(
+    facesToAdd: Partial<AssetFaceEntity>[],
+    faceIdsToRemove: string[],
+    embeddingsToAdd?: FaceSearchEntity[],
+  ): Promise<void> {
+    const query = this.faceSearchRepository.createQueryBuilder().select('1').fromDummy();
+    if (facesToAdd.length > 0) {
+      const insertCte = this.assetFaceRepository.createQueryBuilder().insert().values(facesToAdd);
+      query.addCommonTableExpression(insertCte, 'added');
+    }
 
-  async replaceFaces(assetId: string, entities: AssetFaceEntity[], sourceType: string): Promise<string[]> {
-    return this.dataSource.transaction(async (manager) => {
-      await manager.delete(AssetFaceEntity, { assetId, sourceType });
-      const assetFaces = await manager.save(AssetFaceEntity, entities);
-      return assetFaces.map(({ id }) => id);
-    });
+    if (faceIdsToRemove.length > 0) {
+      const deleteCte = this.assetFaceRepository
+        .createQueryBuilder()
+        .delete()
+        .where('id = any(:faceIdsToRemove)', { faceIdsToRemove });
+      query.addCommonTableExpression(deleteCte, 'deleted');
+    }
+
+    if (embeddingsToAdd?.length) {
+      const embeddingCte = this.faceSearchRepository.createQueryBuilder().insert().values(embeddingsToAdd).orIgnore();
+      query.addCommonTableExpression(embeddingCte, 'embeddings');
+      query.getQuery(); // typeorm mixes up parameters without this
+    }
+
+    await query.execute();
   }
 
   async update(person: Partial<PersonEntity>): Promise<PersonEntity> {

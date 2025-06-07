@@ -4,11 +4,12 @@ import { getName } from 'i18n-iso-countries';
 import { createReadStream, existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import readLine from 'node:readline';
-import { citiesFile, resourcePaths } from 'src/constants';
+import { citiesFile } from 'src/constants';
 import { AssetEntity } from 'src/entities/asset.entity';
 import { GeodataPlacesEntity } from 'src/entities/geodata-places.entity';
 import { NaturalEarthCountriesEntity } from 'src/entities/natural-earth-countries.entity';
 import { SystemMetadataKey } from 'src/enum';
+import { IConfigRepository } from 'src/interfaces/config.interface';
 import { ILoggerRepository } from 'src/interfaces/logger.interface';
 import {
   GeoPoint,
@@ -32,6 +33,7 @@ export class MapRepository implements IMapRepository {
     @InjectRepository(NaturalEarthCountriesEntity)
     private naturalEarthCountriesRepository: Repository<NaturalEarthCountriesEntity>,
     @InjectDataSource() private dataSource: DataSource,
+    @Inject(IConfigRepository) private configRepository: IConfigRepository,
     @Inject(ISystemMetadataRepository) private metadataRepository: ISystemMetadataRepository,
     @Inject(ILoggerRepository) private logger: ILoggerRepository,
   ) {
@@ -40,6 +42,7 @@ export class MapRepository implements IMapRepository {
 
   async init(): Promise<void> {
     this.logger.log('Initializing metadata repository');
+    const { resourcePaths } = this.configRepository.getEnv();
     const geodataDate = await readFile(resourcePaths.geodata.dateFile, 'utf8');
 
     // TODO move to service init
@@ -108,20 +111,6 @@ export class MapRepository implements IMapRepository {
       state: asset.exifInfo!.state,
       country: asset.exifInfo!.country,
     }));
-  }
-
-  async fetchStyle(url: string) {
-    try {
-      const response = await fetch(url);
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch data from ${url} with status ${response.status}: ${await response.text()}`);
-      }
-
-      return response.json();
-    } catch (error) {
-      throw new Error(`Failed to fetch data from ${url}: ${error}`);
-    }
   }
 
   async reverseGeocodeWithPetalmap(point: GeoPoint): Promise<ReverseGeocodeResult> {
@@ -306,6 +295,8 @@ export class MapRepository implements IMapRepository {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
 
+    const { resourcePaths } = this.configRepository.getEnv();
+
     try {
       await queryRunner.startTransaction();
       await queryRunner.manager.clear(NaturalEarthCountriesEntity);
@@ -350,6 +341,7 @@ export class MapRepository implements IMapRepository {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
 
+    const { resourcePaths } = this.configRepository.getEnv();
     const admin1 = await this.loadAdmin(resourcePaths.geodata.admin1);
     const admin2 = await this.loadAdmin(resourcePaths.geodata.admin2);
 
@@ -405,6 +397,7 @@ export class MapRepository implements IMapRepository {
     admin1Map: Map<string, string>,
     admin2Map: Map<string, string>,
   ) {
+    const { resourcePaths } = this.configRepository.getEnv();
     await this.loadGeodataToTableFromFile(
       queryRunner,
       (lineSplit: string[]) =>

@@ -95,10 +95,9 @@ class SyncService {
   /// Syncs remote albums to the database
   /// returns `true` if there were any changes
   Future<bool> syncRemoteAlbumsToDb(
-    List<Album> remote, {
-    required bool isShared,
-  }) =>
-      _lock.run(() => _syncRemoteAlbumsToDb(remote, isShared));
+    List<Album> remote,
+  ) =>
+      _lock.run(() => _syncRemoteAlbumsToDb(remote));
 
   /// Syncs all device albums and their assets to the database
   /// Returns `true` if there were any changes
@@ -138,7 +137,6 @@ class SyncService {
   Future<bool> _syncUsersFromServer(List<User> users) async {
     users.sortBy((u) => u.id);
     final dbUsers = await _userRepository.getAll(sortBy: UserSort.id);
-    assert(dbUsers.isSortedBy((u) => u.id), "dbUsers not sorted!");
     final List<int> toDelete = [];
     final List<User> toUpsert = [];
     final changes = diffSortedListsSync(
@@ -311,18 +309,13 @@ class SyncService {
   /// returns `true` if there were any changes
   Future<bool> _syncRemoteAlbumsToDb(
     List<Album> remoteAlbums,
-    bool isShared,
   ) async {
     remoteAlbums.sortBy((e) => e.remoteId!);
 
-    final User me = await _userRepository.me();
     final List<Album> dbAlbums = await _albumRepository.getAll(
       remote: true,
-      shared: isShared ? true : null,
-      ownerId: isShared ? null : me.isarId,
       sortBy: AlbumSort.remoteId,
     );
-    assert(dbAlbums.isSortedBy((e) => e.remoteId!), "dbAlbums not sorted!");
 
     final List<Asset> toDelete = [];
     final List<Asset> existing = [];
@@ -338,7 +331,7 @@ class SyncService {
       onlySecond: (dbAlbum) => _removeAlbumFromDb(dbAlbum, toDelete),
     );
 
-    if (isShared && toDelete.isNotEmpty) {
+    if (toDelete.isNotEmpty) {
       final List<int> idsToRemove = sharedAssetsToRemove(toDelete, existing);
       if (idsToRemove.isNotEmpty) {
         await _assetRepository.deleteById(idsToRemove);
@@ -512,7 +505,6 @@ class SyncService {
         await _albumRepository.getAll(remote: false, sortBy: AlbumSort.localId);
     final List<Asset> deleteCandidates = [];
     final List<Asset> existing = [];
-    assert(inDb.isSorted((a, b) => a.localId!.compareTo(b.localId!)), "sort!");
     final bool anyChanges = await diffSortedLists(
       onDevice,
       inDb,
@@ -805,8 +797,7 @@ class SyncService {
     assets.sort(Asset.compareByOwnerChecksumCreatedModified);
     assets.uniqueConsecutive(
       compare: Asset.compareByOwnerChecksum,
-      onDuplicate: (a, b) =>
-          _log.info("Ignoring duplicate assets on device:\n$a\n$b"),
+      onDuplicate: (a, b) => {},
     );
     final int duplicates = before - assets.length;
     if (duplicates > 0) {

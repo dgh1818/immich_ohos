@@ -21,4 +21,6 @@ mobile/openapi/.openapi-generator/FILES
 open-api/typescript-sdk/build
 mobile/android/fastlane/report.xml
 mobile/ios/fastlane/report.xml
+
+vite.config.js.timestamp-*
 mobile/ohos/build-profile.json5

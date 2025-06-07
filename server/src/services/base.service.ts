@@ -23,6 +23,7 @@ import { IMetadataRepository } from 'src/interfaces/metadata.interface';
 import { IMetricRepository } from 'src/interfaces/metric.interface';
 import { IMoveRepository } from 'src/interfaces/move.interface';
 import { INotificationRepository } from 'src/interfaces/notification.interface';
+import { IOAuthRepository } from 'src/interfaces/oauth.interface';
 import { IPartnerRepository } from 'src/interfaces/partner.interface';
 import { IPersonRepository } from 'src/interfaces/person.interface';
 import { ISearchRepository } from 'src/interfaces/search.interface';
@@ -37,6 +38,7 @@ import { ITrashRepository } from 'src/interfaces/trash.interface';
 import { IUserRepository } from 'src/interfaces/user.interface';
 import { IVersionHistoryRepository } from 'src/interfaces/version-history.interface';
 import { IViewRepository } from 'src/interfaces/view.interface';
+import { AccessRequest, checkAccess, requireAccess } from 'src/utils/access';
 import { getConfig, updateConfig } from 'src/utils/config';
 
 export class BaseService {
@@ -65,6 +67,7 @@ export class BaseService {
     @Inject(IMetricRepository) protected metricRepository: IMetricRepository,
     @Inject(IMoveRepository) protected moveRepository: IMoveRepository,
     @Inject(INotificationRepository) protected notificationRepository: INotificationRepository,
+    @Inject(IOAuthRepository) protected oauthRepository: IOAuthRepository,
     @Inject(IPartnerRepository) protected partnerRepository: IPartnerRepository,
     @Inject(IPersonRepository) protected personRepository: IPersonRepository,
     @Inject(ISearchRepository) protected searchRepository: ISearchRepository,
@@ -93,7 +96,7 @@ export class BaseService {
     );
   }
 
-  private get repos() {
+  private get configRepos() {
     return {
       configRepo: this.configRepository,
       metadataRepo: this.systemMetadataRepository,
@@ -102,10 +105,18 @@ export class BaseService {
   }
 
   getConfig(options: { withCache: boolean }) {
-    return getConfig(this.repos, options);
+    return getConfig(this.configRepos, options);
   }
 
   updateConfig(newConfig: SystemConfig) {
-    return updateConfig(this.repos, newConfig);
+    return updateConfig(this.configRepos, newConfig);
+  }
+
+  requireAccess(request: AccessRequest) {
+    return requireAccess(this.accessRepository, request);
+  }
+
+  checkAccess(request: AccessRequest) {
+    return checkAccess(this.accessRepository, request);
   }
 }
