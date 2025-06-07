@@ -646,7 +646,7 @@ packages:
     dependency: "direct main"
     description:
       name: flutter_web_auth
-      sha256: a69fa8f43b9e4d86ac72176bf747b735e7b977dd7cf215076d95b87cb05affdd
+      sha256: "95e4856e24fb6ac1678f5ff334743b63f782d839ab324543d29ccbd295176209"
       url: "https://pub.flutter-io.cn"
     source: hosted
     version: "0.6.0"
@@ -938,7 +938,7 @@ packages:
       sha256: "76c121e1295a30423604f2f819bc255bc79f852f3bc8743a24017df6068ad133"
       url: "https://pub.flutter-io.cn"
     source: hosted
-    version: "3.1.8"
+    version: "3.1.0+1"
   js:
     dependency: transitive
     description:
