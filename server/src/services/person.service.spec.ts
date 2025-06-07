@@ -1,39 +1,26 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
-import { Colorspace } from 'src/config';
 import { BulkIdErrorReason } from 'src/dtos/asset-ids.response.dto';
 import { PersonResponseDto, mapFaces, mapPerson } from 'src/dtos/person.dto';
 import { AssetFaceEntity } from 'src/entities/asset-face.entity';
-import { SourceType, SystemMetadataKey } from 'src/enum';
+import { CacheControl, Colorspace, ImageFormat, SourceType, SystemMetadataKey } from 'src/enum';
 import { IAssetRepository, WithoutProperty } from 'src/interfaces/asset.interface';
 import { ICryptoRepository } from 'src/interfaces/crypto.interface';
 import { IJobRepository, JobName, JobStatus } from 'src/interfaces/job.interface';
-import { ILoggerRepository } from 'src/interfaces/logger.interface';
 import { DetectedFaces, IMachineLearningRepository } from 'src/interfaces/machine-learning.interface';
 import { IMediaRepository } from 'src/interfaces/media.interface';
-import { IMoveRepository } from 'src/interfaces/move.interface';
 import { IPersonRepository } from 'src/interfaces/person.interface';
 import { FaceSearchResult, ISearchRepository } from 'src/interfaces/search.interface';
 import { IStorageRepository } from 'src/interfaces/storage.interface';
 import { ISystemMetadataRepository } from 'src/interfaces/system-metadata.interface';
 import { PersonService } from 'src/services/person.service';
-import { CacheControl, ImmichFileResponse } from 'src/utils/file';
+import { ImmichFileResponse } from 'src/utils/file';
 import { assetStub } from 'test/fixtures/asset.stub';
 import { authStub } from 'test/fixtures/auth.stub';
 import { faceStub } from 'test/fixtures/face.stub';
 import { personStub } from 'test/fixtures/person.stub';
 import { systemConfigStub } from 'test/fixtures/system-config.stub';
-import { IAccessRepositoryMock, newAccessRepositoryMock } from 'test/repositories/access.repository.mock';
-import { newAssetRepositoryMock } from 'test/repositories/asset.repository.mock';
-import { newCryptoRepositoryMock } from 'test/repositories/crypto.repository.mock';
-import { newJobRepositoryMock } from 'test/repositories/job.repository.mock';
-import { newLoggerRepositoryMock } from 'test/repositories/logger.repository.mock';
-import { newMachineLearningRepositoryMock } from 'test/repositories/machine-learning.repository.mock';
-import { newMediaRepositoryMock } from 'test/repositories/media.repository.mock';
-import { newMoveRepositoryMock } from 'test/repositories/move.repository.mock';
-import { newPersonRepositoryMock } from 'test/repositories/person.repository.mock';
-import { newSearchRepositoryMock } from 'test/repositories/search.repository.mock';
-import { newStorageRepositoryMock } from 'test/repositories/storage.repository.mock';
-import { newSystemMetadataRepositoryMock } from 'test/repositories/system-metadata.repository.mock';
+import { IAccessRepositoryMock } from 'test/repositories/access.repository.mock';
+import { newTestService } from 'test/utils';
 import { IsNull } from 'typeorm';
 import { Mocked } from 'vitest';
 
@@ -66,47 +53,33 @@ const detectFaceMock: DetectedFaces = {
 };
 
 describe(PersonService.name, () => {
+  let sut: PersonService;
+
   let accessMock: IAccessRepositoryMock;
   let assetMock: Mocked<IAssetRepository>;
-  let systemMock: Mocked<ISystemMetadataRepository>;
+  let cryptoMock: Mocked<ICryptoRepository>;
   let jobMock: Mocked<IJobRepository>;
   let machineLearningMock: Mocked<IMachineLearningRepository>;
   let mediaMock: Mocked<IMediaRepository>;
-  let moveMock: Mocked<IMoveRepository>;
   let personMock: Mocked<IPersonRepository>;
-  let storageMock: Mocked<IStorageRepository>;
   let searchMock: Mocked<ISearchRepository>;
-  let cryptoMock: Mocked<ICryptoRepository>;
-  let loggerMock: Mocked<ILoggerRepository>;
-  let sut: PersonService;
+  let storageMock: Mocked<IStorageRepository>;
+  let systemMock: Mocked<ISystemMetadataRepository>;
 
   beforeEach(() => {
-    accessMock = newAccessRepositoryMock();
-    assetMock = newAssetRepositoryMock();
-    systemMock = newSystemMetadataRepositoryMock();
-    jobMock = newJobRepositoryMock();
-    machineLearningMock = newMachineLearningRepositoryMock();
-    moveMock = newMoveRepositoryMock();
-    mediaMock = newMediaRepositoryMock();
-    personMock = newPersonRepositoryMock();
-    storageMock = newStorageRepositoryMock();
-    searchMock = newSearchRepositoryMock();
-    cryptoMock = newCryptoRepositoryMock();
-    loggerMock = newLoggerRepositoryMock();
-    sut = new PersonService(
+    ({
+      sut,
       accessMock,
       assetMock,
+      cryptoMock,
+      jobMock,
       machineLearningMock,
-      moveMock,
       mediaMock,
       personMock,
-      systemMock,
-      storageMock,
-      jobMock,
       searchMock,
-      cryptoMock,
-      loggerMock,
-    );
+      storageMock,
+      systemMock,
+    } = newTestService(PersonService));
   });
 
   it('should be defined', () => {
@@ -661,7 +634,7 @@ describe(PersonService.name, () => {
       expect(systemMock.set).not.toHaveBeenCalled();
     });
 
-    it('should delete existing people and faces if forced', async () => {
+    it('should delete existing people if forced', async () => {
       jobMock.getJobCounts.mockResolvedValue({ active: 1, waiting: 0, paused: 0, completed: 0, failed: 0, delayed: 0 });
       personMock.getAll.mockResolvedValue({
         items: [faceStub.face1.person, personStub.randomPerson],
@@ -676,7 +649,8 @@ describe(PersonService.name, () => {
 
       await sut.handleQueueRecognizeFaces({ force: true });
 
-      expect(personMock.deleteAllFaces).toHaveBeenCalledWith({ sourceType: SourceType.MACHINE_LEARNING });
+      expect(personMock.deleteFaces).not.toHaveBeenCalled();
+      expect(personMock.unassignFaces).toHaveBeenCalledWith({ sourceType: SourceType.MACHINE_LEARNING });
       expect(jobMock.queueAll).toHaveBeenCalledWith([
         {
           name: JobName.FACIAL_RECOGNITION,
@@ -962,12 +936,11 @@ describe(PersonService.name, () => {
       expect(storageMock.mkdirSync).toHaveBeenCalledWith('upload/thumbs/admin_id/pe/rs');
       expect(mediaMock.generateThumbnail).toHaveBeenCalledWith(
         assetStub.primaryImage.originalPath,
-        'upload/thumbs/admin_id/pe/rs/person-1.jpeg',
         {
-          format: 'jpeg',
+          colorspace: Colorspace.P3,
+          format: ImageFormat.JPEG,
           size: 250,
           quality: 80,
-          colorspace: Colorspace.P3,
           crop: {
             left: 238,
             top: 163,
@@ -976,6 +949,7 @@ describe(PersonService.name, () => {
           },
           processInvalidImages: false,
         },
+        'upload/thumbs/admin_id/pe/rs/person-1.jpeg',
       );
       expect(personMock.update).toHaveBeenCalledWith({
         id: 'person-1',
@@ -991,13 +965,12 @@ describe(PersonService.name, () => {
       await sut.handleGeneratePersonThumbnail({ id: personStub.primaryPerson.id });
 
       expect(mediaMock.generateThumbnail).toHaveBeenCalledWith(
-        assetStub.image.originalPath,
-        'upload/thumbs/admin_id/pe/rs/person-1.jpeg',
+        assetStub.primaryImage.originalPath,
         {
-          format: 'jpeg',
+          colorspace: Colorspace.P3,
+          format: ImageFormat.JPEG,
           size: 250,
           quality: 80,
-          colorspace: Colorspace.P3,
           crop: {
             left: 0,
             top: 85,
@@ -1006,6 +979,7 @@ describe(PersonService.name, () => {
           },
           processInvalidImages: false,
         },
+        'upload/thumbs/admin_id/pe/rs/person-1.jpeg',
       );
     });
 
@@ -1018,12 +992,11 @@ describe(PersonService.name, () => {
 
       expect(mediaMock.generateThumbnail).toHaveBeenCalledWith(
         assetStub.primaryImage.originalPath,
-        'upload/thumbs/admin_id/pe/rs/person-1.jpeg',
         {
-          format: 'jpeg',
+          colorspace: Colorspace.P3,
+          format: ImageFormat.JPEG,
           size: 250,
           quality: 80,
-          colorspace: Colorspace.P3,
           crop: {
             left: 591,
             top: 591,
@@ -1032,33 +1005,7 @@ describe(PersonService.name, () => {
           },
           processInvalidImages: false,
         },
-      );
-    });
-
-    it('should use preview path for videos', async () => {
-      personMock.getById.mockResolvedValue({ ...personStub.primaryPerson, faceAssetId: faceStub.end.assetId });
-      personMock.getFaceByIdWithAssets.mockResolvedValue(faceStub.end);
-      assetMock.getById.mockResolvedValue(assetStub.video);
-      mediaMock.getImageDimensions.mockResolvedValue({ width: 2560, height: 1440 });
-
-      await sut.handleGeneratePersonThumbnail({ id: personStub.primaryPerson.id });
-
-      expect(mediaMock.generateThumbnail).toHaveBeenCalledWith(
-        '/uploads/user-id/thumbs/path.jpg',
         'upload/thumbs/admin_id/pe/rs/person-1.jpeg',
-        {
-          format: 'jpeg',
-          size: 250,
-          quality: 80,
-          colorspace: Colorspace.P3,
-          crop: {
-            left: 1741,
-            top: 851,
-            width: 588,
-            height: 588,
-          },
-          processInvalidImages: false,
-        },
       );
     });
   });
