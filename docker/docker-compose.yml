@@ -3,7 +3,7 @@ name: immich
 services:
   immich-server:
     container_name: immich_server
-    image: docker.io/dgh18/ohos_immich:v1.115.0
+    image: docker.io/dgh18/ohos_immich:v1.120.2
     # extends:
     #   file: hwaccel.transcoding.yml
     #   service: cpu # set to one of [nvenc, quicksync, rkmpp, vaapi, vaapi-wsl] for accelerated transcoding
@@ -14,7 +14,7 @@ services:
     env_file:
       - .env
     ports:
-      - '2297:3001'
+      - '2283:2283'
     depends_on:
       - redis
       - database
@@ -26,7 +26,7 @@ services:
     container_name: immich_machine_learning
     # For hardware acceleration, add one of -[armnn, cuda, rocm, openvino, rknn] to the image tag.
     # Example tag: ${IMMICH_VERSION:-release}-cuda
-    image: ghcr.io/immich-app/immich-machine-learning:v1.115.0
+    image: ghcr.io/immich-app/immich-machine-learning:v1.120.2
     extends: # uncomment this section for hardware acceleration - see https://immich.app/docs/features/ml-hardware-acceleration
       file: hwaccel.ml.yml
       service: openvino # set to one of [armnn, cuda, openvino, openvino-wsl] for accelerated inference - use the `-wsl` version for WSL2 where applicable

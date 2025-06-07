@@ -1820,10 +1820,10 @@ packages:
     dependency: "direct main"
     description:
       name: video_player_android
-      sha256: "28dcc4122079f40f93a0965b3679aff1a5f4251cf79611bd8011f937eb6b69de"
+      sha256: "4de50df9ee786f5891d3281e1e633d7b142ef1acf47392592eb91cba5d355849"
       url: "https://pub.flutter-io.cn"
     source: hosted
-    version: "2.8.4"
+    version: "2.6.0"
   video_player_avfoundation:
     dependency: transitive
     description:
