@@ -1,4 +1,5 @@
 // import 'dart:math';
+
 // import 'package:auto_route/auto_route.dart';
 // import 'package:collection/collection.dart';
 // import 'package:easy_localization/easy_localization.dart';
@@ -7,26 +8,27 @@
 // import 'package:fluttertoast/fluttertoast.dart';
 // import 'package:geolocator/geolocator.dart';
 // import 'package:hooks_riverpod/hooks_riverpod.dart';
+// import 'package:immich_mobile/entities/asset.entity.dart';
 // import 'package:immich_mobile/extensions/asyncvalue_extensions.dart';
 // import 'package:immich_mobile/extensions/build_context_extensions.dart';
 // import 'package:immich_mobile/extensions/latlngbounds_extension.dart';
 // import 'package:immich_mobile/extensions/maplibrecontroller_extensions.dart';
 // import 'package:immich_mobile/models/map/map_event.model.dart';
 // import 'package:immich_mobile/models/map/map_marker.model.dart';
+// import 'package:immich_mobile/providers/db.provider.dart';
 // import 'package:immich_mobile/providers/map/map_marker.provider.dart';
 // import 'package:immich_mobile/providers/map/map_state.provider.dart';
+// import 'package:immich_mobile/routing/router.dart';
+// import 'package:immich_mobile/utils/debounce.dart';
+// import 'package:immich_mobile/utils/immich_loading_overlay.dart';
 // import 'package:immich_mobile/utils/map_utils.dart';
+// import 'package:immich_mobile/widgets/asset_grid/asset_grid_data_structure.dart';
+// import 'package:immich_mobile/widgets/common/immich_toast.dart';
 // import 'package:immich_mobile/widgets/map/map_app_bar.dart';
 // import 'package:immich_mobile/widgets/map/map_asset_grid.dart';
 // import 'package:immich_mobile/widgets/map/map_bottom_sheet.dart';
 // import 'package:immich_mobile/widgets/map/map_theme_override.dart';
 // import 'package:immich_mobile/widgets/map/positioned_asset_marker_icon.dart';
-// import 'package:immich_mobile/routing/router.dart';
-// import 'package:immich_mobile/entities/asset.entity.dart';
-// import 'package:immich_mobile/providers/db.provider.dart';
-// import 'package:immich_mobile/widgets/common/immich_toast.dart';
-// import 'package:immich_mobile/utils/immich_loading_overlay.dart';
-// import 'package:immich_mobile/utils/debounce.dart';
 // import 'package:maplibre_gl/maplibre_gl.dart';
 
 // // @RoutePage()
@@ -248,86 +250,86 @@
 //       selectedAssets.value = selected ? selection : {};
 //     }
 
-//     return MapThemeOveride(
-//       mapBuilder: (style) => context.isMobile
-//           // Single-column
-//           ? Scaffold(
-//               extendBodyBehindAppBar: true,
-//               appBar: MapAppBar(selectedAssets: selectedAssets),
-//               body: Stack(
-//                 children: [
-//                   _MapWithMarker(
-//                     style: style,
-//                     selectedMarker: selectedMarker,
-//                     onMapCreated: onMapCreated,
-//                     onMapMoved: onMapMoved,
-//                     onMapClicked: onMarkerClicked,
-//                     onStyleLoaded: reloadLayers,
-//                     onMarkerTapped: onMarkerTapped,
-//                   ),
-//                   // Should be a part of the body and not scaffold::bottomsheet for the
-//                   // location button to be hit testable
-//                   MapBottomSheet(
-//                     mapEventStream: bottomSheetStreamController.stream,
-//                     onGridAssetChanged: onBottomSheetScrolled,
-//                     onZoomToAsset: onZoomToAsset,
-//                     onAssetsSelected: onAssetsSelected,
-//                     onZoomToLocation: onZoomToLocation,
-//                     selectedAssets: selectedAssets,
-//                   ),
-//                 ],
-//               ),
-//             )
-//           // Two-pane
-//           : Row(
-//               children: [
-//                 Expanded(
-//                   child: Scaffold(
-//                     extendBodyBehindAppBar: true,
-//                     appBar: MapAppBar(selectedAssets: selectedAssets),
-//                     body: Stack(
-//                       children: [
-//                         _MapWithMarker(
-//                           style: style,
-//                           selectedMarker: selectedMarker,
-//                           onMapCreated: onMapCreated,
-//                           onMapMoved: onMapMoved,
-//                           onMapClicked: onMarkerClicked,
-//                           onStyleLoaded: reloadLayers,
-//                           onMarkerTapped: onMarkerTapped,
-//                         ),
-//                         Positioned(
-//                           right: 0,
-//                           bottom: 30,
-//                           child: ElevatedButton(
-//                             onPressed: onZoomToLocation,
-//                             style: ElevatedButton.styleFrom(
-//                               shape: const CircleBorder(),
-//                             ),
-//                             child: const Icon(Icons.my_location),
-//                           ),
-//                         ),
-//                       ],
-//                     ),
-//                   ),
-//                 ),
-//                 Expanded(
-//                   child: LayoutBuilder(
-//                     builder: (ctx, constraints) => MapAssetGrid(
-//                       controller: scrollController,
-//                       mapEventStream: bottomSheetStreamController.stream,
-//                       onGridAssetChanged: onBottomSheetScrolled,
-//                       onZoomToAsset: onZoomToAsset,
-//                       onAssetsSelected: onAssetsSelected,
-//                       selectedAssets: selectedAssets,
-//                     ),
-//                   ),
-//                 ),
-//               ],
-//             ),
-//     );
-//   }
-// }
+    return MapThemeOveride(
+      mapBuilder: (style) => context.isMobile
+          // Single-column
+          ? Scaffold(
+              extendBodyBehindAppBar: true,
+              appBar: MapAppBar(selectedAssets: selectedAssets),
+              body: Stack(
+                children: [
+                  _MapWithMarker(
+                    style: style,
+                    selectedMarker: selectedMarker,
+                    onMapCreated: onMapCreated,
+                    onMapMoved: onMapMoved,
+                    onMapClicked: onMarkerClicked,
+                    onStyleLoaded: reloadLayers,
+                    onMarkerTapped: onMarkerTapped,
+                  ),
+                  // Should be a part of the body and not scaffold::bottomsheet for the
+                  // location button to be hit testable
+                  MapBottomSheet(
+                    mapEventStream: bottomSheetStreamController.stream,
+                    onGridAssetChanged: onBottomSheetScrolled,
+                    onZoomToAsset: onZoomToAsset,
+                    onAssetsSelected: onAssetsSelected,
+                    onZoomToLocation: onZoomToLocation,
+                    selectedAssets: selectedAssets,
+                  ),
+                ],
+              ),
+            )
+          // Two-pane
+          : Row(
+              children: [
+                Expanded(
+                  child: Scaffold(
+                    extendBodyBehindAppBar: true,
+                    appBar: MapAppBar(selectedAssets: selectedAssets),
+                    body: Stack(
+                      children: [
+                        _MapWithMarker(
+                          style: style,
+                          selectedMarker: selectedMarker,
+                          onMapCreated: onMapCreated,
+                          onMapMoved: onMapMoved,
+                          onMapClicked: onMarkerClicked,
+                          onStyleLoaded: reloadLayers,
+                          onMarkerTapped: onMarkerTapped,
+                        ),
+                        Positioned(
+                          right: 0,
+                          bottom: MediaQuery.paddingOf(context).bottom + 16,
+                          child: ElevatedButton(
+                            onPressed: onZoomToLocation,
+                            style: ElevatedButton.styleFrom(
+                              shape: const CircleBorder(),
+                            ),
+                            child: const Icon(Icons.my_location),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: LayoutBuilder(
+                    builder: (ctx, constraints) => MapAssetGrid(
+                      controller: scrollController,
+                      mapEventStream: bottomSheetStreamController.stream,
+                      onGridAssetChanged: onBottomSheetScrolled,
+                      onZoomToAsset: onZoomToAsset,
+                      onAssetsSelected: onAssetsSelected,
+                      selectedAssets: selectedAssets,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+    );
+  }
+}
 
 // class _AssetMarkerMeta {
 //   final Point<num> point;

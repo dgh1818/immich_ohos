@@ -8,6 +8,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:immich_mobile/entities/asset.entity.dart';
 import 'package:immich_mobile/extensions/build_context_extensions.dart';
 import 'package:immich_mobile/extensions/theme_extensions.dart';
+import 'package:immich_mobile/interfaces/person_api.interface.dart';
 import 'package:immich_mobile/models/search/search_filter.model.dart';
 import 'package:immich_mobile/providers/search/paginated_search.provider.dart';
 import 'package:immich_mobile/widgets/asset_grid/multiselect_grid.dart';
@@ -19,7 +20,6 @@ import 'package:immich_mobile/widgets/search/search_filter/media_type_picker.dar
 import 'package:immich_mobile/widgets/search/search_filter/people_picker.dart';
 import 'package:immich_mobile/widgets/search/search_filter/search_filter_chip.dart';
 import 'package:immich_mobile/widgets/search/search_filter/search_filter_utils.dart';
-import 'package:openapi/api.dart';
 import 'dart:ui' as ui;
 import 'package:immich_mobile/main.dart';
 
@@ -66,7 +66,6 @@ class SearchInputPage extends HookConsumerWidget {
 
     useEffect(() {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-
         final modalRoute = ModalRoute.of(context);
         if (modalRoute is PageRoute) {
           routeObserver.subscribe(routeAware, modalRoute);
@@ -128,7 +127,7 @@ class SearchInputPage extends HookConsumerWidget {
     }
 
     showPeoplePicker() {
-      handleOnSelect(Set<PersonResponseDto> value) {
+      handleOnSelect(Set<Person> value) {
         filter.value = filter.value.copyWith(
           people: value,
         );
@@ -601,7 +600,7 @@ class _MyRouteAware extends RouteAware {
   @override
   void didPopNext() {
     super.didPopNext();
-    ui.SetHdr.setHdrMode(hdr:0, is_image:true);
+    ui.SetHdr.setHdrMode(hdr: 0, is_image: true);
   }
   // void didPush() { }
   // void didPop() { }
