@@ -33,6 +33,8 @@ import 'package:immich_mobile/widgets/photo_view/src/photo_view_computed_scale.d
 import 'package:immich_mobile/widgets/photo_view/src/photo_view_scale_state.dart';
 import 'package:immich_mobile/widgets/photo_view/src/utils/photo_view_hero_attributes.dart';
 
+import 'package:immich_mobile/main.dart';
+
 @RoutePage()
 // ignore: must_be_immutable
 class GalleryViewerPage extends HookConsumerWidget {
@@ -62,6 +64,21 @@ class GalleryViewerPage extends HookConsumerWidget {
     final localPosition = useState<Offset?>(null);
     final currentIndex = useState(initialIndex);
     final currentAsset = loadAsset(currentIndex.value);
+
+    final routeAware = useMemoized(() => _MyRouteAware());
+
+    useEffect(() {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final modalRoute = ModalRoute.of(context);
+        if (modalRoute is PageRoute) {
+          routeObserver.subscribe(routeAware, modalRoute);
+        }
+      });
+
+      return () {
+        routeObserver.unsubscribe(routeAware);
+      };
+    }, [context]);
 
     // Update is playing motion video
     ref.listen(videoPlaybackValueProvider.select((v) => v.state), (_, state) {
@@ -480,4 +497,20 @@ class GalleryViewerPage extends HookConsumerWidget {
       ),
     );
   }
+}
+
+class _MyRouteAware extends RouteAware {
+  //@override
+  // void didPopNext() {
+  //   super.didPopNext();
+  //   ui.SetHdr.setHdrMode(hdr: 0, is_image: true);
+  // }
+  // void didPush() { }
+
+  @override
+  void didPop() {
+    super.didPop();
+    ui.SetHdr.setHdrMode(hdr: 0, is_image: true);
+  }
+  // void didPushNext() { }
 }
