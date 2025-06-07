@@ -16,8 +16,10 @@ class FileMediaRepository implements IFileMediaRepository {
     required String title,
     String? relativePath,
   }) async {
+    // final entity = await PhotoManager.editor
+    //     .saveImage(data, title: title, relativePath: relativePath);
     final entity = await PhotoManager.editor
-        .saveImage(data, title: title, relativePath: relativePath);
+        .saveImage(data, filename: title, relativePath: relativePath);
     return AssetMediaRepository.toAsset(entity);
   }
 

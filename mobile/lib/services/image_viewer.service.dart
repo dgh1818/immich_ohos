@@ -90,8 +90,7 @@ class ImageViewerService {
         if (asset.isImage) {
           resultAsset = await _fileMediaRepository.saveImage(
             res.bodyBytes,
-            //title: asset.fileName,
-            filename: asset.fileName,
+            title: asset.fileName,
             relativePath: relativePath,
           );
         } else {
