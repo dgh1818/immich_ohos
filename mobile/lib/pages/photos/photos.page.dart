@@ -39,19 +39,6 @@ class PhotosPage extends HookConsumerWidget {
       [],
     );
 
-    // useEffect(() {
-    //   WidgetsBinding.instance.addPostFrameCallback((_) {
-    //     final modalRoute = ModalRoute.of(context);
-    //     if (modalRoute is PageRoute) {
-    //       routeObserver.subscribe(routeAware, modalRoute);
-    //     }
-    //   });
-
-    //   return () {
-    //     routeObserver.unsubscribe(routeAware);
-    //   };
-    // }, [context]);
-
     Widget buildLoadingIndicator() {
       Timer(const Duration(seconds: 2), () => tipOneOpacity.value = 1);
 
@@ -138,14 +125,3 @@ class PhotosPage extends HookConsumerWidget {
     );
   }
 }
-
-// class _MyRouteAware extends RouteAware {
-//   @override
-//   void didPopNext() {
-//     super.didPopNext();
-//     ui.SetHdr.setHdrMode(hdr:0, is_image:true);
-//   }
-//   // void didPush() { }
-//   // void didPop() { }
-//   // void didPushNext() { }
-// }
