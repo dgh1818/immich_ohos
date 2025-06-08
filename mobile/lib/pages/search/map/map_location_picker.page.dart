@@ -11,6 +11,8 @@ import 'package:immich_mobile/extensions/maplibrecontroller_extensions.dart';
 import 'package:immich_mobile/widgets/map/map_theme_override.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 import 'package:immich_mobile/utils/map_utils.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 
 @RoutePage()
 class MapLocationPickerPage extends HookConsumerWidget {
@@ -24,19 +26,35 @@ class MapLocationPickerPage extends HookConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final selectedLatLng = useValueNotifier<LatLng>(initialLatLng);
-    final controller = useRef<MaplibreMapController?>(null);
+    final controller = useRef<MapLibreMapController?>(null);
     final marker = useRef<Symbol?>(null);
 
     Future<void> onStyleLoaded() async {
-      marker.value = await controller.value?.addMarkerAtLatLng(initialLatLng);
+      // marker.value = await controller.value?.addMarkerAtLatLng(initialLatLng);
+      if (defaultTargetPlatform == TargetPlatform.android ||
+          defaultTargetPlatform == TargetPlatform.iOS) {
+        marker.value = await controller.value?.addMarkerAtLatLng(initialLatLng);
+      } else if (defaultTargetPlatform == TargetPlatform.ohos) {
+        ByteData mapMarkData = await rootBundle.load("assets/location-pin.png");
+        await controller.value
+            ?.addMarkerAtLatLng_Ohos(initialLatLng, mapMarkData, 0.15);
+      }
     }
 
     Future<void> onMapClick(Point<num> point, LatLng centre) async {
       selectedLatLng.value = centre;
       controller.value?.animateCamera(CameraUpdate.newLatLng(centre));
       if (marker.value != null) {
-        await controller.value
-            ?.updateSymbol(marker.value!, SymbolOptions(geometry: centre));
+        if (defaultTargetPlatform == TargetPlatform.android ||
+            defaultTargetPlatform == TargetPlatform.iOS) {
+          await controller.value
+              ?.updateSymbol(marker.value!, SymbolOptions(geometry: centre));
+        } else {
+          ByteData mapMarkData =
+              await rootBundle.load("assets/location-pin.png");
+          await controller.value
+              ?.addMarkerAtLatLng_Ohos(centre, mapMarkData, 0.15);
+        }
       }
     }
 
@@ -74,7 +92,7 @@ class MapLocationPickerPage extends HookConsumerWidget {
                   bottomRight: Radius.circular(40),
                 ),
               ),
-              child: MaplibreMap(
+              child: MapLibreMap(
                 initialCameraPosition:
                     CameraPosition(target: initialLatLng, zoom: 12),
                 styleString: style,

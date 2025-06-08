@@ -32,9 +32,10 @@ class LocalNotificationService {
     const androidSetting =
         AndroidInitializationSettings('@drawable/notification_icon');
     const iosSetting = DarwinInitializationSettings();
+    const ohosSetting = OhosInitializationSettings('app_icon');
 
     const initSettings =
-        InitializationSettings(android: androidSetting, iOS: iosSetting);
+        InitializationSettings(android: androidSetting, iOS: iosSetting, ohos: ohosSetting);
 
     await _localNotificationPlugin.initialize(
       initSettings,
@@ -49,10 +50,12 @@ class LocalNotificationService {
     String body,
     AndroidNotificationDetails androidNotificationDetails,
     DarwinNotificationDetails iosNotificationDetails,
+    OhosNotificationDetails ohosNotificationDetails,
   ) async {
     final notificationDetails = NotificationDetails(
       android: androidNotificationDetails,
       iOS: iosNotificationDetails,
+      ohos: ohosNotificationDetails,
     );
 
     if (_permissionStatus == PermissionStatus.granted) {
@@ -114,6 +117,31 @@ class LocalNotificationService {
             playSound: false,
           );
 
+    final ohosNotificationDetails = (maxProgress != null && progress != null)
+        ? OhosNotificationDetails(
+            OhosNotificationSlotType.CONTENT_INFORMATION,
+            slotDesc: title,
+            importance: OhosImportance.low,
+            playSound: false,
+            showProgress: true,
+            onlyAlertOnce: true,
+            maxProgress: maxProgress,
+            progress: progress,
+            indeterminate: false,
+            ongoing: true,
+            actions: (showActions ?? false)
+                ? <OhosNotificationAction>[
+                    const OhosNotificationAction(
+                      cancelUploadActionID,
+                      'Cancel',
+                    ),
+                  ] 
+                : null,
+          )
+          // Non-progress notification
+          : OhosNotificationDetails(OhosNotificationSlotType.CONTENT_INFORMATION,
+            playSound: false,
+            );
     final iosNotificationDetails = DarwinNotificationDetails(
       presentBadge: true,
       presentList: true,
@@ -126,6 +154,7 @@ class LocalNotificationService {
       body,
       androidNotificationDetails,
       iosNotificationDetails,
+      ohosNotificationDetails,
     );
   }
 

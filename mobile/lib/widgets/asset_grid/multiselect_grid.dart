@@ -381,9 +381,9 @@ class MultiselectGrid extends HookConsumerWidget {
           ownerErrorMessage: 'home_page_favorite_err_partner'.tr(),
         );
 
-        if (remoteAssets.isNotEmpty) {
-          handleEditLocation(ref, context, remoteAssets.toList());
-        }
+        // if (remoteAssets.isNotEmpty) {
+        //   handleEditLocation(ref, context, remoteAssets.toList());
+        // }
       } finally {
         selectionEnabledHook.value = false;
       }

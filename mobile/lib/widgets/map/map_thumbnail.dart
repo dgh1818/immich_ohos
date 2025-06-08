@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:immich_mobile/extensions/asyncvalue_extensions.dart';
@@ -8,12 +9,15 @@ import 'package:immich_mobile/extensions/maplibrecontroller_extensions.dart';
 import 'package:immich_mobile/widgets/map/map_theme_override.dart';
 import 'package:immich_mobile/widgets/map/positioned_asset_marker_icon.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
+import 'package:flutter/foundation.dart';
+import 'package:coordtransform_dart/coordtransform_dart.dart';
+import 'package:immich_mobile/widgets/asset_viewer/detail_panel/asset_location.dart';
 
-/// A non-interactive thumbnail of a map in the given coordinates with optional markers
-///
-/// User can provide either a [assetMarkerRemoteId] to display the asset's thumbnail or set
-/// [showMarkerPin] to true which would display a marker pin instead. If both are provided,
-/// [assetMarkerRemoteId] will take precedence
+// /// A non-interactive thumbnail of a map in the given coordinates with optional markers
+// ///
+// /// User can provide either a [assetMarkerRemoteId] to display the asset's thumbnail or set
+// /// [showMarkerPin] to true which would display a marker pin instead. If both are provided,
+// /// [assetMarkerRemoteId] will take precedence
 class MapThumbnail extends HookConsumerWidget {
   final Function(Point<double>, LatLng)? onTap;
   final LatLng centre;
@@ -24,6 +28,7 @@ class MapThumbnail extends HookConsumerWidget {
   final double width;
   final ThemeMode? themeMode;
   final bool showAttribution;
+  final bool isZoomControlsEnabled;
 
   const MapThumbnail({
     super.key,
@@ -36,29 +41,64 @@ class MapThumbnail extends HookConsumerWidget {
     this.showMarkerPin = false,
     this.themeMode,
     this.showAttribution = true,
+    this.isZoomControlsEnabled = true,
   });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final offsettedCentre = LatLng(centre.latitude + 0.002, centre.longitude);
-    final controller = useRef<MaplibreMapController?>(null);
+    final outLngLat =
+        CoordinateTransformUtil.wgs84ToGcj02(centre.longitude, centre.latitude);
+    final LatLng centreProcessed = LatLng(outLngLat[1], outLngLat[0]);
+    // final offsettedCentre =
+    //     LatLng(centreProcessed.latitude + 0.002, centreProcessed.longitude);
+    final offsettedCentre =
+        LatLng(centreProcessed.latitude, centreProcessed.longitude);
+    final controller = useRef<MapLibreMapController?>(null);
     final position = useValueNotifier<Point<num>?>(null);
-
-    Future<void> onMapCreated(MaplibreMapController mapController) async {
+    final reverseLocation = useValueNotifier<String?>(null);
+    Future<void> onMapCreated(MapLibreMapController mapController) async {
       controller.value = mapController;
-      if (assetMarkerRemoteId != null) {
-        // The iOS impl returns wrong toScreenLocation without the delay
-        Future.delayed(
-          const Duration(milliseconds: 100),
-          () async =>
-              position.value = await mapController.toScreenLocation(centre),
-        );
+      if (defaultTargetPlatform == TargetPlatform.android ||
+          defaultTargetPlatform == TargetPlatform.iOS) {
+        // The Ohos need to wait for the PetalMap View to return
+        if (assetMarkerRemoteId != null) {
+          // The iOS impl returns wrong toScreenLocation without the delay
+          Future.delayed(
+            const Duration(milliseconds: 100),
+            () async =>
+                position.value = await mapController.toScreenLocation(centre),
+          );
+        }
       }
     }
 
+    Future<void> onLocationChanged() async {
+      reverseLocation.value = controller.value?.reverseLocation;
+      ref.read(exifLocationTextProvider.notifier).state =
+          reverseLocation.value!;
+    }
+
     Future<void> onStyleLoaded() async {
+      if (defaultTargetPlatform == TargetPlatform.ohos) {
+        controller.value?.addListener(onLocationChanged);
+        if (assetMarkerRemoteId != null) {
+          position.value =
+              await controller.value?.toScreenLocation(centreProcessed);
+        }
+
+        await controller.value?.reverseGeo(centreProcessed);
+      }
+      //The Ohos PetalMap View get
       if (showMarkerPin && controller.value != null) {
-        await controller.value?.addMarkerAtLatLng(centre);
+        if (defaultTargetPlatform == TargetPlatform.android ||
+            defaultTargetPlatform == TargetPlatform.iOS) {
+          await controller.value?.addMarkerAtLatLng(centre);
+        } else if (defaultTargetPlatform == TargetPlatform.ohos) {
+          ByteData mapMarkData =
+              await rootBundle.load("assets/location-pin.png");
+          await controller.value
+              ?.addMarkerAtLatLng_Ohos(centreProcessed, mapMarkData, 0.15);
+        }
       }
     }
 
@@ -73,16 +113,16 @@ class MapThumbnail extends HookConsumerWidget {
             alignment: Alignment.center,
             children: [
               style.widgetWhen(
-                onData: (style) => MaplibreMap(
+                onData: (style) => MapLibreMap(
                   initialCameraPosition:
-                      CameraPosition(target: offsettedCentre, zoom: zoom),
+                      CameraPosition(target: centreProcessed, zoom: zoom),
                   styleString: style,
                   onMapCreated: onMapCreated,
                   onStyleLoadedCallback: onStyleLoaded,
                   onMapClick: onTap,
                   doubleClickZoomEnabled: false,
                   dragEnabled: false,
-                  zoomGesturesEnabled: false,
+                  zoomGesturesEnabled: isZoomControlsEnabled,
                   tiltGesturesEnabled: false,
                   scrollGesturesEnabled: false,
                   rotateGesturesEnabled: false,

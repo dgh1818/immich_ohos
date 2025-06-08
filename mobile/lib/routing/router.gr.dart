@@ -1010,22 +1010,22 @@ class MapLocationPickerRouteArgs {
 
 /// generated route for
 /// [MapPage]
-class MapRoute extends PageRouteInfo<void> {
-  const MapRoute({List<PageRouteInfo>? children})
-      : super(
-          MapRoute.name,
-          initialChildren: children,
-        );
+// class MapRoute extends PageRouteInfo<void> {
+//   const MapRoute({List<PageRouteInfo>? children})
+//       : super(
+//           MapRoute.name,
+//           initialChildren: children,
+//         );
 
-  static const String name = 'MapRoute';
+//   static const String name = 'MapRoute';
 
-  static PageInfo page = PageInfo(
-    name,
-    builder: (data) {
-      return const MapPage();
-    },
-  );
-}
+//   static PageInfo page = PageInfo(
+//     name,
+//     builder: (data) {
+//       return const MapPage();
+//     },
+//   );
+// }
 
 /// generated route for
 /// [MemoryPage]

@@ -5,8 +5,8 @@ import 'package:immich_mobile/providers/locale_provider.dart';
 import 'package:immich_mobile/providers/map/map_state.provider.dart';
 import 'package:immich_mobile/utils/immich_app_theme.dart';
 
-/// Overrides the theme below the widget tree to use the theme data based on the
-/// map settings instead of the one from the app settings
+// /// Overrides the theme below the widget tree to use the theme data based on the
+// /// map settings instead of the one from the app settings
 class MapThemeOveride extends StatefulHookConsumerWidget {
   final ThemeMode? themeMode;
   final Widget Function(AsyncValue<String> style) mapBuilder;

@@ -5,7 +5,7 @@ import 'package:fluttertoast/fluttertoast.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:immich_mobile/providers/album/current_album.provider.dart';
 import 'package:immich_mobile/widgets/album/add_to_album_bottom_sheet.dart';
-import 'package:immich_mobile/providers/asset_viewer/download.provider.dart';
+//import 'package:immich_mobile/providers/asset_viewer/download.provider.dart';
 import 'package:immich_mobile/providers/asset_viewer/show_controls.provider.dart';
 import 'package:immich_mobile/widgets/asset_viewer/top_control_app_bar.dart';
 import 'package:immich_mobile/providers/backup/manual_upload.provider.dart';
@@ -93,9 +93,9 @@ class GalleryAppBar extends ConsumerWidget {
       );
     }
 
-    handleDownloadAsset() {
-      ref.read(downloadStateProvider.notifier).downloadAsset(asset, context);
-    }
+    // handleDownloadAsset() {
+    //   ref.read(downloadStateProvider.notifier).downloadAsset(asset, context);
+    // }
 
     return IgnorePointer(
       ignoring: !ref.watch(showControlsProvider),
@@ -113,7 +113,8 @@ class GalleryAppBar extends ConsumerWidget {
             onFavorite: toggleFavorite,
             onRestorePressed: () => handleRestore(asset),
             onUploadPressed: asset.isLocal ? () => handleUpload(asset) : null,
-            onDownloadPressed: asset.isLocal ? null : handleDownloadAsset,
+            //onDownloadPressed: asset.isLocal ? null : handleDownloadAsset,
+            onDownloadPressed: asset.isLocal ? null : null,
             onToggleMotionVideo: onToggleMotionVideo,
             onAddToAlbumPressed: () => addToAlbum(asset),
             onActivitiesPressed: handleActivities,

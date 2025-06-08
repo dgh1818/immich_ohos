@@ -3,6 +3,7 @@ import { ContainerDirectoryItem, ExifDateTime, Maybe, Tags } from 'exiftool-vend
 import { firstDateTime } from 'exiftool-vendored/dist/FirstDateTime';
 import _ from 'lodash';
 import { Duration } from 'luxon';
+import { createReadStream, promises as fs } from 'node:fs';
 import { constants } from 'node:fs/promises';
 import path from 'node:path';
 import { SystemConfig } from 'src/config';
@@ -387,6 +388,7 @@ export class MetadataService extends BaseService {
     const directory = Array.isArray(tags.ContainerDirectory)
       ? (tags.ContainerDirectory as ContainerDirectoryItem[])
       : null;
+    const { hasOhosLivePhoto, ohosFileSize, ohosVideoOffset } = await this.checkOhosLivePhoto(asset.originalPath);
 
     let length = 0;
     let padding = 0;
@@ -405,7 +407,12 @@ export class MetadataService extends BaseService {
       length = videoOffset;
     }
 
-    if (!length && !hasEmbeddedVideoFile && !hasMotionPhotoVideo) {
+    if (hasOhosLivePhoto) {
+      length = ohosVideoOffset;
+      this.logger.log(`Is Ohos JPEG-encoded livephoto (${asset.id})`);
+    }
+
+    if (!length && !hasEmbeddedVideoFile && !hasMotionPhotoVideo && !hasOhosLivePhoto) {
       return;
     }
 
@@ -423,6 +430,10 @@ export class MetadataService extends BaseService {
       //     JPEG-encoded; HEIC also contains these tags, so this conditional must come second
       else if (hasEmbeddedVideoFile) {
         video = await this.metadataRepository.extractBinaryTag(asset.originalPath, 'EmbeddedVideoFile');
+      }
+      //     Ohos LivePhoto video extraction; JPEG-encoded
+      else if (hasOhosLivePhoto) {
+        video = await this.processOhosLivePhoto(asset.originalPath, ohosFileSize, ohosVideoOffset);
       }
       // Default video extraction
       else {
@@ -738,5 +749,92 @@ export class MetadataService extends BaseService {
     await this.assetRepository.update({ id: asset.id, sidecarPath: null });
 
     return JobStatus.SUCCESS;
+  }
+
+  private async processOhosLivePhoto(filePath: string, fileSize: number, offset: number): Promise<Buffer> {
+    if (offset < 0) {
+      throw new Error(`Invalid Ohoslivephoto metadata`);
+    }
+
+    let OhosVideoEndOffset = 40;
+    const end = fileSize - OhosVideoEndOffset;
+    const start = end - offset;
+
+    if (start < 0 || start >= end) {
+      throw new Error(`Invalid data range: start=${start}, end=${end}`);
+    }
+
+    let video: Buffer;
+    const videoLength = end - start + 1;
+    const fd = await fs.open(filePath, 'r');
+
+    try {
+      video = Buffer.alloc(end - start + 1);
+      await fd.read(video, 0, videoLength, start);
+    } finally {
+      await fd.close();
+    }
+
+    return video;
+  }
+
+  private async checkOhosLivePhoto(
+    filePath: string,
+  ): Promise<{ hasOhosLivePhoto: number; ohosFileSize: number; ohosVideoOffset: number }> {
+    const stats = await fs.stat(filePath);
+    const ohosFileSize = stats.size;
+    let ohosLiveMetaDataOFFSET = 20;
+    let ohosVideoEndOffset = 40;
+    let hasOhosLivePhoto = 0;
+    let metadataBuffer = Buffer.alloc(ohosLiveMetaDataOFFSET);
+    let ohosVideoOffset = -1;
+
+    const minSize = ohosVideoEndOffset + 1;
+    if (ohosFileSize < minSize) {
+      return { hasOhosLivePhoto, ohosFileSize, ohosVideoOffset };
+    }
+
+    const fd = await fs.open(filePath, 'r');
+    try {
+      await fd.read(metadataBuffer, 0, ohosLiveMetaDataOFFSET, ohosFileSize - ohosLiveMetaDataOFFSET);
+    } finally {
+      await fd.close();
+    }
+
+    let liveStr = '';
+    for (let i = 0; i < 5; i++) {
+      const byte = metadataBuffer.readUInt8(i);
+      liveStr += String.fromCharCode(byte);
+    }
+    if (liveStr != 'LIVE_') {
+      return { hasOhosLivePhoto, ohosFileSize, ohosVideoOffset };
+    } else {
+      hasOhosLivePhoto = 1;
+    }
+
+    let numberStr = '';
+    if (hasOhosLivePhoto) {
+      const startPos = 5;
+      for (let i = startPos; i < metadataBuffer.length; i++) {
+        const byte = metadataBuffer.readUInt8(i);
+        if (byte === 0x20) continue; // Skip spaces
+        if (byte >= 0x30 && byte <= 0x39) {
+          numberStr += String.fromCharCode(byte);
+        } else {
+          break;
+        }
+      }
+      const ohosVideoOffset = parseInt(numberStr, 10);
+      this.logger.log(`numberStr is ${numberStr} `);
+
+      if (isNaN(ohosVideoOffset)) {
+        hasOhosLivePhoto = 0;
+        return { hasOhosLivePhoto, ohosFileSize, ohosVideoOffset };
+      } else {
+        return { hasOhosLivePhoto, ohosFileSize, ohosVideoOffset };
+      }
+    }
+
+    return { hasOhosLivePhoto, ohosFileSize, ohosVideoOffset };
   }
 }

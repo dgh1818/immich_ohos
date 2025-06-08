@@ -34,8 +34,8 @@ class VideoPlaybackValue {
     late VideoPlaybackState s;
     if (video == null) {
       s = VideoPlaybackState.initializing;
-    } else if (video.isCompleted) {
-      s = VideoPlaybackState.completed;
+      // } else if (video.isCompleted) {
+      //   s = VideoPlaybackState.completed;
     } else if (video.isPlaying) {
       s = VideoPlaybackState.playing;
     } else if (video.isBuffering) {

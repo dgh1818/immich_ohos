@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:background_downloader/background_downloader.dart';
+// import 'package:background_downloader/background_downloader.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/foundation.dart';
@@ -40,6 +40,10 @@ import 'package:immich_mobile/utils/migration.dart';
 import 'package:isar/isar.dart';
 import 'package:logging/logging.dart';
 import 'package:path_provider/path_provider.dart';
+
+import 'package:isar_flutter_libs/isar_flutter_libs.dart';
+
+final RouteObserver<ModalRoute> routeObserver = RouteObserver<ModalRoute>();
 
 void main() async {
   ImmichWidgetsBinding();
@@ -93,22 +97,22 @@ Future<void> initApp() async {
 
   initializeTimeZones();
 
-  FileDownloader().configureNotification(
-    running: TaskNotification(
-      'downloading_media'.tr(),
-      'file: {filename}',
-    ),
-    complete: TaskNotification(
-      'download_finished'.tr(),
-      'file: {filename}',
-    ),
-    progressBar: true,
-  );
+  // FileDownloader().configureNotification(
+  //   running: TaskNotification(
+  //     'downloading_media'.tr(),
+  //     'file: {filename}',
+  //   ),
+  //   complete: TaskNotification(
+  //     'download_finished'.tr(),
+  //     'file: {filename}',
+  //   ),
+  //   progressBar: true,
+  // );
 
-  FileDownloader().trackTasksInGroup(
-    downloadGroupLivePhoto,
-    markDownloadedComplete: false,
-  );
+  // FileDownloader().trackTasksInGroup(
+  //   downloadGroupLivePhoto,
+  //   markDownloadedComplete: false,
+  // );
 }
 
 Future<Isar> loadDb() async {
@@ -126,6 +130,7 @@ Future<Isar> loadDb() async {
       ETagSchema,
       if (Platform.isAndroid) AndroidDeviceAssetSchema,
       if (Platform.isIOS) IOSDeviceAssetSchema,
+      if (defaultTargetPlatform == TargetPlatform.ohos) IOSDeviceAssetSchema,
     ],
     directory: dir.path,
     maxSizeMiB: 1024,
@@ -242,8 +247,10 @@ class ImmichAppState extends ConsumerState<ImmichApp>
           ),
           routeInformationParser: router.defaultRouteParser(),
           routerDelegate: router.delegate(
-            navigatorObservers: () => [TabNavigationObserver(ref: ref)],
-          ),
+              navigatorObservers: () => [
+                    TabNavigationObserver(ref: ref),
+                    routeObserver,
+                  ]),
         ),
       ),
     );

@@ -75,8 +75,8 @@ class LibraryPage extends ConsumerWidget {
               spacing: 8,
               runSpacing: 8,
               children: [
-                PeopleCollectionCard(),
                 PlacesCollectionCard(),
+                PeopleCollectionCard(),
                 LocalAlbumsCollectionCard(),
               ],
             ),
@@ -353,8 +353,8 @@ class PlacesCollectionCard extends StatelessWidget {
                   child: MapThumbnail(
                     zoom: 8,
                     centre: const LatLng(
-                      21.44950,
-                      -157.91959,
+                      31.1019,
+                      121.3259,
                     ),
                     showAttribution: false,
                     themeMode:

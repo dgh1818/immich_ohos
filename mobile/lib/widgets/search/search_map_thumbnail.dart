@@ -20,7 +20,7 @@ class SearchMapThumbnail extends StatelessWidget {
     return ThumbnailWithInfoContainer(
       label: 'search_page_your_map'.tr(),
       onTap: () {
-        context.pushRoute(const MapRoute());
+        // context.pushRoute(const MapRoute());
       },
       child: IgnorePointer(
         child: MapThumbnail(
@@ -32,6 +32,7 @@ class SearchMapThumbnail extends StatelessWidget {
           height: size,
           width: size,
           showAttribution: false,
+          isZoomControlsEnabled: false,
         ),
       ),
     );

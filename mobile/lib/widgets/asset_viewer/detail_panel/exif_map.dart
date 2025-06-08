@@ -19,47 +19,47 @@ class ExifMap extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final hasCoordinates = exifInfo.hasCoordinates;
-    Future<Uri?> createCoordinatesUri() async {
-      if (!hasCoordinates) {
-        return null;
-      }
+    // Future<Uri?> createCoordinatesUri() async {
+    //   if (!hasCoordinates) {
+    //     return null;
+    //   }
 
-      final double latitude = exifInfo.latitude!;
-      final double longitude = exifInfo.longitude!;
+    //   final double latitude = exifInfo.latitude!;
+    //   final double longitude = exifInfo.longitude!;
 
-      const zoomLevel = 16;
+    //   const zoomLevel = 16;
 
-      if (Platform.isAndroid) {
-        Uri uri = Uri(
-          scheme: 'geo',
-          host: '$latitude,$longitude',
-          queryParameters: {
-            'z': '$zoomLevel',
-            'q': '$latitude,$longitude',
-          },
-        );
-        if (await canLaunchUrl(uri)) {
-          return uri;
-        }
-      } else if (Platform.isIOS) {
-        var params = {
-          'll': '$latitude,$longitude',
-          'q': '$latitude,$longitude',
-          'z': '$zoomLevel',
-        };
-        Uri uri = Uri.https('maps.apple.com', '/', params);
-        if (await canLaunchUrl(uri)) {
-          return uri;
-        }
-      }
+    // if (Platform.isAndroid) {
+    //   Uri uri = Uri(
+    //     scheme: 'geo',
+    //     host: '$latitude,$longitude',
+    //     queryParameters: {
+    //       'z': '$zoomLevel',
+    //       'q': '$latitude,$longitude',
+    //     },
+    //   );
+    //   if (await canLaunchUrl(uri)) {
+    //     return uri;
+    //   }
+    // } else if (Platform.isIOS) {
+    //   var params = {
+    //     'll': '$latitude,$longitude',
+    //     'q': '$latitude,$longitude',
+    //     'z': '$zoomLevel',
+    //   };
+    //   Uri uri = Uri.https('maps.apple.com', '/', params);
+    //   if (await canLaunchUrl(uri)) {
+    //     return uri;
+    //   }
+    // }
 
-      return Uri(
-        scheme: 'https',
-        host: 'openstreetmap.org',
-        queryParameters: {'mlat': '$latitude', 'mlon': '$longitude'},
-        fragment: 'map=$zoomLevel/$latitude/$longitude',
-      );
-    }
+    //   return Uri(
+    //     scheme: 'https',
+    //     host: 'openstreetmap.org',
+    //     queryParameters: {'mlat': '$latitude', 'mlon': '$longitude'},
+    //     fragment: 'map=$zoomLevel/$latitude/$longitude',
+    //   );
+    // }
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -72,16 +72,16 @@ class ExifMap extends StatelessWidget {
           width: constraints.maxWidth,
           zoom: 12.0,
           assetMarkerRemoteId: markerId,
-          onTap: (tapPosition, latLong) async {
-            Uri? uri = await createCoordinatesUri();
+          // onTap: (tapPosition, latLong) async {
+          //   Uri? uri = await createCoordinatesUri();
 
-            if (uri == null) {
-              return;
-            }
+          //   if (uri == null) {
+          //     return;
+          //   }
 
-            debugPrint('Opening Map Uri: $uri');
-            launchUrl(uri);
-          },
+          //   debugPrint('Opening Map Uri: $uri');
+          //   launchUrl(uri);
+          // },
         );
       },
     );

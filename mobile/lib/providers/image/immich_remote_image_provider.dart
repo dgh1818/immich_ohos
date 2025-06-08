@@ -19,6 +19,7 @@ class ImmichRemoteImageProvider
     extends ImageProvider<ImmichRemoteImageProvider> {
   /// The [Asset.remoteId] of the asset to fetch
   final String assetId;
+  final bool? is_image;
 
   /// The image cache manager
   final CacheManager? cacheManager;
@@ -26,6 +27,7 @@ class ImmichRemoteImageProvider
   ImmichRemoteImageProvider({
     required this.assetId,
     this.cacheManager,
+    this.is_image,
   });
 
   /// Converts an [ImageProvider]'s settings plus an [ImageConfiguration] to a key
