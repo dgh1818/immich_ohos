@@ -76,7 +76,7 @@ class BackupControllerPage extends HookConsumerWidget {
             .stopListenToEvent('on_upload_success');
 
         return () {
-          WakelockPlus.disable();
+          //WakelockPlus.disable();
           darkenScreenTimer.value?.cancel();
           isScreenDarkened.value = false;
         };
@@ -100,10 +100,10 @@ class BackupControllerPage extends HookConsumerWidget {
       () {
         if (backupState.backupProgress == BackUpProgressEnum.inProgress) {
           startScreenDarkenTimer();
-          WakelockPlus.enable();
+          //WakelockPlus.enable();
         } else {
           stopScreenDarkenTimer();
-          WakelockPlus.disable();
+          //WakelockPlus.disable();
         }
 
         return null;
