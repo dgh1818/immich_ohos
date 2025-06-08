@@ -79,13 +79,13 @@ class VideoViewerPage extends HookConsumerWidget {
       final state = videoPlayback.state;
 
       // Enable the WakeLock while the video is playing
-      // if (state == VideoPlaybackState.playing) {
-      //   // Sync with the controls playing
-      //   WakelockPlus.enable();
-      // } else {
-      //   // Sync with the controls pause
-      //   WakelockPlus.disable();
-      // }
+      if (state == VideoPlaybackState.playing) {
+        // Sync with the controls playing
+        //WakelockPlus.enable();
+      } else {
+        // Sync with the controls pause
+        //WakelockPlus.disable();
+      }
     }
 
     // Adds and removes the listener to the video player

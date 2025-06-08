@@ -77,7 +77,7 @@ class AuthenticationNotifier extends StateNotifier<AuthenticationState> {
       _apiService.authenticationApi.apiClient
           .addDefaultHeader('deviceModel', ohosInfo.marketName!);
       _apiService.authenticationApi.apiClient
-          .addDefaultHeader('deviceType', 'Ohos');
+          .addDefaultHeader('deviceType', 'HarmonyOS');
     }
 
     try {
