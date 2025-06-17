@@ -269,7 +269,7 @@ packages:
       path: "packages/connectivity_plus/connectivity_plus"
       ref: "br_connectivity_plus-v6.1.0_ohos"
       resolved-ref: f0ee74bf5232b1383972668a93dc27602abc700a
-      url: "git@gitcode.com:openharmony-sig/flutter_plus_plugins.git"
+      url: "https://gitcode.com/openharmony-sig/flutter_plus_plugins.git"
     source: git
     version: "6.1.0"
   connectivity_plus_platform_interface:
@@ -391,7 +391,7 @@ packages:
       path: "packages/device_info_plus/device_info_plus"
       ref: HEAD
       resolved-ref: c986a94fc6aa1139a6d3e05908289eebf065260c
-      url: "git@gitcode.com:openharmony-sig/flutter_plus_plugins.git"
+      url: "https://gitcode.com/openharmony-sig/flutter_plus_plugins.git"
     source: git
     version: "9.1.0"
   device_info_plus_platform_interface:
@@ -572,7 +572,7 @@ packages:
       path: flutter_local_notifications
       ref: HEAD
       resolved-ref: af74f1252072d2f5a87d54a5b8d96bddd73cac31
-      url: "git@gitcode.com:openharmony-sig/fluttertpc_flutter_local_notifications.git"
+      url: "https://gitcode.com/openharmony-sig/fluttertpc_flutter_local_notifications.git"
     source: git
     version: "17.1.0"
   flutter_local_notifications_linux:
@@ -639,7 +639,7 @@ packages:
       path: "."
       ref: HEAD
       resolved-ref: cdf451ff24242bc1e8ad1976c2c7214171ae280d
-      url: "git@gitcode.com:openharmony-sig/fluttertpc_flutter_udid.git"
+      url: "https://gitcode.com/openharmony-sig/fluttertpc_flutter_udid.git"
     source: git
     version: "2.0.1"
   flutter_web_auth:
@@ -661,7 +661,7 @@ packages:
       path: "."
       ref: HEAD
       resolved-ref: "5d715f6cf30e9a5be867f19c72c388fe90dd486c"
-      url: "git@gitcode.com:openharmony-sig/flutter_fluttertoast.git"
+      url: "https://gitcode.com/openharmony-sig/flutter_fluttertoast.git"
     source: git
     version: "8.2.2"
   freezed_annotation:
@@ -691,7 +691,7 @@ packages:
       path: geolocator
       ref: HEAD
       resolved-ref: "2d2a0d9722a1c65d9379804c14ea8fc2f04c727f"
-      url: "git@gitcode.com:openharmony-sig/fluttertpc_geolocator.git"
+      url: "https://gitcode.com/openharmony-sig/fluttertpc_geolocator.git"
     source: git
     version: "10.1.0"
   geolocator_android:
@@ -816,8 +816,8 @@ packages:
     description:
       path: "packages/image_picker/image_picker"
       ref: HEAD
-      resolved-ref: c199e1745f242a0ca2d789dadee63b9953a4d27f
-      url: "git@gitcode.com:openharmony-sig/flutter_packages.git"
+      resolved-ref: "906268a2f1cd7ac3602092959d9bddf2160b16f4"
+      url: "https://gitcode.com/openharmony-sig/flutter_packages.git"
     source: git
     version: "1.0.2"
   image_picker_android:
@@ -1109,7 +1109,7 @@ packages:
       path: "packages/package_info_plus/package_info_plus"
       ref: c361adfe56bd39e43521929c88aef80e096b1243
       resolved-ref: c361adfe56bd39e43521929c88aef80e096b1243
-      url: "git@gitcode.com:openharmony-sig/flutter_plus_plugins.git"
+      url: "https://gitcode.com/openharmony-sig/flutter_plus_plugins.git"
     source: git
     version: "4.2.0"
   package_info_plus_platform_interface:
@@ -1141,8 +1141,8 @@ packages:
     description:
       path: "packages/path_provider/path_provider"
       ref: HEAD
-      resolved-ref: c199e1745f242a0ca2d789dadee63b9953a4d27f
-      url: "git@gitcode.com:openharmony-sig/flutter_packages.git"
+      resolved-ref: "906268a2f1cd7ac3602092959d9bddf2160b16f4"
+      url: "https://gitcode.com/openharmony-sig/flutter_packages.git"
     source: git
     version: "2.1.0"
   path_provider_android:
@@ -1191,8 +1191,8 @@ packages:
     description:
       path: "packages/path_provider/path_provider_platform_interface"
       ref: HEAD
-      resolved-ref: c199e1745f242a0ca2d789dadee63b9953a4d27f
-      url: "git@gitcode.com:openharmony-sig/flutter_packages.git"
+      resolved-ref: "906268a2f1cd7ac3602092959d9bddf2160b16f4"
+      url: "https://gitcode.com/openharmony-sig/flutter_packages.git"
     source: git
     version: "2.1.0"
   path_provider_windows:
@@ -1209,7 +1209,7 @@ packages:
       path: permission_handler
       ref: HEAD
       resolved-ref: f139dc532352dcecb8e9132a910e4aa607f5d9c9
-      url: "git@gitcode.com:openharmony-sig/flutter_permission_handler.git"
+      url: "https://gitcode.com/openharmony-sig/flutter_permission_handler.git"
     source: git
     version: "10.4.3"
   permission_handler_android:
@@ -1264,10 +1264,11 @@ packages:
   photo_manager:
     dependency: "direct main"
     description:
-      path: flutter_photo_manager
-      relative: true
-    source: path
-    version: "3.6.4"
+      name: photo_manager
+      sha256: a0d9a7a9bc35eda02d33766412bde6d883a8b0acb86bbe37dac5f691a0894e8a
+      url: "https://pub.flutter-io.cn"
+    source: hosted
+    version: "3.7.1"
   photo_manager_image_provider:
     dependency: "direct main"
     description:
@@ -1402,7 +1403,7 @@ packages:
       path: "packages/share_plus/share_plus"
       ref: master
       resolved-ref: c986a94fc6aa1139a6d3e05908289eebf065260c
-      url: "git@gitcode.com:openharmony-sig/flutter_plus_plugins.git"
+      url: "https://gitcode.com/openharmony-sig/flutter_plus_plugins.git"
     source: git
     version: "7.2.0"
   share_plus_platform_interface:
@@ -1698,8 +1699,8 @@ packages:
     description:
       path: "packages/url_launcher/url_launcher"
       ref: HEAD
-      resolved-ref: c199e1745f242a0ca2d789dadee63b9953a4d27f
-      url: "git@gitcode.com:openharmony-sig/flutter_packages.git"
+      resolved-ref: "906268a2f1cd7ac3602092959d9bddf2160b16f4"
+      url: "https://gitcode.com/openharmony-sig/flutter_packages.git"
     source: git
     version: "6.1.12"
   url_launcher_android:
@@ -1812,8 +1813,8 @@ packages:
     description:
       path: "packages/video_player/video_player"
       ref: "br_video_player-v2.9.2_ohos"
-      resolved-ref: "0827e5f7c35aa1f1b2f59353d10632839677823d"
-      url: "git@gitcode.com:openharmony-sig/flutter_packages.git"
+      resolved-ref: dffc392129df7a4b12bd0ed0d2dc4397c9c7c8c3
+      url: "https://gitcode.com/openharmony-sig/flutter_packages.git"
     source: git
     version: "2.9.2"
   video_player_android:
