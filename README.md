@@ -39,11 +39,10 @@
 
 ## Harmonyos Next 适配
 
-**IMMICH 1.111.0 搭配 本目录下服务器 使用**
-已知 BUG:
+**IMMICH 1.121.0 搭配 本目录下服务器 使用**
 
-1. v1.111.0-ohos-v1.0.0 及之后版本升级 flutter 3.27 之后视频播放缓冲会导致系统卡死
-2. v1.122.0 之后版本要用到 native_player 插件，尚未适配
+To do:
+1. v1.122.0 之后版本要用到 native_player 插件，尚未适配
 
 Harmonyos Next 鸿蒙端的 Immich
 实现了 HDR 图片和视频的显示
