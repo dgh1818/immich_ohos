@@ -55,8 +55,12 @@ String getAlbumThumbNailCacheKey(
   );
 }
 
-String getOriginalUrlForRemoteId(final String id) {
-  return '${Store.get(StoreKey.serverEndpoint)}/assets/$id/original';
+String getOriginalUrlForRemoteId(final String id, {final bool? is_image}) {
+  if(is_image == false) {
+    return '${Store.get(StoreKey.serverEndpoint)}/assets/$id/thumbnail?size=preview';
+  } else {
+    return '${Store.get(StoreKey.serverEndpoint)}/assets/$id/original';
+  }
 }
 
 String getImageCacheKey(final Asset asset) {
