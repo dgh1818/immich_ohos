@@ -1,5 +1,6 @@
 <script lang="ts">
   import { afterNavigate, goto, onNavigate } from '$app/navigation';
+  import { scrollMemoryClearer } from '$lib/actions/scroll-memory';
   import AlbumDescription from '$lib/components/album-page/album-description.svelte';
   import AlbumOptions from '$lib/components/album-page/album-options.svelte';
   import AlbumSummary from '$lib/components/album-page/album-summary.svelte';
@@ -430,7 +431,7 @@
   });
 </script>
 
-<div class="flex overflow-hidden">
+<div class="flex overflow-hidden" use:scrollMemoryClearer={{ routeStartsWith: AppRoute.ALBUMS }}>
   <div class="relative w-full shrink">
     {#if $isMultiSelectState}
       <AssetSelectControlBar assets={$selectedAssets} clearSelect={() => assetInteractionStore.clearMultiselect()}>
@@ -500,9 +501,11 @@
             {#if album.assetCount > 0}
               <CircleIconButton title={$t('slideshow')} onclick={handleStartSlideshow} icon={mdiPresentationPlay} />
               <CircleIconButton title={$t('download')} onclick={handleDownloadAlbum} icon={mdiFolderDownloadOutline} />
+            {/if}
 
-              {#if isOwned}
-                <ButtonContextMenu icon={mdiDotsVertical} title={$t('album_options')}>
+            {#if isOwned}
+              <ButtonContextMenu icon={mdiDotsVertical} title={$t('album_options')}>
+                {#if album.assetCount > 0}
                   <MenuOption
                     icon={mdiImageOutline}
                     text={$t('select_album_cover')}
@@ -513,9 +516,10 @@
                     text={$t('options')}
                     onClick={() => (viewMode = AlbumPageViewMode.OPTIONS)}
                   />
-                  <MenuOption icon={mdiDeleteOutline} text={$t('delete_album')} onClick={() => handleRemoveAlbum()} />
-                </ButtonContextMenu>
-              {/if}
+                {/if}
+
+                <MenuOption icon={mdiDeleteOutline} text={$t('delete_album')} onClick={() => handleRemoveAlbum()} />
+              </ButtonContextMenu>
             {/if}
 
             {#if isCreatingSharedAlbum && album.albumUsers.length === 0}

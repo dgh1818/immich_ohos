@@ -16,18 +16,18 @@
 
 //   const MapAppBar({super.key, required this.selectedAssets});
 
-//   @override
-//   Widget build(BuildContext context) {
-//     return Padding(
-//       padding: EdgeInsets.only(top: MediaQuery.paddingOf(context).top + 25),
-//       child: ValueListenableBuilder(
-//         valueListenable: selectedAssets,
-//         builder: (ctx, value, child) => value.isNotEmpty
-//             ? _SelectionRow(selectedAssets: selectedAssets)
-//             : _NonSelectionRow(),
-//       ),
-//     );
-//   }
+  // @override
+  // Widget build(BuildContext context) {
+  //   return Padding(
+  //     padding: EdgeInsets.only(top: context.padding.top + 25),
+  //     child: ValueListenableBuilder(
+  //       valueListenable: selectedAssets,
+  //       builder: (ctx, value, child) => value.isNotEmpty
+  //           ? _SelectionRow(selectedAssets: selectedAssets)
+  //           : _NonSelectionRow(),
+  //     ),
+  //   );
+  // }
 
 //   @override
 //   Size get preferredSize => const Size.fromHeight(100);

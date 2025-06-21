@@ -24,11 +24,12 @@
   } from '@mdi/js';
   import SideBarSection from './side-bar-section.svelte';
   import SideBarLink from './side-bar-link.svelte';
-  import MoreInformationAssets from '$lib/components/shared-components/side-bar/more-information-assets.svelte';
-  import MoreInformationAlbums from '$lib/components/shared-components/side-bar/more-information-albums.svelte';
   import { t } from 'svelte-i18n';
   import BottomInfo from '$lib/components/shared-components/side-bar/bottom-info.svelte';
   import { preferences } from '$lib/stores/user.store';
+  import { recentAlbumsDropdown } from '$lib/stores/preferences.store';
+  import RecentAlbums from '$lib/components/shared-components/side-bar/recent-albums.svelte';
+  import { fly } from 'svelte/transition';
 
   let isArchiveSelected: boolean = $state(false);
   let isFavoritesSelected: boolean = $state(false);
@@ -47,11 +48,7 @@
       routeId="/(user)/photos"
       bind:isSelected={isPhotosSelected}
       icon={isPhotosSelected ? mdiImageMultiple : mdiImageMultipleOutline}
-    >
-      {#snippet moreInformation()}
-        <MoreInformationAssets assetStats={{ isArchived: false }} />
-      {/snippet}
-    </SideBarLink>
+    ></SideBarLink>
 
     {#if $featureFlags.search}
       <SideBarLink title={$t('explore')} routeId="/(user)/explore" icon={mdiMagnify} />
@@ -80,11 +77,7 @@
       routeId="/(user)/sharing"
       icon={isSharingSelected ? mdiAccountMultiple : mdiAccountMultipleOutline}
       bind:isSelected={isSharingSelected}
-    >
-      {#snippet moreInformation()}
-        <MoreInformationAlbums albumType="shared" />
-      {/snippet}
-    </SideBarLink>
+    ></SideBarLink>
 
     <div class="text-xs transition-all duration-200 dark:text-immich-dark-fg">
       <p class="hidden p-6 group-hover:sm:block md:block">{$t('library').toUpperCase()}</p>
@@ -96,15 +89,19 @@
       routeId="/(user)/favorites"
       icon={isFavoritesSelected ? mdiHeart : mdiHeartOutline}
       bind:isSelected={isFavoritesSelected}
-    >
-      {#snippet moreInformation()}
-        <MoreInformationAssets assetStats={{ isFavorite: true }} />
-      {/snippet}
-    </SideBarLink>
+    ></SideBarLink>
 
-    <SideBarLink title={$t('albums')} routeId="/(user)/albums" icon={mdiImageAlbum} flippedLogo>
-      {#snippet moreInformation()}
-        <MoreInformationAlbums albumType="owned" />
+    <SideBarLink
+      title={$t('albums')}
+      routeId="/(user)/albums"
+      icon={mdiImageAlbum}
+      flippedLogo
+      bind:dropdownOpen={$recentAlbumsDropdown}
+    >
+      {#snippet dropDownContent()}
+        <span in:fly={{ y: -20 }} class="hidden md:block">
+          <RecentAlbums />
+        </span>
       {/snippet}
     </SideBarLink>
 
@@ -128,11 +125,7 @@
       routeId="/(user)/archive"
       bind:isSelected={isArchiveSelected}
       icon={isArchiveSelected ? mdiArchiveArrowDown : mdiArchiveArrowDownOutline}
-    >
-      {#snippet moreInformation()}
-        <MoreInformationAssets assetStats={{ isArchived: true }} />
-      {/snippet}
-    </SideBarLink>
+    ></SideBarLink>
 
     {#if $featureFlags.trash}
       <SideBarLink
@@ -140,11 +133,7 @@
         routeId="/(user)/trash"
         bind:isSelected={isTrashSelected}
         icon={isTrashSelected ? mdiTrashCan : mdiTrashCanOutline}
-      >
-        {#snippet moreInformation()}
-          <MoreInformationAssets assetStats={{ isTrashed: true }} />
-        {/snippet}
-      </SideBarLink>
+      ></SideBarLink>
     {/if}
   </nav>
 
