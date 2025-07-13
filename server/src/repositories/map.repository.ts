@@ -303,7 +303,7 @@ export class MapRepository implements IMapRepository {
 
     await this.dataSource.query('DROP TABLE IF EXISTS naturalearth_countries_tmp');
     await this.dataSource.query(
-      'CREATE UNLOGGED TABLE naturalearth_countries_tmp (LIKE naturalearth_countries INCLUDING ALL EXCLUDING INDEXES)',
+      'CREATE TABLE naturalearth_countries_tmp (LIKE naturalearth_countries INCLUDING ALL EXCLUDING INDEXES)',
     );
     const entities: Omit<NaturalEarthCountriesTempEntity, 'id'>[] = [];
     for (const feature of geoJSONData.features) {
@@ -341,7 +341,7 @@ export class MapRepository implements IMapRepository {
 
     await this.dataSource.query('DROP TABLE IF EXISTS geodata_places_tmp');
     await this.dataSource.query(
-      'CREATE UNLOGGED TABLE geodata_places_tmp (LIKE geodata_places INCLUDING ALL EXCLUDING INDEXES)',
+      'CREATE TABLE geodata_places_tmp (LIKE geodata_places INCLUDING ALL EXCLUDING INDEXES)',
     );
     await this.loadCities500(admin1, admin2);
     await this.createGeodataIndices();

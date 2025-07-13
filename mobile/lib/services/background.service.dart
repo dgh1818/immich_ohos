@@ -381,7 +381,6 @@ class BackgroundService {
     HttpOverrides.global = HttpSSLCertOverride();
     ApiService apiService = ApiService();
     apiService.setAccessToken(Store.get(StoreKey.accessToken));
-    AppSettingsService settingService = AppSettingsService();
     AppSettingsService settingsService = AppSettingsService();
     AlbumRepository albumRepository = AlbumRepository(db);
     AssetRepository assetRepository = AssetRepository(db);
@@ -431,7 +430,7 @@ class BackgroundService {
     );
     BackupService backupService = BackupService(
       apiService,
-      settingService,
+      settingsService,
       albumService,
       albumMediaRepository,
       fileMediaRepository,
