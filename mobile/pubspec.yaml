@@ -2,7 +2,7 @@ name: immich_mobile
 description: Immich - selfhosted backup media file on mobile phone
 
 publish_to: 'none'
-version: 1.121.0+168
+version: 1.122.0+169
 
 environment:
   sdk: '>=3.3.0 <4.0.0'
@@ -50,7 +50,7 @@ dependencies:
   path_provider_platform_interface: ^2.0.0
   collection: ^1.18.0
   http_parser: ^4.0.2
-  flutter_web_auth: ^0.6.0
+  flutter_web_auth: 0.6.0
   easy_image_viewer: ^1.4.0
   isar: ^3.1.0+1 #ok
   isar_flutter_libs: ^3.1.0+1 #ok
@@ -65,7 +65,10 @@ dependencies:
   async: ^2.11.0
   dynamic_color: ^1.7.0 #package to apply system theme # OHOS待适配
   background_downloader: ^8.5.5 # OHOS待适配
-  coordtransform_dart: ^1.0.4
+  native_video_player:
+    git:
+      url: https://github.com/immich-app/native_video_player
+      ref: ac78487
 
   #image editing packages
   crop_image: ^1.0.13

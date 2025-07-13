@@ -15,6 +15,8 @@
 // import 'package:immich_mobile/extensions/maplibrecontroller_extensions.dart';
 // import 'package:immich_mobile/models/map/map_event.model.dart';
 // import 'package:immich_mobile/models/map/map_marker.model.dart';
+// import 'package:immich_mobile/providers/asset_viewer/current_asset.provider.dart';
+// import 'package:immich_mobile/providers/asset_viewer/show_controls.provider.dart';
 // import 'package:immich_mobile/providers/db.provider.dart';
 // import 'package:immich_mobile/providers/map/map_marker.provider.dart';
 // import 'package:immich_mobile/providers/map/map_state.provider.dart';
@@ -97,13 +99,16 @@
 //       }
 //     }
 
-//     useEffect(
-//       () {
-//         loadMarkers();
-//         return null;
-//       },
-//       [],
-//     );
+    // useEffect(
+    //   () {
+    //     final currentAssetLink =
+    //         ref.read(currentAssetProvider.notifier).ref.keepAlive();
+
+    //     loadMarkers();
+    //     return currentAssetLink.close;
+    //   },
+    //   [],
+    // );
 
 //     // Refetch markers when map state is changed
 //     ref.listen(mapStateNotifierProvider, (_, current) {
@@ -175,22 +180,31 @@
 //         return;
 //       }
 
-//       final asset = await ref.read(dbProvider).assets.getByRemoteId(assetId);
-//       if (asset == null) {
-//         return;
-//       }
+    //   final asset = await ref.read(dbProvider).assets.getByRemoteId(assetId);
+    //   if (asset == null) {
+    //     return;
+    //   }
 
-//       context.pushRoute(
-//         GalleryViewerRoute(
-//           initialIndex: 0,
-//           loadAsset: (index) => asset,
-//           totalAssets: 1,
-//           heroOffset: 0,
-//         ),
-//       );
-//     }
+    //   // Since we only have a single asset, we can just show GroupAssetBy.none
+    //   final renderList = await RenderList.fromAssets(
+    //     [asset],
+    //     GroupAssetsBy.none,
+    //   );
 
-//     /// BOTTOM SHEET CALLBACKS
+    //   ref.read(currentAssetProvider.notifier).set(asset);
+    //   if (asset.isVideo) {
+    //     ref.read(showControlsProvider.notifier).show = false;
+    //   }
+    //   context.pushRoute(
+    //     GalleryViewerRoute(
+    //       initialIndex: 0,
+    //       heroOffset: 0,
+    //       renderList: renderList,
+    //     ),
+    //   );
+    // }
+
+    /// BOTTOM SHEET CALLBACKS
 
 //     Future<void> onMapMoved() async {
 //       assetsDebouncer.run(updateAssetsInBounds);

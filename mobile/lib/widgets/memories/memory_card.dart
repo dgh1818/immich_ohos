@@ -2,11 +2,12 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
-import 'package:immich_mobile/extensions/build_context_extensions.dart';
 import 'package:immich_mobile/entities/asset.entity.dart';
-import 'package:immich_mobile/pages/common/video_viewer.page.dart';
+import 'package:immich_mobile/extensions/build_context_extensions.dart';
+import 'package:immich_mobile/pages/common/native_video_viewer.page.dart';
 import 'package:immich_mobile/utils/hooks/blurhash_hook.dart';
 import 'package:immich_mobile/widgets/common/immich_image.dart';
+import 'package:immich_mobile/pages/common/video_viewer.page.dart';
 
 class MemoryCard extends StatelessWidget {
   final Asset asset;
@@ -68,18 +69,38 @@ class MemoryCard extends StatelessWidget {
               } else {
                 return Hero(
                   tag: 'memory-${asset.id}',
+                  // child: SizedBox(
+                  //   width: context.width,
+                  //   height: context.height,
+                  //   child: NativeVideoViewerPage(
+                  //     key: ValueKey(asset.id),
+                  //     asset: asset,
+                  //     showControls: false,
+                  //     image: ImmichImage(
+                  //       asset,
+                  //       width: context.width,
+                  //       height: context.height,
+                  //       fit: fit,
+                  //     ),
+                  //   ),
+
+                  // ),
                   child: VideoViewerPage(
-                    key: ValueKey(asset),
+                    key: key,
                     asset: asset,
-                    showDownloadingIndicator: false,
-                    placeholder: SizedBox.expand(
-                      child: ImmichImage(
-                        asset,
-                        fit: fit,
-                      ),
-                    ),
-                    hideControlsTimer: const Duration(seconds: 2),
+                    isMotionVideo: asset.livePhotoVideoId != null,
                     showControls: false,
+                    placeholder: Image(
+                      image: ImmichImage.imageProvider(
+                        asset: asset,
+                        width: context.width,
+                        height: context.height,
+                      ),
+                      fit: BoxFit.contain,
+                      height: context.height,
+                      width: context.width,
+                      alignment: Alignment.center,
+                    ),
                   ),
                 );
               }
@@ -137,6 +158,8 @@ class _BlurredBackdrop extends HookWidget {
             image: DecorationImage(
               image: ImmichImage.imageProvider(
                 asset: asset,
+                height: context.height,
+                width: context.width,
               ),
               fit: BoxFit.cover,
             ),

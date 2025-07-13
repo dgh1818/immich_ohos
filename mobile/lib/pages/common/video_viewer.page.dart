@@ -11,6 +11,9 @@ import 'package:immich_mobile/widgets/asset_viewer/video_player.dart';
 import 'package:immich_mobile/widgets/common/delayed_loading_indicator.dart';
 //import 'package:wakelock_plus/wakelock_plus.dart';
 
+import 'package:immich_mobile/providers/asset_viewer/is_motion_video_playing.provider.dart';
+import 'package:logging/logging.dart';
+
 class VideoViewerPage extends HookConsumerWidget {
   final Asset asset;
   final bool isMotionVideo;
@@ -37,14 +40,38 @@ class VideoViewerPage extends HookConsumerWidget {
         ref.watch(videoPlayerControllerProvider(asset: asset)).value;
     // The last volume of the video used when mute is toggled
     final lastVolume = useState(0.5);
+    final showMotionVideo = useState(false);
 
     // When the volume changes, set the volume
-    ref.listen(videoPlayerControlsProvider.select((value) => value.mute),
-        (_, mute) {
-      if (mute) {
-        controller?.setVolume(0.0);
-      } else {
-        controller?.setVolume(lastVolume.value);
+    // ref.listen(videoPlayerControlsProvider.select((value) => value.mute),
+    //     (_, mute) {
+    //   if (mute) {
+    //     controller?.setVolume(0.0);
+    //   } else {
+    //     controller?.setVolume(lastVolume.value);
+    //   }
+    // });
+
+    ref.listen(isPlayingMotionVideoProvider, (_, value) async {
+      if (controller == null) {
+        // No seeeking if there is no video
+        return;
+      }
+
+      if (!asset.isMotionPhoto || !context.mounted) {
+        return;
+      }
+
+      showMotionVideo.value = value;
+      try {
+        if (value) {
+          await controller.seekTo(Duration.zero);
+          await controller.play();
+        } else {
+          await controller.pause();
+        }
+      } catch (error) {
+        ;
       }
     });
 
@@ -78,6 +105,8 @@ class VideoViewerPage extends HookConsumerWidget {
       final videoPlayback = VideoPlaybackValue.fromController(controller);
       ref.read(videoPlaybackValueProvider.notifier).value = videoPlayback;
       final state = videoPlayback.state;
+      final motionPhotoPlaying =
+          ref.read(isPlayingMotionVideoProvider.notifier).playing;
 
       // Enable the WakeLock while the video is playing
       if (state == VideoPlaybackState.playing) {
@@ -87,6 +116,9 @@ class VideoViewerPage extends HookConsumerWidget {
         // Sync with the controls pause
         //WakelockPlus.disable();
       }
+
+      ref.read(isPlayingMotionVideoProvider.notifier).playing =
+          state == VideoPlaybackState.playing ? true : false;
     }
 
     // Adds and removes the listener to the video player

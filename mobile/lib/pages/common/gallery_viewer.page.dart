@@ -8,18 +8,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_hooks/flutter_hooks.dart' hide Store;
 import 'package:hooks_riverpod/hooks_riverpod.dart';
-import 'package:immich_mobile/constants/constants.dart';
 import 'package:immich_mobile/entities/asset.entity.dart';
 import 'package:immich_mobile/extensions/build_context_extensions.dart';
+import 'package:immich_mobile/extensions/scroll_extensions.dart';
 import 'package:immich_mobile/pages/common/download_panel.dart';
-import 'package:immich_mobile/pages/common/video_viewer.page.dart';
+//import 'package:immich_mobile/pages/common/native_video_viewer.page.dart';
+import 'package:immich_mobile/pages/common/gallery_stacked_children.dart';
 import 'package:immich_mobile/providers/app_settings.provider.dart';
 import 'package:immich_mobile/providers/asset_viewer/asset_stack.provider.dart';
 import 'package:immich_mobile/providers/asset_viewer/current_asset.provider.dart';
+import 'package:immich_mobile/providers/asset_viewer/is_motion_video_playing.provider.dart';
 import 'package:immich_mobile/providers/asset_viewer/show_controls.provider.dart';
 import 'package:immich_mobile/providers/asset_viewer/video_player_value_provider.dart';
 import 'package:immich_mobile/providers/haptic_feedback.provider.dart';
-import 'package:immich_mobile/providers/image/immich_remote_image_provider.dart';
 import 'package:immich_mobile/services/app_settings.service.dart';
 import 'package:immich_mobile/widgets/asset_grid/asset_grid_data_structure.dart';
 import 'package:immich_mobile/widgets/asset_viewer/advanced_bottom_sheet.dart';
@@ -34,9 +35,11 @@ import 'package:immich_mobile/widgets/photo_view/src/photo_view_scale_state.dart
 import 'package:immich_mobile/widgets/photo_view/src/utils/photo_view_hero_attributes.dart';
 
 import 'package:immich_mobile/main.dart';
+import 'package:immich_mobile/pages/common/video_viewer.page.dart';
 
 @RoutePage()
 // ignore: must_be_immutable
+/// Expects [currentAssetProvider] to be set before navigating to this page
 class GalleryViewerPage extends HookConsumerWidget {
   final int initialIndex;
   final int heroOffset;
@@ -55,16 +58,16 @@ class GalleryViewerPage extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final settings = ref.watch(appSettingsServiceProvider);
-    final loadAsset = renderList.loadAsset;
     final totalAssets = useState(renderList.totalAssets);
-    final shouldLoopVideo = useState(AppSettingsEnum.loopVideo.defaultValue);
     final isZoomed = useState(false);
-    final isPlayingVideo = useState(false);
-    final localPosition = useState<Offset?>(null);
-    final currentIndex = useState(initialIndex);
-    final currentAsset = loadAsset(currentIndex.value);
+    final stackIndex = useState(0);
+    final localPosition = useRef<Offset?>(null);
+    final currentIndex = useValueNotifier(initialIndex);
+    final loadAsset = renderList.loadAsset;
 
+    final shouldLoopVideo = useState(AppSettingsEnum.loopVideo.defaultValue);
+
+    //final isPlayingVideo = useState(false);
     final routeAware = useMemoized(() => _MyRouteAware());
 
     useEffect(() {
@@ -80,67 +83,53 @@ class GalleryViewerPage extends HookConsumerWidget {
       };
     }, [context]);
 
-    // Update is playing motion video
-    ref.listen(videoPlaybackValueProvider.select((v) => v.state), (_, state) {
-      isPlayingVideo.value = state == VideoPlaybackState.playing;
-    });
-
-    final stackIndex = useState(-1);
-    final stack = showStack && currentAsset.stackCount > 0
-        ? ref.watch(assetStackStateProvider(currentAsset))
-        : <Asset>[];
-    final stackElements = showStack ? [currentAsset, ...stack] : <Asset>[];
-    // Assets from response DTOs do not have an isar id, querying which would give us the default autoIncrement id
-    final isFromDto = currentAsset.id == noDbId;
-
-    Asset asset = stackIndex.value == -1
-        ? currentAsset
-        : stackElements.elementAt(stackIndex.value);
-
-    final isMotionPhoto = asset.livePhotoVideoId != null;
-    // Listen provider to prevent autoDispose when navigating to other routes from within the gallery page
-    ref.listen(currentAssetProvider, (_, __) {});
-    useEffect(
-      () {
-        // Delay state update to after the execution of build method
-        Future.microtask(
-          () => ref.read(currentAssetProvider.notifier).set(asset),
-        );
-        return null;
-      },
-      [asset],
-    );
-
-    useEffect(
-      () {
-        shouldLoopVideo.value =
-            settings.getSetting<bool>(AppSettingsEnum.loopVideo);
-        return null;
-      },
-      [],
-    );
-
     Future<void> precacheNextImage(int index) async {
+      if (!context.mounted) {
+        return;
+      }
+
       void onError(Object exception, StackTrace? stackTrace) {
         // swallow error silently
-        debugPrint('Error precaching next image: $exception, $stackTrace');
+        log.severe('Error precaching next image: $exception, $stackTrace');
       }
 
       try {
         if (index < totalAssets.value && index >= 0) {
           final asset = loadAsset(index);
           await precacheImage(
-            ImmichImage.imageProvider(asset: asset),
+            ImmichImage.imageProvider(
+              asset: asset,
+              width: context.width,
+              height: context.height,
+            ),
             context,
             onError: onError,
           );
         }
       } catch (e) {
         // swallow error silently
-        debugPrint('Error precaching next image: $e');
+        log.severe('Error precaching next image: $e');
         context.maybePop();
       }
     }
+
+    useEffect(
+      () {
+        if (ref.read(showControlsProvider)) {
+          SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+        } else {
+          SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersive);
+        }
+
+        // Delay this a bit so we can finish loading the page
+        Timer(const Duration(milliseconds: 400), () {
+          precacheNextImage(currentIndex.value + 1);
+        });
+
+        return null;
+      },
+      const [],
+    );
 
     Future<ui.ColorSpace?> getImageColorSpace(
         ImageProvider provider, BuildContext context) async {
@@ -171,6 +160,10 @@ class GalleryViewerPage extends HookConsumerWidget {
     }
 
     void showInfo() {
+      final asset = ref.read(currentAssetProvider);
+      if (asset == null) {
+        return;
+      }
       showModalBottomSheet(
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.all(Radius.circular(15.0)),
@@ -230,7 +223,7 @@ class GalleryViewerPage extends HookConsumerWidget {
 
     useEffect(
       () {
-        final a = asset;
+        final a = loadAsset(currentIndex.value);
         final ImageProvider provider = ImmichImage.imageProvider(asset: a);
         ui.SetHdr.enableHdr(enable_hdr: true);
         if (a.isImage) {
@@ -246,7 +239,7 @@ class GalleryViewerPage extends HookConsumerWidget {
         } else {
           SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersive);
         }
-        isPlayingVideo.value = false;
+        //isPlayingVideo.value = false;
         return null;
       },
       [],
@@ -268,55 +261,115 @@ class GalleryViewerPage extends HookConsumerWidget {
     );
 
     ref.listen(showControlsProvider, (_, show) {
-      if (show) {
+      if (show || Platform.isIOS) {
         SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
-      } else {
-        SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersive);
+        return;
       }
+
+      // This prevents the bottom bar from "dropping" while the controls are being hidden
+      Timer(const Duration(milliseconds: 100), () {
+        SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersive);
+      });
     });
 
-    Widget buildStackedChildren() {
-      return ListView.builder(
-        shrinkWrap: true,
-        scrollDirection: Axis.horizontal,
-        itemCount: stackElements.length,
-        padding: const EdgeInsets.only(
-          left: 5,
-          right: 5,
-          bottom: 30,
-        ),
-        itemBuilder: (context, index) {
-          final assetId = stackElements.elementAt(index).remoteId;
-          return Padding(
-            padding: const EdgeInsets.only(right: 5),
-            child: GestureDetector(
-              onTap: () => stackIndex.value = index,
-              child: Container(
-                width: 60,
-                height: 60,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(6),
-                  border: (stackIndex.value == -1 && index == 0) ||
-                          index == stackIndex.value
-                      ? Border.all(
-                          color: Colors.white,
-                          width: 2,
-                        )
-                      : null,
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(4),
-                  child: Image(
-                    fit: BoxFit.cover,
-                    image: ImmichRemoteImageProvider(assetId: assetId!),
-                  ),
-                ),
-              ),
-            ),
-          );
+    PhotoViewGalleryPageOptions buildImage(BuildContext context, Asset asset) {
+      return PhotoViewGalleryPageOptions(
+        onDragStart: (_, details, __) {
+          localPosition.value = details.localPosition;
         },
+        onDragUpdate: (_, details, __) {
+          handleSwipeUpDown(details);
+        },
+        onTapDown: (_, __, ___) {
+          ref.read(showControlsProvider.notifier).toggle();
+        },
+        onLongPressStart: asset.isMotionPhoto
+            ? (_, __, ___) {
+                ref.read(isPlayingMotionVideoProvider.notifier).playing = true;
+              }
+            : null,
+        imageProvider: ImmichImage.imageProvider(asset: asset),
+        heroAttributes: _getHeroAttributes(asset),
+        filterQuality: FilterQuality.high,
+        tightMode: true,
+        minScale: PhotoViewComputedScale.contained,
+        errorBuilder: (context, error, stackTrace) => ImmichImage(
+          asset,
+          fit: BoxFit.contain,
+        ),
       );
+    }
+
+    PhotoViewGalleryPageOptions buildVideo(BuildContext context, Asset asset) {
+      // This key is to prevent the video player from being re-initialized during the hero animation
+      final key = GlobalKey();
+      return PhotoViewGalleryPageOptions.customChild(
+        onDragStart: (_, details, __) =>
+            localPosition.value = details.localPosition,
+        onDragUpdate: (_, details, __) => handleSwipeUpDown(details),
+        heroAttributes: _getHeroAttributes(asset),
+        filterQuality: FilterQuality.high,
+        initialScale: 1.0,
+        maxScale: 1.0,
+        minScale: 1.0,
+        basePosition: Alignment.center,
+        child: SizedBox(
+          width: context.width,
+          height: context.height,
+          // child: NativeVideoViewerPage(
+          //   key: key,
+          //   asset: asset,
+          //   image: Image(
+          //     key: ValueKey(asset),
+          //     image: ImmichImage.imageProvider(
+          //       asset: asset,
+          //       width: context.width,
+          //       height: context.height,
+          //     ),
+          //     fit: BoxFit.contain,
+          //     height: context.height,
+          //     width: context.width,
+          //     alignment: Alignment.center,
+          //   ),
+          // ),
+          child: VideoViewerPage(
+            key: key,
+            asset: asset,
+            isMotionVideo: asset.livePhotoVideoId != null,
+            loopVideo:
+                asset.livePhotoVideoId != null ? false : shouldLoopVideo.value,
+            placeholder: Image(
+              image: ImmichImage.imageProvider(
+                asset: asset,
+                width: context.width,
+                height: context.height,
+              ),
+              fit: BoxFit.contain,
+              height: context.height,
+              width: context.width,
+              alignment: Alignment.center,
+            ),
+          ),
+        ),
+      );
+    }
+
+    PhotoViewGalleryPageOptions buildAsset(BuildContext context, int index) {
+      ref.read(isPlayingMotionVideoProvider.notifier).playing = false;
+      var newAsset = loadAsset(index);
+      final stackId = newAsset.stackId;
+      if (stackId != null && currentIndex.value == index) {
+        final stackElements =
+            ref.read(assetStackStateProvider(newAsset.stackId!));
+        if (stackIndex.value < stackElements.length) {
+          newAsset = stackElements.elementAt(stackIndex.value);
+        }
+      }
+
+      if (newAsset.isImage && !newAsset.isMotionPhoto) {
+        return buildImage(context, newAsset);
+      }
+      return buildVideo(context, newAsset);
     }
 
     return PopScope(
@@ -328,44 +381,64 @@ class GalleryViewerPage extends HookConsumerWidget {
         body: Stack(
           children: [
             PhotoViewGallery.builder(
+              key: const ValueKey('gallery'),
               scaleStateChangedCallback: (state) {
-                isZoomed.value = state != PhotoViewScaleState.initial;
-                ref.read(showControlsProvider.notifier).show = !isZoomed.value;
+                final asset = ref.read(currentAssetProvider);
+                if (asset == null) {
+                  return;
+                }
+
+                if (asset.isImage && !ref.read(isPlayingMotionVideoProvider)) {
+                  isZoomed.value = state != PhotoViewScaleState.initial;
+                  ref.read(showControlsProvider.notifier).show =
+                      !isZoomed.value;
+                }
               },
-              loadingBuilder: (context, event, index) => ClipRect(
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    BackdropFilter(
-                      filter: ui.ImageFilter.blur(
-                        sigmaX: 10,
-                        sigmaY: 10,
+              gaplessPlayback: true,
+              loadingBuilder: (context, event, index) {
+                final asset = loadAsset(index);
+                return ClipRect(
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      BackdropFilter(
+                        filter: ui.ImageFilter.blur(
+                          sigmaX: 10,
+                          sigmaY: 10,
+                        ),
                       ),
-                    ),
-                    ImmichThumbnail(
-                      asset: asset,
-                      fit: BoxFit.contain,
-                    ),
-                  ],
-                ),
-              ),
+                      ImmichThumbnail(
+                        key: ValueKey(asset),
+                        asset: asset,
+                        fit: BoxFit.contain,
+                      ),
+                    ],
+                  ),
+                );
+              },
               pageController: controller,
               scrollPhysics: isZoomed.value
                   ? const NeverScrollableScrollPhysics() // Don't allow paging while scrolled in
                   : (Platform.isIOS
-                      ? const ScrollPhysics() // Use bouncing physics for iOS
-                      : const ClampingScrollPhysics() // Use heavy physics for Android
+                      ? const FastScrollPhysics() // Use bouncing physics for iOS
+                      : const FastClampingScrollPhysics() // Use heavy physics for Android
                   ),
               itemCount: totalAssets.value,
               scrollDirection: Axis.horizontal,
-              onPageChanged: (value) async {
+              onPageChanged: (value) {
                 final next = currentIndex.value < value ? value + 1 : value - 1;
 
                 ref.read(hapticFeedbackProvider.notifier).selectionClick();
 
+                final newAsset = loadAsset(value);
+
                 currentIndex.value = value;
-                stackIndex.value = -1;
-                isPlayingVideo.value = false;
+                stackIndex.value = 0;
+
+                ref.read(currentAssetProvider.notifier).set(newAsset);
+                if (newAsset.isVideo || newAsset.isMotionPhoto) {
+                  ref.read(videoPlaybackValueProvider.notifier).reset();
+                }
 
                 final a = loadAsset(currentIndex.value);
                 final ImageProvider provider =
@@ -377,92 +450,25 @@ class GalleryViewerPage extends HookConsumerWidget {
                   ui.SetHdr.setHdrMode(hdr: 0, is_image: true);
                 }
 
-                // Wait for page change animation to finish
-                await Future.delayed(const Duration(milliseconds: 400));
                 // Then precache the next image
-                if (!a.isImage) {
-                  ui.SetHdr.setHdrMode(hdr: -1, is_image: false);
-                }
-                unawaited(precacheNextImage(next));
-              },
-              builder: (context, index) {
-                final a =
-                    index == currentIndex.value ? asset : loadAsset(index);
 
-                final ImageProvider provider =
-                    ImmichImage.imageProvider(asset: a);
-
-                if (a.isImage && !isPlayingVideo.value) {
-                  return PhotoViewGalleryPageOptions(
-                    onDragStart: (_, details, __) =>
-                        localPosition.value = details.localPosition,
-                    onDragUpdate: (_, details, __) =>
-                        handleSwipeUpDown(details),
-                    onTapDown: (_, __, ___) {
-                      ref.read(showControlsProvider.notifier).toggle();
-                    },
-                    onLongPressStart: (_, __, ___) {
-                      if (asset.livePhotoVideoId != null) {
-                        isPlayingVideo.value = true;
-                      }
-                    },
-                    imageProvider: provider,
-                    heroAttributes: PhotoViewHeroAttributes(
-                      tag: isFromDto
-                          ? '${currentAsset.remoteId}-$heroOffset'
-                          : currentAsset.id + heroOffset,
-                      transitionOnUserGestures: true,
-                    ),
-                    filterQuality: FilterQuality.high,
-                    tightMode: true,
-                    minScale: PhotoViewComputedScale.contained,
-                    errorBuilder: (context, error, stackTrace) => ImmichImage(
-                      a,
-                      fit: BoxFit.contain,
-                    ),
-                  );
-                } else {
-                  return PhotoViewGalleryPageOptions.customChild(
-                    onDragStart: (_, details, __) =>
-                        localPosition.value = details.localPosition,
-                    onDragUpdate: (_, details, __) =>
-                        handleSwipeUpDown(details),
-                    heroAttributes: PhotoViewHeroAttributes(
-                      tag: isFromDto
-                          ? '${currentAsset.remoteId}-$heroOffset'
-                          : currentAsset.id + heroOffset,
-                    ),
-                    filterQuality: FilterQuality.high,
-                    maxScale: 1.0,
-                    minScale: 1.0,
-                    basePosition: Alignment.center,
-                    child: VideoViewerPage(
-                      key: ValueKey(a),
-                      asset: a,
-                      isMotionVideo: a.livePhotoVideoId != null,
-                      loopVideo: shouldLoopVideo.value,
-                      placeholder: Image(
-                        image: provider,
-                        fit: BoxFit.contain,
-                        height: context.height,
-                        width: context.width,
-                        alignment: Alignment.center,
-                      ),
-                    ),
-                  );
-                }
+                // Wait for page change animation to finish, then precache the next image
+                Timer(const Duration(milliseconds: 400), () {
+                  if (!a.isImage) {
+                    ui.SetHdr.setHdrMode(hdr: -1, is_image: false);
+                  }
+                  precacheNextImage(next);
+                });
               },
+              builder: buildAsset,
             ),
             Positioned(
               top: 0,
               left: 0,
               right: 0,
               child: GalleryAppBar(
-                asset: asset,
+                key: const ValueKey('app-bar'),
                 showInfo: showInfo,
-                isPlayingVideo: isPlayingVideo.value,
-                onToggleMotionVideo: () =>
-                    isPlayingVideo.value = !isPlayingVideo.value,
               ),
             ),
             Positioned(
@@ -471,22 +477,15 @@ class GalleryViewerPage extends HookConsumerWidget {
               right: 0,
               child: Column(
                 children: [
-                  Visibility(
-                    visible: stack.isNotEmpty,
-                    child: SizedBox(
-                      height: 80,
-                      child: buildStackedChildren(),
-                    ),
-                  ),
+                  GalleryStackedChildren(stackIndex),
                   BottomGalleryBar(
+                    key: const ValueKey('bottom-bar'),
                     renderList: renderList,
                     totalAssets: totalAssets,
                     controller: controller,
                     showStack: showStack,
-                    stackIndex: stackIndex.value,
-                    asset: asset,
+                    stackIndex: stackIndex,
                     assetIndex: currentIndex,
-                    showVideoPlayerControls: !asset.isImage && !isMotionPhoto,
                   ),
                 ],
               ),
@@ -495,6 +494,16 @@ class GalleryViewerPage extends HookConsumerWidget {
           ],
         ),
       ),
+    );
+  }
+
+  @pragma('vm:prefer-inline')
+  PhotoViewHeroAttributes _getHeroAttributes(Asset asset) {
+    return PhotoViewHeroAttributes(
+      tag: asset.isInDb
+          ? asset.id + heroOffset
+          : '${asset.remoteId}-$heroOffset',
+      transitionOnUserGestures: true,
     );
   }
 }
