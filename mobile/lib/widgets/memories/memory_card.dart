@@ -69,37 +69,37 @@ class MemoryCard extends StatelessWidget {
               } else {
                 return Hero(
                   tag: 'memory-${asset.id}',
-                  // child: SizedBox(
-                  //   width: context.width,
-                  //   height: context.height,
-                  //   child: NativeVideoViewerPage(
-                  //     key: ValueKey(asset.id),
-                  //     asset: asset,
-                  //     showControls: false,
-                  //     image: ImmichImage(
-                  //       asset,
-                  //       width: context.width,
-                  //       height: context.height,
-                  //       fit: fit,
-                  //     ),
-                  //   ),
-
-                  // ),
-                  child: VideoViewerPage(
-                    key: key,
-                    asset: asset,
-                    isMotionVideo: asset.livePhotoVideoId != null,
-                    showControls: false,
-                    placeholder: Image(
-                      image: ImmichImage.imageProvider(
-                        asset: asset,
-                        width: context.width,
+                  child: SizedBox(
+                    width: context.width,
+                    height: context.height,
+                    // child: NativeVideoViewerPage(
+                    //   key: ValueKey(asset.id),
+                    //   asset: asset,
+                    //   showControls: false,
+                    //   playbackDelayFactor: 2,
+                    //   image: ImmichImage(
+                    //     asset,
+                    //     width: context.width,
+                    //     height: context.height,
+                    //     fit: BoxFit.contain,
+                    //   ),
+                    // ),
+                    child: VideoViewerPage(
+                      key: key,
+                      asset: asset,
+                      isMotionVideo: asset.livePhotoVideoId != null,
+                      showControls: false,
+                      placeholder: Image(
+                        image: ImmichImage.imageProvider(
+                          asset: asset,
+                          width: context.width,
+                          height: context.height,
+                        ),
+                        fit: BoxFit.contain,
                         height: context.height,
+                        width: context.width,
+                        alignment: Alignment.center,
                       ),
-                      fit: BoxFit.contain,
-                      height: context.height,
-                      width: context.width,
-                      alignment: Alignment.center,
                     ),
                   ),
                 );
