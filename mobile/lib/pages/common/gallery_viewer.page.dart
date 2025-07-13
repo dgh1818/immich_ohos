@@ -64,6 +64,7 @@ class GalleryViewerPage extends HookConsumerWidget {
     final localPosition = useRef<Offset?>(null);
     final currentIndex = useValueNotifier(initialIndex);
     final loadAsset = renderList.loadAsset;
+    final isPlayingMotionVideo = ref.watch(isPlayingMotionVideoProvider);
 
     final shouldLoopVideo = useState(AppSettingsEnum.loopVideo.defaultValue);
 
@@ -355,7 +356,6 @@ class GalleryViewerPage extends HookConsumerWidget {
     }
 
     PhotoViewGalleryPageOptions buildAsset(BuildContext context, int index) {
-      ref.read(isPlayingMotionVideoProvider.notifier).playing = false;
       var newAsset = loadAsset(index);
       final stackId = newAsset.stackId;
       if (stackId != null && currentIndex.value == index) {
@@ -366,7 +366,7 @@ class GalleryViewerPage extends HookConsumerWidget {
         }
       }
 
-      if (newAsset.isImage && !newAsset.isMotionPhoto) {
+      if (newAsset.isImage && !isPlayingMotionVideo) {
         return buildImage(context, newAsset);
       }
       return buildVideo(context, newAsset);
@@ -381,7 +381,7 @@ class GalleryViewerPage extends HookConsumerWidget {
         body: Stack(
           children: [
             PhotoViewGallery.builder(
-              key: const ValueKey('gallery'),
+              key: ValueKey(isPlayingMotionVideo),
               scaleStateChangedCallback: (state) {
                 final asset = ref.read(currentAssetProvider);
                 if (asset == null) {

@@ -21,7 +21,6 @@
 // import 'package:logging/logging.dart';
 // import 'package:native_video_player/native_video_player.dart';
 // import 'package:wakelock_plus/wakelock_plus.dart';
-// import 'package:immich_mobile/providers/asset_viewer/video_player_controller_provider.dart';
 
 // @RoutePage()
 // class NativeVideoViewerPage extends HookConsumerWidget {
@@ -39,11 +38,8 @@
 //   @override
 //   Widget build(BuildContext context, WidgetRef ref) {
 //     final controller = useState<NativeVideoPlayerController?>(null);
-//     // final controller =
-//     //     ref.watch(videoPlayerControllerProvider(asset: asset)).value;
 //     final lastVideoPosition = useRef(-1);
 //     final isBuffering = useRef(false);
-//     final showMotionVideo = useState(false);
 
 //     // When a video is opened through the timeline, `isCurrent` will immediately be true.
 //     // When swiping from video A to video B, `isCurrent` will initially be true for video A and false for video B.
@@ -53,29 +49,9 @@
 //     final isCurrent = currentAsset.value == asset;
 
 //     // Used to show the placeholder during hero animations for remote videos to avoid a stutter
-//     final isVisible =
-//         useState((Platform.isIOS && asset.isLocal) || asset.isMotionPhoto);
+//     final isVisible = useState(Platform.isIOS && asset.isLocal);
 
 //     final log = Logger('NativeVideoViewerPage');
-
-//     ref.listen(isPlayingMotionVideoProvider, (_, value) async {
-//       final videoController = controller.value;
-//       if (!asset.isMotionPhoto || videoController == null || !context.mounted) {
-//         return;
-//       }
-
-//       showMotionVideo.value = value;
-//       try {
-//         if (value) {
-//           await videoController.seekTo(0);
-//           await videoController.play();
-//         } else {
-//           await videoController.pause();
-//         }
-//       } catch (error) {
-//         log.severe('Error toggling motion video: $error');
-//       }
-//     });
 
 //     Future<VideoSource?> createSource() async {
 //       if (!context.mounted) {
@@ -84,7 +60,7 @@
 
 //       try {
 //         final local = asset.local;
-//         if (local != null && !asset.isMotionPhoto) {
+//         if (local != null) {
 //           final file = await local.file;
 //           if (file == null) {
 //             throw Exception('No file found for the video');
@@ -207,9 +183,7 @@
 //       ref.read(videoPlaybackValueProvider.notifier).value = videoPlayback;
 
 //       try {
-//         if (asset.isVideo || showMotionVideo.value) {
-//           await videoController.play();
-//         }
+//         await videoController.play();
 //         await videoController.setVolume(0.9);
 //       } catch (error) {
 //         log.severe('Error playing video: $error');
@@ -271,8 +245,7 @@
 //         return;
 //       }
 
-//       if (showMotionVideo.value &&
-//           videoController.playbackInfo?.status == PlaybackStatus.stopped &&
+//       if (videoController.playbackInfo?.status == PlaybackStatus.stopped &&
 //           !ref
 //               .read(appSettingsServiceProvider)
 //               .getSetting<bool>(AppSettingsEnum.loopVideo)) {
@@ -391,8 +364,7 @@
 //         if (aspectRatio.value != null)
 //           Visibility.maintain(
 //             key: ValueKey(asset),
-//             visible:
-//                 (asset.isVideo || showMotionVideo.value) && isVisible.value,
+//             visible: isVisible.value,
 //             child: Center(
 //               key: ValueKey(asset),
 //               child: AspectRatio(
