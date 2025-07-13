@@ -163,18 +163,16 @@ class ApiService implements Authentication {
       authenticationApi.apiClient
           .addDefaultHeader('deviceModel', iosInfo.utsname.machine);
       authenticationApi.apiClient.addDefaultHeader('deviceType', 'iOS');
+    } else if (defaultTargetPlatform == TargetPlatform.ohos) {
+      final ohosInfo = await deviceInfoPlugin.ohosInfo;
+      authenticationApi.apiClient
+          .addDefaultHeader('deviceModel', ohosInfo.marketName.toString());
+      authenticationApi.apiClient.addDefaultHeader('deviceType', 'OHOS');
     } else {
       final androidInfo = await deviceInfoPlugin.androidInfo;
       authenticationApi.apiClient
           .addDefaultHeader('deviceModel', androidInfo.model);
       authenticationApi.apiClient.addDefaultHeader('deviceType', 'Android');
-    }
-
-    if (defaultTargetPlatform == TargetPlatform.ohos) {
-      final ohosInfo = await deviceInfoPlugin.ohosInfo;
-      authenticationApi.apiClient
-          .addDefaultHeader('deviceModel', ohosInfo.marketName.toString());
-      authenticationApi.apiClient.addDefaultHeader('deviceType', 'OHOS');
     }
   }
 
