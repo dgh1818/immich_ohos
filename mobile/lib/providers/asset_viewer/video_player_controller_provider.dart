@@ -6,6 +6,9 @@ import 'package:video_player/video_player.dart';
 
 import 'package:immich_mobile/domain/models/store.model.dart';
 
+import 'package:flutter/foundation.dart';
+import 'package:logging/logging.dart';
+
 part 'video_player_controller_provider.g.dart';
 
 @riverpod
@@ -38,11 +41,12 @@ Future<VideoPlayerController> videoPlayerController(
     );
   }
 
-  await controller.initialize();
-
-  ref.onDispose(() {
-    controller.dispose();
-  });
+  final log = Logger("ImmichErrorLogger");
+  try {
+    await controller.initialize();
+  } catch (e) {
+    log.severe('Error playing video: $e');
+  }
 
   return controller;
 }

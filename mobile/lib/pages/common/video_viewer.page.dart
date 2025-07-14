@@ -57,16 +57,12 @@ class VideoViewerPage extends HookConsumerWidget {
         return;
       }
 
-      try {
-        if (current.playing) {
-          // 每次开始播放时都重置到开头
-          await controller.seekTo(Duration.zero);
-          await controller.play();
-        } else {
-          await controller.pause();
-        }
-      } catch (error) {
-        //log.severe("Error handling motion video state", error);
+      if (current.playing) {
+        // 每次开始播放时都重置到开头
+        await controller.seekTo(Duration.zero);
+        await controller.play();
+      } else {
+        await controller.pause();
       }
     });
 
