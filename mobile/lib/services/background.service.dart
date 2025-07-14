@@ -338,7 +338,7 @@ class BackgroundService {
         try {
           _clearErrorNotifications();
 
-          // iOS should time out after some threshhold so it doesn't wait
+          // iOS should time out after some threshold so it doesn't wait
           // indefinitely and can run later
           // Android is fine to wait here until the lock releases
           final waitForLock = Platform.isIOS
@@ -419,7 +419,6 @@ class BackgroundService {
       partnerApiRepository,
       userApiRepository,
       userRepository,
-      syncSerive,
     );
     AlbumService albumService = AlbumService(
       userService,
