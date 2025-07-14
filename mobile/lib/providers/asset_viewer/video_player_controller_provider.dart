@@ -4,6 +4,8 @@ import 'package:immich_mobile/services/api.service.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:video_player/video_player.dart';
 
+import 'package:immich_mobile/domain/models/store.model.dart';
+
 part 'video_player_controller_provider.g.dart';
 
 @riverpod

@@ -268,7 +268,7 @@ packages:
     description:
       path: "packages/connectivity_plus/connectivity_plus"
       ref: "br_connectivity_plus-v6.1.0_ohos"
-      resolved-ref: f0ee74bf5232b1383972668a93dc27602abc700a
+      resolved-ref: cd46a890e2a9694c35915950fbfac022221828de
       url: "https://gitcode.com/openharmony-sig/flutter_plus_plugins.git"
     source: git
     version: "6.1.0"
@@ -390,7 +390,7 @@ packages:
     description:
       path: "packages/device_info_plus/device_info_plus"
       ref: HEAD
-      resolved-ref: c986a94fc6aa1139a6d3e05908289eebf065260c
+      resolved-ref: a1715b982fbdec46add7185b8f396a556d9ce364
       url: "https://gitcode.com/openharmony-sig/flutter_plus_plugins.git"
     source: git
     version: "9.1.0"
@@ -538,7 +538,7 @@ packages:
     description:
       path: geolocator_ohos
       ref: HEAD
-      resolved-ref: "2d2a0d9722a1c65d9379804c14ea8fc2f04c727f"
+      resolved-ref: "5491416e03bee3f67b7b4b65d57fc97954241369"
       url: "https://gitcode.com/openharmony-sig/fluttertpc_geolocator.git"
     source: git
     version: "1.0.0"
@@ -554,10 +554,10 @@ packages:
     dependency: "direct dev"
     description:
       name: flutter_launcher_icons
-      sha256: bfa04787c85d80ecb3f8777bde5fc10c3de809240c48fa061a2c2bf15ea5211c
+      sha256: "10f13781741a2e3972126fae08393d3c4e01fa4cd7473326b94b72cf594195e7"
       url: "https://pub.flutter-io.cn"
     source: hosted
-    version: "0.14.3"
+    version: "0.14.4"
   flutter_lints:
     dependency: "direct dev"
     description:
@@ -571,7 +571,7 @@ packages:
     description:
       path: flutter_local_notifications
       ref: HEAD
-      resolved-ref: af74f1252072d2f5a87d54a5b8d96bddd73cac31
+      resolved-ref: "46bd5cbd7d0460f95b3c639c9d5874b7f1bf68d7"
       url: "https://gitcode.com/openharmony-sig/fluttertpc_flutter_local_notifications.git"
     source: git
     version: "17.1.0"
@@ -624,10 +624,10 @@ packages:
     dependency: "direct main"
     description:
       name: flutter_svg
-      sha256: d44bf546b13025ec7353091516f6881f1d4c633993cb109c3916c3a0159dadf1
+      sha256: cd57f7969b4679317c17af6fd16ee233c1e60a82ed209d8a475c54fd6fd6f845
       url: "https://pub.flutter-io.cn"
     source: hosted
-    version: "2.1.0"
+    version: "2.2.0"
   flutter_test:
     dependency: "direct dev"
     description: flutter
@@ -638,7 +638,7 @@ packages:
     description:
       path: "."
       ref: HEAD
-      resolved-ref: cdf451ff24242bc1e8ad1976c2c7214171ae280d
+      resolved-ref: "4bd2d6988e959e11779f9a72eaadb3f75de68a2d"
       url: "https://gitcode.com/openharmony-sig/fluttertpc_flutter_udid.git"
     source: git
     version: "2.0.1"
@@ -659,11 +659,11 @@ packages:
     dependency: "direct main"
     description:
       path: "."
-      ref: HEAD
-      resolved-ref: "5d715f6cf30e9a5be867f19c72c388fe90dd486c"
+      ref: "br_8.2.8_ohos"
+      resolved-ref: "54a9ccaf32fbf0e53e0ce16ced890ebc49e04599"
       url: "https://gitcode.com/openharmony-sig/flutter_fluttertoast.git"
     source: git
-    version: "8.2.2"
+    version: "8.2.8"
   freezed_annotation:
     dependency: transitive
     description:
@@ -690,7 +690,7 @@ packages:
     description:
       path: geolocator
       ref: HEAD
-      resolved-ref: "2d2a0d9722a1c65d9379804c14ea8fc2f04c727f"
+      resolved-ref: "5491416e03bee3f67b7b4b65d57fc97954241369"
       url: "https://gitcode.com/openharmony-sig/fluttertpc_geolocator.git"
     source: git
     version: "10.1.0"
@@ -699,7 +699,7 @@ packages:
     description:
       path: geolocator_android
       ref: HEAD
-      resolved-ref: "2d2a0d9722a1c65d9379804c14ea8fc2f04c727f"
+      resolved-ref: "5491416e03bee3f67b7b4b65d57fc97954241369"
       url: "https://gitcode.com/openharmony-sig/fluttertpc_geolocator.git"
     source: git
     version: "4.3.0"
@@ -708,7 +708,7 @@ packages:
     description:
       path: geolocator_apple
       ref: HEAD
-      resolved-ref: "2d2a0d9722a1c65d9379804c14ea8fc2f04c727f"
+      resolved-ref: "5491416e03bee3f67b7b4b65d57fc97954241369"
       url: "https://gitcode.com/openharmony-sig/fluttertpc_geolocator.git"
     source: git
     version: "2.3.1"
@@ -717,7 +717,7 @@ packages:
     description:
       path: geolocator_platform_interface
       ref: HEAD
-      resolved-ref: "2d2a0d9722a1c65d9379804c14ea8fc2f04c727f"
+      resolved-ref: "5491416e03bee3f67b7b4b65d57fc97954241369"
       url: "https://gitcode.com/openharmony-sig/fluttertpc_geolocator.git"
     source: git
     version: "4.1.0"
@@ -726,7 +726,7 @@ packages:
     description:
       path: geolocator_web
       ref: HEAD
-      resolved-ref: "2d2a0d9722a1c65d9379804c14ea8fc2f04c727f"
+      resolved-ref: "5491416e03bee3f67b7b4b65d57fc97954241369"
       url: "https://gitcode.com/openharmony-sig/fluttertpc_geolocator.git"
     source: git
     version: "2.2.0"
@@ -735,7 +735,7 @@ packages:
     description:
       path: geolocator_windows
       ref: HEAD
-      resolved-ref: "2d2a0d9722a1c65d9379804c14ea8fc2f04c727f"
+      resolved-ref: "5491416e03bee3f67b7b4b65d57fc97954241369"
       url: "https://gitcode.com/openharmony-sig/fluttertpc_geolocator.git"
     source: git
     version: "0.2.1"
@@ -816,7 +816,7 @@ packages:
     description:
       path: "packages/image_picker/image_picker"
       ref: HEAD
-      resolved-ref: "906268a2f1cd7ac3602092959d9bddf2160b16f4"
+      resolved-ref: "34a7be77a81baf6c8f75b09ffc365074d384fe91"
       url: "https://gitcode.com/openharmony-sig/flutter_packages.git"
     source: git
     version: "1.0.2"
@@ -865,8 +865,8 @@ packages:
     description:
       path: "packages/image_picker/image_picker_ohos"
       ref: HEAD
-      resolved-ref: c199e1745f242a0ca2d789dadee63b9953a4d27f
-      url: "https://gitcode.com/openharmony-sig/flutter_packages.git"
+      resolved-ref: "34a7be77a81baf6c8f75b09ffc365074d384fe91"
+      url: "https://gitcode.com/openharmony-tpc/flutter_packages.git"
     source: git
     version: "0.8.7+4"
   image_picker_platform_interface:
@@ -1166,7 +1166,7 @@ packages:
     description:
       path: "packages/path_provider/path_provider"
       ref: HEAD
-      resolved-ref: "906268a2f1cd7ac3602092959d9bddf2160b16f4"
+      resolved-ref: "34a7be77a81baf6c8f75b09ffc365074d384fe91"
       url: "https://gitcode.com/openharmony-sig/flutter_packages.git"
     source: git
     version: "2.1.0"
@@ -1207,8 +1207,8 @@ packages:
     description:
       path: "packages/path_provider/path_provider_ohos"
       ref: HEAD
-      resolved-ref: c199e1745f242a0ca2d789dadee63b9953a4d27f
-      url: "https://gitcode.com/openharmony-sig/flutter_packages.git"
+      resolved-ref: "34a7be77a81baf6c8f75b09ffc365074d384fe91"
+      url: "https://gitcode.com/openharmony-tpc/flutter_packages.git"
     source: git
     version: "2.2.1"
   path_provider_platform_interface:
@@ -1216,7 +1216,7 @@ packages:
     description:
       path: "packages/path_provider/path_provider_platform_interface"
       ref: HEAD
-      resolved-ref: "906268a2f1cd7ac3602092959d9bddf2160b16f4"
+      resolved-ref: "34a7be77a81baf6c8f75b09ffc365074d384fe91"
       url: "https://gitcode.com/openharmony-sig/flutter_packages.git"
     source: git
     version: "2.1.0"
@@ -1233,7 +1233,7 @@ packages:
     description:
       path: permission_handler
       ref: HEAD
-      resolved-ref: f139dc532352dcecb8e9132a910e4aa607f5d9c9
+      resolved-ref: "7acc00e7c9265654b00e81867242e4e2d4d6ad38"
       url: "https://gitcode.com/openharmony-sig/flutter_permission_handler.git"
     source: git
     version: "10.4.3"
@@ -1330,10 +1330,10 @@ packages:
     dependency: transitive
     description:
       name: posix
-      sha256: f0d7856b6ca1887cfa6d1d394056a296ae33489db914e365e2044fdada449e62
+      sha256: "6323a5b0fa688b6a010df4905a56b00181479e6d10534cecfecede2aa55add61"
       url: "https://pub.flutter-io.cn"
     source: hosted
-    version: "6.0.2"
+    version: "6.0.3"
   process:
     dependency: transitive
     description:
@@ -1427,7 +1427,7 @@ packages:
     description:
       path: "packages/share_plus/share_plus"
       ref: master
-      resolved-ref: c986a94fc6aa1139a6d3e05908289eebf065260c
+      resolved-ref: a1715b982fbdec46add7185b8f396a556d9ce364
       url: "https://gitcode.com/openharmony-sig/flutter_plus_plugins.git"
     source: git
     version: "7.2.0"
@@ -1436,7 +1436,7 @@ packages:
     description:
       path: "packages/share_plus/share_plus_platform_interface"
       ref: master
-      resolved-ref: c986a94fc6aa1139a6d3e05908289eebf065260c
+      resolved-ref: a1715b982fbdec46add7185b8f396a556d9ce364
       url: "https://gitcode.com/openharmony-sig/flutter_plus_plugins.git"
     source: git
     version: "3.3.0"
@@ -1724,7 +1724,7 @@ packages:
     description:
       path: "packages/url_launcher/url_launcher"
       ref: HEAD
-      resolved-ref: "906268a2f1cd7ac3602092959d9bddf2160b16f4"
+      resolved-ref: "34a7be77a81baf6c8f75b09ffc365074d384fe91"
       url: "https://gitcode.com/openharmony-sig/flutter_packages.git"
     source: git
     version: "6.1.12"
@@ -1765,8 +1765,8 @@ packages:
     description:
       path: "packages/url_launcher/url_launcher_ohos"
       ref: HEAD
-      resolved-ref: c199e1745f242a0ca2d789dadee63b9953a4d27f
-      url: "https://gitcode.com/openharmony-sig/flutter_packages.git"
+      resolved-ref: "34a7be77a81baf6c8f75b09ffc365074d384fe91"
+      url: "https://gitcode.com/openharmony-tpc/flutter_packages.git"
     source: git
     version: "6.0.38"
   url_launcher_platform_interface:
@@ -1805,10 +1805,10 @@ packages:
     dependency: transitive
     description:
       name: vector_graphics
-      sha256: "44cc7104ff32563122a929e4620cf3efd584194eec6d1d913eb5ba593dbcf6de"
+      sha256: a4f059dc26fc8295b5921376600a194c4ec7d55e72f2fe4c7d2831e103d461e6
       url: "https://pub.flutter-io.cn"
     source: hosted
-    version: "1.1.18"
+    version: "1.1.19"
   vector_graphics_codec:
     dependency: transitive
     description:
@@ -1838,7 +1838,7 @@ packages:
     description:
       path: "packages/video_player/video_player"
       ref: "br_video_player-v2.9.2_ohos"
-      resolved-ref: dffc392129df7a4b12bd0ed0d2dc4397c9c7c8c3
+      resolved-ref: b8cd99e7937de783e88ef0e6a7f8034d95328ce8
       url: "https://gitcode.com/openharmony-sig/flutter_packages.git"
     source: git
     version: "2.9.2"
@@ -1854,16 +1854,16 @@ packages:
     dependency: transitive
     description:
       name: video_player_avfoundation
-      sha256: "9ee764e5cd2fc1e10911ae8ad588e1a19db3b6aa9a6eb53c127c42d3a3c3f22f"
+      sha256: "9fedd55023249f3a02738c195c906b4e530956191febf0838e37d0dac912f953"
       url: "https://pub.flutter-io.cn"
     source: hosted
-    version: "2.7.1"
+    version: "2.8.0"
   video_player_ohos:
     dependency: transitive
     description:
       path: "packages/video_player/video_player_ohos"
       ref: "br_video_player-v2.9.2_ohos"
-      resolved-ref: "0827e5f7c35aa1f1b2f59353d10632839677823d"
+      resolved-ref: b8cd99e7937de783e88ef0e6a7f8034d95328ce8
       url: "https://gitcode.com/openharmony-sig/flutter_packages.git"
     source: git
     version: "1.0.0+1"
@@ -1871,18 +1871,18 @@ packages:
     dependency: transitive
     description:
       name: video_player_platform_interface
-      sha256: df534476c341ab2c6a835078066fc681b8265048addd853a1e3c78740316a844
+      sha256: cf2a1d29a284db648fd66cbd18aacc157f9862d77d2cc790f6f9678a46c1db5a
       url: "https://pub.flutter-io.cn"
     source: hosted
-    version: "6.3.0"
+    version: "6.4.0"
   video_player_web:
     dependency: transitive
     description:
       name: video_player_web
-      sha256: e8bba2e5d1e159d5048c9a491bb2a7b29c535c612bb7d10c1e21107f5bd365ba
+      sha256: "9f3c00be2ef9b76a95d94ac5119fb843dca6f2c69e6c9968f6f2b6c9e7afbdeb"
       url: "https://pub.flutter-io.cn"
     source: hosted
-    version: "2.3.5"
+    version: "2.4.0"
   vm_service:
     dependency: transitive
     description:
@@ -1896,7 +1896,7 @@ packages:
     description:
       path: wakelock_plus
       ref: "br_wakelock_plus_1.2.8_ohos"
-      resolved-ref: a944d451112f7569bcffb282eafaf08f37857f1c
+      resolved-ref: "38ef06d4678dbfdeed1619c00abca2a68e27c98c"
       url: "https://gitcode.com/openharmony-sig/fluttertpc_wakelock_plus.git"
     source: git
     version: "1.2.8"
@@ -1912,10 +1912,10 @@ packages:
     dependency: transitive
     description:
       name: watcher
-      sha256: "69da27e49efa56a15f8afe8f4438c4ec02eff0a117df1b22ea4aad194fe1c104"
+      sha256: "0b7fd4a0bbc4b92641dbf20adfd7e3fd1398fe17102d94b674234563e110088a"
       url: "https://pub.flutter-io.cn"
     source: hosted
-    version: "1.1.1"
+    version: "1.1.2"
   web:
     dependency: transitive
     description:

@@ -4,11 +4,13 @@ import 'dart:io';
 
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart';
+import 'package:immich_mobile/domain/models/store.model.dart';
 import 'package:immich_mobile/entities/store.entity.dart';
 import 'package:immich_mobile/utils/url_helper.dart';
 import 'package:logging/logging.dart';
 import 'package:openapi/api.dart';
-import 'package:http/http.dart';
+
 import 'package:flutter/foundation.dart';
 
 class ApiService implements Authentication {
@@ -24,7 +26,6 @@ class ApiService implements Authentication {
   late MapApi mapApi;
   late PartnersApi partnersApi;
   late PeopleApi peopleApi;
-  late AuditApi auditApi;
   late SharedLinksApi sharedLinksApi;
   late SyncApi syncApi;
   late SystemConfigApi systemConfigApi;
@@ -32,6 +33,7 @@ class ApiService implements Authentication {
   late DownloadApi downloadApi;
   late TrashApi trashApi;
   late StacksApi stacksApi;
+  late MemoriesApi memoriesApi;
 
   ApiService() {
     final endpoint = Store.tryGet(StoreKey.serverEndpoint);
@@ -57,7 +59,6 @@ class ApiService implements Authentication {
     mapApi = MapApi(_apiClient);
     partnersApi = PartnersApi(_apiClient);
     peopleApi = PeopleApi(_apiClient);
-    auditApi = AuditApi(_apiClient);
     sharedLinksApi = SharedLinksApi(_apiClient);
     syncApi = SyncApi(_apiClient);
     systemConfigApi = SystemConfigApi(_apiClient);
@@ -65,6 +66,7 @@ class ApiService implements Authentication {
     downloadApi = DownloadApi(_apiClient);
     trashApi = TrashApi(_apiClient);
     stacksApi = StacksApi(_apiClient);
+    memoriesApi = MemoriesApi(_apiClient);
   }
 
   Future<String> resolveAndSetEndpoint(String serverUrl) async {
@@ -150,9 +152,9 @@ class ApiService implements Authentication {
     return "";
   }
 
-  void setAccessToken(String accessToken) {
+  Future<void> setAccessToken(String accessToken) async {
     _accessToken = accessToken;
-    Store.put(StoreKey.accessToken, accessToken);
+    await Store.put(StoreKey.accessToken, accessToken);
   }
 
   Future<void> setDeviceInfoHeader() async {

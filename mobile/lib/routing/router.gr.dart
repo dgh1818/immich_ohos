@@ -83,7 +83,6 @@ class AlbumAssetSelectionRoute
     Key? key,
     required Set<Asset> existingAssets,
     bool canDeselect = false,
-    required QueryBuilder<Asset, Asset, QAfterSortBy>? query,
     List<PageRouteInfo>? children,
   }) : super(
           AlbumAssetSelectionRoute.name,
@@ -91,7 +90,6 @@ class AlbumAssetSelectionRoute
             key: key,
             existingAssets: existingAssets,
             canDeselect: canDeselect,
-            query: query,
           ),
           initialChildren: children,
         );
@@ -106,7 +104,6 @@ class AlbumAssetSelectionRoute
         key: args.key,
         existingAssets: args.existingAssets,
         canDeselect: args.canDeselect,
-        query: args.query,
       );
     },
   );
@@ -117,7 +114,6 @@ class AlbumAssetSelectionRouteArgs {
     this.key,
     required this.existingAssets,
     this.canDeselect = false,
-    required this.query,
   });
 
   final Key? key;
@@ -126,11 +122,9 @@ class AlbumAssetSelectionRouteArgs {
 
   final bool canDeselect;
 
-  final QueryBuilder<Asset, Asset, QAfterSortBy>? query;
-
   @override
   String toString() {
-    return 'AlbumAssetSelectionRouteArgs{key: $key, existingAssets: $existingAssets, canDeselect: $canDeselect, query: $query}';
+    return 'AlbumAssetSelectionRouteArgs{key: $key, existingAssets: $existingAssets, canDeselect: $canDeselect}';
   }
 }
 
@@ -1052,14 +1046,15 @@ class MemoryRouteArgs {
   }
 }
 
-// /// generated route for
-// /// [NativeVideoViewerPage]
+/// generated route for
+/// [NativeVideoViewerPage]
 // class NativeVideoViewerRoute extends PageRouteInfo<NativeVideoViewerRouteArgs> {
 //   NativeVideoViewerRoute({
 //     Key? key,
 //     required Asset asset,
 //     required Widget image,
 //     bool showControls = true,
+//     int playbackDelayFactor = 1,
 //     List<PageRouteInfo>? children,
 //   }) : super(
 //           NativeVideoViewerRoute.name,
@@ -1068,6 +1063,7 @@ class MemoryRouteArgs {
 //             asset: asset,
 //             image: image,
 //             showControls: showControls,
+//             playbackDelayFactor: playbackDelayFactor,
 //           ),
 //           initialChildren: children,
 //         );
@@ -1083,6 +1079,7 @@ class MemoryRouteArgs {
 //         asset: args.asset,
 //         image: args.image,
 //         showControls: args.showControls,
+//         playbackDelayFactor: args.playbackDelayFactor,
 //       );
 //     },
 //   );
@@ -1094,6 +1091,7 @@ class MemoryRouteArgs {
 //     required this.asset,
 //     required this.image,
 //     this.showControls = true,
+//     this.playbackDelayFactor = 1,
 //   });
 
 //   final Key? key;
@@ -1102,11 +1100,13 @@ class MemoryRouteArgs {
 
 //   final Widget image;
 
-//   final bool showControls;
+// final bool showControls;
+
+// final int playbackDelayFactor;
 
 //   @override
 //   String toString() {
-//     return 'NativeVideoViewerRouteArgs{key: $key, asset: $asset, image: $image, showControls: $showControls}';
+//     return 'NativeVideoViewerRouteArgs{key: $key, asset: $asset, image: $image, showControls: $showControls, playbackDelayFactor: $playbackDelayFactor}';
 //   }
 // }
 
