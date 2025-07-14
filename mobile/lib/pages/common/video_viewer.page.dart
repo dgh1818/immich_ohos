@@ -51,25 +51,22 @@ class VideoViewerPage extends HookConsumerWidget {
     //   }
     // });
 
-    ref.listen(isPlayingMotionVideoProvider.notifier, (_, value) async {
-      if (controller == null) {
-        // No seeeking if there is no video
-        return;
-      }
-
-      if (!asset.isMotionPhoto || !context.mounted) {
+    ref.listen(isPlayingMotionVideoProvider.notifier,
+        (previous, current) async {
+      if (controller == null || !asset.isMotionPhoto || !context.mounted) {
         return;
       }
 
       try {
-        if (value.playing) {
+        if (current.playing) {
+          // 每次开始播放时都重置到开头
           await controller.seekTo(Duration.zero);
           await controller.play();
         } else {
           await controller.pause();
         }
       } catch (error) {
-        ;
+        //log.severe("Error handling motion video state", error);
       }
     });
 
@@ -102,9 +99,19 @@ class VideoViewerPage extends HookConsumerWidget {
     void updateVideoPlayback() {
       final videoPlayback = VideoPlaybackValue.fromController(controller);
       ref.read(videoPlaybackValueProvider.notifier).value = videoPlayback;
+
+      // 检测视频是否自然结束
+      final isAtEnd = videoPlayback.position >= videoPlayback.duration;
+      final isPaused = videoPlayback.state == VideoPlaybackState.paused;
+
+      if (isAtEnd && isPaused) {
+        // 动态视频自然结束时自动暂停
+        if (asset.isMotionPhoto && !loopVideo) {
+          ref.read(isPlayingMotionVideoProvider.notifier).playing = false;
+        }
+      }
+
       final state = videoPlayback.state;
-      final motionPhotoPlaying =
-          ref.read(isPlayingMotionVideoProvider.notifier).playing;
 
       // Enable the WakeLock while the video is playing
       if (state == VideoPlaybackState.playing) {
@@ -114,9 +121,6 @@ class VideoViewerPage extends HookConsumerWidget {
         // Sync with the controls pause
         //WakelockPlus.disable();
       }
-
-      ref.read(isPlayingMotionVideoProvider.notifier).playing =
-          state == VideoPlaybackState.playing ? true : false;
     }
 
     // Adds and removes the listener to the video player
