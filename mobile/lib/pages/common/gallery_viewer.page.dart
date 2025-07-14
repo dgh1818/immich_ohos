@@ -64,7 +64,8 @@ class GalleryViewerPage extends HookConsumerWidget {
     final localPosition = useRef<Offset?>(null);
     final currentIndex = useValueNotifier(initialIndex);
     final loadAsset = renderList.loadAsset;
-    final isPlayingMotionVideo = ref.watch(isPlayingMotionVideoProvider);
+    final isPlayingMotionVideo =
+        ref.read(isPlayingMotionVideoProvider.notifier).playing;
 
     final shouldLoopVideo = useState(AppSettingsEnum.loopVideo.defaultValue);
 
@@ -404,7 +405,8 @@ class GalleryViewerPage extends HookConsumerWidget {
                   return;
                 }
 
-                if (asset.isImage && !ref.read(isPlayingMotionVideoProvider)) {
+                //if (asset.isImage && !ref.read(isPlayingMotionVideoProvider)) {
+                if (asset.isImage && !isPlayingMotionVideo) {
                   isZoomed.value = state != PhotoViewScaleState.initial;
                   ref.read(showControlsProvider.notifier).show =
                       !isZoomed.value;
