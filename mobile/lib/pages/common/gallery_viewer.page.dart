@@ -64,12 +64,10 @@ class GalleryViewerPage extends HookConsumerWidget {
     final localPosition = useRef<Offset?>(null);
     final currentIndex = useValueNotifier(initialIndex);
     final loadAsset = renderList.loadAsset;
-    final isPlayingMotionVideo =
-        ref.read(isPlayingMotionVideoProvider.notifier).playing;
+    final isPlayingMotionVideo = ref.watch(isPlayingMotionVideoProvider);
 
     final shouldLoopVideo = useState(AppSettingsEnum.loopVideo.defaultValue);
 
-    //final isPlayingVideo = useState(false);
     final routeAware = useMemoized(() => _MyRouteAware());
 
     useEffect(() {
@@ -444,6 +442,8 @@ class GalleryViewerPage extends HookConsumerWidget {
               itemCount: totalAssets.value,
               scrollDirection: Axis.horizontal,
               onPageChanged: (value) {
+                ref.read(isPlayingMotionVideoProvider.notifier).playing = false;
+
                 final next = currentIndex.value < value ? value + 1 : value - 1;
 
                 ref.read(hapticFeedbackProvider.notifier).selectionClick();

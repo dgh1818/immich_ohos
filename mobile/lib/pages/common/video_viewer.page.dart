@@ -40,7 +40,6 @@ class VideoViewerPage extends HookConsumerWidget {
         ref.watch(videoPlayerControllerProvider(asset: asset)).value;
     // The last volume of the video used when mute is toggled
     final lastVolume = useState(0.5);
-    final showMotionVideo = useState(false);
 
     // When the volume changes, set the volume
     // ref.listen(videoPlayerControlsProvider.select((value) => value.mute),
@@ -52,7 +51,7 @@ class VideoViewerPage extends HookConsumerWidget {
     //   }
     // });
 
-    ref.listen(isPlayingMotionVideoProvider, (_, value) async {
+    ref.listen(isPlayingMotionVideoProvider.notifier, (_, value) async {
       if (controller == null) {
         // No seeeking if there is no video
         return;
@@ -62,9 +61,8 @@ class VideoViewerPage extends HookConsumerWidget {
         return;
       }
 
-      showMotionVideo.value = value;
       try {
-        if (value) {
+        if (value.playing) {
           await controller.seekTo(Duration.zero);
           await controller.play();
         } else {
