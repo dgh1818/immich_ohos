@@ -689,9 +689,9 @@ packages:
     dependency: "direct main"
     description:
       path: geolocator
-      ref: HEAD
-      resolved-ref: "5491416e03bee3f67b7b4b65d57fc97954241369"
-      url: "https://gitcode.com/openharmony-sig/fluttertpc_geolocator.git"
+      ref: master
+      resolved-ref: "998535ff6031f787ff883c8ac38ba642b196898d"
+      url: "https://gitcode.com/dgh18/fluttertpc_geolocator.git"
     source: git
     version: "10.1.0"
   geolocator_android:
@@ -1289,11 +1289,10 @@ packages:
   photo_manager:
     dependency: "direct main"
     description:
-      name: photo_manager
-      sha256: a0d9a7a9bc35eda02d33766412bde6d883a8b0acb86bbe37dac5f691a0894e8a
-      url: "https://pub.flutter-io.cn"
-    source: hosted
-    version: "3.7.1"
+      path: flutter_photo_manager
+      relative: true
+    source: path
+    version: "3.6.4"
   photo_manager_image_provider:
     dependency: "direct main"
     description:

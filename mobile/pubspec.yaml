@@ -126,9 +126,9 @@ dependency_overrides:
       ref: br_video_player-v2.9.2_ohos
   geolocator:
     git:
-      url: https://gitcode.com/openharmony-sig/fluttertpc_geolocator.git
+      url: https://gitcode.com/dgh18/fluttertpc_geolocator.git
       path: 'geolocator'
-      #ref: master
+      ref: master
       #ref: br_geolocator_v13.0.0_ohos
   flutter_udid:
     git:
@@ -180,8 +180,8 @@ dependency_overrides:
       url: https://github.com/dgh1818/chewie_ohos.git
       path: './'
       ref: ohos_dev
-  # photo_manager:
-  #   path: ./flutter_photo_manager
+  photo_manager:
+    path: ./flutter_photo_manager
   coordtransform_dart:
     git:
       url: https://github.com/dgh1818/coordtransform_dart.git

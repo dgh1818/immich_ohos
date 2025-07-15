@@ -26,8 +26,5 @@
       "name": "default",
       "runtimeOS": "HarmonyOS"
     },
-    {
-      "name": "ohosTest",
-    }
   ]
 }

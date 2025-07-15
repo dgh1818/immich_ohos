@@ -1,5 +1,6 @@
 import { FlutterEngine, Log } from '@ohos/flutter_ohos';
 import IntegrationTestPlugin from 'integration_test';
+import PhotoManagerPlugin from 'photo_manager';
 import MapLibreMapsPlugin from 'maplibre_gl';
 import FluttertoastPlugin from 'fluttertoast';
 import ImagePickerPlugin from 'image_picker_ohos';
@@ -16,7 +17,6 @@ import FlutterUdidPlugin from 'flutter_udid';
 import GeolocatorOhosPlugin from 'flutter_geolocator_ohos';
 import IsarFlutterLibsPlugin from 'isar_flutter_libs';
 import SharedPreferencesPlugin from 'shared_preferences_ohos';
-import PhotoManagerPlugin from 'photo_manager';
 
 /**
  * Generated file. Do not edit.
@@ -31,6 +31,7 @@ export class GeneratedPluginRegistrant {
   static registerWith(flutterEngine: FlutterEngine) {
     try {
       flutterEngine.getPlugins()?.add(new IntegrationTestPlugin());
+      flutterEngine.getPlugins()?.add(new PhotoManagerPlugin());
       flutterEngine.getPlugins()?.add(new MapLibreMapsPlugin());
       flutterEngine.getPlugins()?.add(new FluttertoastPlugin());
       flutterEngine.getPlugins()?.add(new ImagePickerPlugin());
@@ -47,7 +48,6 @@ export class GeneratedPluginRegistrant {
       flutterEngine.getPlugins()?.add(new GeolocatorOhosPlugin());
       flutterEngine.getPlugins()?.add(new IsarFlutterLibsPlugin());
       flutterEngine.getPlugins()?.add(new SharedPreferencesPlugin());
-      flutterEngine.getPlugins()?.add(new PhotoManagerPlugin());
     } catch (e) {
       Log.e(
         TAG,
