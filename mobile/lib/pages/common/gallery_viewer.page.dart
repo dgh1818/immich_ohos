@@ -137,12 +137,39 @@ class GalleryViewerPage extends HookConsumerWidget {
 
       ImageStream stream = provider.resolve(ImageConfiguration.empty);
       late final ImageStreamListener listener;
+
+      // ui.ColorSpace defaultColorSpace = ui.ColorSpace.sRGB;
+      // Timer? timeoutTimer;
+      // timeoutTimer = Timer(const Duration(seconds: 5), () {
+      //   if (!completer.isCompleted) {
+      //     completer.complete(defaultColorSpace);
+      //     stream.removeListener(listener);
+      //   }
+      // });
+
       listener = ImageStreamListener((ImageInfo info, bool synchronousCall) {
-        completer.complete(info.image.colorSpace);
-        stream.removeListener(listener);
+        if (info.image.colorSpace == ui.ColorSpace.extendedSRGB) {
+          ui.SetHdr.setHdrMode(hdr: 1, is_image: true);
+        } else {
+          ui.SetHdr.setHdrMode(hdr: 0, is_image: true);
+        }
+
+        if (info.image.width > 2000 || info.image.height > 2000) {
+          //timeoutTimer?.cancel();
+          completer.complete(info.image.colorSpace);
+          stream.removeListener(listener);
+        }
+
+        // completer.complete(info.image.colorSpace);
+        // stream.removeListener(listener);
       });
 
       stream.addListener(listener);
+
+      // completer.future.whenComplete(() {
+      //   stream.removeListener(listener);
+      //   timeoutTimer?.cancel();
+      // });
       return completer.future;
     }
 
@@ -151,11 +178,11 @@ class GalleryViewerPage extends HookConsumerWidget {
       if (colorSpace != null) {
         debugPrint("Image Color Space: ${colorSpace.toString()}");
 
-        if (colorSpace == ui.ColorSpace.extendedSRGB) {
-          ui.SetHdr.setHdrMode(hdr: 1, is_image: true);
-        } else {
-          ui.SetHdr.setHdrMode(hdr: 0, is_image: true);
-        }
+        // if (colorSpace == ui.ColorSpace.extendedSRGB) {
+        //   ui.SetHdr.setHdrMode(hdr: 1, is_image: true);
+        // } else {
+        //   ui.SetHdr.setHdrMode(hdr: 0, is_image: true);
+        // }
       }
     }
 
