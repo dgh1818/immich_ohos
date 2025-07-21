@@ -36,6 +36,7 @@ import 'package:immich_mobile/widgets/photo_view/src/utils/photo_view_hero_attri
 
 import 'package:immich_mobile/main.dart';
 import 'package:immich_mobile/pages/common/video_viewer.page.dart';
+import 'package:immich_mobile/utils/cache/custom_image_cache.dart';
 
 @RoutePage()
 // ignore: must_be_immutable
@@ -69,6 +70,18 @@ class GalleryViewerPage extends HookConsumerWidget {
     final shouldLoopVideo = useState(AppSettingsEnum.loopVideo.defaultValue);
 
     final routeAware = useMemoized(() => _MyRouteAware());
+    final imageListener = useRef<ImageStreamListener?>(null);
+    final currentImageProvider = useRef<ImageProvider?>(null);
+    final timers = useRef<List<Timer>>([]);
+    final cancelAllTimers = useCallback(
+      () {
+        for (final timer in timers.value) {
+          if (timer.isActive) timer.cancel();
+        }
+        timers.value.clear();
+      },
+      [],
+    );
 
     useEffect(() {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -113,77 +126,37 @@ class GalleryViewerPage extends HookConsumerWidget {
       }
     }
 
-    useEffect(
-      () {
-        if (ref.read(showControlsProvider)) {
-          SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
-        } else {
-          SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersive);
-        }
-
-        // Delay this a bit so we can finish loading the page
-        Timer(const Duration(milliseconds: 400), () {
-          precacheNextImage(currentIndex.value + 1);
-        });
-
-        return null;
-      },
-      const [],
-    );
-
-    Future<ui.ColorSpace?> getImageColorSpace(
+    void getImageColorSpace(
         ImageProvider provider, BuildContext context) async {
-      final Completer<ui.ColorSpace?> completer = Completer();
+      if (imageListener.value != null && currentImageProvider.value != null) {
+        currentImageProvider.value!
+            .resolve(ImageConfiguration.empty)
+            .removeListener(imageListener.value!);
+      }
 
       ImageStream stream = provider.resolve(ImageConfiguration.empty);
-      late final ImageStreamListener listener;
 
-      // ui.ColorSpace defaultColorSpace = ui.ColorSpace.sRGB;
-      // Timer? timeoutTimer;
-      // timeoutTimer = Timer(const Duration(seconds: 5), () {
-      //   if (!completer.isCompleted) {
-      //     completer.complete(defaultColorSpace);
-      //     stream.removeListener(listener);
-      //   }
-      // });
+      imageListener.value = ImageStreamListener(
+        (ImageInfo info, bool synchronousCall) {
+          if (info.image.colorSpace == ui.ColorSpace.extendedSRGB) {
+            ui.SetHdr.setHdrMode(hdr: 1, is_image: true);
+          } else {
+            ui.SetHdr.setHdrMode(hdr: 0, is_image: true);
+          }
 
-      listener = ImageStreamListener((ImageInfo info, bool synchronousCall) {
-        if (info.image.colorSpace == ui.ColorSpace.extendedSRGB) {
-          ui.SetHdr.setHdrMode(hdr: 1, is_image: true);
-        } else {
-          ui.SetHdr.setHdrMode(hdr: 0, is_image: true);
-        }
+          // if (info.image.width > 2000 || info.image.height > 2000) {
 
-        if (info.image.width > 2000 || info.image.height > 2000) {
-          //timeoutTimer?.cancel();
-          completer.complete(info.image.colorSpace);
-          stream.removeListener(listener);
-        }
+          // }
+        },
+        onError: (_, __) {},
+      );
 
-        // completer.complete(info.image.colorSpace);
-        // stream.removeListener(listener);
-      });
-
-      stream.addListener(listener);
-
-      // completer.future.whenComplete(() {
-      //   stream.removeListener(listener);
-      //   timeoutTimer?.cancel();
-      // });
-      return completer.future;
+      currentImageProvider.value = provider;
+      stream.addListener(imageListener.value!);
     }
 
     void setDisplayMode(ImageProvider provider, BuildContext context) async {
-      ui.ColorSpace? colorSpace = await getImageColorSpace(provider, context);
-      if (colorSpace != null) {
-        debugPrint("Image Color Space: ${colorSpace.toString()}");
-
-        // if (colorSpace == ui.ColorSpace.extendedSRGB) {
-        //   ui.SetHdr.setHdrMode(hdr: 1, is_image: true);
-        // } else {
-        //   ui.SetHdr.setHdrMode(hdr: 0, is_image: true);
-        // }
-      }
+      getImageColorSpace(provider, context);
     }
 
     void showInfo() {
@@ -278,7 +251,22 @@ class GalleryViewerPage extends HookConsumerWidget {
           SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersive);
         }
         //isPlayingVideo.value = false;
-        return null;
+        return () {
+          if (imageListener.value != null &&
+              currentImageProvider.value != null) {
+            currentImageProvider.value!
+                .resolve(ImageConfiguration.empty)
+                .removeListener(imageListener.value!);
+          }
+          if (imageCache is CustomImageCache) {
+            (imageCache as CustomImageCache).clearLargeCache();
+          }
+
+          //controller.dispose();
+          currentImageProvider.value = null;
+          imageListener.value = null;
+          cancelAllTimers();
+        };
       },
       [],
     );
@@ -297,18 +285,6 @@ class GalleryViewerPage extends HookConsumerWidget {
       },
       [],
     );
-
-    ref.listen(showControlsProvider, (_, show) {
-      if (show || Platform.isIOS) {
-        SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
-        return;
-      }
-
-      // This prevents the bottom bar from "dropping" while the controls are being hidden
-      Timer(const Duration(milliseconds: 100), () {
-        SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersive);
-      });
-    });
 
     PhotoViewGalleryPageOptions buildImage(BuildContext context, Asset asset) {
       return PhotoViewGalleryPageOptions(
@@ -416,8 +392,10 @@ class GalleryViewerPage extends HookConsumerWidget {
 
     return PopScope(
       // Change immersive mode back to normal "edgeToEdge" mode
-      onPopInvokedWithResult: (didPop, _) =>
-          SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge),
+      onPopInvokedWithResult: (didPop, _) {
+        SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+        cancelAllTimers();
+      },
       child: Scaffold(
         backgroundColor: Colors.black,
         body: Stack(
@@ -464,7 +442,7 @@ class GalleryViewerPage extends HookConsumerWidget {
                   ? const NeverScrollableScrollPhysics() // Don't allow paging while scrolled in
                   : (Platform.isIOS
                       ? const FastScrollPhysics() // Use bouncing physics for iOS
-                      : const FastClampingScrollPhysics() // Use heavy physics for Android
+                      : const FastScrollPhysics() // Use heavy physics for Android
                   ),
               itemCount: totalAssets.value,
               scrollDirection: Axis.horizontal,
@@ -498,12 +476,14 @@ class GalleryViewerPage extends HookConsumerWidget {
                 // Then precache the next image
 
                 // Wait for page change animation to finish, then precache the next image
-                Timer(const Duration(milliseconds: 400), () {
-                  if (!a.isImage) {
-                    ui.SetHdr.setHdrMode(hdr: -1, is_image: false);
-                  }
-                  precacheNextImage(next);
-                });
+                timers.value.add(
+                  Timer(const Duration(milliseconds: 400), () {
+                    if (!a.isImage) {
+                      ui.SetHdr.setHdrMode(hdr: -1, is_image: false);
+                    }
+                    precacheNextImage(next);
+                  }),
+                );
               },
               builder: buildAsset,
             ),
@@ -563,8 +543,8 @@ class _MyRouteAware extends RouteAware {
 
   @override
   void didPop() {
-    super.didPop();
     ui.SetHdr.setHdrMode(hdr: 0, is_image: true);
+    super.didPop();
   }
   // void didPushNext() { }
 }
