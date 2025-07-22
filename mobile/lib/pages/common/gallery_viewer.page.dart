@@ -393,7 +393,9 @@ class GalleryViewerPage extends HookConsumerWidget {
     return PopScope(
       // Change immersive mode back to normal "edgeToEdge" mode
       onPopInvokedWithResult: (didPop, _) {
-        SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+        if (didPop) {
+          SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+        }
         cancelAllTimers();
       },
       child: Scaffold(

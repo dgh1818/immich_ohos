@@ -22,11 +22,12 @@ class ImmichRemoteImageProvider
   final bool? is_image;
 
   /// The image cache manager
-  final CacheManager? cacheManager;
+  //final CacheManager? cacheManager;
+  static final cacheImage = RemoteImageCacheManager();
 
   ImmichRemoteImageProvider({
     required this.assetId,
-    this.cacheManager,
+    //this.cacheManager,
     this.is_image,
   });
 
@@ -44,10 +45,10 @@ class ImmichRemoteImageProvider
     ImmichRemoteImageProvider key,
     ImageDecoderCallback decode,
   ) {
-    final cache = cacheManager ?? RemoteImageCacheManager();
+    //final cache = cacheManager ?? RemoteImageCacheManager();
     final chunkEvents = StreamController<ImageChunkEvent>();
     return MultiImageStreamCompleter(
-      codec: _codec(key, cache, decode, chunkEvents),
+      codec: _codec(key, cacheImage, decode, chunkEvents),
       scale: 1.0,
       chunkEvents: chunkEvents.stream,
     );

@@ -131,6 +131,7 @@ class AppRouter extends RootStackRouter {
     CustomRoute(
       page: GalleryViewerRoute.page,
       guards: [_authGuard, _duplicateGuard],
+      maintainState: false,
       transitionsBuilder: CustomTransitionsBuilders.zoomedPage,
     ),
     AutoRoute(

@@ -22,13 +22,14 @@ class ImmichRemoteThumbnailProvider
   final int? width;
 
   /// The image cache manager
-  final CacheManager? cacheManager;
+  //final CacheManager? cacheManager;
+  static final cacheThumbnail = ThumbnailImageCacheManager();
 
   ImmichRemoteThumbnailProvider({
     required this.assetId,
     this.height,
     this.width,
-    this.cacheManager,
+    //this.cacheManager,
   });
 
   /// Converts an [ImageProvider]'s settings plus an [ImageConfiguration] to a key
@@ -45,9 +46,9 @@ class ImmichRemoteThumbnailProvider
     ImmichRemoteThumbnailProvider key,
     ImageDecoderCallback decode,
   ) {
-    final cache = cacheManager ?? ThumbnailImageCacheManager();
+    //final cache = cacheManager ?? ThumbnailImageCacheManager();
     return MultiImageStreamCompleter(
-      codec: _codec(key, cache, decode),
+      codec: _codec(key, cacheThumbnail, decode),
       scale: 1.0,
     );
   }
