@@ -40,31 +40,29 @@
 
 ## Harmonyos Next 适配
 
-**IMMICH 1.121.0 搭配 本目录下服务器 使用**
+**IMMICH 1.129.0 搭配 本项目下服务器 使用**
 
 To do:
-1. v1.122.0 之后版本要用到 native_player 插件，尚未适配
+1. v1.122.0 之后版本要用到 native_player 插件，尚未适配（由于修改了flutter引擎，因此不用native_player也能实现hdr，因此用回flutter video player)
 
 Harmonyos Next 鸿蒙端的 Immich
 实现了 HDR 图片和视频的显示
 
 To Do：
 
-1. 华为动态照片的播放显示（修改 Server 端？）初步完成！需使用https://github.com/dgh1818/immich_ohos/docker 下的 docker-compose
-2. 替换地图 ExifInfo 小地图初步完成！大地图 Mapkit 尚未有热力图功能，待官方功能完善
-3. AI HDR
-4. 地理反向编码中文化 初步完成！
-5. 当前 flutter 版本受限，无法使用最新 flutter 版本，后续更新
+1. 华为动态照片的播放显示（修改 Server 端？）初步完成！需使用本项目服务器，重新分析元数据
+2. 替换地图：ExifInfo 小地图初步完成！大地图 Mapkit 尚未有热力图功能，待官方功能完善 （需App Gallery Connect开通地图权限并签名才能显示地图）
+https://ost.51cto.com/answer/23898 mapkit开通教程
+3. AI HDR（待完成）
+4. 地理反向编码中文化：完成！（需使用本项目服务器，重新分析元数据）（需App Gallery Connect开通地图权限并签名）
+5. 当前 flutter 版本受限（3.27），无法使用最新 flutter 版本（3.32），后续更新
 
 .env 文件设置：
 PETALMAP_GEOCODE_KEYS: //华为 App Gallery Connect API KEY.
-GEOCODE_WITH_PETALMAP: 'true' // 启用 Petal Map 逆地理编码.
+GEOCODE_WITH_PETALMAP: 'true' // 启用 Petal Map 逆地理编码. 80000次/月免费 包括国内和国际
 
 AMAP_GEOCODE_KEYS: //高德地图 key.
 GEOCODE_WITH_AMAP: 'true' // 启用高德 逆地理编码 个人开发者国内免费 5000 次每天，国际收费.
-
-PETALMAP_GEOCODE_KEYS: //华为 App Gallery Connect API KEY.
-GEOCODE_WITH_PETALMAP: 'true' // 启用 Petal Map 逆地理编码 个人开发者国内免费，国际收费，暂时未发现次数限制.
 
 ## Disclaimer
 
