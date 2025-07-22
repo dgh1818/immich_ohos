@@ -154,10 +154,10 @@ packages:
     dependency: transitive
     description:
       name: built_value
-      sha256: "082001b5c3dc495d4a42f1d5789990505df20d8547d42507c29050af6933ee27"
+      sha256: "0b1b12a0a549605e5f04476031cd0bc91ead1d7c8e830773a18ee54179b3cb62"
       url: "https://pub.flutter-io.cn"
     source: hosted
-    version: "8.10.1"
+    version: "8.11.0"
   cached_network_image:
     dependency: "direct main"
     description:
@@ -690,7 +690,7 @@ packages:
     description:
       path: geolocator
       ref: master
-      resolved-ref: "998535ff6031f787ff883c8ac38ba642b196898d"
+      resolved-ref: a6a45ab47d24b5822a11883a4ccfe4c714ffcb11
       url: "https://gitcode.com/dgh18/fluttertpc_geolocator.git"
     source: git
     version: "10.1.0"
@@ -824,10 +824,10 @@ packages:
     dependency: transitive
     description:
       name: image_picker_android
-      sha256: "317a5d961cec5b34e777b9252393f2afbd23084aa6e60fcf601dcf6341b9ebeb"
+      sha256: "6fae381e6af2bbe0365a5e4ce1db3959462fa0c4d234facf070746024bb80c8d"
       url: "https://pub.flutter-io.cn"
     source: hosted
-    version: "0.8.12+23"
+    version: "0.8.12+24"
   image_picker_for_web:
     dependency: transitive
     description:
@@ -1289,10 +1289,11 @@ packages:
   photo_manager:
     dependency: "direct main"
     description:
-      path: flutter_photo_manager
-      relative: true
-    source: path
-    version: "3.6.4"
+      name: photo_manager
+      sha256: a0d9a7a9bc35eda02d33766412bde6d883a8b0acb86bbe37dac5f691a0894e8a
+      url: "https://pub.flutter-io.cn"
+    source: hosted
+    version: "3.7.1"
   photo_manager_image_provider:
     dependency: "direct main"
     description:

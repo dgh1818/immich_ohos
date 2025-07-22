@@ -180,8 +180,8 @@ dependency_overrides:
       url: https://github.com/dgh1818/chewie_ohos.git
       path: './'
       ref: ohos_dev
-  photo_manager:
-    path: ./flutter_photo_manager
+  # photo_manager:
+  #   path: ./flutter_photo_manager
   coordtransform_dart:
     git:
       url: https://github.com/dgh1818/coordtransform_dart.git
