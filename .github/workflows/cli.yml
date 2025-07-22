@@ -47,10 +47,10 @@ jobs:
         run: npm run build --prefix ../open-api/typescript-sdk/
       - run: npm ci
       - run: npm run build
-      - run: npm publish
-        if: ${{ github.event_name == 'release' }}
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      # - run: npm publish
+      #   if: ${{ github.event_name == 'release' }}
+      #   env:
+      #     NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
   docker:
     name: Docker
