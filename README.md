@@ -47,6 +47,7 @@ To do:
 
 Harmonyos Next 鸿蒙端的 Immich
 实现了 HDR 图片和视频的显示
+优化ui布局 点击左上角logo可收起侧栏
 
 To Do：
 
