@@ -144,7 +144,8 @@ class ImmichAppBar extends ConsumerWidget implements PreferredSizeWidget {
     }
 
     return AppBar(
-      backgroundColor: context.themeData.appBarTheme.backgroundColor,
+      //backgroundColor: context.themeData.appBarTheme.backgroundColor,
+      backgroundColor: Colors.transparent,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.all(
           Radius.circular(5),
@@ -171,12 +172,12 @@ class ImmichAppBar extends ConsumerWidget implements PreferredSizeWidget {
                   }
                   return Padding(
                     padding: const EdgeInsets.only(top: 3.0),
-                    child: SvgPicture.asset(
-                      context.isDarkTheme
-                          ? 'assets/immich-logo-inline-dark.svg'
-                          : 'assets/immich-logo-inline-light.svg',
-                      height: 40,
-                    ),
+                    // child: SvgPicture.asset(
+                    //   context.isDarkTheme
+                    //       ? 'assets/immich-logo-inline-dark.svg'
+                    //       : 'assets/immich-logo-inline-light.svg',
+                    //   height: 40,
+                    // ),
                   );
                 },
               ),
