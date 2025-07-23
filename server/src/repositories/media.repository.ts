@@ -71,9 +71,7 @@ export class MediaRepository {
       })
       .toFile(output);
     } else {
-      await this.getImageDecodingPipeline(input, options)
-      .toFormat('raw')
-      .toFile(output);
+      await this.getImageDecodingPipeline(input, options).raw().toFile(output);
     }
   }
     
