@@ -52,10 +52,10 @@ class ImmichImage extends StatelessWidget {
         height: height,
       );
     } else {
-      if(!asset.isImage) {
+      if (!asset.isImage) {
         return ImmichRemoteImageProvider(
-        assetId: asset.remoteId!,
-        is_image: asset.isImage!,
+          assetId: asset.remoteId!,
+          is_image: asset.isImage!,
         );
       }
 

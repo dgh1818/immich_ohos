@@ -72,11 +72,11 @@ class ImmichThumbnail extends HookWidget {
       );
     }
 
-    return OctoImage.fromSet(
+    return OctoImage(
       placeholderFadeInDuration: Duration.zero,
       fadeInDuration: Duration.zero,
       fadeOutDuration: const Duration(milliseconds: 100),
-      octoSet: blurHashOrPlaceholder(blurhash),
+      //octoSet: blurHashOrPlaceholder(blurhash),
       image: ImmichThumbnail.imageProvider(
         asset: asset,
       ),
