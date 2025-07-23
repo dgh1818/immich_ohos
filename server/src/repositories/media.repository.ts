@@ -71,10 +71,9 @@ export class MediaRepository {
       })
       .toFile(output);
     } else {
-      await sharp(input)
-        .raw()
-        .ensureAlpha()
-        .toFile(output);  // 输出为裸 RGBA 数据
+      await this.getImageDecodingPipeline(input, options)
+      .toFormat('raw')
+      .toFile(output);
     }
   }
     
