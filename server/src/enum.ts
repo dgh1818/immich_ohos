@@ -322,6 +322,7 @@ export enum Colorspace {
 export enum ImageFormat {
   JPEG = 'jpeg',
   WEBP = 'webp',
+  RAW = 'raw',
 }
 
 export enum LogLevel {

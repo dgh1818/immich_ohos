@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { raw } from 'express';
 import { dirname } from 'node:path';
 import { JOBS_ASSET_PAGINATION_SIZE } from 'src/constants';
 import { StorageCore } from 'src/cores/storage.core';
@@ -29,6 +30,11 @@ import { getAssetFiles } from 'src/utils/asset.util';
 import { BaseConfig, ThumbnailConfig } from 'src/utils/media';
 import { mimeTypes } from 'src/utils/mime-types';
 import { usePagination } from 'src/utils/pagination';
+import {
+  
+  ImageFormat,
+ 
+} from 'src/enum';
 
 @Injectable()
 export class MediaService extends BaseService {
@@ -202,7 +208,10 @@ export class MediaService extends BaseService {
   private async generateImageThumbnails(asset: AssetEntity) {
     const { image } = await this.getConfig({ withCache: true });
     const previewPath = StorageCore.getImagePath(asset, AssetPathType.PREVIEW, image.preview.format);
-    const thumbnailPath = StorageCore.getImagePath(asset, AssetPathType.THUMBNAIL, image.thumbnail.format);
+    //const thumbnailPath = StorageCore.getImagePath(asset, AssetPathType.THUMBNAIL, image.thumbnail.format);
+
+    const thumbnailPath = process.env.THUMBNAIL_WITH_BITMAP === 'FALSE'?StorageCore.getImagePath(asset, AssetPathType.THUMBNAIL, image.thumbnail.format):StorageCore.getImagePath(asset, AssetPathType.THUMBNAIL,ImageFormat.RAW);
+    
     this.storageCore.ensureFolders(previewPath);
 
     const shouldExtract = image.extractEmbedded && mimeTypes.isRaw(asset.originalPath);
