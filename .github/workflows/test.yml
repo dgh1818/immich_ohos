@@ -499,7 +499,7 @@ jobs:
     runs-on: ubuntu-latest
     if: always()
     steps:
-      - uses: dgh18/devtools/actions/success-check@main # 0.0.4
+      - uses: dgh1818/devtools/actions/success-check@main # 0.0.4
         with:
           needs: ${{ toJSON(needs) }}
 
