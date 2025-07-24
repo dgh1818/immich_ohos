@@ -14,7 +14,7 @@ class ThumbnailImageCacheManager extends CacheManager {
       : super(
           Config(
             key,
-            maxNrOfCacheObjects: 5000,
+            maxNrOfCacheObjects: 30000,
             stalePeriod: const Duration(days: 30),
           ),
         );

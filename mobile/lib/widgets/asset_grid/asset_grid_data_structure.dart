@@ -143,7 +143,7 @@ class RenderList {
     final List<RenderAssetGridElement> elements = [];
 
     const pageSize = 50000;
-    const sectionSize = 60; // divides evenly by 2,3,4,5,6
+    const sectionSize = 120; // divides evenly by 2,3,4,5,6
 
     if (groupBy == GroupAssetsBy.none) {
       final int total = assets?.length ?? query!.countSync();

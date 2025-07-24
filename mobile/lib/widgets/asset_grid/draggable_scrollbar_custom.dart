@@ -413,7 +413,7 @@ class DraggableScrollbarState extends State<DraggableScrollbar>
           widget.scrollStateListener(true);
 
           dragHaltTimer = Timer(
-            const Duration(milliseconds: 500),
+            const Duration(milliseconds: 3000),
             () {
               widget.scrollStateListener(false);
             },
