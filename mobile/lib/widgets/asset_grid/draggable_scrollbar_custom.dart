@@ -273,6 +273,11 @@ class DraggableScrollbarState extends State<DraggableScrollbar>
         return NotificationListener<ScrollNotification>(
           onNotification: (ScrollNotification notification) {
             changePosition(notification);
+
+            if (notification is ScrollEndNotification) {
+              widget.scrollStateListener(false);
+            }
+
             return false;
           },
           child: Stack(
@@ -412,12 +417,12 @@ class DraggableScrollbarState extends State<DraggableScrollbar>
           dragHaltTimer?.cancel();
           widget.scrollStateListener(true);
 
-          dragHaltTimer = Timer(
-            const Duration(milliseconds: 3000),
-            () {
-              widget.scrollStateListener(false);
-            },
-          );
+          // dragHaltTimer = Timer(
+          //   const Duration(milliseconds: 3000),
+          //   () {
+          //     widget.scrollStateListener(false);
+          //   },
+          // );
         }
 
         _jumpToBarPosition();

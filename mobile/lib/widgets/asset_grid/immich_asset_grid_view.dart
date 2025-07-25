@@ -271,7 +271,7 @@ class ImmichAssetGridViewState extends ConsumerState<ImmichAssetGridView> {
           (widget.topWidget != null ? 1 : 0),
       addRepaintBoundaries: true,
       shrinkWrap: widget.shrinkWrap,
-      minCacheExtent: context.height * 5,
+      minCacheExtent: context.height * 6,
     );
 
     final child = (useDragScrolling && ModalRoute.of(context) != null)
