@@ -62,12 +62,12 @@ enum AppSettingsEnum<T> {
   ),
   advancedTroubleshooting<bool>(StoreKey.advancedTroubleshooting, null, false),
   logLevel<int>(StoreKey.logLevel, null, 5), // Level.INFO = 5
-  preferRemoteImage<bool>(StoreKey.preferRemoteImage, null, false),
+  preferRemoteImage<bool>(StoreKey.preferRemoteImage, null, true),
   loopVideo<bool>(StoreKey.loopVideo, "loopVideo", true),
   loadOriginalVideo<bool>(
     StoreKey.loadOriginalVideo,
     "loadOriginalVideo",
-    false,
+    true,
   ),
   mapThemeMode<int>(StoreKey.mapThemeMode, null, 0),
   mapShowFavoriteOnly<bool>(StoreKey.mapShowFavoriteOnly, null, false),

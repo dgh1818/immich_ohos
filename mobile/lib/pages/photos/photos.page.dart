@@ -159,13 +159,13 @@ class PhotosPage extends HookConsumerWidget {
             duration: const Duration(milliseconds: 300),
             top: ref.watch(multiselectProvider)
                 ? -(kToolbarHeight + context.padding.top)
-                : 0,
+                : -context.padding.top / 2,
             left: 0,
             right: 0,
-            child: const SafeArea(
-              bottom: false,
-              top: false,
-              child: ImmichAppBar(),
+            child: Container(
+              height: kToolbarHeight + context.padding.top,
+              color: Colors.transparent,
+              child: const ImmichAppBar(),
             ),
           ),
         ],

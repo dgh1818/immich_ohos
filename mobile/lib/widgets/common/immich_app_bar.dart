@@ -199,7 +199,7 @@ class ImmichAppBar extends ConsumerWidget implements PreferredSizeWidget {
             child: buildBackupIndicator(),
           ),
         Padding(
-          padding: const EdgeInsets.only(right: 20),
+          padding: const EdgeInsets.only(right: 30),
           child: buildProfileIndicator(),
         ),
       ],

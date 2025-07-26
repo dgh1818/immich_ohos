@@ -61,7 +61,7 @@ class ImmichLocalImageProvider extends ImageProvider<ImmichLocalImageProvider> {
       }
 
       var thumbBytes = await local
-          .thumbnailDataWithSize(const ThumbnailSize.square(256), quality: 80);
+          .thumbnailDataWithSize(const ThumbnailSize(333, 250), quality: 100);
       if (thumbBytes == null) {
         throw StateError("Loading thumbnail for ${asset.fileName} failed");
       }

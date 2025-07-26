@@ -54,17 +54,17 @@ class ImmichLocalThumbnailProvider
     StreamController<ImageChunkEvent> chunkEvents,
   ) async* {
     // Load a small thumbnail
-    final thumbBytes = await asset.local?.thumbnailDataWithSize(
-      const ThumbnailSize.square(32),
-      quality: 75,
-    );
-    if (thumbBytes != null) {
-      final buffer = await ui.ImmutableBuffer.fromUint8List(thumbBytes);
-      final codec = await decode(buffer);
-      yield codec;
-    } else {
-      debugPrint("Loading thumb for ${asset.fileName} failed");
-    }
+    // final thumbBytes = await asset.local?.thumbnailDataWithSize(
+    //   const ThumbnailSize.square(32),
+    //   quality: 75,
+    // );
+    // if (thumbBytes != null) {
+    //   final buffer = await ui.ImmutableBuffer.fromUint8List(thumbBytes);
+    //   final codec = await decode(buffer);
+    //   yield codec;
+    // } else {
+    //   debugPrint("Loading thumb for ${asset.fileName} failed");
+    // }
 
     final normalThumbBytes =
         await asset.local?.thumbnailDataWithSize(ThumbnailSize(width, height));

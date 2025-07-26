@@ -43,11 +43,16 @@ class ImmichThumbnail extends HookWidget {
       );
     }
 
+    final ratio =
+        (asset.width != null && asset.height != null && asset.height != 0)
+            ? asset.width! / asset.height!
+            : null;
+
     if (ImmichImage.useLocal(asset)) {
       return ImmichLocalThumbnailProvider(
         asset: asset,
-        height: thumbnailSize,
-        width: thumbnailSize,
+        height: 256,
+        width: (thumbnailSize * (ratio ?? 1.33)).toInt(),
       );
     } else {
       return ImmichRemoteThumbnailProvider(

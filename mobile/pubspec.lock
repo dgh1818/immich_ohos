@@ -1289,18 +1289,16 @@ packages:
   photo_manager:
     dependency: "direct main"
     description:
-      name: photo_manager
-      sha256: a0d9a7a9bc35eda02d33766412bde6d883a8b0acb86bbe37dac5f691a0894e8a
-      url: "https://pub.flutter-io.cn"
-    source: hosted
-    version: "3.7.1"
+      path: flutter_photo_manager
+      relative: true
+    source: path
+    version: "3.6.4"
   photo_manager_image_provider:
     dependency: "direct main"
     description:
-      name: photo_manager_image_provider
-      sha256: b6015b67b32f345f57cf32c126f871bced2501236c405aafaefa885f7c821e4f
-      url: "https://pub.flutter-io.cn"
-    source: hosted
+      path: photo_manager_image_provider
+      relative: true
+    source: path
     version: "2.2.0"
   platform:
     dependency: transitive
