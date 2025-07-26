@@ -65,6 +65,13 @@ GEOCODE_WITH_PETALMAP: 'true' // 启用 Petal Map 逆地理编码. 80000次/月�
 AMAP_GEOCODE_KEYS: //高德地图 key.
 GEOCODE_WITH_AMAP: 'true' // 启用高德 逆地理编码 个人开发者国内免费 5000 次每天，国际收费.
 
+DEMO:
+![微信图片_20250726225916_42](https://github.com/user-attachments/assets/bcd88029-4e22-4742-95ae-77477a2fc855)
+![微信图片_20250726225910_41](https://github.com/user-attachments/assets/79e9e708-26d7-49d8-b2fc-e61859f581d3)
+
+
+
+
 ## Disclaimer
 
 - ⚠️ The project is under **very active** development.
