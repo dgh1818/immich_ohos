@@ -56,18 +56,26 @@ To Do：
 https://ost.51cto.com/answer/23898 mapkit开通教程
 3. AI HDR（待完成）
 4. 地理反向编码中文化：完成！（需使用本项目服务器，重新分析元数据）（需App Gallery Connect开通地图权限并签名）
-5. 当前 flutter 版本受限（3.27），无法使用最新 flutter 版本（3.32），后续更新
+5. 当前 flutter 版本受限（3.27），无法使用最新 flutter 版本（3.32），后续更新<br/>
 
-.env 文件设置：
-PETALMAP_GEOCODE_KEYS: //华为 App Gallery Connect API KEY.
-GEOCODE_WITH_PETALMAP: 'true' // 启用 Petal Map 逆地理编码. 80000次/月免费 包括国内和国际
+.env 文件设置：<br/>
+PETALMAP_GEOCODE_KEYS: //华为 App Gallery Connect API KEY.<br/>
+GEOCODE_WITH_PETALMAP: 'true' // 启用 Petal Map 逆地理编码. 80000次/月免费 包括国内和国际<br/>
 
-AMAP_GEOCODE_KEYS: //高德地图 key.
-GEOCODE_WITH_AMAP: 'true' // 启用高德 逆地理编码 个人开发者国内免费 5000 次每天，国际收费.
+AMAP_GEOCODE_KEYS: //高德地图 key.<br/>
+GEOCODE_WITH_AMAP: 'true' // 启用高德 逆地理编码 个人开发者国内免费 5000 次每天，国际收费.<br/>
 
-DEMO:
-![微信图片_20250726225916_42](https://github.com/user-attachments/assets/bcd88029-4e22-4742-95ae-77477a2fc855)
-![微信图片_20250726225910_41](https://github.com/user-attachments/assets/79e9e708-26d7-49d8-b2fc-e61859f581d3)
+DEMO:<br/>
+
+<p align="center">
+  <img src="(https://github.com/user-attachments/assets/bcd88029-4e22-4742-95ae-77477a2fc855" alt="平板1" width="400" />
+</p>
+<p align="center">
+  <img src="(https://github.com/user-attachments/assets/79e9e708-26d7-49d8-b2fc-e61859f581d3" alt="平板2" width="400" />
+</p>
+<p align="center">
+  <img src="(https://github.com/user-attachments/assets/b9087716-ef8e-4f24-b3dc-3728fc6400a6" alt="平板3" width="400" />
+</p>
 
 
 
