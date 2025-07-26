@@ -41,7 +41,7 @@
 # Harmonyos Next 鸿蒙端的 Immich
 
 **IMMICH 1.129.0 搭配 本项目下服务器 使用**
-###注意事项：
+<h1>签名有关注意事项：</h1>
 1. 本目录下服务器可实现华为jpeg动态照片解析<br/>
 2. 本目录下服务器搭配PETAL MAP的API KEY可实现中文逆地理编码（中文地名）<br/>
 .env 文件设置：<br/>
@@ -59,12 +59,12 @@ GEOCODE_WITH_AMAP: 'true' // 启用高德 逆地理编码 个人开发者国内�
    "ohos.permission.READ_IMAGEVIDEO" <br/>
    "ohos.permission.WRITE_IMAGEVIDEO" <br/>
    
-###Additional Features：
+<h1>Additional Features：</h1>
 1. 实现了 HDR 图片和视频的显示  <br/>
 2. 优化了ui布局 点击左上角logo可收起侧栏  <br/>
 3. 小地图替换成了petalmap  <br/>
 
-##History：
+<h2>History：</h2>
 
 To Do：
 
@@ -77,7 +77,7 @@ https://ost.51cto.com/answer/23898 mapkit开通教程
 
 
 
-DEMO:<br/>
+<h2>DEMO:</h2>
 
 <p align="center">
   <img src="https://github.com/user-attachments/assets/bcd88029-4e22-4742-95ae-77477a2fc855" alt="平板1" width="800" />
