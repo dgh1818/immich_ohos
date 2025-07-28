@@ -159,7 +159,7 @@ dependency_overrides:
     git:
       url: https://gitcode.com/openharmony-sig/flutter_packages.git
       path: 'packages/image_picker/image_picker'
-      #ref: 8c61f19e816168efc212cca5c4fbf9ac183ee90e
+      #ref: br_image_picker-v1.1.2_ohos
   isar:
     git:
       url: https://gitee.com/du_guang/isar.git

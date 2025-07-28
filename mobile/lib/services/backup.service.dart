@@ -34,6 +34,9 @@ import 'package:path/path.dart' as p;
 import 'package:permission_handler/permission_handler.dart' as pm;
 import 'package:photo_manager/photo_manager.dart' show PMProgressHandler;
 
+import 'package:image_picker/image_picker.dart';
+import 'package:path/path.dart';
+
 final backupServiceProvider = Provider(
   (ref) => BackupService(
     ref.watch(apiServiceProvider),
@@ -470,6 +473,71 @@ class BackupService {
     }
 
     return !anyErrors;
+  }
+
+  Future<void> uploadImageDirectly(XFile image) async {
+    final deviceId = Store.get(StoreKey.deviceId);
+    final endpoint = Store.get(StoreKey.serverEndpoint);
+    final accessToken = Store.get(StoreKey.accessToken);
+
+    // 1. 准备文件
+    final file = File(image.path);
+    final stat = await file.stat();
+
+    // 2. 创建唯一标识 - 使用文件路径哈希
+    final deviceAssetId = hash(file.path).toString();
+
+    // 3. 获取元数据
+    final fileCreatedAt =
+        stat.changed.year == 1970 ? stat.modified : stat.changed;
+    final fileModifiedAt = stat.modified;
+
+    // 4. 构建请求
+    final baseRequest = http.MultipartRequest(
+      'POST',
+      Uri.parse('$endpoint/assets'),
+    );
+
+    // 5. 设置头信息
+    baseRequest.headers.addAll({
+      'Authorization': 'Bearer $accessToken',
+      'Accept': 'application/json',
+      'Transfer-Encoding': 'chunked',
+    });
+
+    // 6. 添加表单字段
+    baseRequest.fields.addAll({
+      'deviceAssetId': deviceAssetId,
+      'deviceId': deviceId,
+      'fileCreatedAt': fileCreatedAt.toUtc().toIso8601String(),
+      'fileModifiedAt': fileModifiedAt.toUtc().toIso8601String(),
+      'isFavorite': 'false',
+      'duration': '0',
+    });
+
+    // 7. 添加文件
+    baseRequest.files.add(http.MultipartFile(
+      'assetData',
+      file.openRead(),
+      file.lengthSync(),
+      filename: image.name,
+    ));
+
+    // 8. 发送请求
+    try {
+      final response = await http.Response.fromStream(await baseRequest.send());
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final json = jsonDecode(response.body);
+        debugPrint('上传成功! 资产ID: ${json['id']}');
+      } else {
+        final error = jsonDecode(response.body);
+        throw Exception('上传失败: ${error['message']}');
+      }
+    } catch (e) {
+      debugPrint('上传出错: $e');
+      rethrow;
+    }
   }
 
   Future<String?> uploadLivePhotoVideo(
