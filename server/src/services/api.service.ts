@@ -128,8 +128,10 @@ export class ApiService {
         return next();
       }
 
-      if (!isPrivateIp(ip)) {
-        return res.sendStatus(404);
+      if (process.env.FORBIDDEN_WEB_FROM_INTERNET === 'true') {
+        if (!isPrivateIp(ip)) {
+          return res.sendStatus(404);
+        }
       }
 
       const targets = [
