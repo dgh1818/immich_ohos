@@ -63,6 +63,7 @@ GEOCODE_WITH_AMAP: 'true' // 启用高德 逆地理编码 个人开发者国内�
 1. 实现了 HDR 图片和视频的显示  <br/>
 2. 优化了ui布局 点击左上角logo可收起侧栏  <br/>
 3. 小地图替换成了petalmap  <br/>
+4. 增加了photopicker，无需ACL可手动上传媒体 <br/>
 
 <h2>History：</h2>
 
@@ -74,6 +75,9 @@ https://ost.51cto.com/answer/23898 mapkit开通教程
 3. AI HDR（待完成）
 4. 地理反向编码中文化：完成！（需使用本项目服务器，重新分析元数据）（需App Gallery Connect开通地图权限并签名）
 5. 当前 flutter 版本受限（3.27），无法使用最新 flutter 版本（3.32），后续更新<br/>
+
+<h2>备忘：</h2>
+1. photopicker最大媒体数量从9修改为了500
 
 
 
