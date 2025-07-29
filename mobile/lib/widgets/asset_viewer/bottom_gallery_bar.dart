@@ -25,6 +25,8 @@ import 'package:immich_mobile/providers/user.provider.dart';
 import 'package:immich_mobile/widgets/common/immich_toast.dart';
 import 'package:immich_mobile/pages/editing/edit.page.dart';
 
+import 'package:immich_mobile/utils/selection_handlers.dart';
+
 class BottomGalleryBar extends ConsumerWidget {
   final ValueNotifier<int> assetIndex;
   final bool showStack;
@@ -184,6 +186,9 @@ class BottomGalleryBar extends ConsumerWidget {
         );
         return;
       }
+
+      final assetList = [asset];
+      handleShareAssets(ref, context, assetList);
       //ref.read(downloadStateProvider.notifier).shareAsset(asset, context);
     }
 
