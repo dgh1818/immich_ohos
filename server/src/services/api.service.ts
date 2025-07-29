@@ -65,7 +65,8 @@ function isIPv4(ip: string): boolean {
   return true;
 }
 
-function isPrivateIp(ip: string): boolean {
+function isPrivateIp(ip?: string): boolean {
+  if (!ip) return false;
   // 如果有 ipv4-mapped IPv6 前缀，先拆掉
   if (ip.startsWith('::ffff:')) {
     ip = ip.replace('::ffff:', '');
