@@ -34,11 +34,11 @@ enum SettingSection {
     Icons.language,
     "setting_languages_subtitle",
   ),
-  networking(
-    'networking_settings',
-    Icons.wifi,
-    "networking_subtitle",
-  ),
+  // networking(
+  //   'networking_settings',
+  //   Icons.wifi,
+  //   "networking_subtitle",
+  // ),
   notifications(
     'setting_notifications_title',
     Icons.notifications_none_rounded,
@@ -64,7 +64,7 @@ enum SettingSection {
         SettingSection.assetViewer => const AssetViewerSettings(),
         SettingSection.backup => const BackupSettings(),
         SettingSection.languages => const LanguageSettings(),
-        SettingSection.networking => const NetworkingSettings(),
+        //SettingSection.networking => const NetworkingSettings(),
         SettingSection.notifications => const NotificationSetting(),
         SettingSection.preferences => const PreferenceSetting(),
         SettingSection.timeline => const AssetListSettings(),

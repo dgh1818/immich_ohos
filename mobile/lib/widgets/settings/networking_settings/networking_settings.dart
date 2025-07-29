@@ -157,8 +157,11 @@ class NetworkingSettings extends HookConsumerWidget {
             icon: Icons.home_outlined,
           ),
         ),
+        // LocalNetworkPreference(
+        //   enabled: featureEnabled.value,
+        // ),
         LocalNetworkPreference(
-          enabled: featureEnabled.value,
+          enabled: false,
         ),
         Padding(
           padding: const EdgeInsets.only(top: 32, left: 16, bottom: 16),
