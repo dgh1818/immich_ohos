@@ -118,8 +118,12 @@ export class ApiService {
 
     return async (request: Request, res: Response, next: NextFunction) => {
 
+      
       const forwarded = request.headers['x-forwarded-for'];
-      const ip = ((typeof forwarded === 'string' ? forwarded : request.ip) || '').split(',')[0].trim();
+      const realIp = request.headers['x-real-ip'];
+      const ip =
+        (typeof realIp === 'string' && realIp) ||
+        (typeof forwarded === 'string' && forwarded.split(',')[0].trim()) || request.ip;
       if (
         request.url.startsWith('/api') ||
         request.method.toLowerCase() !== 'get' ||
