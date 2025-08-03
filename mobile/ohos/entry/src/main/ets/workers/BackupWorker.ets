@@ -1,0 +1,542 @@
+import { ArrayList, ErrorEvent, MessageEvents, ThreadWorkerGlobalScope, worker } from '@kit.ArkTS';
+import { SendableObject } from '../plugins/BackgroundServicePlugin';
+import { common, sendableContextManager } from '@kit.AbilityKit';
+import { FlutterEngine, MethodCall, MethodChannel, MethodResult,FlutterLoader,
+  MethodCallHandler,
+  FlutterPluginBinding,
+  FlutterCallbackInformation,
+  DartExecutor,
+  DartCallback,
+  FlutterShellArgs,
+  } from '@ohos/flutter_ohos';
+
+import { notificationManager } from '@kit.NotificationKit';
+import dataPreferences from '@ohos.data.preferences'
+import { BusinessError } from '@kit.BasicServicesKit';
+import { process } from '@kit.ArkTS';
+import { workScheduler, WorkSchedulerExtensionAbility } from '@kit.BackgroundTasksKit';
+
+export class BackupWorker extends WorkSchedulerExtensionAbility implements MethodCallHandler {
+  //private NetworkType;
+  onWorkStart(workInfo: workScheduler.WorkInfo) {
+    console.info(`onWorkStart, workInfo = ${JSON.stringify(workInfo)}`);
+    // 打印 parameters中的参数，如：参数key1
+    // console.info(`work info parameters: ${JSON.parse(workInfo.parameters?.toString()).key1}`)
+  }
+
+  onWorkStop(workInfo: workScheduler.WorkInfo) {
+    console.info(`onWorkStop, workInfo is ${JSON.stringify(workInfo)}`);
+  }
+
+  constructor() {
+    super();
+    // this.context_input = ui_context;
+    // this.ui_context = sendableContextManager.convertToUIAbilityContext(this.context_input);
+
+
+    this.workerPort.onmessage = (event: MessageEvents) => {
+      let input: SendableObject = event.data;
+      let command: string = input.command;
+      this.ui_context = sendableContextManager.convertToUIAbilityContext(input.sendableContext);
+
+      switch (command) {
+        case "startWork":
+          this.ui_context = sendableContextManager.convertToUIAbilityContext(input.sendableContext);
+
+          if (!this.flutterLoader?.initialized) {
+            this.flutterLoader?.startInitialization(this.ui_context);
+          }
+
+          this.createChannel();
+          dataPreferences.getPreferences(this.ui_context, BackupWorker.SHARED_PREF_NAME, (err, sp) => {
+
+          this.title = sp.getSync(BackupWorker.SHARED_PREF_NOTIFICATION_TITLE, BackupWorker.NOTIFICATION_DEFAULT_TITLE) as string;
+
+          // if (isIgnoringBatteryOptimizations) {
+          //   // normal background services can only up to 10 minutes
+          //   // foreground services are allowed to run indefinitely
+          //   // requires battery optimizations to be disabled (either manually by the user
+          //   // or by the system learning that immich is important to the user)
+          //   val title = ctx.getSharedPreferences(SHARED_PREF_NAME, Context.MODE_PRIVATE)
+          //     .getString(SHARED_PREF_NOTIFICATION_TITLE, NOTIFICATION_DEFAULT_TITLE)!!
+          //   showInfo(getInfoBuilder(title, indeterminate = true).build())
+          // }
+          this.showInfo(this.getInfoBuilder(this.title, undefined,false,0,0,true));
+
+            this.engine = new FlutterEngine(this.ui_context!,null,null,null);
+            const flutterShellArgs = new FlutterShellArgs();
+
+            this.flutterLoader?.ensureInitializationComplete(flutterShellArgs.toArray() ?? []);
+            let appBundlePath = this.flutterLoader?.findAppBundlePath();
+
+            this.ensureInitializationCompleteAsync(this.ui_context!,appBundlePath).then(()=>{
+              this.runDart();
+            })
+
+
+            });
+
+          case "onStopped":
+
+            Promise.resolve().then(() => {
+              if (this.backgroundChannel) {
+                    this.backgroundChannel.invokeMethod("systemStop", null)
+                  }
+              // 与 queueMicrotask 效果类似
+            });
+            break;
+
+          case "enqueueBackupWorker":
+            let requireWifi = input.requireWifi;
+            let requireCharging = input.requireCharging;
+            let delayMilliseconds = input.triggerUpdateDelay;
+            this.backupWorkInfo = this.buildWorkRequest(requireWifi, requireCharging, delayMilliseconds)
+            workScheduler.startWork(this.backupWorkInfo);
+
+          case "updateBackupWorker":
+            let context = this.ui_context;
+            let requireWifi2: boolean = false;
+            let requireCharging2: boolean = false
+
+            let workInfoFuture = workScheduler.getWorkStatus(BackupWorker.TASK_NAME_BACKUP_ID);
+
+            try{
+              workScheduler.obtainAllWorks((error: BusinessError, workInfoList: Array<workScheduler.WorkInfo>) =>{
+                if (error) {
+                  console.error(`workschedulerLog obtainAllWorks failed. code is ${error.code} message is ${error.message}`);
+                } else {
+                  if(!workInfoList==undefined) {
+                    for (const workInfo of workInfoList) {
+                      let workRequest = this.buildWorkRequest(requireWifi, requireCharging)
+                      workScheduler.stopWork(workInfo); // 先停止原来的
+                      workScheduler.startWork(workRequest);
+                      console.debug('updateBackupWorker: BackupWorker constraints updated');
+                      return;
+                    }
+                  }
+                  console.info("updateBackupWorker: BackupWorker not enqueued");
+
+                }
+              });
+
+            } catch(error) {
+              console.error('updateBackupWorker failed:', error);
+            }
+
+            break;
+          case "stopWork":
+            workScheduler.stopWork(this.backupWorkInfo); // 先停止原来的
+            console.info('stopWork: BackupWorker cancelled');
+
+            break;
+          case "isIgnoringBatteryOptimizations":
+            break;
+      }
+    };
+  }
+
+  private waitOnSetForegroundAsync() {
+    let fgFuture = this.fgFuture
+    let finished = false;
+
+    let timer = setTimeout(() => {
+      if (!finished) {
+        console.warn("fgFuture timeout after 500ms");
+        return;
+        // 超时逻辑，可能标记错误状态或取消任务
+      }
+    }, 500);
+
+    fgFuture?.then(() => {
+      if (!finished) {
+        finished = true;
+        clearTimeout(timer);
+        console.log("fgFuture resolved in time");
+      }
+    }).catch((e:BusinessError) => {
+      if (!finished) {
+        finished = true;
+        clearTimeout(timer);
+        console.log("fgFuture failed before timeout");
+      }
+    });
+  }
+
+  private async ensureInitializationCompleteAsync(ctx:common.UIAbilityContext,appBundlePath?:string) {
+    const flutterShellArgs = new FlutterShellArgs();
+    this.flutterLoader?.ensureInitializationComplete(flutterShellArgs.toArray() ?? []);
+
+    return;
+  }
+
+  private stopEngine(result: ResultCode) {
+    this.clearBackgroundNotification();
+    this.engine?.destroy();
+    this.engine = undefined;
+    if (result) {
+      console.info(`stopEngine result=${result}`);
+
+      this.resolvableFuture?.resolve(result);
+      //MethodChannel.Result
+
+    }
+    this.waitOnSetForegroundAsync()
+  }
+
+  async onMethodCall(call: MethodCall, result: MethodResult): Promise<void> {
+    switch (call.method) {
+      case "initialized" :
+        this.timeBackupStarted = process.uptime() * 1000;
+
+        this.backgroundChannel?.invokeMethod("onAssetsChanged",null,
+          {
+            notImplemented: () => {
+              this.stopEngine(ResultCode.FAILURE);
+            },
+            error: (errorCode: string, errorMessage?: string, errorDetails?: ESObject) => {
+              this.stopEngine(ResultCode.FAILURE);
+
+            },
+            success: (receivedResult: ESObject) => {
+              const success = Boolean(receivedResult);
+              this.stopEngine(success ? ResultCode.SUCCESS : ResultCode.RETRY);
+            }
+          }
+        );
+        break;
+      case "updateNotification" :
+        let args:ArrayList<ESObject> = call.args as ArrayList<ESObject>;
+        let title = args[0] as string
+        let content = args[1] as string
+        let progress = args[2] as number
+        let max = args[3] as number
+        let indeterminate = args[4] as boolean
+        let isDetail = args[5] as boolean
+        let onlyIfFG = args[6] as boolean
+
+        //if (!onlyIfFG || isIgnoringBatteryOptimizations) {
+        this.showInfo(
+          this.getInfoBuilder(title, content, isDetail, progress, max, indeterminate),
+          isDetail
+        );
+
+        break;
+      case "showError":
+        let args2:ArrayList<ESObject> = call.args as ArrayList<ESObject>;
+        let title2 = args2[0] as string
+        let content2 = args2[1] as string
+        let individualTag = args2[2] as string
+        this.showError(title2, content2, individualTag);
+        break;
+      case "clearErrorNotifications":
+        this.clearErrorNotifications();
+        break;
+      case "hasContentChanged":
+        dataPreferences.getPreferences(this.ui_context, BackupWorker.SHARED_PREF_NAME, (err, sp) => {
+          let lastChange = sp.getSync(BackupWorker.SHARED_PREF_LAST_CHANGE, this.timeBackupStarted)
+          let hasContentChanged = lastChange > this.timeBackupStarted;
+          this.timeBackupStarted = process.uptime() * 1000;
+          result.success(hasContentChanged);
+        });
+        break;
+      default:
+        result.notImplemented();
+    }
+  }
+
+  private showError(title: string, content?: string, individualTag?: string) {
+    let notification:notificationManager.NotificationRequest = {
+      id: this.NOTIFICATION_CHANNEL_ID,
+      content: {
+
+        notificationContentType: notificationManager.ContentType.NOTIFICATION_CONTENT_BASIC_TEXT, // 普通文本类型通知
+        normal: {
+          title: title,
+          text: content??'',
+          //additionalText: 'test_additionalText',
+        },
+      },
+      template: {
+        name: 'downloadTemplate',
+        data: { title: title, fileName: '', progressValue: 0 }
+      },
+      notificationSlotType: notificationManager.SlotType.SERVICE_INFORMATION,
+      smallIcon: this.icon?.getPixelMap(),
+    };
+  }
+
+  private clearErrorNotifications() {
+    notificationManager.cancel(BackupWorker.NOTIFICATION_ERROR_ID);
+  }
+
+  private clearBackgroundNotification() {
+    notificationManager.cancel(BackupWorker.NOTIFICATION_ID);
+    notificationManager.cancel(BackupWorker.NOTIFICATION_DETAIL_ID);
+  }
+
+  private showInfo(notification: notificationManager.NotificationRequest, isDetail: Boolean = false) {
+    let id = isDetail ? BackupWorker.NOTIFICATION_DETAIL_ID : BackupWorker.NOTIFICATION_ID
+
+    //if (isIgnoringBatteryOptimizations && !isDetail) {
+    if (!isDetail) {
+      // this.fgFuture =
+      // setForegroundAsync(ForegroundInfo(id, notification, FOREGROUND_SERVICE_TYPE_SHORT_SERVICE))
+
+    } else {
+      notificationManager.publish(notification);
+    }
+  }
+
+  private getInfoBuilder(
+    title?:string,
+    content?: string,
+    isDetail: boolean = false,
+    progress: number = 0,
+    max: number = 0,
+    indeterminate: boolean = false
+  ): notificationManager.NotificationRequest {
+    let builder = isDetail? this.notificationDetailBuilder : this.notificationBuilder
+
+    if (builder == undefined) {
+      builder = {
+        id: this.NOTIFICATION_CHANNEL_ID,
+        content: {
+
+          notificationContentType: notificationManager.ContentType.NOTIFICATION_CONTENT_BASIC_TEXT, // 普通文本类型通知
+          normal: {
+            title: '',
+            text: '',
+            //additionalText: 'test_additionalText',
+          },
+        },
+        template: {
+          name: 'downloadTemplate',
+          data: { title: '', fileName: '', progressValue: 0 }
+        },
+        notificationSlotType: notificationManager.SlotType.SERVICE_INFORMATION,
+        smallIcon: this.icon?.getPixelMap(),
+        isAlertOnce: true,
+        isOngoing: true,
+      };
+      if (isDetail) {
+        this.notificationDetailBuilder = builder
+      } else {
+        this.notificationBuilder = builder
+      }
+    }
+
+    if (title != undefined) {
+      builder = {
+        updateOnly: true,
+        id: this.NOTIFICATION_CHANNEL_ID,
+        content:{
+
+          notificationContentType: notificationManager.ContentType.NOTIFICATION_CONTENT_BASIC_TEXT, // 普通文本类型通知
+          normal: {
+            title: title!,
+            text: "",
+            //additionalText: 'test_additionalText',
+          },
+        },
+        template: {
+          name: 'downloadTemplate',
+          data: { title: title!, fileName: 'music.mp4', progressValue: progress }
+        },
+        notificationSlotType: notificationManager.SlotType.SERVICE_INFORMATION,
+        smallIcon: this.icon?.getPixelMap(),
+        isAlertOnce:true,
+        isOngoing:true,
+      };
+    }
+
+    if (content != undefined) {
+      builder = {
+        updateOnly: true,
+        id: this.NOTIFICATION_CHANNEL_ID,
+        content:{
+
+          notificationContentType: notificationManager.ContentType.NOTIFICATION_CONTENT_BASIC_TEXT, // 普通文本类型通知
+          normal: {
+            title: title!,
+            text: "",
+            //additionalText: 'test_additionalText',
+          },
+        },
+        template: {
+          name: 'downloadTemplate',
+          data: { title: title!, fileName: content, progressValue: progress }
+        },
+        notificationSlotType: notificationManager.SlotType.SERVICE_INFORMATION,
+        smallIcon: this.icon?.getPixelMap(),
+        isAlertOnce:true,
+        isOngoing:true,
+      };
+    }
+    return builder;
+  }
+
+  private async createChannel() {
+    this.foreground = {
+      id: this.NOTIFICATION_CHANNEL_ID,
+      //groupName: this.NOTIFICATION_CHANNEL_name,
+      content: {
+        notificationContentType: notificationManager.ContentType.NOTIFICATION_CONTENT_BASIC_TEXT, // 普通文本类型通知
+        normal: {
+          title: this.title!,
+          text: 'test_text',
+          additionalText: 'test_additionalText',
+        }
+      },
+      notificationSlotType: notificationManager.SlotType.SERVICE_INFORMATION
+    };
+
+    this.error = {
+      id: this.NOTIFICATION_CHANNEL_ERROR_ID,
+      //groupName: this.NOTIFICATION_CHANNEL_name,
+      content: {
+        notificationContentType: notificationManager.ContentType.NOTIFICATION_CONTENT_BASIC_TEXT, // 普通文本类型通知
+        normal: {
+          title: 'test_title',
+          text: 'test_text',
+          additionalText: 'test_additionalText',
+        }
+      },
+      notificationSlotType: notificationManager.SlotType.SOCIAL_COMMUNICATION
+    };
+  }
+
+  private runDart() {
+    dataPreferences.getPreferences(this.ui_context, BackupWorker.SHARED_PREF_NAME, (err, sp) => {
+      let callbackDispatcherHandle = sp.getSync("SHARED_PREF_CALLBACK_KEY",0) as number;
+      let callbackInformation = FlutterCallbackInformation.lookupCallbackInformation(callbackDispatcherHandle);
+      let appBundlePath = this.flutterLoader?.findAppBundlePath();
+      //this.engine.
+      if(this.engine) {
+        this.backgroundChannel = new MethodChannel(this.engine.dartExecutor, "immich/backgroundChannel");
+        this.backgroundChannel.setMethodCallHandler(this);
+
+        dartCallback:DartCallback
+        this.engine.dartExecutor.executeDartCallback(
+          new DartCallback(
+            this.ui_context?.resourceManager,
+            appBundlePath,
+            callbackInformation
+          )
+        ); //修改了index.ets
+      }
+    });
+  };
+
+  private buildWorkRequest(
+  requireWifi: boolean = false,
+  requireCharging: boolean = false,
+  delayMilliseconds: number = 0
+  ): workScheduler.WorkInfo {
+
+    let constraints:workScheduler.WorkInfo = {
+      workId:BackupWorker.TASK_NAME_BACKUP_ID,
+      bundleName:'com.dgh18.immich',
+      abilityName:'BackupWorker',
+      networkType: requireWifi? workScheduler.NetworkType.NETWORK_TYPE_WIFI:workScheduler.NetworkType.NETWORK_TYPE_ANY,
+      batteryStatus:workScheduler.BatteryStatus.BATTERY_STATUS_OKAY,
+      isCharging:requireCharging,
+    }
+
+    return constraints;
+}
+  private ui_context?: common.UIAbilityContext;
+  private context_input?: sendableContextManager.SendableContext;
+
+  //private resolvableFuture?:Promise<MethodResult>;
+  private engine?: FlutterEngine = undefined;
+  private backgroundChannel?: MethodChannel;
+  // private notificationManager =
+  //   notificationManager;
+  private isIgnoringBatteryOptimizations = true;
+  //private isIgnoringBatteryOptimizations = isIgnoringBatteryOptimizations(applicationContext)
+  private timeBackupStarted: number = 0;
+  private notificationBuilder?: notificationManager.NotificationRequest;
+  private notificationDetailBuilder?: notificationManager.NotificationRequest;
+
+  private fgFuture?: Promise<void>;
+
+  private resolvableFuture = new ResolvablePromise<ResultCode>();
+  //private workRequest?:workScheduler.WorkInfo;
+  private backupWorkInfo?:workScheduler.WorkInfo;
+  private flutterLoader?:FlutterLoader;
+  private NOTIFICATION_CHANNEL_ID:number = 1;
+  private NOTIFICATION_CHANNEL_name = "immich/backgroundService"
+  private foreground?: notificationManager.NotificationRequest
+  private error?:notificationManager.NotificationRequest
+  private NOTIFICATION_CHANNEL_ERROR_ID:number = 2;
+  private methodChannel?: MethodChannel = undefined;
+;
+  static readonly SHARED_PREF_NAME = "immichBackgroundService";
+  static readonly SHARED_PREF_CALLBACK_KEY = "callbackDispatcherHandle";
+  static readonly SHARED_PREF_NOTIFICATION_TITLE = "notificationTitle";
+  static readonly SHARED_PREF_LAST_CHANGE = "lastChange";
+  //
+  static readonly TASK_NAME_BACKUP = "immich/BackupWorker"
+  static readonly TASK_NAME_BACKUP_ID = 10010;
+  static readonly NOTIFICATION_CHANNEL_ID = "immich/backgroundService"
+  static readonly NOTIFICATION_CHANNEL_ERROR_ID = "immich/backgroundServiceError"
+  static readonly NOTIFICATION_DEFAULT_TITLE = "Immich"
+  static readonly NOTIFICATION_ID = 1
+  static readonly NOTIFICATION_ERROR_ID = 2
+  static readonly NOTIFICATION_DETAIL_ID = 3
+  static readonly ONE_MINUTE = 60000;
+  private title?:string;
+  private notification_content?:notificationManager.NotificationProgress;
+  private icon?:DrawableDescriptor = this.ui_context?.resourceManager.getDrawableDescriptor($r('app.media.icon').id);
+
+  private workerPort: ThreadWorkerGlobalScope = worker.workerPort;
+
+  onAttachedToEngine(binding: FlutterPluginBinding): void {
+
+    this.flutterLoader = binding?.getFlutterEngine().getFlutterLoader();
+    //context = ctx;
+    this.methodChannel = new MethodChannel(binding.getBinaryMessenger(), "immich/foregroundChannel");
+    this.methodChannel.setMethodCallHandler(this);
+  }
+
+  onDetachedFromEngine(binding: FlutterPluginBinding): void {
+    this.methodChannel?.setMethodCallHandler(undefined);
+    this.methodChannel = undefined;
+  }
+}
+
+class ResolvablePromise<T> {
+  promise: Promise<T>;
+  resolve!: (v: T) => void;
+  reject!: (e?: ESObject) => void;
+
+  constructor() {
+    this.promise = new Promise<T>((res, rej) => {
+      this.resolve = res;
+      this.reject = rej;
+    });
+  }
+}
+
+export enum ResultCode {
+  SUCCESS = "success",
+  FAILURE = "failure",
+  RETRY   = "retry",
+}
+
+export class MyWorkSchedulerExtensionAbility extends WorkSchedulerExtensionAbility {
+  // 延迟任务开始回调
+  onWorkStart(workInfo: workScheduler.WorkInfo) {
+    console.info(`onWorkStart, workInfo = ${JSON.stringify(workInfo)}`);
+    // 打印 parameters中的参数，如：参数key1
+    // console.info(`work info parameters: ${JSON.parse(workInfo.parameters?.toString()).key1}`)
+  }
+
+  // 延迟任务结束回调。当延迟任务2分钟超时或应用调用stopWork接口取消任务时，触发该回调。
+  onWorkStop(workInfo: workScheduler.WorkInfo) {
+    console.info(`onWorkStop, workInfo is ${JSON.stringify(workInfo)}`);
+  }
+}
+
+new BackupWorker();
+
