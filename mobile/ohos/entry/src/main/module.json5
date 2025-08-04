@@ -44,8 +44,13 @@
     ],
     "extensionAbilities": [
       {
-        "name": "BackupWorker",
-        "srcEntry": "./ets/workers/BackupWorker.ets",
+        "name": "BackupWorkerTask",
+        "srcEntry": "./ets/workers/BackupWorkScheduler.ets",
+        "type": "workScheduler"
+      },
+      {
+        "name": "ContentObserverWorkerTask",
+        "srcEntry": "./ets/workers/ContentObserverWorkScheduler.ets",
         "type": "workScheduler"
       }
     ],

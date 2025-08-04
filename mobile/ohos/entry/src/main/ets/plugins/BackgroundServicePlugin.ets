@@ -1,8 +1,8 @@
 import { FlutterPlugin, FlutterPluginBinding, MethodCall,
   MethodCallHandler,
   MethodChannel, MethodResult,
-  StandardMethodCodec,AbilityAware,AbilityPluginBinding,FlutterLoader } from "@ohos/flutter_ohos";
-import router from '@ohos.router';
+  StandardMethodCodec,AbilityAware,AbilityPluginBinding,FlutterLoader,
+  PluginRegistry } from "@ohos/flutter_ohos";
 import { abilityAccessCtrl, common, ErrorCode, PermissionRequestResult, Permissions,
   sendableContextManager,
   StartOptions,
@@ -44,28 +44,24 @@ export class SendableObject {
   triggerMaxDelay?: number  = 50000;
 }
 
-export class BackgroundServicePlugin implements FlutterPlugin,MethodCallHandler, AbilityAware{
-//export class BackgroundServicePlugin implements FlutterPlugin,MethodCallHandler, AbilityAware,AbilityPluginBinding{
+export class BackgroundServicePlugin implements FlutterPlugin, MethodCallHandler, AbilityAware{
   private methodChannel?: MethodChannel = undefined;
   private fileTrashChannel?: MethodChannel = undefined;
   private context: common.Context = getContext();
   private activityBinding?: AbilityPluginBinding = undefined;
+
   private uiContext: common.UIAbilityContext | null = null;
   private static ignoreCheck: boolean = false;
   private sendableCtx?:sendableContextManager.SendableContext = undefined;
   private ContentObserverWorker?:worker.ThreadWorker;
   private BackupWorker?:worker.ThreadWorker;
 
-  //private worker1?: worker.ThreadWorker;
-  //private worker1: worker.ThreadWorker = new worker.ThreadWorker('../workers/ContentObserverWorker');
-
   onAttachedToEngine(binding: FlutterPluginBinding): void {
-
-
-    //context = ctx;
+    //context = ctx //move to onAttachedToAbility
     this.methodChannel = new MethodChannel(binding.getBinaryMessenger(), "immich/foregroundChannel");
     this.methodChannel.setMethodCallHandler(this);
 
+    // Add file trash channel
     this.fileTrashChannel = new MethodChannel(binding.getBinaryMessenger(), "file_trash");
     this.methodChannel.setMethodCallHandler(this);
   }
@@ -77,60 +73,56 @@ export class BackgroundServicePlugin implements FlutterPlugin,MethodCallHandler,
     this.fileTrashChannel = undefined;
   }
 
-  //this.getUIContext();
-
   async onMethodCall(call: MethodCall, result: MethodResult): Promise<void> {
-    let ctx = this.context;
+    let ctx = this.uiContext;
     switch (call.method) {
       case "enable":
         let args0:ArrayList<ESObject> = call.args as ArrayList<ESObject>;
-        dataPreferences.getPreferences(this.uiContext, 'myPreferences', (err, preferences) => {
+        dataPreferences.getPreferences(this.uiContext, BackupWorker.SHARED_PREF_NAME, (err, preferences) => {
           if (err) {
             console.error('获取Preferences实例失败:', err)
             return
           }
-          preferences.put(ContentObserverWorker.SHARED_PREF_SERVICE_ENABLED,true);
-          preferences.put(BackupWorker.SHARED_PREF_CALLBACK_KEY,args0[0] as number);
-          preferences.put(BackupWorker.SHARED_PREF_NOTIFICATION_TITLE,args0[1] as string);
-          preferences.flush();
+          preferences.putSync(ContentObserverWorker.SHARED_PREF_SERVICE_ENABLED,true);
+          preferences.putSync(BackupWorker.SHARED_PREF_CALLBACK_KEY,args0[0] as number);
+          preferences.putSync(BackupWorker.SHARED_PREF_NOTIFICATION_TITLE,args0[1] as string);
+          preferences.flushSync();
           console.log('获取Preferences实例成功')
 
-          if(this.sendableCtx!=undefined) {
+          if(this.sendableCtx != undefined) {
             let object1: SendableObject = new SendableObject("doWork", this.sendableCtx,args0[2] as boolean)
             this.ContentObserverWorker = new worker.ThreadWorker('../workers/ContentObserverWorker');
             this.ContentObserverWorker.postMessageWithSharedSendable(object1);
             let object2: SendableObject = new SendableObject("enable", this.sendableCtx,args0[2] as boolean)
             this.ContentObserverWorker.postMessageWithSharedSendable(object2);
-
             result.success(true)
           }
-
-          result.error("sendableCtx", "The context is underfined.", null);
-
         })
         break;
+
       case "configure":
         let args1:ArrayList<ESObject> = call.args as ArrayList<ESObject>;
         let requireUnmeteredNetwork = args1[0] as boolean;
         let requireCharging = args1[1] as boolean;
         let triggerUpdateDelay = args1[2] as number;
         let triggerMaxDelay = args1[3] as number;
+
         if(this.sendableCtx!=undefined) {
           let object: SendableObject = new SendableObject("configureWork", this.sendableCtx,undefined,requireUnmeteredNetwork,requireCharging,triggerUpdateDelay,triggerMaxDelay);
           this.ContentObserverWorker?.postMessageWithSharedSendable(object);
           result.success(true);
         }
-
-        result.error("sendableCtx", "The context is underfined.", null);
         break;
+
       case "disable":
         if(this.sendableCtx!=undefined) {
           let object: SendableObject = new SendableObject("disable", this.sendableCtx)
           this.ContentObserverWorker?.postMessageWithSharedSendable(object);
+          this.ContentObserverWorker?.terminate();
 
           let object5: SendableObject = new SendableObject("stopWork", this.sendableCtx)
           ContentObserverWorker.BackupWorkerInstance_public?.postMessageWithSharedSendable(object5);
-
+          ContentObserverWorker.BackupWorkerInstance_public?.terminate();
           result.success(true);
         }
         break;
@@ -154,8 +146,6 @@ export class BackgroundServicePlugin implements FlutterPlugin,MethodCallHandler,
         }
 
         break;
-        //result.success(ContentObserverWorker.isEnabled(ctx));
-
       case "isIgnoringBatteryOptimizations":
         result.success(true);
         //result.success(BackupWorker.isIgnoringBatteryOptimizations(ctx));
@@ -203,7 +193,7 @@ export class BackgroundServicePlugin implements FlutterPlugin,MethodCallHandler,
         const args3:Map<string, ArrayList<string>> = call.args as Map<string, ArrayList<string>>;
           //const mediaUrls:string = args3.args3.("mediaUrls");
           const mediaUrls = args3["mediaUrls"] as Array<string>;
-          if (mediaUrls != null) {
+          if (mediaUrls != undefined) {
             if (await this.requestManageMediaPermission()) {
               this.moveToTrash(mediaUrls, result)
             } else {
@@ -237,7 +227,7 @@ export class BackgroundServicePlugin implements FlutterPlugin,MethodCallHandler,
           if(requestResult) {
             result.success(true);
           } else {
-            result.error("Manage Media Permission", "Permission already granted","error");
+            result.error("Manage Media Permission", "Permission not granted","error");
           }
         break;
       default:
@@ -272,7 +262,6 @@ export class BackgroundServicePlugin implements FlutterPlugin,MethodCallHandler,
         let length: number = grantStatus.length;
         for (let i = 0; i < length; i++) {
           if (grantStatus[i] != 0) {
-
             return false;
           }
         }
@@ -350,8 +339,6 @@ export class BackgroundServicePlugin implements FlutterPlugin,MethodCallHandler,
     }
 }
 
-
-
   getUniqueClassName(): string {
     return "BackgroundServicePlugin"
   }
@@ -365,7 +352,6 @@ export class BackgroundServicePlugin implements FlutterPlugin,MethodCallHandler,
   onDetachedFromAbility() {
     //activityBinding?.removeActivityResultListener(this)
     this.activityBinding = undefined;
-
   }
 
   hexStringToBytes(hex: string): Uint8Array {
@@ -375,6 +361,4 @@ export class BackgroundServicePlugin implements FlutterPlugin,MethodCallHandler,
     }
     return bytes;
   }
-
-
 }

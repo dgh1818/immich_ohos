@@ -16,28 +16,26 @@ import { BusinessError } from '@kit.BasicServicesKit';
 import { process } from '@kit.ArkTS';
 import { workScheduler, WorkSchedulerExtensionAbility } from '@kit.BackgroundTasksKit';
 
-export class BackupWorker extends WorkSchedulerExtensionAbility implements MethodCallHandler {
-  //private NetworkType;
-  onWorkStart(workInfo: workScheduler.WorkInfo) {
-    console.info(`onWorkStart, workInfo = ${JSON.stringify(workInfo)}`);
-    // 打印 parameters中的参数，如：参数key1
-    // console.info(`work info parameters: ${JSON.parse(workInfo.parameters?.toString()).key1}`)
-  }
+export class BackupWorker implements MethodCallHandler {
+  private readonly TAG = "BackupWorker"
 
-  onWorkStop(workInfo: workScheduler.WorkInfo) {
-    console.info(`onWorkStop, workInfo is ${JSON.stringify(workInfo)}`);
-  }
+  private resolvableFuture = new ResolvablePromise<ResultCode>();
+  private engine?: FlutterEngine;
+  private backgroundChannel?: MethodChannel;
+  // private notificationManager = notificationManager; //ohos直接调用
+  private isIgnoringBatteryOptimizations = true;
+  //private isIgnoringBatteryOptimizations = isIgnoringBatteryOptimizations(applicationContext)
+  private timeBackupStarted: number = 0;
+  private notificationBuilder?: notificationManager.NotificationRequest;
+  private notificationDetailBuilder?: notificationManager.NotificationRequest;
+  private fgFuture?: Promise<void>;
 
   constructor() {
-    super();
-    // this.context_input = ui_context;
-    // this.ui_context = sendableContextManager.convertToUIAbilityContext(this.context_input);
-
-
     this.workerPort.onmessage = (event: MessageEvents) => {
       let input: SendableObject = event.data;
       let command: string = input.command;
       this.ui_context = sendableContextManager.convertToUIAbilityContext(input.sendableContext);
+
 
       switch (command) {
         case "startWork":
@@ -47,10 +45,11 @@ export class BackupWorker extends WorkSchedulerExtensionAbility implements Metho
             this.flutterLoader?.startInitialization(this.ui_context);
           }
 
-          this.createChannel();
+          // Create a Notification channel
+          //this.createChannel(title);
           dataPreferences.getPreferences(this.ui_context, BackupWorker.SHARED_PREF_NAME, (err, sp) => {
 
-          this.title = sp.getSync(BackupWorker.SHARED_PREF_NOTIFICATION_TITLE, BackupWorker.NOTIFICATION_DEFAULT_TITLE) as string;
+            let title = sp.getSync(BackupWorker.SHARED_PREF_NOTIFICATION_TITLE, BackupWorker.NOTIFICATION_DEFAULT_TITLE) as string;
 
           // if (isIgnoringBatteryOptimizations) {
           //   // normal background services can only up to 10 minutes
@@ -61,29 +60,38 @@ export class BackupWorker extends WorkSchedulerExtensionAbility implements Metho
           //     .getString(SHARED_PREF_NOTIFICATION_TITLE, NOTIFICATION_DEFAULT_TITLE)!!
           //   showInfo(getInfoBuilder(title, indeterminate = true).build())
           // }
-          this.showInfo(this.getInfoBuilder(this.title, undefined,false,0,0,true));
+
+            this.showInfo(this.getInfoBuilder(title, undefined,false,0,0,true));
 
             this.engine = new FlutterEngine(this.ui_context!,null,null,null);
             const flutterShellArgs = new FlutterShellArgs();
 
-            this.flutterLoader?.ensureInitializationComplete(flutterShellArgs.toArray() ?? []);
             let appBundlePath = this.flutterLoader?.findAppBundlePath();
-
             this.ensureInitializationCompleteAsync(this.ui_context!,appBundlePath).then(()=>{
               this.runDart();
             })
+          });
 
+          //return this.resolvableFuture; //待完善
+          break;
 
-            });
+        case "onStopped":
+          console.info(this.TAG,"onStopped");
+          // called when the system has to stop this worker because constraints are
+          // no longer met or the system needs resources for more important tasks
 
-          case "onStopped":
+          Promise.resolve().then(() => {
+            if (this.backgroundChannel) {
+              this.backgroundChannel.invokeMethod("systemStop", undefined);
+            }
+            this.waitOnSetForegroundAsync();
 
-            Promise.resolve().then(() => {
-              if (this.backgroundChannel) {
-                    this.backgroundChannel.invokeMethod("systemStop", null)
-                  }
-              // 与 queueMicrotask 效果类似
-            });
+            setTimeout(() => {
+              // 这里的 this 就是你的类实例
+              this.stopEngine(ResultCode.SUCCESS);
+              BackupWorkerClass = undefined;
+            }, 5000);
+          });
             break;
 
           case "enqueueBackupWorker":
@@ -92,48 +100,71 @@ export class BackupWorker extends WorkSchedulerExtensionAbility implements Metho
             let delayMilliseconds = input.triggerUpdateDelay;
             this.backupWorkInfo = this.buildWorkRequest(requireWifi, requireCharging, delayMilliseconds)
             workScheduler.startWork(this.backupWorkInfo);
+            break;
 
           case "updateBackupWorker":
             let context = this.ui_context;
             let requireWifi2: boolean = false;
             let requireCharging2: boolean = false
 
-            let workInfoFuture = workScheduler.getWorkStatus(BackupWorker.TASK_NAME_BACKUP_ID);
+            //let workInfoFuture = workScheduler.getWorkStatus(BackupWorker.TASK_NAME_BACKUP_ID);
 
             try{
               workScheduler.obtainAllWorks((error: BusinessError, workInfoList: Array<workScheduler.WorkInfo>) =>{
                 if (error) {
                   console.error(`workschedulerLog obtainAllWorks failed. code is ${error.code} message is ${error.message}`);
+
                 } else {
                   if(!workInfoList==undefined) {
                     for (const workInfo of workInfoList) {
                       let workRequest = this.buildWorkRequest(requireWifi, requireCharging)
                       workScheduler.stopWork(workInfo); // 先停止原来的
                       workScheduler.startWork(workRequest);
-                      console.debug('updateBackupWorker: BackupWorker constraints updated');
+                      console.info(this.TAG, "updateBackupWorker updated BackupWorker constraints");
+
                       return;
                     }
                   }
-                  console.info("updateBackupWorker: BackupWorker not enqueued");
-
+                  console.info(this.TAG, "updateBackupWorker: BackupWorker not enqueued");
                 }
               });
-
             } catch(error) {
               console.error('updateBackupWorker failed:', error);
             }
-
             break;
+
           case "stopWork":
             workScheduler.stopWork(this.backupWorkInfo); // 先停止原来的
-            console.info('stopWork: BackupWorker cancelled');
-
+            console.info(this.TAG, 'stopWork: BackupWorker cancelled');
             break;
+
           case "isIgnoringBatteryOptimizations":
             break;
       }
     };
   }
+
+  private runDart() {
+    dataPreferences.getPreferences(this.ui_context, BackupWorker.SHARED_PREF_NAME, (err, sp) => {
+      let callbackDispatcherHandle = sp.getSync("SHARED_PREF_CALLBACK_KEY",0) as number;
+      let callbackInformation = FlutterCallbackInformation.lookupCallbackInformation(callbackDispatcherHandle);
+      let appBundlePath = this.flutterLoader?.findAppBundlePath();
+      //this.engine.
+      if(this.engine) {
+        this.backgroundChannel = new MethodChannel(this.engine.dartExecutor, "immich/backgroundChannel");
+        this.backgroundChannel.setMethodCallHandler(this);
+
+        dartCallback:DartCallback
+        this.engine.dartExecutor.executeDartCallback(
+          new DartCallback(
+            this.ui_context?.resourceManager,
+            appBundlePath,
+            callbackInformation
+          )
+        ); //修改了index.ets
+      }
+    });
+  };
 
   private waitOnSetForegroundAsync() {
     let fgFuture = this.fgFuture
@@ -198,7 +229,7 @@ export class BackupWorker extends WorkSchedulerExtensionAbility implements Metho
 
             },
             success: (receivedResult: ESObject) => {
-              const success = Boolean(receivedResult);
+              const success = receivedResult as boolean;
               this.stopEngine(success ? ResultCode.SUCCESS : ResultCode.RETRY);
             }
           }
@@ -215,11 +246,12 @@ export class BackupWorker extends WorkSchedulerExtensionAbility implements Metho
         let onlyIfFG = args[6] as boolean
 
         //if (!onlyIfFG || isIgnoringBatteryOptimizations) {
-        this.showInfo(
-          this.getInfoBuilder(title, content, isDetail, progress, max, indeterminate),
-          isDetail
-        );
-
+        if (!onlyIfFG) {
+          this.showInfo(
+            this.getInfoBuilder(title, content, isDetail, progress, max, indeterminate),
+            isDetail
+          );
+        }
         break;
       case "showError":
         let args2:ArrayList<ESObject> = call.args as ArrayList<ESObject>;
@@ -246,7 +278,7 @@ export class BackupWorker extends WorkSchedulerExtensionAbility implements Metho
 
   private showError(title: string, content?: string, individualTag?: string) {
     let notification:notificationManager.NotificationRequest = {
-      id: this.NOTIFICATION_CHANNEL_ID,
+      id: BackupWorker.NOTIFICATION_ERROR_ID,
       content: {
 
         notificationContentType: notificationManager.ContentType.NOTIFICATION_CONTENT_BASIC_TEXT, // 普通文本类型通知
@@ -279,9 +311,8 @@ export class BackupWorker extends WorkSchedulerExtensionAbility implements Metho
 
     //if (isIgnoringBatteryOptimizations && !isDetail) {
     if (!isDetail) {
-      // this.fgFuture =
-      // setForegroundAsync(ForegroundInfo(id, notification, FOREGROUND_SERVICE_TYPE_SHORT_SERVICE))
-
+      notificationManager.publish(notification);
+      this.fgFuture=Promise.resolve();
     } else {
       notificationManager.publish(notification);
     }
@@ -324,7 +355,6 @@ export class BackupWorker extends WorkSchedulerExtensionAbility implements Metho
         this.notificationBuilder = builder
       }
     }
-
     if (title != undefined) {
       builder = {
         updateOnly: true,
@@ -340,7 +370,7 @@ export class BackupWorker extends WorkSchedulerExtensionAbility implements Metho
         },
         template: {
           name: 'downloadTemplate',
-          data: { title: title!, fileName: 'music.mp4', progressValue: progress }
+          data: { title: title!, fileName: '', progressValue: progress }
         },
         notificationSlotType: notificationManager.SlotType.SERVICE_INFORMATION,
         smallIcon: this.icon?.getPixelMap(),
@@ -358,13 +388,13 @@ export class BackupWorker extends WorkSchedulerExtensionAbility implements Metho
           notificationContentType: notificationManager.ContentType.NOTIFICATION_CONTENT_BASIC_TEXT, // 普通文本类型通知
           normal: {
             title: title!,
-            text: "",
+            text: content,
             //additionalText: 'test_additionalText',
           },
         },
         template: {
           name: 'downloadTemplate',
-          data: { title: title!, fileName: content, progressValue: progress }
+          data: { title: title!, fileName: '', progressValue: progress }
         },
         notificationSlotType: notificationManager.SlotType.SERVICE_INFORMATION,
         smallIcon: this.icon?.getPixelMap(),
@@ -375,57 +405,35 @@ export class BackupWorker extends WorkSchedulerExtensionAbility implements Metho
     return builder;
   }
 
-  private async createChannel() {
-    this.foreground = {
-      id: this.NOTIFICATION_CHANNEL_ID,
-      //groupName: this.NOTIFICATION_CHANNEL_name,
-      content: {
-        notificationContentType: notificationManager.ContentType.NOTIFICATION_CONTENT_BASIC_TEXT, // 普通文本类型通知
-        normal: {
-          title: this.title!,
-          text: 'test_text',
-          additionalText: 'test_additionalText',
-        }
-      },
-      notificationSlotType: notificationManager.SlotType.SERVICE_INFORMATION
-    };
-
-    this.error = {
-      id: this.NOTIFICATION_CHANNEL_ERROR_ID,
-      //groupName: this.NOTIFICATION_CHANNEL_name,
-      content: {
-        notificationContentType: notificationManager.ContentType.NOTIFICATION_CONTENT_BASIC_TEXT, // 普通文本类型通知
-        normal: {
-          title: 'test_title',
-          text: 'test_text',
-          additionalText: 'test_additionalText',
-        }
-      },
-      notificationSlotType: notificationManager.SlotType.SOCIAL_COMMUNICATION
-    };
-  }
-
-  private runDart() {
-    dataPreferences.getPreferences(this.ui_context, BackupWorker.SHARED_PREF_NAME, (err, sp) => {
-      let callbackDispatcherHandle = sp.getSync("SHARED_PREF_CALLBACK_KEY",0) as number;
-      let callbackInformation = FlutterCallbackInformation.lookupCallbackInformation(callbackDispatcherHandle);
-      let appBundlePath = this.flutterLoader?.findAppBundlePath();
-      //this.engine.
-      if(this.engine) {
-        this.backgroundChannel = new MethodChannel(this.engine.dartExecutor, "immich/backgroundChannel");
-        this.backgroundChannel.setMethodCallHandler(this);
-
-        dartCallback:DartCallback
-        this.engine.dartExecutor.executeDartCallback(
-          new DartCallback(
-            this.ui_context?.resourceManager,
-            appBundlePath,
-            callbackInformation
-          )
-        ); //修改了index.ets
-      }
-    });
-  };
+  // private async createChannel(title:string) {
+  //   this.foreground = {
+  //     id: this.NOTIFICATION_CHANNEL_ID,
+  //     //groupName: this.NOTIFICATION_CHANNEL_name,
+  //     content: {
+  //       notificationContentType: notificationManager.ContentType.NOTIFICATION_CONTENT_BASIC_TEXT, // 普通文本类型通知
+  //       normal: {
+  //         title: title!,
+  //         text: 'test_text',
+  //         additionalText: 'test_additionalText',
+  //       }
+  //     },
+  //     notificationSlotType: notificationManager.SlotType.SERVICE_INFORMATION
+  //   };
+  //
+  //   this.error = {
+  //     id: this.NOTIFICATION_CHANNEL_ERROR_ID,
+  //     //groupName: this.NOTIFICATION_CHANNEL_name,
+  //     content: {
+  //       notificationContentType: notificationManager.ContentType.NOTIFICATION_CONTENT_BASIC_TEXT, // 普通文本类型通知
+  //       normal: {
+  //         title: 'test_title',
+  //         text: 'test_text',
+  //         additionalText: 'test_additionalText',
+  //       }
+  //     },
+  //     notificationSlotType: notificationManager.SlotType.SOCIAL_COMMUNICATION
+  //   };
+  // }
 
   private buildWorkRequest(
   requireWifi: boolean = false,
@@ -436,7 +444,7 @@ export class BackupWorker extends WorkSchedulerExtensionAbility implements Metho
     let constraints:workScheduler.WorkInfo = {
       workId:BackupWorker.TASK_NAME_BACKUP_ID,
       bundleName:'com.dgh18.immich',
-      abilityName:'BackupWorker',
+      abilityName:'BackupWorkerTask',
       networkType: requireWifi? workScheduler.NetworkType.NETWORK_TYPE_WIFI:workScheduler.NetworkType.NETWORK_TYPE_ANY,
       batteryStatus:workScheduler.BatteryStatus.BATTERY_STATUS_OKAY,
       isCharging:requireCharging,
@@ -444,24 +452,9 @@ export class BackupWorker extends WorkSchedulerExtensionAbility implements Metho
 
     return constraints;
 }
-  private ui_context?: common.UIAbilityContext;
+  private ui_context?: common.UIAbilityContext
   private context_input?: sendableContextManager.SendableContext;
 
-  //private resolvableFuture?:Promise<MethodResult>;
-  private engine?: FlutterEngine = undefined;
-  private backgroundChannel?: MethodChannel;
-  // private notificationManager =
-  //   notificationManager;
-  private isIgnoringBatteryOptimizations = true;
-  //private isIgnoringBatteryOptimizations = isIgnoringBatteryOptimizations(applicationContext)
-  private timeBackupStarted: number = 0;
-  private notificationBuilder?: notificationManager.NotificationRequest;
-  private notificationDetailBuilder?: notificationManager.NotificationRequest;
-
-  private fgFuture?: Promise<void>;
-
-  private resolvableFuture = new ResolvablePromise<ResultCode>();
-  //private workRequest?:workScheduler.WorkInfo;
   private backupWorkInfo?:workScheduler.WorkInfo;
   private flutterLoader?:FlutterLoader;
   private NOTIFICATION_CHANNEL_ID:number = 1;
@@ -485,7 +478,6 @@ export class BackupWorker extends WorkSchedulerExtensionAbility implements Metho
   static readonly NOTIFICATION_ERROR_ID = 2
   static readonly NOTIFICATION_DETAIL_ID = 3
   static readonly ONE_MINUTE = 60000;
-  private title?:string;
   private notification_content?:notificationManager.NotificationProgress;
   private icon?:DrawableDescriptor = this.ui_context?.resourceManager.getDrawableDescriptor($r('app.media.icon').id);
 
@@ -524,19 +516,9 @@ export enum ResultCode {
   RETRY   = "retry",
 }
 
-export class MyWorkSchedulerExtensionAbility extends WorkSchedulerExtensionAbility {
-  // 延迟任务开始回调
-  onWorkStart(workInfo: workScheduler.WorkInfo) {
-    console.info(`onWorkStart, workInfo = ${JSON.stringify(workInfo)}`);
-    // 打印 parameters中的参数，如：参数key1
-    // console.info(`work info parameters: ${JSON.parse(workInfo.parameters?.toString()).key1}`)
-  }
+let BackupWorkerClass:BackupWorker|undefined = new BackupWorker();
 
-  // 延迟任务结束回调。当延迟任务2分钟超时或应用调用stopWork接口取消任务时，触发该回调。
-  onWorkStop(workInfo: workScheduler.WorkInfo) {
-    console.info(`onWorkStop, workInfo is ${JSON.stringify(workInfo)}`);
-  }
-}
 
-new BackupWorker();
+
+
 

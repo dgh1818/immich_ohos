@@ -8,6 +8,7 @@ import { BusinessError } from '@kit.BasicServicesKit';
 import { process } from '@kit.ArkTS';
 import { AbilityAware, FlutterPlugin, MethodCallHandler } from '@ohos/flutter_ohos';
 import { BackupWorker } from './BackupWorker';
+import { backgroundTaskManager, workScheduler } from '@kit.BackgroundTasksKit';
 
 interface WorkerMessage {
   command: string;
@@ -20,42 +21,29 @@ export class ContentObserverWorker{
     this.workerPort.onmessage = (event: MessageEvents) => {
       let input: SendableObject = event.data;
       let command: string = input.command;
-      this.ui_context = sendableContextManager.convertToUIAbilityContext(input.sendableContext);
+      this.context_input = input.sendableContext;
+      this.ui_context = sendableContextManager.convertToUIAbilityContext(this.context_input);
 
       switch (command) {
         case "doWork":
           this.context_input = input.sendableContext;
           this.ui_context = sendableContextManager.convertToUIAbilityContext(this.context_input);
 
-
           if (this.triggeredContentUris.length > 0) {
             this.startBackupWorker(this.ui_context, 0);
-
           }
 
           this.enqueueObserverWorker(this.ui_context);
           break;
-
-      //const ui_context = input.sendableContext;
         case "enable":
-          let immediate: boolean = false;
-          if (input.immediate == undefined) {
-            immediate = false;
-          } else {
-            immediate = input.immediate;
-          }
-
-          if (this.ui_context == undefined) {
-            return;
-          }
-
+          let immediate = input.immediate ?? false;
           this.enqueueObserverWorker(this.ui_context);
-
+          console.info(this.TAG, "enabled ContentObserverWorker")
           if (immediate) {
             this.startBackupWorker(this.ui_context, 5000)
           }
-
           break;
+
         case "configureWork":
           let requireWifi = input.requireWifi ?? false;
           let requireCharging = input.requireCharging ?? false;
@@ -79,10 +67,11 @@ export class ContentObserverWorker{
             sp.putSync(ContentObserverWorker.SHARED_PREF_TRIGGER_MAX_DELAY, triggerMaxDelay);
             sp.flushSync();
             let object2: SendableObject =
-              new SendableObject("enqueueBackupWorker", this.context_input, undefined, requireWifi, requireCharging);
-
+              new SendableObject("updateBackupWorker", this.context_input, undefined, requireWifi, requireCharging);
             this.BackupWorkerInstance?.postMessageWithSharedSendable(object2);
           })
+          break;
+
         case "disable":
           dataPreferences.getPreferences(this.ui_context, BackupWorker.SHARED_PREF_NAME, (err, sp) => {
             if (err) {
@@ -99,9 +88,12 @@ export class ContentObserverWorker{
             if (this.phAccessHelper == undefined) {
               return;
             }
-            console.info("disabled ContentObserverWorker");
+            console.info(this.TAG,"disabled ContentObserverWorker");
             this.phAccessHelper.unRegisterChange(photoAccessHelper.DefaultChangeUri.DEFAULT_PHOTO_URI);
+            ContentObserverWorkerClass = undefined;
           })
+         break;
+
         case "isEnabled":
           dataPreferences.getPreferences(this.ui_context, BackupWorker.SHARED_PREF_NAME, (err, sp) => {
             let result = sp.getSync(ContentObserverWorker.SHARED_PREF_SERVICE_ENABLED, false) as boolean
@@ -116,13 +108,16 @@ export class ContentObserverWorker{
           if (this.phAccessHelper == undefined) {
             return;
           }
-          console.info("disabled ContentObserverWorker");
-          this.phAccessHelper.unRegisterChange(photoAccessHelper.DefaultChangeUri.DEFAULT_PHOTO_URI);
+
+          this.ContentObserverWorker = new worker.ThreadWorker('../workers/ContentObserverWorker');
+          let object: SendableObject = new SendableObject("doWork", this.context_input!);
+          this.ContentObserverWorker.postMessageWithSharedSendable(object);
+
+          //backgroundTaskManager.startBackgroundRunning(this.ui_context,)
           break;
         case "startBackupWorker":
           this.startBackupWorker(this.ui_context!, 5000);
-
-
+          break;
       }
 
     };
@@ -139,6 +134,8 @@ export class ContentObserverWorker{
   private phAccessHelper?: photoAccessHelper.PhotoAccessHelper;
   private TAG = "ContentObserverWorker";
 
+  private ContentObserverWorker?: worker.ThreadWorker;
+
   static readonly SHARED_PREF_SERVICE_ENABLED = "serviceEnabled"
   static readonly SHARED_PREF_REQUIRE_WIFI = "requireWifi"
   static readonly SHARED_PREF_REQUIRE_CHARGING = "requireCharging"
@@ -153,9 +150,9 @@ export class ContentObserverWorker{
         console.error('获取Preferences实例失败:', err)
         return
       }
-      let SHARED_PREF_NAME = sp.getSync(BackupWorker.SHARED_PREF_NAME, false) as boolean;
+      let sharedPrefServiceEnabled = sp.getSync(ContentObserverWorker.SHARED_PREF_SERVICE_ENABLED, false) as boolean;
 
-      if (!SHARED_PREF_NAME) {
+      if (!sharedPrefServiceEnabled) {
         return;
       }
 
@@ -166,15 +163,21 @@ export class ContentObserverWorker{
         return;
       }
 
-      this.BackupWorkerInstance = new worker.ThreadWorker('./BackupWorker');
-      ContentObserverWorker.BackupWorkerInstance_public = this.BackupWorkerInstance;
-      let object1: SendableObject =
-        new SendableObject("startWork", this.context_input)
-      this.BackupWorkerInstance.postMessageWithSharedSendable(object1);
-      let object2: SendableObject =
-        new SendableObject("enqueueBackupWorker", this.context_input, undefined, requireWifi, requireCharging,
-          delayMilliseconds)
-      this.BackupWorkerInstance.postMessageWithSharedSendable(object2);
+      PersistentStorage.persistProp('UIsendablecontext', this.context_input);
+
+      let constraints:workScheduler.WorkInfo = {
+        workId:BackupWorker.TASK_NAME_BACKUP_ID,
+        bundleName:'com.dgh18.immich',
+        abilityName:'BackupWorkerTask',
+        networkType: requireWifi? workScheduler.NetworkType.NETWORK_TYPE_WIFI:workScheduler.NetworkType.NETWORK_TYPE_ANY,
+        isCharging:requireCharging,
+        parameters:{
+          needQueueBackupWorker:true,
+        }
+      }
+
+      workScheduler.startWork(constraints);
+
       sp.putSync(BackupWorker.SHARED_PREF_LAST_CHANGE, process.uptime() * 1000);
       sp.flush();
     })
@@ -198,16 +201,31 @@ export class ContentObserverWorker{
         //console.info('getAssets photoAsset.uri : ' + photoAsset.uri);
         this.triggeredContentUris = changeData.extraUris;
         this.phAccessHelper!.unRegisterChange(photoAccessHelper.DefaultChangeUri.DEFAULT_PHOTO_URI);
+        this.ContentObserverWorker = new worker.ThreadWorker('../workers/ContentObserverWorker');
         let object: SendableObject = new SendableObject("doWork", this.context_input!);
-        this.workerPort.postMessageWithSharedSendable(object);
+        this.ContentObserverWorker.postMessageWithSharedSendable(object);
+        //待完善
+        // PersistentStorage.persistProp('UIsendablecontext', this.context_input);
+        //
+        // let constraints:workScheduler.WorkInfo = {
+        //   workId:BackupWorker.TASK_NAME_BACKUP_ID,
+        //   bundleName:'com.dgh18.immich',
+        //   abilityName:'BackupWorkerTask',
+        //   networkType: requireWifi? workScheduler.NetworkType.NETWORK_TYPE_WIFI:workScheduler.NetworkType.NETWORK_TYPE_ANY,
+        //   isCharging:requireCharging,
+        //   parameters:{
+        //     needQueueBackupWorker:true,
+        //   }
+        //}
+
+        //workScheduler.startWork(constraints);
       }
 
       this.phAccessHelper!.registerChange(photoAccessHelper.DefaultChangeUri.DEFAULT_PHOTO_URI, true, onCallback);
-
     } catch (err) {
       console.error('onCallback failed with err: ' + err);
     }
   }
 }
 
-new ContentObserverWorker();
+let ContentObserverWorkerClass:ContentObserverWorker|undefined = new ContentObserverWorker();
