@@ -9,8 +9,8 @@
     },
     "sourceOption": {
       "workers": [
-        './src/main/ets/workers/ContentObserverWorker.ets',
-        './src/main/ets/workers/BackupWorker.ets'
+        "./src/main/ets/workers/ContentObserverWorker.ets",
+        "./src/main/ets/workers/BackupWorker.ets"
       ]
     },
   },

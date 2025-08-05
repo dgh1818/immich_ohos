@@ -16,8 +16,8 @@ import dataPreferences from '@ohos.data.preferences'
 import { photoAccessHelper } from "@kit.MediaLibraryKit";
 import FileUtils from "image_picker_ohos/src/main/ets/image_picker/FileUtils";
 import { dataSharePredicates } from "@kit.ArkData";
-import { ContentObserverWorker } from "../workers/ContentObserverWorker";
-import { BackupWorker } from "../workers/BackupWorker";
+import { ContentObserverWorker } from "../workers/ContentObserverWorkerImpl";
+import { BackupWorker } from "../workers/BackupWorkerImpl";
 
 @Sendable
 export class SendableObject {
