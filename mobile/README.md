@@ -23,7 +23,18 @@ The Immich mobile app is a Flutter-based solution leveraging the Isar Database f
 
 ## Setup
 
-You must set up Flutter toolchain in your machine before you can perform any of the development.
+1. Setup Flutter toolchain using FVM.
+2. Run `flutter pub get` to install the dependencies.
+3. Run `make translation` to generate the translation file.
+4. Run `fvm flutter run` to start the app.
+
+## Translation
+
+To add a new translation text, enter the key-value pair in the `i18n/en.json` in the root of the immich project. Then, from the `mobile/` directory, run
+
+```bash
+make translation
+```
 
 ## Immich-Flutter Directory Structure
 

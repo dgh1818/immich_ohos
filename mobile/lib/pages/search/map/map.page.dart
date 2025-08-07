@@ -1,4 +1,4 @@
-// // import 'dart:math';
+// import 'dart:math';
 
 // import 'package:auto_route/auto_route.dart';
 // import 'package:collection/collection.dart';
@@ -32,9 +32,10 @@
 // import 'package:immich_mobile/widgets/map/positioned_asset_marker_icon.dart';
 // import 'package:maplibre_gl/maplibre_gl.dart';
 
-// // // @RoutePage()
-// // // class MapPage extends HookConsumerWidget {
-// // //   const MapPage({super.key});
+// @RoutePage()
+// class MapPage extends HookConsumerWidget {
+//   const MapPage({super.key, this.initialLocation});
+//   final LatLng? initialLocation;
 
 //   @override
 //   Widget build(BuildContext context, WidgetRef ref) {
@@ -52,114 +53,114 @@
 //     final selectedAssets = useValueNotifier<Set<Asset>>({});
 //     const mapZoomToAssetLevel = 12.0;
 
-// //     // updates the markersInBounds value with the map markers that are visible in the current
-// //     // map camera bounds
-// //     Future<void> updateAssetsInBounds() async {
-// //       // Guard map not created
-// //       if (mapController.value == null) {
-// //         return;
-// //       }
+//     // updates the markersInBounds value with the map markers that are visible in the current
+//     // map camera bounds
+//     Future<void> updateAssetsInBounds() async {
+//       // Guard map not created
+//       if (mapController.value == null) {
+//         return;
+//       }
 
-// //       final bounds = await mapController.value!.getVisibleRegion();
-// //       final inBounds = markers.value
-// //           .where(
-// //             (m) =>
-// //                 bounds.contains(LatLng(m.latLng.latitude, m.latLng.longitude)),
-// //           )
-// //           .toList();
-// //       // Notify bottom sheet to update asset grid only when there are new assets
-// //       if (markersInBounds.value.length != inBounds.length) {
-// //         bottomSheetStreamController.add(
-// //           MapAssetsInBoundsUpdated(
-// //             inBounds.map((e) => e.assetRemoteId).toList(),
-// //           ),
-// //         );
-// //       }
-// //       markersInBounds.value = inBounds;
-// //     }
+//       final bounds = await mapController.value!.getVisibleRegion();
+//       final inBounds = markers.value
+//           .where(
+//             (m) =>
+//                 bounds.contains(LatLng(m.latLng.latitude, m.latLng.longitude)),
+//           )
+//           .toList();
+//       // Notify bottom sheet to update asset grid only when there are new assets
+//       if (markersInBounds.value.length != inBounds.length) {
+//         bottomSheetStreamController.add(
+//           MapAssetsInBoundsUpdated(
+//             inBounds.map((e) => e.assetRemoteId).toList(),
+//           ),
+//         );
+//       }
+//       markersInBounds.value = inBounds;
+//     }
 
-// //     // removes all sources and layers and re-adds them with the updated markers
-// //     Future<void> reloadLayers() async {
-// //       if (mapController.value != null) {
-// //         layerDebouncer.run(
-// //           () => mapController.value!.reloadAllLayersForMarkers(markers.value),
-// //         );
-// //       }
-// //     }
+//     // removes all sources and layers and re-adds them with the updated markers
+//     Future<void> reloadLayers() async {
+//       if (mapController.value != null) {
+//         layerDebouncer.run(
+//           () => mapController.value!.reloadAllLayersForMarkers(markers.value),
+//         );
+//       }
+//     }
 
-// //     Future<void> loadMarkers() async {
-// //       try {
-// //         isLoading.value = true;
-// //         markers.value = await ref.read(mapMarkersProvider.future);
-// //         assetsDebouncer.run(updateAssetsInBounds);
-// //         reloadLayers();
-// //       } finally {
-// //         isLoading.value = false;
-// //       }
-// //     }
+//     Future<void> loadMarkers() async {
+//       try {
+//         isLoading.value = true;
+//         markers.value = await ref.read(mapMarkersProvider.future);
+//         assetsDebouncer.run(updateAssetsInBounds);
+//         reloadLayers();
+//       } finally {
+//         isLoading.value = false;
+//       }
+//     }
 
-//     // useEffect(
-//     //   () {
-//     //     final currentAssetLink =
-//     //         ref.read(currentAssetProvider.notifier).ref.keepAlive();
+//     useEffect(
+//       () {
+//         final currentAssetLink =
+//             ref.read(currentAssetProvider.notifier).ref.keepAlive();
 
-//     //     loadMarkers();
-//     //     return currentAssetLink.close;
-//     //   },
-//     //   [],
-//     // );
+//         loadMarkers();
+//         return currentAssetLink.close;
+//       },
+//       [],
+//     );
 
-// //     // Refetch markers when map state is changed
-// //     ref.listen(mapStateNotifierProvider, (_, current) {
-// //       if (current.shouldRefetchMarkers) {
-// //         markerDebouncer.run(() {
-// //           ref.invalidate(mapMarkersProvider);
-// //           // Reset marker
-// //           selectedMarker.value = null;
-// //           loadMarkers();
-// //           ref.read(mapStateNotifierProvider.notifier).setRefetchMarkers(false);
-// //         });
-// //       }
-// //     });
+//     // Refetch markers when map state is changed
+//     ref.listen(mapStateNotifierProvider, (_, current) {
+//       if (current.shouldRefetchMarkers) {
+//         markerDebouncer.run(() {
+//           ref.invalidate(mapMarkersProvider);
+//           // Reset marker
+//           selectedMarker.value = null;
+//           loadMarkers();
+//           ref.read(mapStateNotifierProvider.notifier).setRefetchMarkers(false);
+//         });
+//       }
+//     });
 
-// //     // updates the selected markers position based on the current map camera
-// //     Future<void> updateAssetMarkerPosition(
-// //       MapMarker marker, {
-// //       bool shouldAnimate = true,
-// //     }) async {
-// //       final assetPoint =
-// //           await mapController.value!.toScreenLocation(marker.latLng);
-// //       selectedMarker.value = _AssetMarkerMeta(
-// //         point: assetPoint,
-// //         marker: marker,
-// //         shouldAnimate: shouldAnimate,
-// //       );
-// //       (assetPoint, marker, shouldAnimate);
-// //     }
+//     // updates the selected markers position based on the current map camera
+//     Future<void> updateAssetMarkerPosition(
+//       MapMarker marker, {
+//       bool shouldAnimate = true,
+//     }) async {
+//       final assetPoint =
+//           await mapController.value!.toScreenLocation(marker.latLng);
+//       selectedMarker.value = _AssetMarkerMeta(
+//         point: assetPoint,
+//         marker: marker,
+//         shouldAnimate: shouldAnimate,
+//       );
+//       (assetPoint, marker, shouldAnimate);
+//     }
 
-// //     // finds the nearest asset marker from the tap point and store it as the selectedMarker
-// //     Future<void> onMarkerClicked(Point<double> point, LatLng coords) async {
-// //       // Guard map not created
-// //       if (mapController.value == null) {
-// //         return;
-// //       }
-// //       final latlngBound =
-// //           await mapController.value!.getBoundsFromPoint(point, 50);
-// //       final marker = markersInBounds.value.firstWhereOrNull(
-// //         (m) =>
-// //             latlngBound.contains(LatLng(m.latLng.latitude, m.latLng.longitude)),
-// //       );
+//     // finds the nearest asset marker from the tap point and store it as the selectedMarker
+//     Future<void> onMarkerClicked(Point<double> point, LatLng coords) async {
+//       // Guard map not created
+//       if (mapController.value == null) {
+//         return;
+//       }
+//       final latlngBound =
+//           await mapController.value!.getBoundsFromPoint(point, 50);
+//       final marker = markersInBounds.value.firstWhereOrNull(
+//         (m) =>
+//             latlngBound.contains(LatLng(m.latLng.latitude, m.latLng.longitude)),
+//       );
 
-// //       if (marker != null) {
-// //         updateAssetMarkerPosition(marker);
-// //       } else {
-// //         // If no asset was previously selected and no new asset is available, close the bottom sheet
-// //         if (selectedMarker.value == null) {
-// //           bottomSheetStreamController.add(MapCloseBottomSheet());
-// //         }
-// //         selectedMarker.value = null;
-// //       }
-// //     }
+//       if (marker != null) {
+//         updateAssetMarkerPosition(marker);
+//       } else {
+//         // If no asset was previously selected and no new asset is available, close the bottom sheet
+//         if (selectedMarker.value == null) {
+//           bottomSheetStreamController.add(MapCloseBottomSheet());
+//         }
+//         selectedMarker.value = null;
+//       }
+//     }
 
 //     void onMapCreated(MapLibreMapController controller) async {
 //       mapController.value = controller;
@@ -173,95 +174,96 @@
 //       });
 //     }
 
-// //     Future<void> onMarkerTapped() async {
-// //       final assetId = selectedMarker.value?.marker.assetRemoteId;
-// //       if (assetId == null) {
-// //         return;
-// //       }
+//     Future<void> onMarkerTapped() async {
+//       final assetId = selectedMarker.value?.marker.assetRemoteId;
+//       if (assetId == null) {
+//         return;
+//       }
 
-//     //   final asset = await ref.read(dbProvider).assets.getByRemoteId(assetId);
-//     //   if (asset == null) {
-//     //     return;
-//     //   }
+//       final asset = await ref.read(dbProvider).assets.getByRemoteId(assetId);
+//       if (asset == null) {
+//         return;
+//       }
 
-//     //   // Since we only have a single asset, we can just show GroupAssetBy.none
-//     //   final renderList = await RenderList.fromAssets(
-//     //     [asset],
-//     //     GroupAssetsBy.none,
-//     //   );
+//       // Since we only have a single asset, we can just show GroupAssetBy.none
+//       final renderList = await RenderList.fromAssets(
+//         [asset],
+//         GroupAssetsBy.none,
+//       );
 
-//     //   ref.read(currentAssetProvider.notifier).set(asset);
-//     //   if (asset.isVideo) {
-//     //     ref.read(showControlsProvider.notifier).show = false;
-//     //   }
-//     //   context.pushRoute(
-//     //     GalleryViewerRoute(
-//     //       initialIndex: 0,
-//     //       heroOffset: 0,
-//     //       renderList: renderList,
-//     //     ),
-//     //   );
-//     // }
+//       ref.read(currentAssetProvider.notifier).set(asset);
+//       if (asset.isVideo) {
+//         ref.read(showControlsProvider.notifier).show = false;
+//       }
+//       context.pushRoute(
+//         GalleryViewerRoute(
+//           initialIndex: 0,
+//           heroOffset: 0,
+//           renderList: renderList,
+//         ),
+//       );
+//     }
 
 //     /// BOTTOM SHEET CALLBACKS
 
-// //     Future<void> onMapMoved() async {
-// //       assetsDebouncer.run(updateAssetsInBounds);
-// //     }
+//     Future<void> onMapMoved() async {
+//       assetsDebouncer.run(updateAssetsInBounds);
+//     }
 
-// //     void onBottomSheetScrolled(String assetRemoteId) {
-// //       final assetMarker = markersInBounds.value
-// //           .firstWhereOrNull((m) => m.assetRemoteId == assetRemoteId);
-// //       if (assetMarker != null) {
-// //         updateAssetMarkerPosition(assetMarker);
-// //       }
-// //     }
+//     void onBottomSheetScrolled(String assetRemoteId) {
+//       final assetMarker = markersInBounds.value
+//           .firstWhereOrNull((m) => m.assetRemoteId == assetRemoteId);
+//       if (assetMarker != null) {
+//         updateAssetMarkerPosition(assetMarker);
+//       }
+//     }
 
-// //     void onZoomToAsset(String assetRemoteId) {
-// //       final assetMarker = markersInBounds.value
-// //           .firstWhereOrNull((m) => m.assetRemoteId == assetRemoteId);
-// //       if (mapController.value != null && assetMarker != null) {
-// //         // Offset the latitude a little to show the marker just above the viewports center
-// //         final offset = context.isMobile ? 0.02 : 0;
-// //         final latlng = LatLng(
-// //           assetMarker.latLng.latitude - offset,
-// //           assetMarker.latLng.longitude,
-// //         );
-// //         mapController.value!.animateCamera(
-// //           CameraUpdate.newLatLngZoom(latlng, mapZoomToAssetLevel),
-// //           duration: const Duration(milliseconds: 800),
-// //         );
-// //       }
-// //     }
+//     void onZoomToAsset(String assetRemoteId) {
+//       final assetMarker = markersInBounds.value
+//           .firstWhereOrNull((m) => m.assetRemoteId == assetRemoteId);
+//       if (mapController.value != null && assetMarker != null) {
+//         // Offset the latitude a little to show the marker just above the viewports center
+//         final offset = context.isMobile ? 0.02 : 0;
+//         final latlng = LatLng(
+//           assetMarker.latLng.latitude - offset,
+//           assetMarker.latLng.longitude,
+//         );
+//         mapController.value!.animateCamera(
+//           CameraUpdate.newLatLngZoom(latlng, mapZoomToAssetLevel),
+//           duration: const Duration(milliseconds: 800),
+//         );
+//       }
+//     }
 
-// //     void onZoomToLocation() async {
-// //       final (location, error) = await MapUtils.checkPermAndGetLocation(context);
-// //       if (error != null) {
-// //         if (error == LocationPermission.unableToDetermine && context.mounted) {
-// //           ImmichToast.show(
-// //             context: context,
-// //             gravity: ToastGravity.BOTTOM,
-// //             toastType: ToastType.error,
-// //             msg: "map_cannot_get_user_location".tr(),
-// //           );
-// //         }
-// //         return;
-// //       }
+//     void onZoomToLocation() async {
+//       final (location, error) =
+//           await MapUtils.checkPermAndGetLocation(context: context);
+//       if (error != null) {
+//         if (error == LocationPermission.unableToDetermine && context.mounted) {
+//           ImmichToast.show(
+//             context: context,
+//             gravity: ToastGravity.BOTTOM,
+//             toastType: ToastType.error,
+//             msg: "map_cannot_get_user_location".tr(),
+//           );
+//         }
+//         return;
+//       }
 
-// //       if (mapController.value != null && location != null) {
-// //         mapController.value!.animateCamera(
-// //           CameraUpdate.newLatLngZoom(
-// //             LatLng(location.latitude, location.longitude),
-// //             mapZoomToAssetLevel,
-// //           ),
-// //           duration: const Duration(milliseconds: 800),
-// //         );
-// //       }
-// //     }
+//       if (mapController.value != null && location != null) {
+//         mapController.value!.animateCamera(
+//           CameraUpdate.newLatLngZoom(
+//             LatLng(location.latitude, location.longitude),
+//             mapZoomToAssetLevel,
+//           ),
+//           duration: const Duration(milliseconds: 800),
+//         );
+//       }
+//     }
 
-// //     void onAssetsSelected(bool selected, Set<Asset> selection) {
-// //       selectedAssets.value = selected ? selection : {};
-// //     }
+//     void onAssetsSelected(bool selected, Set<Asset> selection) {
+//       selectedAssets.value = selected ? selection : {};
+//     }
 
 //     return MapThemeOverride(
 //       mapBuilder: (style) => context.isMobile
@@ -272,6 +274,7 @@
 //               body: Stack(
 //                 children: [
 //                   _MapWithMarker(
+//                     initialLocation: initialLocation,
 //                     style: style,
 //                     selectedMarker: selectedMarker,
 //                     onMapCreated: onMapCreated,
@@ -303,6 +306,7 @@
 //                     body: Stack(
 //                       children: [
 //                         _MapWithMarker(
+//                           initialLocation: initialLocation,
 //                           style: style,
 //                           selectedMarker: selectedMarker,
 //                           onMapCreated: onMapCreated,
@@ -344,40 +348,42 @@
 //   }
 // }
 
-// // class _AssetMarkerMeta {
-// //   final Point<num> point;
-// //   final MapMarker marker;
-// //   final bool shouldAnimate;
+// class _AssetMarkerMeta {
+//   final Point<num> point;
+//   final MapMarker marker;
+//   final bool shouldAnimate;
 
-// //   const _AssetMarkerMeta({
-// //     required this.point,
-// //     required this.marker,
-// //     required this.shouldAnimate,
-// //   });
+//   const _AssetMarkerMeta({
+//     required this.point,
+//     required this.marker,
+//     required this.shouldAnimate,
+//   });
 
-// //   @override
-// //   String toString() =>
-// //       '_AssetMarkerMeta(point: $point, marker: $marker, shouldAnimate: $shouldAnimate)';
-// // }
+//   @override
+//   String toString() =>
+//       '_AssetMarkerMeta(point: $point, marker: $marker, shouldAnimate: $shouldAnimate)';
+// }
 
-// // class _MapWithMarker extends StatelessWidget {
-// //   final AsyncValue<String> style;
-// //   final MapCreatedCallback onMapCreated;
-// //   final OnCameraIdleCallback onMapMoved;
-// //   final OnMapClickCallback onMapClicked;
-// //   final OnStyleLoadedCallback onStyleLoaded;
-// //   final Function()? onMarkerTapped;
-// //   final ValueNotifier<_AssetMarkerMeta?> selectedMarker;
+// class _MapWithMarker extends StatelessWidget {
+//   final AsyncValue<String> style;
+//   final MapCreatedCallback onMapCreated;
+//   final OnCameraIdleCallback onMapMoved;
+//   final OnMapClickCallback onMapClicked;
+//   final OnStyleLoadedCallback onStyleLoaded;
+//   final Function()? onMarkerTapped;
+//   final ValueNotifier<_AssetMarkerMeta?> selectedMarker;
+//   final LatLng? initialLocation;
 
-// //   const _MapWithMarker({
-// //     required this.style,
-// //     required this.onMapCreated,
-// //     required this.onMapMoved,
-// //     required this.onMapClicked,
-// //     required this.onStyleLoaded,
-// //     required this.selectedMarker,
-// //     this.onMarkerTapped,
-// //   });
+//   const _MapWithMarker({
+//     required this.style,
+//     required this.onMapCreated,
+//     required this.onMapMoved,
+//     required this.onMapClicked,
+//     required this.onStyleLoaded,
+//     required this.selectedMarker,
+//     this.onMarkerTapped,
+//     this.initialLocation,
+//   });
 
 //   @override
 //   Widget build(BuildContext context) {
@@ -389,8 +395,10 @@
 //           children: [
 //             style.widgetWhen(
 //               onData: (style) => MapLibreMap(
-//                 initialCameraPosition:
-//                     const CameraPosition(target: LatLng(0, 0)),
+//                 initialCameraPosition: CameraPosition(
+//                   target: initialLocation ?? const LatLng(0, 0),
+//                   zoom: initialLocation != null ? 12 : 0,
+//                 ),
 //                 styleString: style,
 //                 // This is needed to update the selectedMarker's position on map camera updates
 //                 // The changes are notified through the mapController ValueListener which is added in [onMapCreated]

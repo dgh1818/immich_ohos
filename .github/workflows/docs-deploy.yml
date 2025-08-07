@@ -1,6 +1,6 @@
 name: Docs deploy
 on:
-  workflow_run:
+  workflow_run: # zizmor: ignore[dangerous-triggers] no attacker inputs are used here
     workflows: ['Docs build']
     types:
       - completed
@@ -39,6 +39,8 @@ jobs:
       - name: Determine deploy parameters
         id: parameters
         uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7
+        env:
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
         with:
           script: |
             const eventType = context.payload.workflow_run.event;
@@ -107,10 +109,14 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+        with:
+          persist-credentials: false
 
       - name: Load parameters
         id: parameters
         uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7
+        env:
+          PARAM_JSON: ${{ needs.checks.outputs.parameters }}
         with:
           script: |
             const parameters = JSON.parse(process.env.PARAM_JSON);
@@ -120,6 +126,8 @@ jobs:
 
       - name: Download artifact
         uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7
+        env:
+          ARTIFACT_JSON: ${{ needs.checks.outputs.artifact }}
         with:
           script: |
             let artifact = JSON.parse(process.env.ARTIFACT_JSON);

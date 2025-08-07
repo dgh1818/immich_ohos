@@ -1,7 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_hooks/flutter_hooks.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:immich_mobile/providers/image/immich_local_thumbnail_provider.dart';
 import 'package:immich_mobile/providers/image/immich_remote_thumbnail_provider.dart';
 import 'package:immich_mobile/entities/asset.entity.dart';
@@ -9,8 +9,9 @@ import 'package:immich_mobile/entities/asset.entity.dart';
 import 'package:immich_mobile/widgets/common/immich_image.dart';
 //import 'package:immich_mobile/widgets/common/thumbhash_placeholder.dart';
 import 'package:octo_image/octo_image.dart';
+import 'package:immich_mobile/providers/user.provider.dart';
 
-class ImmichThumbnail extends HookWidget {
+class ImmichThumbnail extends HookConsumerWidget {
   const ImmichThumbnail({
     this.asset,
     this.width = 250,
@@ -31,6 +32,7 @@ class ImmichThumbnail extends HookWidget {
   static ImageProvider imageProvider({
     Asset? asset,
     String? assetId,
+    String? userId,
     int thumbnailSize = 256,
   }) {
     if (asset == null && assetId == null) {
@@ -53,6 +55,7 @@ class ImmichThumbnail extends HookWidget {
         asset: asset,
         height: 256,
         width: (thumbnailSize * (ratio ?? 1.33)).toInt(),
+        userId: userId,
       );
     } else {
       return ImmichRemoteThumbnailProvider(
@@ -64,8 +67,10 @@ class ImmichThumbnail extends HookWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     //Uint8List? blurhash = useBlurHashRef(asset).value;
+    final userId = ref.watch(currentUserProvider)?.id;
+
     if (asset == null) {
       return Container(
         color: Colors.grey,
@@ -84,6 +89,7 @@ class ImmichThumbnail extends HookWidget {
       //octoSet: blurHashOrPlaceholder(blurhash),
       image: ImmichThumbnail.imageProvider(
         asset: asset,
+        userId: userId,
       ),
       width: width,
       height: height,

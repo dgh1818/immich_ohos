@@ -2,11 +2,11 @@ name: immich_mobile
 description: Immich - selfhosted backup media file on mobile phone
 
 publish_to: 'none'
-version: 1.131.3+193
+version: 1.132.3+197
 
 environment:
   sdk: '>=3.3.0 <4.0.0'
-  flutter: 3.29.2
+  flutter: 3.29.3
 
 #isar_version: &isar_version ^3.1.0+1 # define the version to be used
 
@@ -19,12 +19,13 @@ dependencies:
   video_player: ^2.9.2
   video_player_android: 2.6.0
   chewie: ^1.7.4
-  background_downloader: ^8.5.5  #ohos待适配
+  #background_downloader: ^9.2.0  #ohos待适配
   cached_network_image: ^3.4.1
   cancellation_token_http: ^2.1.0
   collection: ^1.18.0
   connectivity_plus: ^6.1.3
   crop_image: ^1.0.16
+  crypto: ^3.0.6
   device_info_plus: ^11.3.3
   dynamic_color: ^1.7.0    #ohos待适配
   easy_image_viewer: ^1.5.1
@@ -38,7 +39,7 @@ dependencies:
   flutter_udid: ^3.0.0
   flutter_web_auth_2: ^5.0.0-alpha.0
   fluttertoast: ^8.2.12
-  geolocator: ^11.0.0
+  geolocator: ^14.0.0
   hooks_riverpod: ^2.6.1
   http: ^1.3.0
   image_picker: ^1.1.2
@@ -54,15 +55,18 @@ dependencies:
   permission_handler: ^11.4.0
   photo_manager: ^3.6.4
   photo_manager_image_provider: ^2.2.0
+  punycode: ^1.0.0
   riverpod_annotation: ^2.6.1
   scrollable_positioned_list: ^0.3.8
   share_handler: ^0.0.22 #ohos待适配
-  share_plus: ^10.1.4
+  #share_plus: ^10.1.4
   socket_io_client: ^2.0.3+1
   thumbhash: 0.1.0+1
   timezone: ^0.9.4
   url_launcher: ^6.3.1
+  uuid: ^4.5.1
   wakelock_plus: ^1.2.10
+  worker_manager: ^7.2.3
 
   native_video_player:
     git:
@@ -72,6 +76,9 @@ dependencies:
     path: openapi
   isar: ^3.1.0+1 #ok
   isar_flutter_libs: ^3.1.0+1 #ok
+  # DB
+  drift: ^2.23.1
+  drift_flutter: ^0.2.4
 
 dependency_overrides:
   analyzer: ^6.0.0
@@ -192,6 +199,7 @@ dependency_overrides:
       ref: master
   intl: 0.20.2
   uuid: ^4.4.2
+  easy_localization_generator: ^0.3.3
   # photo_manager:
   #   path: ./flutter_photo_manager
   # package_info_plus:
@@ -204,6 +212,25 @@ dependency_overrides:
 #f      url: https://github.com/Zverik/flutter-geolocator.git
 #f      ref: floss
 #f      path: geolocator_android
+ # 数据库
+  sqflite:
+    git:
+      url: "https://gitcode.com/openharmony-sig/flutter_sqflite"
+      path: "sqflite"
+
+  sqflite_common:
+    git:
+      url: "https://gitcode.com/openharmony-sig/flutter_sqflite.git"
+      path: "sqflite_common"
+  sqflite_common_ffi:
+    git:
+      url: "https://gitcode.com/openharmony-sig/flutter_sqflite.git"
+      path: "sqflite_common_ffi"
+  sqflite_common_ffi_web:
+    git:
+      url: "https://gitcode.com/openharmony-sig/flutter_sqflite.git"
+      path: "packages_web/sqflite_common_ffi_web"
+
 
 dev_dependencies:
   flutter_test:
@@ -226,6 +253,9 @@ dev_dependencies:
   immich_mobile_immich_lint:
     path: './immich_lint'
   fake_async: ^1.3.1
+  file: ^7.0.1 # for MemoryFileSystem ??
+  # Drift generator
+  drift_dev: ^2.23.1  #??
 
 dev_dependency_overrides:
   isar_generator:
@@ -237,8 +267,8 @@ flutter:
   uses-material-design: true
   assets:
     - assets/
-    - assets/i18n/
-    - assets/productfontconfig.json
+    # - assets/i18n/
+    # - assets/productfontconfig.json
     - assets/icons/notification_icon.png
   fonts:
     - family: Inconsolata
