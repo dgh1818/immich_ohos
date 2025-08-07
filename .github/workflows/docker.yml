@@ -100,7 +100,7 @@ jobs:
     if: ${{ needs.pre-job.outputs.should_run_server == 'true' && !github.event.pull_request.head.repo.fork }}
     env:
       GHCR_REPO: ghcr.io/${{ github.repository_owner }}/immich-server
-      DOCKER_REPO: dgh1818/immich-server
+      DOCKER_REPO: dgh18/immich-server
     needs:
       - build_and_push_server
     steps:
