@@ -14,6 +14,8 @@ import 'package:immich_mobile/widgets/common/delayed_loading_indicator.dart';
 import 'package:immich_mobile/providers/asset_viewer/is_motion_video_playing.provider.dart';
 import 'package:logging/logging.dart';
 
+//import 'package:immich_mobile/providers/cast.provider.dart';
+
 class VideoViewerPage extends HookConsumerWidget {
   final Asset asset;
   final bool isMotionVideo;
@@ -40,6 +42,8 @@ class VideoViewerPage extends HookConsumerWidget {
         ref.watch(videoPlayerControllerProvider(asset: asset)).value;
     // The last volume of the video used when mute is toggled
     final lastVolume = useState(0.5);
+
+    //final isCasting = ref.watch(castProvider.select((c) => c.isCasting));
 
     // When the volume changes, set the volume
     // ref.listen(videoPlayerControlsProvider.select((value) => value.mute),
@@ -163,6 +167,7 @@ class VideoViewerPage extends HookConsumerWidget {
           children: [
             Visibility(
               visible: controller == null,
+              //visible: controller == null && !isCasting,
               child: Stack(
                 children: [
                   if (placeholder != null) placeholder!,

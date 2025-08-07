@@ -6,7 +6,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:immich_mobile/constants/colors.dart';
 import 'package:immich_mobile/providers/asset_viewer/video_player_controls_provider.dart';
 import 'package:immich_mobile/providers/asset_viewer/video_player_value_provider.dart';
-import 'package:immich_mobile/providers/cast.provider.dart';
+//import 'package:immich_mobile/providers/cast.provider.dart';
 import 'package:immich_mobile/widgets/asset_viewer/formatted_duration.dart';
 
 class VideoPosition extends HookConsumerWidget {
@@ -14,15 +14,19 @@ class VideoPosition extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isCasting = ref.watch(castProvider).isCasting;
+    //final isCasting = ref.watch(castProvider).isCasting;
 
-    final (position, duration) = isCasting
-        ? ref.watch(
-            castProvider.select((c) => (c.currentTime, c.duration)),
-          )
-        : ref.watch(
-            videoPlaybackValueProvider.select((v) => (v.position, v.duration)),
-          );
+    // final (position, duration) = isCasting
+    //     ? ref.watch(
+    //         castProvider.select((c) => (c.currentTime, c.duration)),
+    //       )
+    //     : ref.watch(
+    //         videoPlaybackValueProvider.select((v) => (v.position, v.duration)),
+    //       );
+
+    final (position, duration) = ref.watch(
+      videoPlaybackValueProvider.select((v) => (v.position, v.duration)),
+    );
 
     final wasPlaying = useRef<bool>(true);
     return duration == Duration.zero
@@ -84,12 +88,12 @@ class VideoPosition extends HookConsumerWidget {
                       // },
                       onChanged: (position) {
                         final seekToDuration = (duration * (position / 100.0));
-                        if (isCasting) {
-                          ref
-                              .read(castProvider.notifier)
-                              .seekTo(seekToDuration);
-                          return;
-                        }
+                        // if (isCasting) {
+                        //   ref
+                        //       .read(castProvider.notifier)
+                        //       .seekTo(seekToDuration);
+                        //   return;
+                        // }
 
                         ref
                             .read(videoPlayerControlsProvider.notifier)

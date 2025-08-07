@@ -5,7 +5,7 @@ import 'package:immich_mobile/providers/asset_viewer/current_asset.provider.dart
 import 'package:immich_mobile/providers/asset_viewer/show_controls.provider.dart';
 import 'package:immich_mobile/providers/asset_viewer/video_player_controls_provider.dart';
 import 'package:immich_mobile/providers/asset_viewer/video_player_value_provider.dart';
-import 'package:immich_mobile/providers/cast.provider.dart';
+//import 'package:immich_mobile/providers/cast.provider.dart';
 import 'package:immich_mobile/utils/hooks/timer_hook.dart';
 import 'package:immich_mobile/widgets/asset_viewer/center_play_button.dart';
 import 'package:immich_mobile/widgets/common/delayed_loading_indicator.dart';
@@ -27,7 +27,7 @@ class CustomVideoPlayerControls extends HookConsumerWidget {
     final VideoPlaybackState state =
         ref.watch(videoPlaybackValueProvider.select((value) => value.state));
 
-    final cast = ref.watch(castProvider);
+    //final cast = ref.watch(castProvider);
 
     // A timer to hide the controls
     final hideTimer = useTimer(
@@ -46,8 +46,9 @@ class CustomVideoPlayerControls extends HookConsumerWidget {
         }
       },
     );
-    final showBuffering =
-        state == VideoPlaybackState.buffering && !cast.isCasting;
+    // final showBuffering =
+    //     state == VideoPlaybackState.buffering && !cast.isCasting;
+    final showBuffering = state == VideoPlaybackState.buffering;
 
     /// Shows the controls and starts the timer to hide them
     void showControlsAndStartHideTimer() {
@@ -65,26 +66,26 @@ class CustomVideoPlayerControls extends HookConsumerWidget {
     void togglePlay() {
       showControlsAndStartHideTimer();
 
-      if (cast.isCasting) {
-        if (cast.castState == CastState.playing) {
-          ref.read(castProvider.notifier).pause();
-        } else if (cast.castState == CastState.paused) {
-          ref.read(castProvider.notifier).play();
-        } else if (cast.castState == CastState.idle) {
-          // resend the play command since its finished
-          final asset = ref.read(currentAssetProvider);
-          if (asset == null) {
-            return;
-          }
-          ref.read(castProvider.notifier).loadMedia(asset, true);
-        }
-        return;
-      }
+      // if (cast.isCasting) {
+      //   if (cast.castState == CastState.playing) {
+      //     ref.read(castProvider.notifier).pause();
+      //   } else if (cast.castState == CastState.paused) {
+      //     ref.read(castProvider.notifier).play();
+      //   } else if (cast.castState == CastState.idle) {
+      //     // resend the play command since its finished
+      //     final asset = ref.read(currentAssetProvider);
+      //     if (asset == null) {
+      //       return;
+      //     }
+      //     ref.read(castProvider.notifier).loadMedia(asset, true);
+      //   }
+      //   return;
+      // }
 
       if (state == VideoPlaybackState.playing) {
         ref.read(videoPlayerControlsProvider.notifier).pause();
-      // } else if (state == VideoPlaybackState.completed) {
-      //   ref.read(videoPlayerControlsProvider.notifier).restart();
+        // } else if (state == VideoPlaybackState.completed) {
+        //   ref.read(videoPlayerControlsProvider.notifier).restart();
       } else {
         ref.read(videoPlayerControlsProvider.notifier).play();
       }
@@ -111,8 +112,9 @@ class CustomVideoPlayerControls extends HookConsumerWidget {
                   backgroundColor: Colors.black54,
                   iconColor: Colors.white,
                   isFinished: state == VideoPlaybackState.completed,
-                  isPlaying: state == VideoPlaybackState.playing ||
-                      (cast.isCasting && cast.castState == CastState.playing),
+                  isPlaying: state == VideoPlaybackState.playing,
+                  // isPlaying: state == VideoPlaybackState.playing ||
+                  //     (cast.isCasting && cast.castState == CastState.playing),
                   show: assetIsVideo && showControls,
                   onPressed: togglePlay,
                 ),
