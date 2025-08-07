@@ -65,6 +65,11 @@ GEOCODE_WITH_AMAP: 'true' // 启用高德 逆地理编码 个人开发者国内�
 3. 小地图替换成了petalmap  <br/>
 4. 增加了photopicker，无需ACL可手动上传媒体 <br/>
 
+<h1>功能对齐：</h1>
+1. 后台上传下载
+2. gcast投屏
+3. 大地图，热力图
+
 <h2>History：</h2>
 
 To Do：
