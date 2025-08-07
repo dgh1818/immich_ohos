@@ -131,7 +131,8 @@ class _BlurredBackdrop extends HookWidget {
 
   @override
   Widget build(BuildContext context) {
-    final blurhash = useBlurHashRef(asset).value;
+    //final blurhash = useBlurHashRef(asset).value;
+    final blurhash = null;
     if (blurhash != null) {
       // Use a nice cheap blur hash image decoration
       return Container(
