@@ -28,63 +28,58 @@ const UserSchema = CollectionSchema(
       name: r'email',
       type: IsarType.string,
     ),
-    r'hasQuota': PropertySchema(
-      id: 2,
-      name: r'hasQuota',
-      type: IsarType.bool,
-    ),
     r'id': PropertySchema(
-      id: 3,
+      id: 2,
       name: r'id',
       type: IsarType.string,
     ),
     r'inTimeline': PropertySchema(
-      id: 4,
+      id: 3,
       name: r'inTimeline',
       type: IsarType.bool,
     ),
     r'isAdmin': PropertySchema(
-      id: 5,
+      id: 4,
       name: r'isAdmin',
       type: IsarType.bool,
     ),
     r'isPartnerSharedBy': PropertySchema(
-      id: 6,
+      id: 5,
       name: r'isPartnerSharedBy',
       type: IsarType.bool,
     ),
     r'isPartnerSharedWith': PropertySchema(
-      id: 7,
+      id: 6,
       name: r'isPartnerSharedWith',
       type: IsarType.bool,
     ),
     r'memoryEnabled': PropertySchema(
-      id: 8,
+      id: 7,
       name: r'memoryEnabled',
       type: IsarType.bool,
     ),
     r'name': PropertySchema(
-      id: 9,
+      id: 8,
       name: r'name',
       type: IsarType.string,
     ),
     r'profileImagePath': PropertySchema(
-      id: 10,
+      id: 9,
       name: r'profileImagePath',
       type: IsarType.string,
     ),
     r'quotaSizeInBytes': PropertySchema(
-      id: 11,
+      id: 10,
       name: r'quotaSizeInBytes',
       type: IsarType.long,
     ),
     r'quotaUsageInBytes': PropertySchema(
-      id: 12,
+      id: 11,
       name: r'quotaUsageInBytes',
       type: IsarType.long,
     ),
     r'updatedAt': PropertySchema(
-      id: 13,
+      id: 12,
       name: r'updatedAt',
       type: IsarType.dateTime,
     )
@@ -109,22 +104,7 @@ const UserSchema = CollectionSchema(
       ],
     )
   },
-  links: {
-    r'albums': LinkSchema(
-      id: -8764917375410137318,
-      name: r'albums',
-      target: r'Album',
-      single: false,
-      linkName: r'owner',
-    ),
-    r'sharedAlbums': LinkSchema(
-      id: -7037628715076287024,
-      name: r'sharedAlbums',
-      target: r'Album',
-      single: false,
-      linkName: r'sharedUsers',
-    )
-  },
+  links: {},
   embeddedSchemas: {},
   getId: _userGetId,
   getLinks: _userGetLinks,
@@ -153,18 +133,17 @@ void _userSerialize(
 ) {
   writer.writeByte(offsets[0], object.avatarColor.index);
   writer.writeString(offsets[1], object.email);
-  writer.writeBool(offsets[2], object.hasQuota);
-  writer.writeString(offsets[3], object.id);
-  writer.writeBool(offsets[4], object.inTimeline);
-  writer.writeBool(offsets[5], object.isAdmin);
-  writer.writeBool(offsets[6], object.isPartnerSharedBy);
-  writer.writeBool(offsets[7], object.isPartnerSharedWith);
-  writer.writeBool(offsets[8], object.memoryEnabled);
-  writer.writeString(offsets[9], object.name);
-  writer.writeString(offsets[10], object.profileImagePath);
-  writer.writeLong(offsets[11], object.quotaSizeInBytes);
-  writer.writeLong(offsets[12], object.quotaUsageInBytes);
-  writer.writeDateTime(offsets[13], object.updatedAt);
+  writer.writeString(offsets[2], object.id);
+  writer.writeBool(offsets[3], object.inTimeline);
+  writer.writeBool(offsets[4], object.isAdmin);
+  writer.writeBool(offsets[5], object.isPartnerSharedBy);
+  writer.writeBool(offsets[6], object.isPartnerSharedWith);
+  writer.writeBool(offsets[7], object.memoryEnabled);
+  writer.writeString(offsets[8], object.name);
+  writer.writeString(offsets[9], object.profileImagePath);
+  writer.writeLong(offsets[10], object.quotaSizeInBytes);
+  writer.writeLong(offsets[11], object.quotaUsageInBytes);
+  writer.writeDateTime(offsets[12], object.updatedAt);
 }
 
 User _userDeserialize(
@@ -176,19 +155,19 @@ User _userDeserialize(
   final object = User(
     avatarColor:
         _UseravatarColorValueEnumMap[reader.readByteOrNull(offsets[0])] ??
-            AvatarColorEnum.primary,
+            AvatarColor.primary,
     email: reader.readString(offsets[1]),
-    id: reader.readString(offsets[3]),
-    inTimeline: reader.readBoolOrNull(offsets[4]) ?? false,
-    isAdmin: reader.readBool(offsets[5]),
-    isPartnerSharedBy: reader.readBoolOrNull(offsets[6]) ?? false,
-    isPartnerSharedWith: reader.readBoolOrNull(offsets[7]) ?? false,
-    memoryEnabled: reader.readBoolOrNull(offsets[8]) ?? true,
-    name: reader.readString(offsets[9]),
-    profileImagePath: reader.readStringOrNull(offsets[10]) ?? '',
-    quotaSizeInBytes: reader.readLongOrNull(offsets[11]) ?? 0,
-    quotaUsageInBytes: reader.readLongOrNull(offsets[12]) ?? 0,
-    updatedAt: reader.readDateTime(offsets[13]),
+    id: reader.readString(offsets[2]),
+    inTimeline: reader.readBoolOrNull(offsets[3]) ?? false,
+    isAdmin: reader.readBool(offsets[4]),
+    isPartnerSharedBy: reader.readBoolOrNull(offsets[5]) ?? false,
+    isPartnerSharedWith: reader.readBoolOrNull(offsets[6]) ?? false,
+    memoryEnabled: reader.readBoolOrNull(offsets[7]) ?? true,
+    name: reader.readString(offsets[8]),
+    profileImagePath: reader.readStringOrNull(offsets[9]) ?? '',
+    quotaSizeInBytes: reader.readLongOrNull(offsets[10]) ?? 0,
+    quotaUsageInBytes: reader.readLongOrNull(offsets[11]) ?? 0,
+    updatedAt: reader.readDateTime(offsets[12]),
   );
   return object;
 }
@@ -202,32 +181,30 @@ P _userDeserializeProp<P>(
   switch (propertyId) {
     case 0:
       return (_UseravatarColorValueEnumMap[reader.readByteOrNull(offset)] ??
-          AvatarColorEnum.primary) as P;
+          AvatarColor.primary) as P;
     case 1:
       return (reader.readString(offset)) as P;
     case 2:
-      return (reader.readBool(offset)) as P;
-    case 3:
       return (reader.readString(offset)) as P;
-    case 4:
+    case 3:
       return (reader.readBoolOrNull(offset) ?? false) as P;
-    case 5:
+    case 4:
       return (reader.readBool(offset)) as P;
+    case 5:
+      return (reader.readBoolOrNull(offset) ?? false) as P;
     case 6:
       return (reader.readBoolOrNull(offset) ?? false) as P;
     case 7:
-      return (reader.readBoolOrNull(offset) ?? false) as P;
-    case 8:
       return (reader.readBoolOrNull(offset) ?? true) as P;
-    case 9:
+    case 8:
       return (reader.readString(offset)) as P;
-    case 10:
+    case 9:
       return (reader.readStringOrNull(offset) ?? '') as P;
+    case 10:
+      return (reader.readLongOrNull(offset) ?? 0) as P;
     case 11:
       return (reader.readLongOrNull(offset) ?? 0) as P;
     case 12:
-      return (reader.readLongOrNull(offset) ?? 0) as P;
-    case 13:
       return (reader.readDateTime(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -247,16 +224,16 @@ const _UseravatarColorEnumValueMap = {
   'amber': 9,
 };
 const _UseravatarColorValueEnumMap = {
-  0: AvatarColorEnum.primary,
-  1: AvatarColorEnum.pink,
-  2: AvatarColorEnum.red,
-  3: AvatarColorEnum.yellow,
-  4: AvatarColorEnum.blue,
-  5: AvatarColorEnum.green,
-  6: AvatarColorEnum.purple,
-  7: AvatarColorEnum.orange,
-  8: AvatarColorEnum.gray,
-  9: AvatarColorEnum.amber,
+  0: AvatarColor.primary,
+  1: AvatarColor.pink,
+  2: AvatarColor.red,
+  3: AvatarColor.yellow,
+  4: AvatarColor.blue,
+  5: AvatarColor.green,
+  6: AvatarColor.purple,
+  7: AvatarColor.orange,
+  8: AvatarColor.gray,
+  9: AvatarColor.amber,
 };
 
 Id _userGetId(User object) {
@@ -264,14 +241,10 @@ Id _userGetId(User object) {
 }
 
 List<IsarLinkBase<dynamic>> _userGetLinks(User object) {
-  return [object.albums, object.sharedAlbums];
+  return [];
 }
 
-void _userAttach(IsarCollection<dynamic> col, Id id, User object) {
-  object.albums.attach(col, col.isar.collection<Album>(), r'albums', id);
-  object.sharedAlbums
-      .attach(col, col.isar.collection<Album>(), r'sharedAlbums', id);
-}
+void _userAttach(IsarCollection<dynamic> col, Id id, User object) {}
 
 extension UserByIndex on IsarCollection<User> {
   Future<User?> getById(String id) {
@@ -447,7 +420,7 @@ extension UserQueryWhere on QueryBuilder<User, User, QWhereClause> {
 
 extension UserQueryFilter on QueryBuilder<User, User, QFilterCondition> {
   QueryBuilder<User, User, QAfterFilterCondition> avatarColorEqualTo(
-      AvatarColorEnum value) {
+      AvatarColor value) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
         property: r'avatarColor',
@@ -457,7 +430,7 @@ extension UserQueryFilter on QueryBuilder<User, User, QFilterCondition> {
   }
 
   QueryBuilder<User, User, QAfterFilterCondition> avatarColorGreaterThan(
-    AvatarColorEnum value, {
+    AvatarColor value, {
     bool include = false,
   }) {
     return QueryBuilder.apply(this, (query) {
@@ -470,7 +443,7 @@ extension UserQueryFilter on QueryBuilder<User, User, QFilterCondition> {
   }
 
   QueryBuilder<User, User, QAfterFilterCondition> avatarColorLessThan(
-    AvatarColorEnum value, {
+    AvatarColor value, {
     bool include = false,
   }) {
     return QueryBuilder.apply(this, (query) {
@@ -483,8 +456,8 @@ extension UserQueryFilter on QueryBuilder<User, User, QFilterCondition> {
   }
 
   QueryBuilder<User, User, QAfterFilterCondition> avatarColorBetween(
-    AvatarColorEnum lower,
-    AvatarColorEnum upper, {
+    AvatarColor lower,
+    AvatarColor upper, {
     bool includeLower = true,
     bool includeUpper = true,
   }) {
@@ -623,15 +596,6 @@ extension UserQueryFilter on QueryBuilder<User, User, QFilterCondition> {
       return query.addFilterCondition(FilterCondition.greaterThan(
         property: r'email',
         value: '',
-      ));
-    });
-  }
-
-  QueryBuilder<User, User, QAfterFilterCondition> hasQuotaEqualTo(bool value) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'hasQuota',
-        value: value,
       ));
     });
   }
@@ -1285,118 +1249,7 @@ extension UserQueryFilter on QueryBuilder<User, User, QFilterCondition> {
 
 extension UserQueryObject on QueryBuilder<User, User, QFilterCondition> {}
 
-extension UserQueryLinks on QueryBuilder<User, User, QFilterCondition> {
-  QueryBuilder<User, User, QAfterFilterCondition> albums(FilterQuery<Album> q) {
-    return QueryBuilder.apply(this, (query) {
-      return query.link(q, r'albums');
-    });
-  }
-
-  QueryBuilder<User, User, QAfterFilterCondition> albumsLengthEqualTo(
-      int length) {
-    return QueryBuilder.apply(this, (query) {
-      return query.linkLength(r'albums', length, true, length, true);
-    });
-  }
-
-  QueryBuilder<User, User, QAfterFilterCondition> albumsIsEmpty() {
-    return QueryBuilder.apply(this, (query) {
-      return query.linkLength(r'albums', 0, true, 0, true);
-    });
-  }
-
-  QueryBuilder<User, User, QAfterFilterCondition> albumsIsNotEmpty() {
-    return QueryBuilder.apply(this, (query) {
-      return query.linkLength(r'albums', 0, false, 999999, true);
-    });
-  }
-
-  QueryBuilder<User, User, QAfterFilterCondition> albumsLengthLessThan(
-    int length, {
-    bool include = false,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.linkLength(r'albums', 0, true, length, include);
-    });
-  }
-
-  QueryBuilder<User, User, QAfterFilterCondition> albumsLengthGreaterThan(
-    int length, {
-    bool include = false,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.linkLength(r'albums', length, include, 999999, true);
-    });
-  }
-
-  QueryBuilder<User, User, QAfterFilterCondition> albumsLengthBetween(
-    int lower,
-    int upper, {
-    bool includeLower = true,
-    bool includeUpper = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.linkLength(
-          r'albums', lower, includeLower, upper, includeUpper);
-    });
-  }
-
-  QueryBuilder<User, User, QAfterFilterCondition> sharedAlbums(
-      FilterQuery<Album> q) {
-    return QueryBuilder.apply(this, (query) {
-      return query.link(q, r'sharedAlbums');
-    });
-  }
-
-  QueryBuilder<User, User, QAfterFilterCondition> sharedAlbumsLengthEqualTo(
-      int length) {
-    return QueryBuilder.apply(this, (query) {
-      return query.linkLength(r'sharedAlbums', length, true, length, true);
-    });
-  }
-
-  QueryBuilder<User, User, QAfterFilterCondition> sharedAlbumsIsEmpty() {
-    return QueryBuilder.apply(this, (query) {
-      return query.linkLength(r'sharedAlbums', 0, true, 0, true);
-    });
-  }
-
-  QueryBuilder<User, User, QAfterFilterCondition> sharedAlbumsIsNotEmpty() {
-    return QueryBuilder.apply(this, (query) {
-      return query.linkLength(r'sharedAlbums', 0, false, 999999, true);
-    });
-  }
-
-  QueryBuilder<User, User, QAfterFilterCondition> sharedAlbumsLengthLessThan(
-    int length, {
-    bool include = false,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.linkLength(r'sharedAlbums', 0, true, length, include);
-    });
-  }
-
-  QueryBuilder<User, User, QAfterFilterCondition> sharedAlbumsLengthGreaterThan(
-    int length, {
-    bool include = false,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.linkLength(r'sharedAlbums', length, include, 999999, true);
-    });
-  }
-
-  QueryBuilder<User, User, QAfterFilterCondition> sharedAlbumsLengthBetween(
-    int lower,
-    int upper, {
-    bool includeLower = true,
-    bool includeUpper = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.linkLength(
-          r'sharedAlbums', lower, includeLower, upper, includeUpper);
-    });
-  }
-}
+extension UserQueryLinks on QueryBuilder<User, User, QFilterCondition> {}
 
 extension UserQuerySortBy on QueryBuilder<User, User, QSortBy> {
   QueryBuilder<User, User, QAfterSortBy> sortByAvatarColor() {
@@ -1420,18 +1273,6 @@ extension UserQuerySortBy on QueryBuilder<User, User, QSortBy> {
   QueryBuilder<User, User, QAfterSortBy> sortByEmailDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'email', Sort.desc);
-    });
-  }
-
-  QueryBuilder<User, User, QAfterSortBy> sortByHasQuota() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'hasQuota', Sort.asc);
-    });
-  }
-
-  QueryBuilder<User, User, QAfterSortBy> sortByHasQuotaDesc() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'hasQuota', Sort.desc);
     });
   }
 
@@ -1590,18 +1431,6 @@ extension UserQuerySortThenBy on QueryBuilder<User, User, QSortThenBy> {
   QueryBuilder<User, User, QAfterSortBy> thenByEmailDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'email', Sort.desc);
-    });
-  }
-
-  QueryBuilder<User, User, QAfterSortBy> thenByHasQuota() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'hasQuota', Sort.asc);
-    });
-  }
-
-  QueryBuilder<User, User, QAfterSortBy> thenByHasQuotaDesc() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'hasQuota', Sort.desc);
     });
   }
 
@@ -1764,12 +1593,6 @@ extension UserQueryWhereDistinct on QueryBuilder<User, User, QDistinct> {
     });
   }
 
-  QueryBuilder<User, User, QDistinct> distinctByHasQuota() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addDistinctBy(r'hasQuota');
-    });
-  }
-
   QueryBuilder<User, User, QDistinct> distinctById(
       {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
@@ -1848,7 +1671,7 @@ extension UserQueryProperty on QueryBuilder<User, User, QQueryProperty> {
     });
   }
 
-  QueryBuilder<User, AvatarColorEnum, QQueryOperations> avatarColorProperty() {
+  QueryBuilder<User, AvatarColor, QQueryOperations> avatarColorProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'avatarColor');
     });
@@ -1857,12 +1680,6 @@ extension UserQueryProperty on QueryBuilder<User, User, QQueryProperty> {
   QueryBuilder<User, String, QQueryOperations> emailProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'email');
-    });
-  }
-
-  QueryBuilder<User, bool, QQueryOperations> hasQuotaProperty() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addPropertyName(r'hasQuota');
     });
   }
 

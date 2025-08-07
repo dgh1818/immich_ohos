@@ -179,7 +179,7 @@ class ApiService implements Authentication {
       authenticationApi.apiClient
           .addDefaultHeader('deviceModel', ohosInfo.marketName.toString());
       authenticationApi.apiClient.addDefaultHeader('deviceType', 'OHOS');
-    } else {
+    } else if (Platform.isAndroid) {
       final androidInfo = await deviceInfoPlugin.androidInfo;
       authenticationApi.apiClient
           .addDefaultHeader('deviceModel', androidInfo.model);

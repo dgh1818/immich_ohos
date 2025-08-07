@@ -1,6 +1,6 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-part of 'exif_info.entity.dart';
+part of 'exif.entity.dart';
 
 // **************************************************************************
 // IsarCollectionGenerator
@@ -288,9 +288,7 @@ List<IsarLinkBase<dynamic>> _exifInfoGetLinks(ExifInfo object) {
   return [];
 }
 
-void _exifInfoAttach(IsarCollection<dynamic> col, Id id, ExifInfo object) {
-  object.id = id;
-}
+void _exifInfoAttach(IsarCollection<dynamic> col, Id id, ExifInfo object) {}
 
 extension ExifInfoQueryWhereSort on QueryBuilder<ExifInfo, ExifInfo, QWhere> {
   QueryBuilder<ExifInfo, ExifInfo, QAfterWhere> anyId() {
