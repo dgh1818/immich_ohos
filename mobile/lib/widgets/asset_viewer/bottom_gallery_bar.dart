@@ -97,6 +97,11 @@ class BottomGalleryBar extends ConsumerWidget {
 
           totalAssets.value -= 1;
         }
+        if (isDeleted) {
+          ref
+              .read(currentAssetProvider.notifier)
+              .set(renderList.loadAsset(assetIndex.value));
+        }
         return isDeleted;
       }
 

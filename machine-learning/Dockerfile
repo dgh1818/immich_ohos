@@ -51,7 +51,6 @@ ARG DEVICE
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     VIRTUAL_ENV=/opt/venv
-WORKDIR /usr/src/app
 
 RUN apt-get update && apt-get install -y --no-install-recommends g++
 
@@ -66,7 +65,9 @@ RUN if [ "$DEVICE" = "rocm" ]; then \
 
 FROM python:3.11-slim-bookworm@sha256:7029b00486ac40bed03e36775b864d3f3d39dcbdf19cd45e6a52d541e6c178f0 AS prod-cpu
 
-FROM prod-cpu AS prod-openvino
+ENV LD_PRELOAD=/usr/lib/libmimalloc.so.2
+
+FROM python:3.11-slim-bookworm@sha256:7029b00486ac40bed03e36775b864d3f3d39dcbdf19cd45e6a52d541e6c178f0 AS prod-openvino
 
 RUN apt-get update && \
     apt-get install --no-install-recommends -yqq ocl-icd-libopencl1 wget && \
@@ -81,6 +82,8 @@ RUN apt-get update && \
 
 FROM nvidia/cuda:12.2.2-runtime-ubuntu22.04@sha256:94c1577b2cd9dd6c0312dc04dff9cb2fdce2b268018abc3d7c2dbcacf1155000 AS prod-cuda
 
+ENV LD_PRELOAD=/usr/lib/libmimalloc.so.2
+
 RUN apt-get update && \
     apt-get install --no-install-recommends -yqq libcudnn9-cuda-12 && \
     apt-get clean && \
@@ -94,7 +97,8 @@ FROM rocm/dev-ubuntu-22.04:6.3.4-complete@sha256:1f7e92ca7e3a3785680473329ed1091
 
 FROM prod-cpu AS prod-armnn
 
-ENV LD_LIBRARY_PATH=/opt/armnn
+ENV LD_LIBRARY_PATH=/opt/armnn \
+    LD_PRELOAD=/usr/lib/libmimalloc.so.2
 
 RUN apt-get update && apt-get install -y --no-install-recommends ocl-icd-libopencl1 mesa-opencl-icd libgomp1 && \
     rm -rf /var/lib/apt/lists/* && \
@@ -114,6 +118,8 @@ COPY --from=builder-armnn \
 
 FROM prod-cpu AS prod-rknn
 
+ENV LD_PRELOAD=/usr/lib/libmimalloc.so.2
+
 ADD --checksum=sha256:73993ed4b440460825f21611731564503cc1d5a0c123746477da6cd574f34885 https://github.com/airockchip/rknn-toolkit2/raw/refs/tags/v2.3.0/rknpu2/runtime/Linux/librknn_api/aarch64/librknnrt.so /usr/lib/
 
 FROM prod-${DEVICE} AS prod
@@ -126,14 +132,17 @@ RUN apt-get update && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-WORKDIR /usr/src/app
+RUN ln -s "/usr/lib/$(arch)-linux-gnu/libmimalloc.so.2" /usr/lib/libmimalloc.so.2
+
+WORKDIR /usr/src
 ENV TRANSFORMERS_CACHE=/cache \
     PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PATH="/opt/venv/bin:$PATH" \
     PYTHONPATH=/usr/src \
     DEVICE=${DEVICE} \
-    VIRTUAL_ENV=/opt/venv
+    VIRTUAL_ENV=/opt/venv \
+    MACHINE_LEARNING_CACHE_FOLDER=/cache
 
 # prevent core dumps
 RUN echo "hard core 0" >> /etc/security/limits.conf && \
@@ -141,9 +150,8 @@ RUN echo "hard core 0" >> /etc/security/limits.conf && \
     echo 'ulimit -S -c 0 > /dev/null 2>&1' >> /etc/profile
 
 COPY --from=builder /opt/venv /opt/venv
-COPY ann/ann.py /usr/src/ann/ann.py
-COPY start.sh log_conf.json gunicorn_conf.py ./
-COPY app .
+COPY scripts/healthcheck.py .
+COPY immich_ml immich_ml
 
 ARG BUILD_ID
 ARG BUILD_IMAGE
@@ -161,6 +169,6 @@ ENV IMMICH_SOURCE_COMMIT=${BUILD_SOURCE_COMMIT}
 ENV IMMICH_SOURCE_URL=https://github.com/immich-app/immich/commit/${BUILD_SOURCE_COMMIT}
 
 ENTRYPOINT ["tini", "--"]
-CMD ["./start.sh"]
+CMD ["python", "-m", "immich_ml"]
 
 HEALTHCHECK CMD python3 healthcheck.py
