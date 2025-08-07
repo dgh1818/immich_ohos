@@ -57,20 +57,20 @@
     requestPermissions: [
       { name: "ohos.permission.INTERNET" },
       { name: "ohos.permission.VIBRATE" },
-      {
-        name: "ohos.permission.READ_IMAGEVIDEO",
-        reason: "$string:backup_desc",
-        usedScene: {
-          when: "always",
-        },
-      },
-      {
-        name: "ohos.permission.WRITE_IMAGEVIDEO",
-        reason: "$string:backup_desc",
-        usedScene: {
-          when: "always",
-        },
-      },
+//      {
+//        name: "ohos.permission.READ_IMAGEVIDEO",
+//        reason: "$string:backup_desc",
+//        usedScene: {
+//          when: "always",
+//        },
+//      },
+//      {
+//        name: "ohos.permission.WRITE_IMAGEVIDEO",
+//        reason: "$string:backup_desc",
+//        usedScene: {
+//          when: "always",
+//        },
+//      },
 //      {
 //        "name": "ohos.permission.GET_NETWORK_INFO",
 //        reason: "$string:backup_desc",
