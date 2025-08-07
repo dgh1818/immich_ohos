@@ -18,7 +18,6 @@ import 'package:immich_mobile/interfaces/backup_album.interface.dart';
 import 'package:immich_mobile/models/backup/backup_candidate.model.dart';
 import 'package:immich_mobile/models/backup/current_upload_asset.model.dart';
 import 'package:immich_mobile/models/backup/error_upload_asset.model.dart';
-import 'package:immich_mobile/models/backup/success_upload_asset.model.dart';
 import 'package:immich_mobile/providers/api.provider.dart';
 import 'package:immich_mobile/providers/app_settings.provider.dart';
 import 'package:immich_mobile/providers/db.provider.dart';
@@ -498,7 +497,6 @@ class BackgroundService {
       _cancellationToken!,
       pmProgressHandler: pmProgressHandler,
       onSuccess: (result) => _onAssetUploaded(
-        result: result,
         shouldNotify: notifyTotalProgress,
       ),
       onProgress: (bytes, totalBytes) =>
@@ -520,7 +518,6 @@ class BackgroundService {
   }
 
   void _onAssetUploaded({
-    required SuccessUploadAsset result,
     bool shouldNotify = false,
   }) async {
     if (!shouldNotify) {

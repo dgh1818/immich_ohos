@@ -101,7 +101,7 @@
       return 'bg-yellow-500';
     }
 
-    return 'bg-immich-primary dark:bg-immich-dark-primary';
+    return 'bg-primary';
   };
 
   const handleResetPassword = async () => {
@@ -315,6 +315,9 @@
                 </Field>
                 <Field readOnly label={$t('tags')}>
                   <Switch checked={userPreferences.tags.enabled} color="primary" />
+                </Field>
+                <Field readOnly label={$t('gcast_enabled')}>
+                  <Switch checked={userPreferences.cast.gCastEnabled} color="primary" />
                 </Field>
               </Stack>
             </div>

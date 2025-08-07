@@ -36,6 +36,7 @@ class ApiService implements Authentication {
   late StacksApi stacksApi;
   late ViewApi viewApi;
   late MemoriesApi memoriesApi;
+  late SessionsApi sessionsApi;
 
   ApiService() {
     // The below line ensures that the api clients are initialized when the service is instantiated
@@ -74,6 +75,7 @@ class ApiService implements Authentication {
     stacksApi = StacksApi(_apiClient);
     viewApi = ViewApi(_apiClient);
     memoriesApi = MemoriesApi(_apiClient);
+    sessionsApi = SessionsApi(_apiClient);
   }
 
   Future<void> _setUserAgentHeader() async {
