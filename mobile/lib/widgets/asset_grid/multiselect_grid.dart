@@ -243,44 +243,44 @@ class MultiselectGrid extends HookConsumerWidget {
       }
     }
 
-    void onDownload() async {
-      processing.value = true;
-      try {
-        final toDownload = selection.value.toList();
+    // void onDownload() async {
+    //   processing.value = true;
+    //   try {
+    //     final toDownload = selection.value.toList();
 
-        final results = await ref
-            .read(downloadStateProvider.notifier)
-            .downloadAllAsset(toDownload);
+    //     final results = await ref
+    //         .read(downloadStateProvider.notifier)
+    //         .downloadAllAsset(toDownload);
 
-        final totalCount = toDownload.length;
-        final successCount = results.where((e) => e).length;
-        final failedCount = totalCount - successCount;
+    //     final totalCount = toDownload.length;
+    //     final successCount = results.where((e) => e).length;
+    //     final failedCount = totalCount - successCount;
 
-        final msg = failedCount > 0
-            ? 'assets_downloaded_failed'.t(
-                context: context,
-                args: {
-                  'count': successCount,
-                  'error': failedCount,
-                },
-              )
-            : 'assets_downloaded_successfully'.t(
-                context: context,
-                args: {
-                  'count': successCount,
-                },
-              );
+    //     final msg = failedCount > 0
+    //         ? 'assets_downloaded_failed'.t(
+    //             context: context,
+    //             args: {
+    //               'count': successCount,
+    //               'error': failedCount,
+    //             },
+    //           )
+    //         : 'assets_downloaded_successfully'.t(
+    //             context: context,
+    //             args: {
+    //               'count': successCount,
+    //             },
+    //           );
 
-        ImmichToast.show(
-          context: context,
-          msg: msg,
-          gravity: ToastGravity.BOTTOM,
-        );
-      } finally {
-        processing.value = false;
-        selectionEnabledHook.value = false;
-      }
-    }
+    //     ImmichToast.show(
+    //       context: context,
+    //       msg: msg,
+    //       gravity: ToastGravity.BOTTOM,
+    //     );
+    //   } finally {
+    //     processing.value = false;
+    //     selectionEnabledHook.value = false;
+    //   }
+    // }
 
     void onDeleteRemote([bool shouldDeletePermanently = false]) async {
       processing.value = true;
@@ -517,7 +517,8 @@ class MultiselectGrid extends HookConsumerWidget {
               onArchive: archiveEnabled ? onArchiveAsset : null,
               onDelete: deleteEnabled ? onDelete : null,
               onDeleteServer: deleteEnabled ? onDeleteRemote : null,
-              onDownload: downloadEnabled ? onDownload : null,
+              //onDownload: downloadEnabled ? onDownload : null,
+              onDownload: null,
 
               /// local file deletion is allowed irrespective of [deleteEnabled] since it has
               /// nothing to do with the state of the asset in the Immich server
