@@ -72,9 +72,11 @@ class SplashScreenPageState extends ConsumerState<SplashScreenPage> {
       return;
     }
 
-    if (context.router.current.name != ShareIntentRoute.name) {
-      context.replaceRoute(const TabControllerRoute());
-    }
+    context.replaceRoute(const TabControllerRoute());
+
+    // if (context.router.current.name != ShareIntentRoute.name) {
+    //   context.replaceRoute(const TabControllerRoute());
+    // }
 
     final hasPermission =
         await ref.read(galleryPermissionNotifier.notifier).hasPermission;
