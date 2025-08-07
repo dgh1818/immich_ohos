@@ -144,7 +144,7 @@ class _BlurredBackdrop extends HookWidget {
           ),
         ),
         child: Container(
-          color: Colors.black.withOpacity(0.2),
+          color: Colors.black.withValues(alpha: 0.2),
         ),
       );
     } else {
@@ -165,7 +165,7 @@ class _BlurredBackdrop extends HookWidget {
             ),
           ),
           child: Container(
-            color: Colors.black.withOpacity(0.2),
+            color: Colors.black.withValues(alpha: 0.2),
           ),
         ),
       );
