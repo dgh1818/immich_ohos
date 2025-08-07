@@ -82,9 +82,6 @@ jobs:
     permissions:
       contents: read
       packages: write
-    permissions:
-      contents: read
-      packages: write
     if: ${{ needs.pre-job.outputs.should_run_server == 'false' && !github.event.pull_request.head.repo.fork }}
     runs-on: ubuntu-latest
     strategy:
@@ -108,50 +105,50 @@ jobs:
           docker buildx imagetools create -t "${REGISTRY_NAME}/${REPOSITORY}:${TAG_PR}" "${REGISTRY_NAME}/${REPOSITORY}:${TAG_OLD}"
           docker buildx imagetools create -t "${REGISTRY_NAME}/${REPOSITORY}:${TAG_COMMIT}" "${REGISTRY_NAME}/${REPOSITORY}:${TAG_OLD}"
 
-  machine-learning:
-    name: Build and Push ML
-    needs: pre-job
-    if: ${{ needs.pre-job.outputs.should_run_ml == 'true' }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - device: cpu
-            tag-suffix: ''
-          - device: cuda
-            tag-suffix: '-cuda'
-            platforms: linux/amd64
-          - device: openvino
-            tag-suffix: '-openvino'
-            platforms: linux/amd64
-          - device: armnn
-            tag-suffix: '-armnn'
-            platforms: linux/arm64
-          - device: rknn
-            tag-suffix: '-rknn'
-            platforms: linux/arm64
-          - device: rocm
-            tag-suffix: '-rocm'
-            platforms: linux/amd64
-            runner-mapping: '{"linux/amd64": "mich"}'
-    uses: ./.github/workflows/multi-runner-build.yml
-    permissions:
-      contents: read
-      actions: read
-      packages: write
-    secrets:
-      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
-    with:
-      image: immich-machine-learning
-      context: machine-learning
-      dockerfile: machine-learning/Dockerfile
-      platforms: ${{ matrix.platforms }}
-      runner-mapping: ${{ matrix.runner-mapping }}
-      tag-suffix: ${{ matrix.tag-suffix }}
-      dockerhub-push: ${{ github.event_name == 'release' }}
-      build-args: |
-        DEVICE=${{ matrix.device }}
+  # machine-learning:
+  #   name: Build and Push ML
+  #   needs: pre-job
+  #   if: ${{ needs.pre-job.outputs.should_run_ml == 'true' }}
+  #   strategy:
+  #     fail-fast: false
+  #     matrix:
+  #       include:
+  #         - device: cpu
+  #           tag-suffix: ''
+  #         - device: cuda
+  #           tag-suffix: '-cuda'
+  #           platforms: linux/amd64
+  #         - device: openvino
+  #           tag-suffix: '-openvino'
+  #           platforms: linux/amd64
+  #         - device: armnn
+  #           tag-suffix: '-armnn'
+  #           platforms: linux/arm64
+  #         - device: rknn
+  #           tag-suffix: '-rknn'
+  #           platforms: linux/arm64
+  #         - device: rocm
+  #           tag-suffix: '-rocm'
+  #           platforms: linux/amd64
+  #           runner-mapping: '{"linux/amd64": "mich"}'
+  #   uses: ./.github/workflows/multi-runner-build.yml
+  #   permissions:
+  #     contents: read
+  #     actions: read
+  #     packages: write
+  #   secrets:
+  #     DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+  #     DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+  #   with:
+  #     image: immich-machine-learning
+  #     context: machine-learning
+  #     dockerfile: machine-learning/Dockerfile
+  #     platforms: ${{ matrix.platforms }}
+  #     runner-mapping: ${{ matrix.runner-mapping }}
+  #     tag-suffix: ${{ matrix.tag-suffix }}
+  #     dockerhub-push: ${{ github.event_name == 'release' }}
+  #     build-args: |
+  #       DEVICE=${{ matrix.device }}
 
   server:
     name: Build and Push Server
@@ -188,17 +185,17 @@ jobs:
         # zizmor: ignore[template-injection]
         run: echo "All jobs passed or skipped" && echo "${{ toJSON(needs.*.result) }}"
 
-  success-check-ml:
-    name: Docker Build & Push ML Success
-    needs: [machine-learning, retag_ml]
-    permissions: {}
-    runs-on: ubuntu-latest
-    if: always()
-    steps:
-      - name: Any jobs failed?
-        if: ${{ contains(needs.*.result, 'failure') }}
-        run: exit 1
-      - name: All jobs passed or skipped
-        if: ${{ !(contains(needs.*.result, 'failure')) }}
-        # zizmor: ignore[template-injection]
-        run: echo "All jobs passed or skipped" && echo "${{ toJSON(needs.*.result) }}"
+  # success-check-ml:
+  #   name: Docker Build & Push ML Success
+  #   needs: [machine-learning, retag_ml]
+  #   permissions: {}
+  #   runs-on: ubuntu-latest
+  #   if: always()
+  #   steps:
+  #     - name: Any jobs failed?
+  #       if: ${{ contains(needs.*.result, 'failure') }}
+  #       run: exit 1
+  #     - name: All jobs passed or skipped
+  #       if: ${{ !(contains(needs.*.result, 'failure')) }}
+  #       # zizmor: ignore[template-injection]
+  #       run: echo "All jobs passed or skipped" && echo "${{ toJSON(needs.*.result) }}"

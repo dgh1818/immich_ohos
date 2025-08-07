@@ -84,8 +84,6 @@ jobs:
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version-file: './server/.nvmrc'
-          cache: 'npm'
-          cache-dependency-path: '**/package-lock.json'
 
       - name: Run npm install
         run: npm ci
@@ -103,7 +101,7 @@ jobs:
         if: ${{ !cancelled() }}
 
       - name: Run small tests & coverage
-        run: npm test
+        run: npm run test:cov
         if: ${{ !cancelled() }}
 
   cli-unit-tests:
@@ -127,8 +125,6 @@ jobs:
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version-file: './cli/.nvmrc'
-          cache: 'npm'
-          cache-dependency-path: '**/package-lock.json'
 
       - name: Setup typescript-sdk
         run: npm ci && npm run build
@@ -150,7 +146,7 @@ jobs:
         if: ${{ !cancelled() }}
 
       - name: Run unit tests & coverage
-        run: npm run test
+        run: npm run test:cov
         if: ${{ !cancelled() }}
 
   cli-unit-tests-win:
@@ -174,8 +170,6 @@ jobs:
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version-file: './cli/.nvmrc'
-          cache: 'npm'
-          cache-dependency-path: '**/package-lock.json'
 
       - name: Setup typescript-sdk
         run: npm ci && npm run build
@@ -190,7 +184,7 @@ jobs:
         if: ${{ !cancelled() }}
 
       - name: Run unit tests & coverage
-        run: npm run test
+        run: npm run test:cov
         if: ${{ !cancelled() }}
 
   web-lint:
@@ -214,8 +208,6 @@ jobs:
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version-file: './web/.nvmrc'
-          cache: 'npm'
-          cache-dependency-path: '**/package-lock.json'
 
       - name: Run setup typescript-sdk
         run: npm ci && npm run build
@@ -270,7 +262,7 @@ jobs:
         if: ${{ !cancelled() }}
 
       - name: Run unit tests & coverage
-        run: npm run test
+        run: npm run test:cov
         if: ${{ !cancelled() }}
 
   i18n-tests:
@@ -334,8 +326,6 @@ jobs:
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version-file: './e2e/.nvmrc'
-          cache: 'npm'
-          cache-dependency-path: '**/package-lock.json'
 
       - name: Run setup typescript-sdk
         run: npm ci && npm run build
@@ -379,8 +369,6 @@ jobs:
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version-file: './server/.nvmrc'
-          cache: 'npm'
-          cache-dependency-path: '**/package-lock.json'
 
       - name: Run npm install
         run: npm ci
@@ -414,8 +402,6 @@ jobs:
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version-file: './e2e/.nvmrc'
-          cache: 'npm'
-          cache-dependency-path: '**/package-lock.json'
 
       - name: Run setup typescript-sdk
         run: npm ci && npm run build
@@ -464,8 +450,6 @@ jobs:
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version-file: './e2e/.nvmrc'
-          cache: 'npm'
-          cache-dependency-path: '**/package-lock.json'
 
       - name: Run setup typescript-sdk
         run: npm ci && npm run build
@@ -477,7 +461,7 @@ jobs:
         if: ${{ !cancelled() }}
 
       - name: Install Playwright Browsers
-        run: npx playwright install chromium --only-shell
+        run: npx playwright install --with-deps chromium
         if: ${{ !cancelled() }}
 
       - name: Docker build
@@ -607,7 +591,7 @@ jobs:
           persist-credentials: false
 
       - name: Run ShellCheck
-        uses: ludeeus/action-shellcheck@00cae500b08a931fb5698e11e79bfbd38e612a38 # 2.0.0
+        uses: ludeeus/action-shellcheck@master
         with:
           ignore_paths: >-
             **/open-api/**
@@ -629,8 +613,6 @@ jobs:
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version-file: './server/.nvmrc'
-          cache: 'npm'
-          cache-dependency-path: '**/package-lock.json'
 
       - name: Install server dependencies
         run: npm --prefix=server ci
@@ -692,8 +674,6 @@ jobs:
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version-file: './server/.nvmrc'
-          cache: 'npm'
-          cache-dependency-path: '**/package-lock.json'
 
       - name: Install server dependencies
         run: npm ci
