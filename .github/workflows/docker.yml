@@ -272,19 +272,12 @@ jobs:
           docker buildx imagetools create -t "${REGISTRY_NAME}/${REPOSITORY}:${TAG_PR}" "${REGISTRY_NAME}/${REPOSITORY}:${TAG_OLD}"
           docker buildx imagetools create -t "${REGISTRY_NAME}/${REPOSITORY}:${TAG_COMMIT}" "${REGISTRY_NAME}/${REPOSITORY}:${TAG_OLD}"
 
-  server:
+  build_and_push_server:
     name: Build and Push Server
+    runs-on: ${{ matrix.runner }}
     needs: pre-job
     if: ${{ needs.pre-job.outputs.should_run_server == 'true' }}
-    uses: dgh1818/devtools/.github/workflows/multi-runner-build.yml@400ebe47fdfe77321effd39ee1d19cb893105faf # multi-runner-build-workflow-0.1.1
-    permissions:
-      contents: read
-      actions: read
-      packages: write
-    secrets:
-      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
-    with:
+    env:
       image: immich-server
       context: .
       file: server/Dockerfile
@@ -435,11 +428,13 @@ jobs:
 
   success-check-server:
     name: Docker Build & Push Server Success
-    needs: [server, retag_server]
-    permissions: {}
+    needs: [merge_server, retag_server]
     runs-on: ubuntu-latest
     if: always()
     steps:
-      - uses: dgh1818/devtools/actions/success-check@400ebe47fdfe77321effd39ee1d19cb893105faf # 0.0.4
-        with:
-          needs: ${{ toJSON(needs) }}
+      - name: Any jobs failed?
+        if: ${{ contains(needs.*.result, 'failure') }}
+        run: exit 1
+      - name: All jobs passed or skipped
+        if: ${{ !(contains(needs.*.result, 'failure')) }}
+        run: echo "All jobs passed or skipped" && echo "${{ toJSON(needs.*.result) }}"

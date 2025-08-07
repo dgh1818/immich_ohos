@@ -1,5 +1,4 @@
 import { FlutterEngine, Log } from '@ohos/flutter_ohos';
-import IntegrationTestPlugin from 'integration_test';
 import PhotoManagerPlugin from 'photo_manager';
 import MapLibreMapsPlugin from 'maplibre_gl';
 import FluttertoastPlugin from 'fluttertoast';
@@ -8,10 +7,10 @@ import PathProviderPlugin from 'path_provider_ohos';
 import UrlLauncherPlugin from 'url_launcher_ohos';
 import VideoPlayerPlugin from 'video_player_ohos';
 import PermissionHandlerPlugin from 'permission_handler_ohos';
-import DeviceInfoPlusOhosPlugin from 'device_info_plus';
-import SharePlusOhosPlugin from 'share_plus';
 import PackageInfoPlugin from 'package_info_plus';
 import ConnectivityPlugin from 'connectivity_plus';
+import DeviceInfoPlusOhosPlugin from 'device_info_plus';
+import SharePlusOhosPlugin from 'share_plus';
 import FlutterLocalNotificationsPlugin from 'flutter_local_notifications';
 import FlutterUdidPlugin from 'flutter_udid';
 import GeolocatorOhosPlugin from 'flutter_geolocator_ohos';
@@ -30,7 +29,6 @@ export class GeneratedPluginRegistrant {
 
   static registerWith(flutterEngine: FlutterEngine) {
     try {
-      flutterEngine.getPlugins()?.add(new IntegrationTestPlugin());
       flutterEngine.getPlugins()?.add(new PhotoManagerPlugin());
       flutterEngine.getPlugins()?.add(new MapLibreMapsPlugin());
       flutterEngine.getPlugins()?.add(new FluttertoastPlugin());
@@ -39,10 +37,10 @@ export class GeneratedPluginRegistrant {
       flutterEngine.getPlugins()?.add(new UrlLauncherPlugin());
       flutterEngine.getPlugins()?.add(new VideoPlayerPlugin());
       flutterEngine.getPlugins()?.add(new PermissionHandlerPlugin());
-      flutterEngine.getPlugins()?.add(new DeviceInfoPlusOhosPlugin());
-      flutterEngine.getPlugins()?.add(new SharePlusOhosPlugin());
       flutterEngine.getPlugins()?.add(new PackageInfoPlugin());
       flutterEngine.getPlugins()?.add(new ConnectivityPlugin());
+      flutterEngine.getPlugins()?.add(new DeviceInfoPlusOhosPlugin());
+      flutterEngine.getPlugins()?.add(new SharePlusOhosPlugin());
       flutterEngine.getPlugins()?.add(new FlutterLocalNotificationsPlugin());
       flutterEngine.getPlugins()?.add(new FlutterUdidPlugin());
       flutterEngine.getPlugins()?.add(new GeolocatorOhosPlugin());
