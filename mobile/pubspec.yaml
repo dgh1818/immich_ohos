@@ -122,7 +122,14 @@ dependency_overrides:
     git:
       url: https://gitcode.com/openharmony-sig/flutter_packages.git
       path: 'packages/video_player/video_player'
+      #ref: br_video_player-v2.10.0_ohos
       ref: br_video_player-v2.9.2_ohos
+  video_player_android: 
+    git:
+      url: https://gitcode.com/openharmony-sig/flutter_packages.git
+      path: 'packages/video_player/video_player_android'
+      ref: br_video_player-v2.9.2_ohos
+      #ref: br_video_player-v2.10.0_ohos
   geolocator:
     git:
       url: https://gitcode.com/dgh18/fluttertpc_geolocator.git
@@ -178,6 +185,7 @@ dependency_overrides:
     git:
       url: https://github.com/dgh1818/chewie_ohos.git
       path: './'
+      #ref: update_one
       ref: ohos_dev
   photo_manager:
     path: ./flutter_photo_manager
@@ -233,6 +241,7 @@ dependency_overrides:
     git:
       url: "https://gitcode.com/openharmony-sig/flutter_sqflite.git"
       path: "packages_web/sqflite_common_ffi_web"
+  wakelock_plus_platform_interface: ^1.2.1
 
 
 dev_dependencies:

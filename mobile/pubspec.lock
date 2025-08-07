@@ -2135,11 +2135,12 @@ packages:
   video_player_android:
     dependency: "direct main"
     description:
-      name: video_player_android
-      sha256: "4de50df9ee786f5891d3281e1e633d7b142ef1acf47392592eb91cba5d355849"
-      url: "https://pub.flutter-io.cn"
-    source: hosted
-    version: "2.6.0"
+      path: "packages/video_player/video_player_android"
+      ref: "br_video_player-v2.9.2_ohos"
+      resolved-ref: b8cd99e7937de783e88ef0e6a7f8034d95328ce8
+      url: "https://gitcode.com/openharmony-sig/flutter_packages.git"
+    source: git
+    version: "2.7.6"
   video_player_avfoundation:
     dependency: transitive
     description:
@@ -2191,7 +2192,7 @@ packages:
     source: git
     version: "1.2.8"
   wakelock_plus_platform_interface:
-    dependency: transitive
+    dependency: "direct overridden"
     description:
       name: wakelock_plus_platform_interface
       sha256: e10444072e50dbc4999d7316fd303f7ea53d31c824aa5eb05d7ccbdd98985207
