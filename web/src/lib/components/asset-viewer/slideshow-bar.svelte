@@ -2,10 +2,9 @@
   import { shortcuts } from '$lib/actions/shortcut';
   import ProgressBar from '$lib/components/shared-components/progress-bar/progress-bar.svelte';
   import { ProgressBarStatus } from '$lib/constants';
-  import { modalManager } from '$lib/managers/modal-manager.svelte';
   import SlideshowSettingsModal from '$lib/modals/SlideshowSettingsModal.svelte';
   import { SlideshowNavigation, slideshowStore } from '$lib/stores/slideshow.store';
-  import { IconButton } from '@immich/ui';
+  import { IconButton, modalManager } from '@immich/ui';
   import { mdiChevronLeft, mdiChevronRight, mdiClose, mdiCog, mdiFullscreen, mdiPause, mdiPlay } from '@mdi/js';
   import { onDestroy, onMount } from 'svelte';
   import { swipe } from 'svelte-gestures';
@@ -108,6 +107,30 @@
     }
     await modalManager.show(SlideshowSettingsModal);
   };
+
+  onMount(() => {
+    function exitFullscreenHandler() {
+      const doc = document as Document & {
+        webkitIsFullScreen?: boolean;
+      };
+
+      if (
+        // eslint-disable-next-line tscompat/tscompat
+        !document.fullscreenElement &&
+        !doc.webkitIsFullScreen
+      ) {
+        onClose();
+      }
+    }
+
+    document.addEventListener('fullscreenchange', exitFullscreenHandler);
+    document.addEventListener('webkitfullscreenchange', exitFullscreenHandler);
+
+    return () => {
+      document.removeEventListener('fullscreenchange', exitFullscreenHandler);
+      document.removeEventListener('webkitfullscreenchange', exitFullscreenHandler);
+    };
+  });
 </script>
 
 <svelte:document

@@ -25,7 +25,7 @@ class ImmichRemoteImageProvider
   //final CacheManager? cacheManager;
   static final cacheImage = RemoteImageCacheManager();
 
-  ImmichRemoteImageProvider({
+  const ImmichRemoteImageProvider({
     required this.assetId,
     //this.cacheManager,
     this.is_image,

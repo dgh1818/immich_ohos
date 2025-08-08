@@ -343,11 +343,12 @@
         <div class="absolute top-0 h-full w-full">
           <VideoThumbnail
             url={getAssetPlaybackUrl({ id: asset.livePhotoVideoId, cacheKey: asset.thumbhash })}
+            enablePlayback={mouseOver && $playVideoThumbnailOnHover}
             pauseIcon={mdiMotionPauseOutline}
             playIcon={mdiMotionPlayOutline}
             showTime={false}
             curve={selected}
-            playbackOnIconHover
+            playbackOnIconHover={!$playVideoThumbnailOnHover}
           />
         </div>
       {/if}
@@ -375,7 +376,7 @@
           <Icon path={mdiCheckCircle} size="24" class="text-zinc-800" />
         {:else if selected}
           <div class="rounded-full bg-[#D9DCEF] dark:bg-[#232932]">
-            <Icon path={mdiCheckCircle} size="24" class="text-immich-primary" />
+            <Icon path={mdiCheckCircle} size="24" class="text-primary" />
           </div>
         {:else}
           <Icon path={mdiCheckCircle} size="24" class="text-white/80 hover:text-white" />

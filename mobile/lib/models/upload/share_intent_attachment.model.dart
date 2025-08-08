@@ -17,7 +17,7 @@
 //   notFound,
 //   failed,
 //   canceled,
-//   waitingtoRetry,
+//   waitingToRetry,
 //   paused,
 // }
 

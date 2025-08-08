@@ -2,6 +2,7 @@ import 'package:auto_route/auto_route.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:immich_mobile/extensions/build_context_extensions.dart';
@@ -64,7 +65,7 @@ class ImmichAppBar extends ConsumerWidget implements PreferredSizeWidget {
           useRootNavigator: false,
           builder: (ctx) => const ImmichAppBarDialog(),
         ),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: const BorderRadius.all(Radius.circular(12)),
         child: Badge(
           label: Container(
             decoration: BoxDecoration(
@@ -142,7 +143,7 @@ class ImmichAppBar extends ConsumerWidget implements PreferredSizeWidget {
 
       return InkWell(
         onTap: () => context.pushRoute(const BackupControllerRoute()),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: const BorderRadius.all(Radius.circular(12)),
         child: Badge(
           label: Container(
             width: widgetSize / 2,
@@ -267,7 +268,8 @@ class ImmichAppBar extends ConsumerWidget implements PreferredSizeWidget {
           padding: const EdgeInsets.only(right: 20),
           child: buildUploadIndicator(),
         ),
-        if (kDebugMode || kProfileMode)
+
+        if (kDebugMode || kProfileMode || appFlavor == 'beta')
           IconButton(
             icon: const Icon(Icons.science_rounded),
             onPressed: () => context.pushRoute(const FeatInDevRoute()),

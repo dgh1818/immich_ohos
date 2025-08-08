@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Cron, CronExpression, Interval } from '@nestjs/schedule';
+import { Interval } from '@nestjs/schedule';
 import { NextFunction, Request, Response } from 'express';
 import { readFileSync } from 'node:fs';
 import sanitizeHtml from 'sanitize-html';
@@ -102,11 +102,6 @@ export class ApiService {
     await this.versionService.handleQueueVersionCheck();
   }
 
-  @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
-  async onNightlyJob() {
-    await this.jobService.handleNightlyJobs();
-  }
-
   ssr(excludePaths: string[]) {
     const { resourcePaths } = this.configRepository.getEnv();
 
@@ -139,36 +134,33 @@ export class ApiService {
         }
       }
 
-      const targets = [
-        {
-          regex: /^\/share\/(.+)$/,
-          onMatch: async (matches: RegExpMatchArray) => {
-            const key = matches[1];
-            const auth = await this.authService.validateSharedLink(key);
-            return this.sharedLinkService.getMetadataTags(auth);
-          },
-        },
-      ];
-
-      let html = index;
-
-      try {
-        for (const { regex, onMatch } of targets) {
-          const matches = request.url.match(regex);
-          if (matches) {
-            const meta = await onMatch(matches);
-            if (meta) {
-              html = render(index, meta);
-            }
-
-            break;
-          }
+      if (process.env.FORBIDDEN_WEB_FROM_INTERNET === 'true') {
+        if (!isPrivateIp(ip)) {
+          return res.sendStatus(404);
         }
-      } catch {
-        // nothing to do here
       }
 
-      res.type('text/html').header('Cache-Control', 'no-store').send(html);
+      let status = 200;
+      let html = index;
+
+      const shareMatches = request.url.match(/^\/share\/(.+)$/);
+      if (shareMatches) {
+        try {
+          const key = shareMatches[1];
+          const auth = await this.authService.validateSharedLink(key);
+          const meta = await this.sharedLinkService.getMetadataTags(
+            auth,
+            request.host ? `${request.protocol}://${request.host}` : undefined,
+          );
+          if (meta) {
+            html = render(index, meta);
+          }
+        } catch {
+          status = 404;
+        }
+      }
+
+      res.status(status).type('text/html').header('Cache-Control', 'no-store').send(html);
     };
   }
 }

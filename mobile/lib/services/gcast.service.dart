@@ -2,8 +2,7 @@
 
 // import 'package:cast/session.dart';
 // import 'package:hooks_riverpod/hooks_riverpod.dart';
-// import 'package:immich_mobile/entities/asset.entity.dart';
-// import 'package:immich_mobile/interfaces/cast_destination_service.interface.dart';
+// import 'package:immich_mobile/domain/models/asset/base_asset.model.dart';
 // import 'package:immich_mobile/models/cast/cast_manager_state.dart';
 // import 'package:immich_mobile/models/sessions/session_create_response.model.dart';
 // import 'package:immich_mobile/repositories/asset_api.repository.dart';
@@ -21,7 +20,7 @@
 //   ),
 // );
 
-// class GCastService implements ICastDestinationService {
+// class GCastService {
 //   final GCastRepository _gCastRepository;
 //   final SessionsAPIRepository _sessionsApiService;
 //   final AssetApiRepository _assetApiRepository;
@@ -32,15 +31,14 @@
 //   int? _sessionId;
 //   Timer? _mediaStatusPollingTimer;
 
-//   @override
 //   void Function(bool)? onConnectionState;
-//   @override
+
 //   void Function(Duration)? onCurrentTime;
-//   @override
+
 //   void Function(Duration)? onDuration;
-//   @override
+
 //   void Function(String)? onReceiverName;
-//   @override
+
 //   void Function(CastState)? onCastState;
 
 //   GCastService(
@@ -120,25 +118,21 @@
 //     }
 //   }
 
-//   @override
 //   Future<void> connect(dynamic device) async {
 //     await _gCastRepository.connect(device);
 
 //     onReceiverName?.call(device.extras["fn"] ?? "Google Cast");
 //   }
 
-//   @override
 //   CastDestinationType getType() {
 //     return CastDestinationType.googleCast;
 //   }
 
-//   @override
 //   Future<bool> initialize() async {
 //     // there is nothing blocking us from using Google Cast that we can check for
 //     return true;
 //   }
 
-//   @override
 //   Future<void> disconnect() async {
 //     onReceiverName?.call("");
 //     currentAssetId = null;
@@ -162,13 +156,10 @@
 //     return bufferedExpiration.isAfter(DateTime.now());
 //   }
 
-//   @override
-//   void loadMedia(Asset asset, bool reload) async {
+//   void loadMedia(RemoteAsset asset, bool reload) async {
 //     if (!isConnected) {
 //       return;
-//     } else if (asset.remoteId == null) {
-//       return;
-//     } else if (asset.remoteId == currentAssetId && !reload) {
+//     } else if (asset.id == currentAssetId && !reload) {
 //       return;
 //     }
 
@@ -183,10 +174,10 @@
 
 //     final unauthenticatedUrl = asset.isVideo
 //         ? getPlaybackUrlForRemoteId(
-//             asset.remoteId!,
+//             asset.id,
 //           )
 //         : getThumbnailUrlForRemoteId(
-//             asset.remoteId!,
+//             asset.id,
 //             type: AssetMediaSize.fullsize,
 //           );
 
@@ -194,8 +185,7 @@
 //         "$unauthenticatedUrl&sessionKey=${sessionKey?.token}";
 
 //     // get image mime type
-//     final mimeType =
-//         await _assetApiRepository.getAssetMIMEType(asset.remoteId!);
+//     final mimeType = await _assetApiRepository.getAssetMIMEType(asset.id);
 
 //     if (mimeType == null) {
 //       return;
@@ -212,7 +202,7 @@
 //       "autoplay": true,
 //     });
 
-//     currentAssetId = asset.remoteId;
+//     currentAssetId = asset.id;
 
 //     // we need to poll for media status since the cast device does not
 //     // send a message when the media is loaded for whatever reason
@@ -234,7 +224,6 @@
 //     }
 //   }
 
-//   @override
 //   void play() {
 //     _gCastRepository.sendMessage(CastSession.kNamespaceMedia, {
 //       "type": "PLAY",
@@ -242,7 +231,6 @@
 //     });
 //   }
 
-//   @override
 //   void pause() {
 //     _gCastRepository.sendMessage(CastSession.kNamespaceMedia, {
 //       "type": "PAUSE",
@@ -250,7 +238,6 @@
 //     });
 //   }
 
-//   @override
 //   void seekTo(Duration position) {
 //     _gCastRepository.sendMessage(CastSession.kNamespaceMedia, {
 //       "type": "SEEK",
@@ -259,7 +246,6 @@
 //     });
 //   }
 
-//   @override
 //   void stop() {
 //     _gCastRepository.sendMessage(CastSession.kNamespaceMedia, {
 //       "type": "STOP",
@@ -273,7 +259,6 @@
 //   // 0x01 is display capability bitmask
 //   bool isDisplay(int ca) => (ca & 0x01) != 0;
 
-//   @override
 //   Future<List<(String, CastDestinationType, dynamic)>> getDevices() async {
 //     final dests = await _gCastRepository.listDestinations();
 

@@ -5,10 +5,11 @@
   } from '$lib/components/shared-components/notification/notification';
   import ApiKeyGrid from '$lib/components/user-settings-page/user-api-key-grid.svelte';
   import { Permission } from '@immich/sdk';
-  import { Button, Checkbox, Label, Modal, ModalBody, ModalFooter } from '@immich/ui';
+  import { Button, Checkbox, HStack, Label, Modal, ModalBody, ModalFooter } from '@immich/ui';
   import { mdiKeyVariant } from '@mdi/js';
   import { onMount } from 'svelte';
   import { t } from 'svelte-i18n';
+  import { SvelteMap } from 'svelte/reactivity';
 
   interface Props {
     apiKey: { name: string; permissions: Permission[] };
@@ -23,7 +24,7 @@
   let selectedItems: Permission[] = $state(apiKey.permissions);
   let selectAllItems = $derived(selectedItems.length === Object.keys(Permission).length - 1);
 
-  const permissions: Map<string, Permission[]> = new Map();
+  const permissions: Map<string, Permission[]> = new SvelteMap();
 
   permissions.set('activity', [
     Permission.ActivityCreate,
@@ -219,9 +220,9 @@
   </ModalBody>
 
   <ModalFooter>
-    <div class="flex gap-3 w-full">
+    <HStack fullWidth>
       <Button shape="round" color="secondary" fullWidth onclick={() => onClose()}>{cancelText}</Button>
       <Button shape="round" type="submit" fullWidth form="api-key-form">{submitText}</Button>
-    </div>
+    </HStack>
   </ModalFooter>
 </Modal>

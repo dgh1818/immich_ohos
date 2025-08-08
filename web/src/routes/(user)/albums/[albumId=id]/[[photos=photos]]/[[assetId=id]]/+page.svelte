@@ -34,7 +34,6 @@
   import UserAvatar from '$lib/components/shared-components/user-avatar.svelte';
   import { AlbumPageViewMode, AppRoute } from '$lib/constants';
   import { activityManager } from '$lib/managers/activity-manager.svelte';
-  import { modalManager } from '$lib/managers/modal-manager.svelte';
   import { TimelineManager } from '$lib/managers/timeline-manager/timeline-manager.svelte';
   import type { TimelineAsset } from '$lib/managers/timeline-manager/types';
   import AlbumOptionsModal from '$lib/modals/AlbumOptionsModal.svelte';
@@ -70,7 +69,7 @@
     updateAlbumInfo,
     type AlbumUserAddDto,
   } from '@immich/sdk';
-  import { Button, IconButton } from '@immich/ui';
+  import { Button, IconButton, modalManager } from '@immich/ui';
   import {
     mdiArrowLeft,
     mdiCogOutline,
@@ -443,7 +442,7 @@
 
 <div class="flex overflow-hidden" use:scrollMemoryClearer={{ routeStartsWith: AppRoute.ALBUMS }}>
   <div class="relative w-full shrink">
-    <main class="relative h-dvh overflow-hidden px-6 max-md:pt-(--navbar-height-md) pt-(--navbar-height)">
+    <main class="relative h-dvh overflow-hidden px-2 md:px-6 max-md:pt-(--navbar-height-md) pt-(--navbar-height)">
       <AssetGrid
         enableRouting={viewMode === AlbumPageViewMode.SELECT_ASSETS ? false : true}
         {album}

@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:immich_mobile/extensions/asyncvalue_extensions.dart';
+import 'package:immich_mobile/extensions/build_context_extensions.dart';
 import 'package:immich_mobile/extensions/maplibrecontroller_extensions.dart';
 import 'package:immich_mobile/widgets/map/map_theme_override.dart';
 import 'package:immich_mobile/widgets/map/positioned_asset_marker_icon.dart';
@@ -28,6 +29,7 @@ class MapThumbnail extends HookConsumerWidget {
   final double width;
   final ThemeMode? themeMode;
   final bool showAttribution;
+  final MapCreatedCallback? onCreated;
   final bool isZoomControlsEnabled;
 
   const MapThumbnail({
@@ -41,6 +43,7 @@ class MapThumbnail extends HookConsumerWidget {
     this.showMarkerPin = false,
     this.themeMode,
     this.showAttribution = true,
+    this.onCreated,
     this.isZoomControlsEnabled = true,
   });
 
@@ -54,13 +57,16 @@ class MapThumbnail extends HookConsumerWidget {
     final offsettedCentre =
         LatLng(centreProcessed.latitude, centreProcessed.longitude);
     final controller = useRef<MapLibreMapController?>(null);
+    final styleLoaded = useState(false);
     final position = useValueNotifier<Point<num>?>(null);
     final reverseLocation = useValueNotifier<String?>(null);
     Future<void> onMapCreated(MapLibreMapController mapController) async {
       controller.value = mapController;
+
+      styleLoaded.value = false;
+
       if (defaultTargetPlatform == TargetPlatform.android ||
           defaultTargetPlatform == TargetPlatform.iOS) {
-        // The Ohos need to wait for the PetalMap View to return
         if (assetMarkerRemoteId != null) {
           // The iOS impl returns wrong toScreenLocation without the delay
           Future.delayed(
@@ -69,6 +75,7 @@ class MapThumbnail extends HookConsumerWidget {
                 position.value = await mapController.toScreenLocation(centre),
           );
         }
+        onCreated?.call(mapController);
       }
     }
 
@@ -79,32 +86,45 @@ class MapThumbnail extends HookConsumerWidget {
     }
 
     Future<void> onStyleLoaded() async {
-      if (defaultTargetPlatform == TargetPlatform.ohos) {
-        controller.value?.addListener(onLocationChanged);
-        if (assetMarkerRemoteId != null) {
-          position.value =
-              await controller.value?.toScreenLocation(centreProcessed);
-        }
+      try {
+        if (defaultTargetPlatform == TargetPlatform.ohos) {
+          controller.value?.addListener(onLocationChanged);
+          if (assetMarkerRemoteId != null) {
+            position.value =
+                await controller.value?.toScreenLocation(centreProcessed);
+          }
 
-        await controller.value?.reverseGeo(centreProcessed);
-      }
-      //The Ohos PetalMap View get
-      if (showMarkerPin && controller.value != null) {
-        if (defaultTargetPlatform == TargetPlatform.android ||
-            defaultTargetPlatform == TargetPlatform.iOS) {
-          await controller.value?.addMarkerAtLatLng(centre);
-        } else if (defaultTargetPlatform == TargetPlatform.ohos) {
-          ByteData mapMarkData =
-              await rootBundle.load("assets/location-pin.png");
-          await controller.value
-              ?.addMarkerAtLatLng_Ohos(centreProcessed, mapMarkData, 0.15);
+          await controller.value?.reverseGeo(centreProcessed);
         }
+        if (showMarkerPin && controller.value != null) {
+          if (defaultTargetPlatform == TargetPlatform.android ||
+              defaultTargetPlatform == TargetPlatform.iOS) {
+            await controller.value?.addMarkerAtLatLng(centre);
+          } else if (defaultTargetPlatform == TargetPlatform.ohos) {
+            ByteData mapMarkData =
+                await rootBundle.load("assets/location-pin.png");
+            await controller.value
+                ?.addMarkerAtLatLng_Ohos(centreProcessed, mapMarkData, 0.15);
+          }
+        }
+      } finally {
+        // Calling methods on the controller after it is disposed will throw an error
+        // We do not have a way to check if the controller is disposed for now
+        // https://github.com/maplibre/flutter-maplibre-gl/issues/192
       }
+      styleLoaded.value = true;
     }
 
     return MapThemeOverride(
       themeMode: themeMode,
-      mapBuilder: (style) => SizedBox(
+      mapBuilder: (style) => AnimatedContainer(
+        duration: Durations.medium2,
+        curve: Curves.easeOut,
+        foregroundDecoration: BoxDecoration(
+          color: context.colorScheme.inverseSurface
+              .withAlpha(styleLoaded.value ? 0 : 200),
+          borderRadius: const BorderRadius.all(Radius.circular(15)),
+        ),
         height: height,
         width: width,
         child: ClipRRect(
@@ -133,13 +153,14 @@ class MapThumbnail extends HookConsumerWidget {
               ),
               ValueListenableBuilder(
                 valueListenable: position,
-                builder: (_, value, __) => value != null
-                    ? PositionedAssetMarkerIcon(
-                        size: height / 2,
-                        point: value,
-                        assetRemoteId: assetMarkerRemoteId!,
-                      )
-                    : const SizedBox.shrink(),
+                builder: (_, value, __) =>
+                    value != null && assetMarkerRemoteId != null
+                        ? PositionedAssetMarkerIcon(
+                            size: height / 2,
+                            point: value,
+                            assetRemoteId: assetMarkerRemoteId!,
+                          )
+                        : const SizedBox.shrink(),
               ),
             ],
           ),

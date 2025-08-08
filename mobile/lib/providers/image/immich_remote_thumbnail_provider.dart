@@ -25,7 +25,7 @@ class ImmichRemoteThumbnailProvider
   //final CacheManager? cacheManager;
   static final cacheThumbnail = ThumbnailImageCacheManager();
 
-  ImmichRemoteThumbnailProvider({
+  const ImmichRemoteThumbnailProvider({
     required this.assetId,
     this.height,
     this.width,

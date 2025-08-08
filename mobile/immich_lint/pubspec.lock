@@ -33,6 +33,7 @@ packages:
       url: "https://pub.flutter-io.cn"
     source: hosted
     version: "2.7.0"
+    version: "2.7.0"
   async:
     dependency: transitive
     description:
@@ -56,6 +57,7 @@ packages:
       sha256: "959525d3162f249993882720d52b7e0c833978df229be20702b33d48d91de70f"
       url: "https://pub.flutter-io.cn"
     source: hosted
+    version: "2.0.4"
     version: "2.0.4"
   ci:
     dependency: transitive
@@ -161,6 +163,7 @@ packages:
       url: "https://pub.flutter-io.cn"
     source: hosted
     version: "3.1.0"
+    version: "3.1.0"
   glob:
     dependency: "direct main"
     description:
@@ -217,6 +220,7 @@ packages:
       url: "https://pub.flutter-io.cn"
     source: hosted
     version: "1.17.0"
+    version: "1.17.0"
   package_config:
     dependency: transitive
     description:
@@ -224,6 +228,7 @@ packages:
       sha256: f096c55ebb7deb7e384101542bfba8c52696c1b56fca2eb62827989ef2353bbc
       url: "https://pub.flutter-io.cn"
     source: hosted
+    version: "2.2.0"
     version: "2.2.0"
   path:
     dependency: transitive
@@ -345,6 +350,7 @@ packages:
       url: "https://pub.flutter-io.cn"
     source: hosted
     version: "15.0.2"
+    version: "15.0.2"
   watcher:
     dependency: transitive
     description:
@@ -352,6 +358,7 @@ packages:
       sha256: "0b7fd4a0bbc4b92641dbf20adfd7e3fd1398fe17102d94b674234563e110088a"
       url: "https://pub.flutter-io.cn"
     source: hosted
+    version: "1.1.2"
     version: "1.1.2"
   yaml:
     dependency: transitive
@@ -362,4 +369,5 @@ packages:
     source: hosted
     version: "3.1.3"
 sdks:
+  dart: ">=3.8.0 <4.0.0"
   dart: ">=3.8.0 <4.0.0"
