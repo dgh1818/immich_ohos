@@ -8,7 +8,7 @@ environment:
   sdk: '>=3.3.0 <4.0.0'
   flutter: 3.29.3
 
-#isar_version: &isar_version ^3.1.0+1 # define the version to be used
+isar_version: &isar_version 3.1.0+1
 
 dependencies:
   flutter:
@@ -85,9 +85,34 @@ dependencies:
   isar_flutter_libs: ^3.1.0+1 #ok
   # DB
   drift: ^2.23.1
-  drift_flutter: ^0.2.4
+  #drift_flutter: ^0.2.4
+
+  drift_sqflite: ^2.0.1
 
 dependency_overrides:
+  sqflite:
+    git:
+      url: "https://gitcode.com/openharmony-sig/flutter_sqflite"
+      path: "sqflite"
+  sqflite_common:
+    git:
+      url: "https://gitcode.com/openharmony-sig/flutter_sqflite.git"
+      path: "sqflite_common"
+  sqflite_common_ffi:
+    git:
+      url: "https://gitcode.com/openharmony-sig/flutter_sqflite.git"
+      path: "sqflite_common_ffi"
+  sqflite_common_ffi_web:
+    git:
+      url: "https://gitcode.com/openharmony-sig/flutter_sqflite.git"
+      path: "packages_web/sqflite_common_ffi_web"
+
+  flutter_secure_storage:
+    git:
+      url: "https://gitcode.com/dgh18/fluttertpc_flutter_secure_storage.git"
+      path: "flutter_secure_storage"
+      ref: 92f7dbca19a95911a14b012e291b6a995a0f7f78
+
   analyzer: ^6.2.0
   #meta: ^1.11.0
   #analyzer_plugin: ^0.11.3
@@ -215,8 +240,6 @@ dependency_overrides:
   intl: 0.20.2
   uuid: ^4.4.2
   #easy_localization_generator: ^0.3.3
-  # photo_manager:
-  #   path: ./flutter_photo_manager
   # package_info_plus:
   #   git:
   #     url: https://gitee.com/openharmony-sig/flutter_plus_plugins.git
@@ -227,25 +250,10 @@ dependency_overrides:
 #f      url: https://github.com/Zverik/flutter-geolocator.git
 #f      ref: floss
 #f      path: geolocator_android
- # 数据库
-  sqflite:
-    git:
-      url: "https://gitcode.com/openharmony-sig/flutter_sqflite"
-      path: "sqflite"
-
-  sqflite_common:
-    git:
-      url: "https://gitcode.com/openharmony-sig/flutter_sqflite.git"
-      path: "sqflite_common"
-  sqflite_common_ffi:
-    git:
-      url: "https://gitcode.com/openharmony-sig/flutter_sqflite.git"
-      path: "sqflite_common_ffi"
-  sqflite_common_ffi_web:
-    git:
-      url: "https://gitcode.com/openharmony-sig/flutter_sqflite.git"
-      path: "packages_web/sqflite_common_ffi_web"
   wakelock_plus_platform_interface: ^1.2.1
+  analyzer_plugin: ^0.13.0
+  source_gen: ^2.0.0
+  dart_style: ^3.0.1
 
 
 dev_dependencies:
@@ -277,15 +285,19 @@ dev_dependencies:
   pigeon: ^25.3.1
 
 dev_dependency_overrides:
-  # isar_generator:
-  #   git:
-  #     url: https://gitee.com/openharmony-sig/fluttertpc_isar.git
-  #     path: 'packages/isar_generator'
+  isar_generator:
+    git:
+      url: https://gitee.com/openharmony-sig/fluttertpc_isar.git
+      path: 'packages/isar_generator'
   pigeon:
     git:
       url: https://gitcode.com/openharmony-sig/flutter_packages.git
       path: 'packages/pigeon'
       ref: br_pigeon-v25.3.2_ohos
+  drift_dev:
+    git:
+      url: https://gitcode.com/kaicc/drift.git
+      path: 'drift_dev'
 
   # Type safe platform code
 

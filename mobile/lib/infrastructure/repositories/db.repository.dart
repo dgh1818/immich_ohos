@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:drift/drift.dart';
-import 'package:drift_flutter/drift_flutter.dart';
+//import 'package:drift_flutter/drift_flutter.dart';
 import 'package:immich_mobile/domain/interfaces/db.interface.dart';
 import 'package:immich_mobile/infrastructure/entities/exif.entity.dart';
 import 'package:immich_mobile/infrastructure/entities/local_album.entity.dart';
@@ -14,6 +14,11 @@ import 'package:immich_mobile/infrastructure/entities/user_metadata.entity.dart'
 import 'package:isar/isar.dart';
 
 import 'db.repository.drift.dart';
+
+import 'dart:io';
+import 'package:drift_sqflite/drift_sqflite.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart';
 
 // #zoneTxn is the symbol used by Isar to mark a transaction within the current zone
 // ref: isar/isar_common.dart
@@ -28,6 +33,17 @@ class IsarDatabaseRepository implements IDatabaseRepository {
   @override
   Future<T> transaction<T>(Future<T> Function() callback) =>
       Zone.current[_kzoneTxn] == null ? _db.writeTxn(callback) : callback();
+}
+
+LazyDatabase _openConnection() {
+  return LazyDatabase(() async {
+    final docs = await getApplicationDocumentsDirectory();
+    final file = File(join(docs.path, 'immich.sqlite'));
+    return SqfliteQueryExecutor(
+      path: file.path,
+      logStatements: true,
+    );
+  });
 }
 
 @DriftDatabase(
@@ -45,15 +61,32 @@ class IsarDatabaseRepository implements IDatabaseRepository {
     'package:immich_mobile/infrastructure/entities/merged_asset.drift',
   },
 )
+// class Drift extends $Drift implements IDatabaseRepository {
+//   Drift([QueryExecutor? executor])
+//       : super(
+//           executor ??
+//               driftDatabase(
+//                 name: 'immich',
+//                 native: const DriftNativeOptions(shareAcrossIsolates: true),
+//               ),
+//         );
+
+//   @override
+//   int get schemaVersion => 1;
+
+//   @override
+//   MigrationStrategy get migration => MigrationStrategy(
+//         beforeOpen: (details) async {
+//           await customStatement('PRAGMA foreign_keys = ON');
+//           await customStatement('PRAGMA synchronous = NORMAL');
+//           await customStatement('PRAGMA journal_mode = WAL');
+//         },
+//       );
+// }
+
 class Drift extends $Drift implements IDatabaseRepository {
-  Drift([QueryExecutor? executor])
-      : super(
-          executor ??
-              driftDatabase(
-                name: 'immich',
-                native: const DriftNativeOptions(shareAcrossIsolates: true),
-              ),
-        );
+  /// 直接走 sqflite，不再用 FFI/native
+  Drift() : super(_openConnection());
 
   @override
   int get schemaVersion => 1;
