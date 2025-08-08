@@ -2206,10 +2206,10 @@ packages:
     dependency: "direct overridden"
     description:
       name: wakelock_plus_platform_interface
-      sha256: e10444072e50dbc4999d7316fd303f7ea53d31c824aa5eb05d7ccbdd98985207
+      sha256: "422d1cdbb448079a8a62a5a770b69baa489f8f7ca21aef47800c726d404f9d16"
       url: "https://pub.flutter-io.cn"
     source: hosted
-    version: "1.2.3"
+    version: "1.2.1"
   watcher:
     dependency: transitive
     description:

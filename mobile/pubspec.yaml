@@ -250,7 +250,7 @@ dependency_overrides:
 #f      url: https://github.com/Zverik/flutter-geolocator.git
 #f      ref: floss
 #f      path: geolocator_android
-  wakelock_plus_platform_interface: ^1.2.1
+  wakelock_plus_platform_interface: 1.2.1
   analyzer_plugin: ^0.13.0
   source_gen: ^2.0.0
   dart_style: ^3.0.1
