@@ -4,13 +4,13 @@ import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:immich_mobile/extensions/build_context_extensions.dart';
 import 'package:immich_mobile/providers/album/album.provider.dart';
+import 'package:immich_mobile/providers/asset.provider.dart';
 import 'package:immich_mobile/providers/asset_viewer/scroll_notifier.provider.dart';
+import 'package:immich_mobile/providers/haptic_feedback.provider.dart';
 import 'package:immich_mobile/providers/multiselect.provider.dart';
 import 'package:immich_mobile/providers/search/search_input_focus.provider.dart';
-import 'package:immich_mobile/routing/router.dart';
-import 'package:immich_mobile/providers/asset.provider.dart';
-import 'package:immich_mobile/providers/haptic_feedback.provider.dart';
 import 'package:immich_mobile/providers/tab.provider.dart';
+import 'package:immich_mobile/routing/router.dart';
 
 import 'package:flutter_svg/svg.dart';
 import 'package:flutter_hooks/flutter_hooks.dart' hide Store;
@@ -219,6 +219,7 @@ class TabControllerPage extends HookConsumerWidget {
                     children: [
                       // 左侧导航栏
                       navigationRail(tabsRouter),
+                      //const VerticalDivider(),
 
                       // —— 2) 内容区 ——
                       AnimatedPositioned(
@@ -258,7 +259,7 @@ class TabControllerPage extends HookConsumerWidget {
                       ),
                     ],
                   )
-                : heroedChild,
+                : child,
             bottomNavigationBar: multiselectEnabled || isScreenLandscape
                 ? null
                 : bottomNavigationBar(tabsRouter),

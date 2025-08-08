@@ -7,7 +7,7 @@ part of 'video_player_controller_provider.dart';
 // **************************************************************************
 
 String _$videoPlayerControllerHash() =>
-    r'84b2961cc2aeaf9d03255dbf9b9484619d0c24f5';
+    r'124fbc3d6a82856895c2f3aeb29091df3b876689';
 
 /// Copied from Dart SDK
 class _SystemHash {
@@ -146,6 +146,8 @@ class VideoPlayerControllerProvider
   }
 }
 
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
 mixin VideoPlayerControllerRef
     on AutoDisposeFutureProviderRef<VideoPlayerController> {
   /// The parameter `asset` of this provider.
@@ -161,4 +163,4 @@ class _VideoPlayerControllerProviderElement
   Asset get asset => (origin as VideoPlayerControllerProvider).asset;
 }
 // ignore_for_file: type=lint
-// ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member
+// ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member, deprecated_member_use_from_same_package
