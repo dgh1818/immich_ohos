@@ -39,9 +39,9 @@ class ViewerBottomBar extends ConsumerWidget {
     final actions = <Widget>[
       const ShareActionButton(source: ActionSource.viewer),
       if (asset.isLocalOnly)
-        const UploadActionButton(source: ActionSource.viewer),
-      if (asset.hasRemote && isOwner)
-        const ArchiveActionButton(source: ActionSource.viewer),
+        //const UploadActionButton(source: ActionSource.viewer),
+        if (asset.hasRemote && isOwner)
+          const ArchiveActionButton(source: ActionSource.viewer),
     ];
 
     return IgnorePointer(

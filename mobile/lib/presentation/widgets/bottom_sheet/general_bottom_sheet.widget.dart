@@ -38,7 +38,7 @@ class GeneralBottomSheet extends ConsumerWidget {
           const ShareLinkActionButton(source: ActionSource.timeline),
           const ArchiveActionButton(source: ActionSource.timeline),
           const FavoriteActionButton(source: ActionSource.timeline),
-          const DownloadActionButton(source: ActionSource.timeline),
+          //const DownloadActionButton(source: ActionSource.timeline),
           isTrashEnable
               ? const TrashActionButton(source: ActionSource.timeline)
               : const DeletePermanentActionButton(
@@ -56,7 +56,7 @@ class GeneralBottomSheet extends ConsumerWidget {
         ],
         if (multiselect.hasLocal) ...[
           const DeleteLocalActionButton(source: ActionSource.timeline),
-          const UploadActionButton(source: ActionSource.timeline),
+          //const UploadActionButton(source: ActionSource.timeline),
         ],
       ],
     );

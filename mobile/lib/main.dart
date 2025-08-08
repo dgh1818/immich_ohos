@@ -101,10 +101,10 @@ Future<void> initApp() async {
 
   // Initialize the file downloader
 
-  await FileDownloader().configure(
-    // maxConcurrent: 6, maxConcurrentByHost(server):6, maxConcurrentByGroup: 3
-    globalConfig: (Config.holdingQueue, (6, 6, 3)),
-  );
+  // await FileDownloader().configure(
+  //   // maxConcurrent: 6, maxConcurrentByHost(server):6, maxConcurrentByGroup: 3
+  //   globalConfig: (Config.holdingQueue, (6, 6, 3)),
+  // );
 
   // await FileDownloader().trackTasksInGroup(
   //   kDownloadGroupLivePhoto,

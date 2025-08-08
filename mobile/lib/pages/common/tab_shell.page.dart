@@ -5,7 +5,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:immich_mobile/extensions/build_context_extensions.dart';
 import 'package:immich_mobile/providers/app_settings.provider.dart';
 import 'package:immich_mobile/providers/asset_viewer/scroll_notifier.provider.dart';
-import 'package:immich_mobile/providers/backup/drift_backup.provider.dart';
+//import 'package:immich_mobile/providers/backup/drift_backup.provider.dart';
 import 'package:immich_mobile/providers/haptic_feedback.provider.dart';
 import 'package:immich_mobile/providers/infrastructure/album.provider.dart';
 import 'package:immich_mobile/providers/search/search_input_focus.provider.dart';
@@ -33,22 +33,22 @@ class _TabShellPageState extends ConsumerState<TabShellPage> {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       ref.read(websocketProvider.notifier).connect();
 
-      final isEnableBackup = ref
-          .read(appSettingsServiceProvider)
-          .getSetting(AppSettingsEnum.enableBackup);
+      // final isEnableBackup = ref
+      //     .read(appSettingsServiceProvider)
+      //     .getSetting(AppSettingsEnum.enableBackup);
 
-      await runNewSync(ref, full: true).then((_) async {
-        if (isEnableBackup) {
-          final currentUser = ref.read(currentUserProvider);
-          if (currentUser == null) {
-            return;
-          }
+      // await runNewSync(ref, full: true).then((_) async {
+      //   if (isEnableBackup) {
+      //     final currentUser = ref.read(currentUserProvider);
+      //     if (currentUser == null) {
+      //       return;
+      //     }
 
-          await ref
-              .read(driftBackupProvider.notifier)
-              .handleBackupResume(currentUser.id);
-        }
-      });
+      //     await ref
+      //         .read(driftBackupProvider.notifier)
+      //         .handleBackupResume(currentUser.id);
+      //   }
+      // });
     });
   }
 

@@ -53,17 +53,17 @@ class AssetDetailBottomSheet extends ConsumerWidget {
         const ShareLinkActionButton(source: ActionSource.viewer),
         const ArchiveActionButton(source: ActionSource.viewer),
         if (!asset.hasLocal)
-          const DownloadActionButton(source: ActionSource.viewer),
-        isTrashEnable
-            ? const TrashActionButton(source: ActionSource.viewer)
-            : const DeletePermanentActionButton(source: ActionSource.viewer),
+          //const DownloadActionButton(source: ActionSource.viewer),
+          isTrashEnable
+              ? const TrashActionButton(source: ActionSource.viewer)
+              : const DeletePermanentActionButton(source: ActionSource.viewer),
         const MoveToLockFolderActionButton(
           source: ActionSource.viewer,
         ),
       ],
       if (asset.storage == AssetState.local) ...[
         const DeleteLocalActionButton(source: ActionSource.viewer),
-        const UploadActionButton(source: ActionSource.timeline),
+        //const UploadActionButton(source: ActionSource.timeline),
       ],
     ];
 

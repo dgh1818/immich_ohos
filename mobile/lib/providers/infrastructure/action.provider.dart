@@ -5,7 +5,7 @@ import 'package:immich_mobile/providers/infrastructure/asset_viewer/current_asse
 import 'package:immich_mobile/providers/timeline/multiselect.provider.dart';
 import 'package:immich_mobile/providers/user.provider.dart';
 import 'package:immich_mobile/services/action.service.dart';
-import 'package:immich_mobile/services/drift_backup.service.dart';
+//import 'package:immich_mobile/services/drift_backup.service.dart';
 import 'package:immich_mobile/services/timeline.service.dart';
 import 'package:logging/logging.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -33,14 +33,14 @@ class ActionResult {
 class ActionNotifier extends Notifier<void> {
   final Logger _logger = Logger('ActionNotifier');
   late ActionService _service;
-  late DriftBackupService _backupService;
+  //late DriftBackupService _backupService;
 
   ActionNotifier() : super();
 
   @override
   void build() {
     _service = ref.watch(actionServiceProvider);
-    _backupService = ref.watch(driftBackupServiceProvider);
+    //_backupService = ref.watch(driftBackupServiceProvider);
   }
 
   List<String> _getRemoteIdsForSource(ActionSource source) {
@@ -354,38 +354,38 @@ class ActionNotifier extends Notifier<void> {
     }
   }
 
-  Future<ActionResult> downloadAll(ActionSource source) async {
-    final assets =
-        _getAssets(source).whereType<RemoteAsset>().toList(growable: false);
+  // Future<ActionResult> downloadAll(ActionSource source) async {
+  //   final assets =
+  //       _getAssets(source).whereType<RemoteAsset>().toList(growable: false);
 
-    try {
-      final didEnqueue = await _service.downloadAll(assets);
-      final enqueueCount = didEnqueue.where((e) => e).length;
-      return ActionResult(count: enqueueCount, success: true);
-    } catch (error, stack) {
-      _logger.severe('Failed to download assets', error, stack);
-      return ActionResult(
-        count: assets.length,
-        success: false,
-        error: error.toString(),
-      );
-    }
-  }
+  //   try {
+  //     final didEnqueue = await _service.downloadAll(assets);
+  //     final enqueueCount = didEnqueue.where((e) => e).length;
+  //     return ActionResult(count: enqueueCount, success: true);
+  //   } catch (error, stack) {
+  //     _logger.severe('Failed to download assets', error, stack);
+  //     return ActionResult(
+  //       count: assets.length,
+  //       success: false,
+  //       error: error.toString(),
+  //     );
+  //   }
+  // }
 
-  Future<ActionResult> upload(ActionSource source) async {
-    final assets = _getAssets(source).whereType<LocalAsset>().toList();
-    try {
-      await _backupService.manualBackup(assets);
-      return ActionResult(count: assets.length, success: true);
-    } catch (error, stack) {
-      _logger.severe('Failed manually upload assets', error, stack);
-      return ActionResult(
-        count: assets.length,
-        success: false,
-        error: error.toString(),
-      );
-    }
-  }
+  // Future<ActionResult> upload(ActionSource source) async {
+  //   final assets = _getAssets(source).whereType<LocalAsset>().toList();
+  //   try {
+  //     await _backupService.manualBackup(assets);
+  //     return ActionResult(count: assets.length, success: true);
+  //   } catch (error, stack) {
+  //     _logger.severe('Failed manually upload assets', error, stack);
+  //     return ActionResult(
+  //       count: assets.length,
+  //       success: false,
+  //       error: error.toString(),
+  //     );
+  //   }
+  // }
 }
 
 extension on Iterable<RemoteAsset> {

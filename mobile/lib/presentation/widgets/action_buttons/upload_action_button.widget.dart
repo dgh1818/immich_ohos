@@ -8,43 +8,43 @@ import 'package:immich_mobile/providers/infrastructure/action.provider.dart';
 import 'package:immich_mobile/providers/timeline/multiselect.provider.dart';
 import 'package:immich_mobile/widgets/common/immich_toast.dart';
 
-class UploadActionButton extends ConsumerWidget {
-  final ActionSource source;
+// class UploadActionButton extends ConsumerWidget {
+//   final ActionSource source;
 
-  const UploadActionButton({super.key, required this.source});
+//   const UploadActionButton({super.key, required this.source});
 
-  void _onTap(BuildContext context, WidgetRef ref) async {
-    if (!context.mounted) {
-      return;
-    }
+//   void _onTap(BuildContext context, WidgetRef ref) async {
+//     if (!context.mounted) {
+//       return;
+//     }
 
-    final result = await ref.read(actionProvider.notifier).upload(source);
+//     final result = await ref.read(actionProvider.notifier).upload(source);
 
-    final successMessage = 'upload_action_prompt'.t(
-      context: context,
-      args: {'count': result.count.toString()},
-    );
+//     final successMessage = 'upload_action_prompt'.t(
+//       context: context,
+//       args: {'count': result.count.toString()},
+//     );
 
-    if (context.mounted) {
-      ImmichToast.show(
-        context: context,
-        msg: result.success
-            ? successMessage
-            : 'scaffold_body_error_occurred'.t(context: context),
-        gravity: ToastGravity.BOTTOM,
-        toastType: result.success ? ToastType.success : ToastType.error,
-      );
+//     if (context.mounted) {
+//       ImmichToast.show(
+//         context: context,
+//         msg: result.success
+//             ? successMessage
+//             : 'scaffold_body_error_occurred'.t(context: context),
+//         gravity: ToastGravity.BOTTOM,
+//         toastType: result.success ? ToastType.success : ToastType.error,
+//       );
 
-      ref.read(multiSelectProvider.notifier).reset();
-    }
-  }
+//       ref.read(multiSelectProvider.notifier).reset();
+//     }
+//   }
 
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return BaseActionButton(
-      iconData: Icons.backup_outlined,
-      label: "upload".t(context: context),
-      onPressed: () => _onTap(context, ref),
-    );
-  }
-}
+//   @override
+//   Widget build(BuildContext context, WidgetRef ref) {
+//     return BaseActionButton(
+//       iconData: Icons.backup_outlined,
+//       label: "upload".t(context: context),
+//       onPressed: () => _onTap(context, ref),
+//     );
+//   }
+// }
