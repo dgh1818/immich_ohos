@@ -17,12 +17,8 @@ class VideoPosition extends HookConsumerWidget {
     //final isCasting = ref.watch(castProvider).isCasting;
 
     // final (position, duration) = isCasting
-    //     ? ref.watch(
-    //         castProvider.select((c) => (c.currentTime, c.duration)),
-    //       )
-    //     : ref.watch(
-    //         videoPlaybackValueProvider.select((v) => (v.position, v.duration)),
-    //       );
+    //     ? ref.watch(castProvider.select((c) => (c.currentTime, c.duration)))
+    //     : ref.watch(videoPlaybackValueProvider.select((v) => (v.position, v.duration)));
 
     final (position, duration) = ref.watch(
       videoPlaybackValueProvider.select((v) => (v.position, v.duration)),
@@ -40,7 +36,7 @@ class VideoPosition extends HookConsumerWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     FormattedDuration(position),
-                    FormattedDuration(duration),
+                    FormattedDuration(duration)
                   ],
                 ),
               ),
@@ -49,9 +45,10 @@ class VideoPosition extends HookConsumerWidget {
                   Expanded(
                     child: Slider(
                       value: min(
-                        position.inMicroseconds / duration.inMicroseconds * 100,
-                        100,
-                      ),
+                          position.inMicroseconds /
+                              duration.inMicroseconds *
+                              100,
+                          100),
                       min: 0,
                       max: 100,
                       thumbColor: Colors.white,
@@ -72,9 +69,7 @@ class VideoPosition extends HookConsumerWidget {
                       //   final seekToDuration = (duration * (value / 100.0));
 
                       //   if (isCasting) {
-                      //     ref
-                      //         .read(castProvider.notifier)
-                      //         .seekTo(seekToDuration);
+                      //     ref.read(castProvider.notifier).seekTo(seekToDuration);
                       //     return;
                       //   }
 
@@ -123,7 +118,7 @@ class _VideoPositionPlaceholder extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               FormattedDuration(Duration.zero),
-              FormattedDuration(Duration.zero),
+              FormattedDuration(Duration.zero)
             ],
           ),
         ),

@@ -81,26 +81,20 @@ class MultiselectGrid extends HookConsumerWidget {
     final currentUser = ref.watch(currentUserProvider);
     final processing = useProcessingOverlay();
 
-    useEffect(
-      () {
-        selectionEnabledHook.addListener(() {
-          multiselectEnabled.state = selectionEnabledHook.value;
-        });
+    useEffect(() {
+      selectionEnabledHook.addListener(() {
+        multiselectEnabled.state = selectionEnabledHook.value;
+      });
 
-        return () {
-          // This does not work in tests
-          if (kReleaseMode) {
-            selectionEnabledHook.dispose();
-          }
-        };
-      },
-      [],
-    );
+      return () {
+        // This does not work in tests
+        if (kReleaseMode) {
+          selectionEnabledHook.dispose();
+        }
+      };
+    }, []);
 
-    void selectionListener(
-      bool multiselect,
-      Set<Asset> selectedAssets,
-    ) {
+    void selectionListener(bool multiselect, Set<Asset> selectedAssets) {
       selectionEnabledHook.value = multiselect;
       selection.value = selectedAssets;
       selectionAssetState.value =
@@ -109,29 +103,20 @@ class MultiselectGrid extends HookConsumerWidget {
 
     errorBuilder(String? msg) => msg != null && msg.isNotEmpty
         ? () => ImmichToast.show(
-              context: context,
-              msg: msg,
-              gravity: ToastGravity.BOTTOM,
-            )
+            context: context, msg: msg, gravity: ToastGravity.BOTTOM)
         : null;
 
-    Iterable<Asset> ownedRemoteSelection({
-      String? localErrorMessage,
-      String? ownerErrorMessage,
-    }) {
+    Iterable<Asset> ownedRemoteSelection(
+        {String? localErrorMessage, String? ownerErrorMessage}) {
       final assets = selection.value;
       return assets
           .remoteOnly(errorCallback: errorBuilder(localErrorMessage))
-          .ownedOnly(
-            currentUser,
-            errorCallback: errorBuilder(ownerErrorMessage),
-          );
+          .ownedOnly(currentUser,
+              errorCallback: errorBuilder(ownerErrorMessage));
     }
 
     Iterable<Asset> remoteSelection({String? errorMessage}) =>
-        selection.value.remoteOnly(
-          errorCallback: errorBuilder(errorMessage),
-        );
+        selection.value.remoteOnly(errorCallback: errorBuilder(errorMessage));
 
     void onShareAssets(bool shareLocal) {
       processing.value = true;
@@ -182,10 +167,9 @@ class MultiselectGrid extends HookConsumerWidget {
       processing.value = true;
       try {
         final toDelete = selection.value
-            .ownedOnly(
-              currentUser,
-              errorCallback: errorBuilder('home_page_delete_err_partner'.tr()),
-            )
+            .ownedOnly(currentUser,
+                errorCallback:
+                    errorBuilder('home_page_delete_err_partner'.tr()))
             .toList();
         final isDeleted = await ref
             .read(assetProvider.notifier)
@@ -248,34 +232,17 @@ class MultiselectGrid extends HookConsumerWidget {
     //   try {
     //     final toDownload = selection.value.toList();
 
-    //     final results = await ref
-    //         .read(downloadStateProvider.notifier)
-    //         .downloadAllAsset(toDownload);
+    //final results = await ref.read(downloadStateProvider.notifier).downloadAllAsset(toDownload);
 
     //     final totalCount = toDownload.length;
     //     final successCount = results.where((e) => e).length;
     //     final failedCount = totalCount - successCount;
 
-    //     final msg = failedCount > 0
-    //         ? 'assets_downloaded_failed'.t(
-    //             context: context,
-    //             args: {
-    //               'count': successCount,
-    //               'error': failedCount,
-    //             },
-    //           )
-    //         : 'assets_downloaded_successfully'.t(
-    //             context: context,
-    //             args: {
-    //               'count': successCount,
-    //             },
-    //           );
+    // final msg = failedCount > 0
+    //     ? 'assets_downloaded_failed'.t(context: context, args: {'count': successCount, 'error': failedCount})
+    //     : 'assets_downloaded_successfully'.t(context: context, args: {'count': successCount});
 
-    //     ImmichToast.show(
-    //       context: context,
-    //       msg: msg,
-    //       gravity: ToastGravity.BOTTOM,
-    //     );
+    //     ImmichToast.show(context: context, msg: msg, gravity: ToastGravity.BOTTOM);
     //   } finally {
     //     processing.value = false;
     //     selectionEnabledHook.value = false;
@@ -290,11 +257,10 @@ class MultiselectGrid extends HookConsumerWidget {
           ownerErrorMessage: 'home_page_delete_err_partner'.tr(),
         ).toList();
 
-        final isDeleted =
-            await ref.read(assetProvider.notifier).deleteRemoteAssets(
-                  toDelete,
-                  shouldDeletePermanently: shouldDeletePermanently,
-                );
+        final isDeleted = await ref
+            .read(assetProvider.notifier)
+            .deleteRemoteAssets(toDelete,
+                shouldDeletePermanently: shouldDeletePermanently);
         if (isDeleted) {
           ImmichToast.show(
             context: context,
@@ -316,10 +282,8 @@ class MultiselectGrid extends HookConsumerWidget {
       processing.value = true;
       selectionEnabledHook.value = false;
       try {
-        ref.read(manualUploadProvider.notifier).uploadAssets(
-              context,
-              selection.value.where((a) => a.storage == AssetState.local),
-            );
+        ref.read(manualUploadProvider.notifier).uploadAssets(context,
+            selection.value.where((a) => a.storage == AssetState.local));
       } finally {
         processing.value = false;
       }
@@ -329,15 +293,12 @@ class MultiselectGrid extends HookConsumerWidget {
       processing.value = true;
       try {
         final Iterable<Asset> assets = remoteSelection(
-          errorMessage: "home_page_add_to_album_err_local".tr(),
-        );
+            errorMessage: "home_page_add_to_album_err_local".tr());
         if (assets.isEmpty) {
           return;
         }
-        final result = await ref.read(albumServiceProvider).addAssets(
-              album,
-              assets,
-            );
+        final result =
+            await ref.read(albumServiceProvider).addAssets(album, assets);
 
         if (result != null) {
           if (result.alreadyInAlbum.isNotEmpty) {
@@ -357,7 +318,7 @@ class MultiselectGrid extends HookConsumerWidget {
               msg: "home_page_add_to_album_success".tr(
                 namedArgs: {
                   "album": album.name,
-                  "added": result.successfullyAdded.toString(),
+                  "added": result.successfullyAdded.toString()
                 },
               ),
               toastType: ToastType.success,
@@ -374,8 +335,7 @@ class MultiselectGrid extends HookConsumerWidget {
       processing.value = true;
       try {
         final Iterable<Asset> assets = remoteSelection(
-          errorMessage: "home_page_add_to_album_err_local".tr(),
-        );
+            errorMessage: "home_page_add_to_album_err_local".tr());
         if (assets.isEmpty) {
           return;
         }
@@ -401,9 +361,9 @@ class MultiselectGrid extends HookConsumerWidget {
           return;
         }
 
-        await ref.read(stackServiceProvider).createStack(
-              selection.value.map((e) => e.remoteId!).toList(),
-            );
+        await ref
+            .read(stackServiceProvider)
+            .createStack(selection.value.map((e) => e.remoteId!).toList());
       } finally {
         processing.value = false;
         selectionEnabledHook.value = false;
@@ -454,11 +414,7 @@ class MultiselectGrid extends HookConsumerWidget {
               : AssetVisibilityEnum.locked;
 
           await handleSetAssetsVisibility(
-            ref,
-            context,
-            visibility,
-            remoteAssets.toList(),
-          );
+              ref, context, visibility, remoteAssets.toList());
         }
       } finally {
         processing.value = false;
@@ -466,10 +422,8 @@ class MultiselectGrid extends HookConsumerWidget {
       }
     }
 
-    Future<T> Function() wrapLongRunningFun<T>(
-      Future<T> Function() fun, {
-      bool showOverlay = true,
-    }) =>
+    Future<T> Function() wrapLongRunningFun<T>(Future<T> Function() fun,
+            {bool showOverlay = true}) =>
         () async {
           if (showOverlay) processing.value = true;
           try {
@@ -498,10 +452,8 @@ class MultiselectGrid extends HookConsumerWidget {
                         selectionActive: selectionEnabledHook.value,
                         onRefresh: onRefresh == null
                             ? null
-                            : wrapLongRunningFun(
-                                onRefresh!,
-                                showOverlay: false,
-                              ),
+                            : wrapLongRunningFun(onRefresh!,
+                                showOverlay: false),
                         topWidget: topWidget,
                         showStack: stackEnabled,
                         showDragScrollLabel: dragScrollLabelEnabled,
@@ -536,8 +488,7 @@ class MultiselectGrid extends HookConsumerWidget {
               onToggleLocked: onToggleLockedVisibility,
               onRemoveFromAlbum: onRemoveFromAlbum != null
                   ? wrapLongRunningFun(
-                      () => onRemoveFromAlbum!(selection.value),
-                    )
+                      () => onRemoveFromAlbum!(selection.value))
                   : null,
             ),
         ],

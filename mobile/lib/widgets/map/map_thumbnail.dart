@@ -158,8 +158,7 @@ class MapThumbnail extends HookConsumerWidget {
                         ? PositionedAssetMarkerIcon(
                             size: height / 2,
                             point: value,
-                            assetRemoteId: assetMarkerRemoteId!,
-                          )
+                            assetRemoteId: assetMarkerRemoteId!)
                         : const SizedBox.shrink(),
               ),
             ],

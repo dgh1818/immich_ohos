@@ -6,7 +6,6 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:immich_mobile/domain/models/album/local_album.model.dart';
 import 'package:immich_mobile/extensions/build_context_extensions.dart';
 import 'package:immich_mobile/extensions/translate_extensions.dart';
-import 'package:immich_mobile/providers/album/album.provider.dart';
 import 'package:immich_mobile/providers/app_settings.provider.dart';
 import 'package:immich_mobile/providers/backup/backup_album.provider.dart';
 //import 'package:immich_mobile/providers/backup/drift_backup.provider.dart';
@@ -14,7 +13,6 @@ import 'package:immich_mobile/providers/user.provider.dart';
 import 'package:immich_mobile/services/app_settings.service.dart';
 import 'package:immich_mobile/widgets/backup/drift_album_info_list_tile.dart';
 import 'package:immich_mobile/widgets/common/search_field.dart';
-import 'package:immich_mobile/widgets/settings/settings_switch_list_tile.dart';
 
 @RoutePage()
 class DriftBackupAlbumSelectionPage extends ConsumerStatefulWidget {
@@ -47,8 +45,7 @@ class _DriftBackupAlbumSelectionPageState
         .getSetting(AppSettingsEnum.syncAlbums);
     ref.read(backupAlbumProvider.notifier).getAll();
 
-    // _initialTotalAssetCount =
-    //     ref.read(driftBackupProvider.select((p) => p.totalCount));
+    //_initialTotalAssetCount = ref.read(driftBackupProvider.select((p) => p.totalCount));
   }
 
   @override
@@ -76,14 +73,14 @@ class _DriftBackupAlbumSelectionPageState
         .where((album) => album.backupSelection == BackupSelection.excluded)
         .toList();
 
-    handleSyncAlbumToggle(bool isEnable) async {
-      if (isEnable) {
-        await ref.read(albumProvider.notifier).refreshRemoteAlbums();
-        for (final album in selectedBackupAlbums) {
-          await ref.read(albumProvider.notifier).createSyncAlbum(album.name);
-        }
-      }
-    }
+    // handleSyncAlbumToggle(bool isEnable) async {
+    //   if (isEnable) {
+    //     await ref.read(albumProvider.notifier).refreshRemoteAlbums();
+    //     for (final album in selectedBackupAlbums) {
+    //       await ref.read(albumProvider.notifier).createSyncAlbum(album.name);
+    //     }
+    //   }
+    // }
 
     return PopScope(
       onPopInvokedWithResult: (didPop, result) async {
@@ -92,22 +89,16 @@ class _DriftBackupAlbumSelectionPageState
         if (didPop && !_hasPopped) {
           _hasPopped = true;
 
-          super.initState();
           final currentUser = ref.read(currentUserProvider);
           if (currentUser == null) {
             return;
           }
 
-          // await ref
-          //     .read(driftBackupProvider.notifier)
-          //     .getBackupStatus(currentUser.id);
-          // final currentTotalAssetCount =
-          //     ref.read(driftBackupProvider.select((p) => p.totalCount));
+          // await ref.read(driftBackupProvider.notifier).getBackupStatus(currentUser.id);
+          // final currentTotalAssetCount = ref.read(driftBackupProvider.select((p) => p.totalCount));
 
           // if (currentTotalAssetCount != _initialTotalAssetCount) {
-          //   final isBackupEnabled = ref
-          //       .read(appSettingsServiceProvider)
-          //       .getSetting(AppSettingsEnum.enableBackup);
+          //   final isBackupEnabled = ref.read(appSettingsServiceProvider).getSetting(AppSettingsEnum.enableBackup);
 
           //   if (!isBackupEnabled) {
           //     return;
@@ -135,9 +126,8 @@ class _DriftBackupAlbumSelectionPageState
                   onChanged: (value) =>
                       setState(() => _searchQuery = value.trim()),
                 )
-              : const Text(
-                  "backup_album_selection_page_select_albums",
-                ).t(context: context),
+              : const Text("backup_album_selection_page_select_albums")
+                  .t(context: context),
           actions: [
             if (!_isSearchMode)
               IconButton(
@@ -168,69 +158,54 @@ class _DriftBackupAlbumSelectionPageState
                 children: [
                   Padding(
                     padding: const EdgeInsets.symmetric(
-                      vertical: 8.0,
-                      horizontal: 16.0,
-                    ),
+                        vertical: 8.0, horizontal: 16.0),
                     child: Text(
                       "backup_album_selection_page_selection_info",
                       style: context.textTheme.titleSmall,
                     ).t(context: context),
                   ),
-                  // Selected Album Chips
 
+                  // Selected Album Chips
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16.0),
                     child: Wrap(
                       children: [
                         _SelectedAlbumNameChips(
-                          selectedBackupAlbums: selectedBackupAlbums,
-                        ),
+                            selectedBackupAlbums: selectedBackupAlbums),
                         _ExcludedAlbumNameChips(
-                          excludedBackupAlbums: excludedBackupAlbums,
-                        ),
+                            excludedBackupAlbums: excludedBackupAlbums),
                       ],
                     ),
                   ),
 
-                  SettingsSwitchListTile(
-                    valueNotifier: _enableSyncUploadAlbum,
-                    title: "sync_albums".t(context: context),
-                    subtitle: "sync_upload_album_setting_subtitle"
-                        .t(context: context),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16),
-                    titleStyle: context.textTheme.bodyLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                    subtitleStyle: context.textTheme.labelLarge?.copyWith(
-                      color: context.colorScheme.primary,
-                    ),
-                    onChanged: handleSyncAlbumToggle,
-                  ),
-
+                  // SettingsSwitchListTile(
+                  //   valueNotifier: _enableSyncUploadAlbum,
+                  //   title: "sync_albums".t(context: context),
+                  //   subtitle: "sync_upload_album_setting_subtitle".t(context: context),
+                  //   contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+                  //   titleStyle: context.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold),
+                  //   subtitleStyle: context.textTheme.labelLarge?.copyWith(color: context.colorScheme.primary),
+                  //   onChanged: handleSyncAlbumToggle,
+                  // ),
                   ListTile(
                     title: Text(
                       "albums_on_device_count".t(
-                        context: context,
-                        args: {'count': albumCount.toString()},
-                      ),
+                          context: context,
+                          args: {'count': albumCount.toString()}),
                       style: context.textTheme.titleSmall,
                     ),
                     subtitle: Padding(
                       padding: const EdgeInsets.symmetric(vertical: 8.0),
                       child: Text(
                         "backup_album_selection_page_albums_tap",
-                        style: context.textTheme.labelLarge?.copyWith(
-                          color: context.primaryColor,
-                        ),
+                        style: context.textTheme.labelLarge
+                            ?.copyWith(color: context.primaryColor),
                       ).t(context: context),
                     ),
                     trailing: IconButton(
                       splashRadius: 16,
-                      icon: Icon(
-                        Icons.info,
-                        size: 20,
-                        color: context.primaryColor,
-                      ),
+                      icon: Icon(Icons.info,
+                          size: 20, color: context.primaryColor),
                       onPressed: () {
                         // show the dialog
                         showDialog(
@@ -238,9 +213,8 @@ class _DriftBackupAlbumSelectionPageState
                           builder: (BuildContext context) {
                             return AlertDialog(
                               shape: const RoundedRectangleBorder(
-                                borderRadius:
-                                    BorderRadius.all(Radius.circular(10)),
-                              ),
+                                  borderRadius:
+                                      BorderRadius.all(Radius.circular(10))),
                               elevation: 5,
                               title: Text(
                                 'backup_album_selection_page_selection_info',
@@ -255,9 +229,7 @@ class _DriftBackupAlbumSelectionPageState
                                   children: [
                                     const Text(
                                       'backup_album_selection_page_assets_scatter',
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                      ),
+                                      style: TextStyle(fontSize: 14),
                                     ).t(context: context),
                                   ],
                                 ),
@@ -271,9 +243,8 @@ class _DriftBackupAlbumSelectionPageState
 
                   if (Platform.isAndroid)
                     _SelectAllButton(
-                      filteredAlbums: filteredAlbums,
-                      selectedBackupAlbums: selectedBackupAlbums,
-                    ),
+                        filteredAlbums: filteredAlbums,
+                        selectedBackupAlbums: selectedBackupAlbums),
                 ],
               ),
             ),
@@ -281,14 +252,12 @@ class _DriftBackupAlbumSelectionPageState
               builder: (context, constraints) {
                 if (constraints.crossAxisExtent > 600) {
                   return _AlbumSelectionGrid(
-                    filteredAlbums: filteredAlbums,
-                    searchQuery: _searchQuery,
-                  );
+                      filteredAlbums: filteredAlbums,
+                      searchQuery: _searchQuery);
                 } else {
                   return _AlbumSelectionList(
-                    filteredAlbums: filteredAlbums,
-                    searchQuery: _searchQuery,
-                  );
+                      filteredAlbums: filteredAlbums,
+                      searchQuery: _searchQuery);
                 }
               },
             ),
@@ -303,10 +272,8 @@ class _AlbumSelectionList extends StatelessWidget {
   final List<LocalAlbum> filteredAlbums;
   final String searchQuery;
 
-  const _AlbumSelectionList({
-    required this.filteredAlbums,
-    required this.searchQuery,
-  });
+  const _AlbumSelectionList(
+      {required this.filteredAlbums, required this.searchQuery});
 
   @override
   Widget build(BuildContext context) {
@@ -323,23 +290,15 @@ class _AlbumSelectionList extends StatelessWidget {
 
     if (filteredAlbums.isEmpty) {
       return const SliverToBoxAdapter(
-        child: Center(
-          child: CircularProgressIndicator(),
-        ),
-      );
+          child: Center(child: CircularProgressIndicator()));
     }
 
     return SliverPadding(
       padding: const EdgeInsets.symmetric(vertical: 12.0),
       sliver: SliverList(
-        delegate: SliverChildBuilderDelegate(
-          ((context, index) {
-            return DriftAlbumInfoListTile(
-              album: filteredAlbums[index],
-            );
-          }),
-          childCount: filteredAlbums.length,
-        ),
+        delegate: SliverChildBuilderDelegate(((context, index) {
+          return DriftAlbumInfoListTile(album: filteredAlbums[index]);
+        }), childCount: filteredAlbums.length),
       ),
     );
   }
@@ -349,10 +308,8 @@ class _AlbumSelectionGrid extends StatelessWidget {
   final List<LocalAlbum> filteredAlbums;
   final String searchQuery;
 
-  const _AlbumSelectionGrid({
-    required this.filteredAlbums,
-    required this.searchQuery,
-  });
+  const _AlbumSelectionGrid(
+      {required this.filteredAlbums, required this.searchQuery});
 
   @override
   Widget build(BuildContext context) {
@@ -369,10 +326,7 @@ class _AlbumSelectionGrid extends StatelessWidget {
 
     if (filteredAlbums.isEmpty) {
       return const SliverToBoxAdapter(
-        child: Center(
-          child: CircularProgressIndicator(),
-        ),
-      );
+          child: Center(child: CircularProgressIndicator()));
     }
 
     return SliverPadding(
@@ -385,9 +339,7 @@ class _AlbumSelectionGrid extends StatelessWidget {
         ),
         itemCount: filteredAlbums.length,
         itemBuilder: ((context, index) {
-          return DriftAlbumInfoListTile(
-            album: filteredAlbums[index],
-          );
+          return DriftAlbumInfoListTile(album: filteredAlbums[index]);
         }),
       ),
     );
@@ -397,9 +349,7 @@ class _AlbumSelectionGrid extends StatelessWidget {
 class _SelectedAlbumNameChips extends ConsumerWidget {
   final List<LocalAlbum> selectedBackupAlbums;
 
-  const _SelectedAlbumNameChips({
-    required this.selectedBackupAlbums,
-  });
+  const _SelectedAlbumNameChips({required this.selectedBackupAlbums});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -430,10 +380,7 @@ class _SelectedAlbumNameChips extends ConsumerWidget {
                 backgroundColor: context.primaryColor,
                 deleteIconColor:
                     context.isDarkTheme ? Colors.black : Colors.white,
-                deleteIcon: const Icon(
-                  Icons.cancel_rounded,
-                  size: 15,
-                ),
+                deleteIcon: const Icon(Icons.cancel_rounded, size: 15),
                 onDeleted: removeSelection,
               ),
             ),
@@ -447,9 +394,7 @@ class _SelectedAlbumNameChips extends ConsumerWidget {
 class _ExcludedAlbumNameChips extends ConsumerWidget {
   final List<LocalAlbum> excludedBackupAlbums;
 
-  const _ExcludedAlbumNameChips({
-    required this.excludedBackupAlbums,
-  });
+  const _ExcludedAlbumNameChips({required this.excludedBackupAlbums});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -472,17 +417,13 @@ class _ExcludedAlbumNameChips extends ConsumerWidget {
                 label: Text(
                   album.name,
                   style: TextStyle(
-                    fontSize: 12,
-                    color: context.scaffoldBackgroundColor,
-                    fontWeight: FontWeight.bold,
-                  ),
+                      fontSize: 12,
+                      color: context.scaffoldBackgroundColor,
+                      fontWeight: FontWeight.bold),
                 ),
                 backgroundColor: Colors.red[300],
                 deleteIconColor: context.scaffoldBackgroundColor,
-                deleteIcon: const Icon(
-                  Icons.cancel_rounded,
-                  size: 15,
-                ),
+                deleteIcon: const Icon(Icons.cancel_rounded, size: 15),
                 onDeleted: removeSelection,
               ),
             ),
@@ -497,10 +438,8 @@ class _SelectAllButton extends ConsumerWidget {
   final List<LocalAlbum> filteredAlbums;
   final List<LocalAlbum> selectedBackupAlbums;
 
-  const _SelectAllButton({
-    required this.filteredAlbums,
-    required this.selectedBackupAlbums,
-  });
+  const _SelectAllButton(
+      {required this.filteredAlbums, required this.selectedBackupAlbums});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -528,13 +467,10 @@ class _SelectAllButton extends ConsumerWidget {
               icon: const Icon(Icons.select_all),
               label: AnimatedSwitcher(
                 duration: const Duration(milliseconds: 200),
-                child: Text(
-                  "select_all".t(context: context),
-                ),
+                child: Text("select_all".t(context: context)),
               ),
               style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 12.0),
-              ),
+                  padding: const EdgeInsets.symmetric(vertical: 12.0)),
             ),
           ),
           const SizedBox(width: 8.0),
@@ -554,8 +490,7 @@ class _SelectAllButton extends ConsumerWidget {
               icon: const Icon(Icons.deselect),
               label: Text('deselect_all'.t(context: context)),
               style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 12.0),
-              ),
+                  padding: const EdgeInsets.symmetric(vertical: 12.0)),
             ),
           ),
         ],

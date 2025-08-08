@@ -77,10 +77,7 @@ class DraggableScrollbar extends StatefulWidget {
     this.labelConstraints,
   })  : assert(child.scrollDirection == Axis.vertical),
         scrollThumbBuilder = _thumbSemicircleBuilder(
-          heightScrollThumb * 0.6,
-          scrollThumbKey,
-          alwaysVisibleScrollThumb,
-        );
+            heightScrollThumb * 0.6, scrollThumbKey, alwaysVisibleScrollThumb);
 
   @override
   DraggableScrollbarState createState() => DraggableScrollbarState();
@@ -114,16 +111,11 @@ class DraggableScrollbar extends StatefulWidget {
       return scrollThumbAndLabel;
     }
     return SlideFadeTransition(
-      animation: thumbAnimation!,
-      child: scrollThumbAndLabel,
-    );
+        animation: thumbAnimation!, child: scrollThumbAndLabel);
   }
 
   static ScrollThumbBuilder _thumbSemicircleBuilder(
-    double width,
-    Key? scrollThumbKey,
-    bool alwaysVisibleScrollThumb,
-  ) {
+      double width, Key? scrollThumbKey, bool alwaysVisibleScrollThumb) {
     return (
       Color backgroundColor,
       Animation<double> thumbAnimation,
@@ -144,9 +136,8 @@ class DraggableScrollbar extends StatefulWidget {
             topRight: const Radius.circular(4.0),
             bottomRight: const Radius.circular(4.0),
           ),
-          child: Container(
-            constraints: BoxConstraints.tight(Size(width, height)),
-          ),
+          child:
+              Container(constraints: BoxConstraints.tight(Size(width, height))),
         ),
       );
 
@@ -222,24 +213,16 @@ class DraggableScrollbarState extends State<DraggableScrollbar>
     _currentItem = 0;
 
     _thumbAnimationController = AnimationController(
-      vsync: this,
-      duration: widget.scrollbarAnimationDuration,
-    );
+        vsync: this, duration: widget.scrollbarAnimationDuration);
 
     _thumbAnimation = CurvedAnimation(
-      parent: _thumbAnimationController,
-      curve: Curves.fastOutSlowIn,
-    );
+        parent: _thumbAnimationController, curve: Curves.fastOutSlowIn);
 
     _labelAnimationController = AnimationController(
-      vsync: this,
-      duration: widget.scrollbarAnimationDuration,
-    );
+        vsync: this, duration: widget.scrollbarAnimationDuration);
 
     _labelAnimation = CurvedAnimation(
-      parent: _labelAnimationController,
-      curve: Curves.fastOutSlowIn,
-    );
+        parent: _labelAnimationController, curve: Curves.fastOutSlowIn);
   }
 
   @override
@@ -282,9 +265,7 @@ class DraggableScrollbarState extends State<DraggableScrollbar>
           },
           child: Stack(
             children: <Widget>[
-              RepaintBoundary(
-                child: widget.child,
-              ),
+              RepaintBoundary(child: widget.child),
               RepaintBoundary(
                 child: GestureDetector(
                   onVerticalDragStart: _onVerticalDragStart,
@@ -382,16 +363,12 @@ class DraggableScrollbarState extends State<DraggableScrollbar>
     /// If the bar is at the bottom but the item position is still smaller than the max item count (due to rounding error)
     /// jump to the end of the list
     if (barMaxScrollExtent - _barOffset < 10 && itemPosition < maxItemCount) {
-      widget.controller.jumpTo(
-        index: maxItemCount,
-      );
+      widget.controller.jumpTo(index: maxItemCount);
 
       return;
     }
 
-    widget.controller.jumpTo(
-      index: itemPosition,
-    );
+    widget.controller.jumpTo(index: itemPosition);
   }
 
   Timer? dragHaltTimer;
@@ -417,12 +394,9 @@ class DraggableScrollbarState extends State<DraggableScrollbar>
           dragHaltTimer?.cancel();
           widget.scrollStateListener(true);
 
-          // dragHaltTimer = Timer(
-          //   const Duration(milliseconds: 3000),
-          //   () {
-          //     widget.scrollStateListener(false);
-          //   },
-          // );
+          // dragHaltTimer = Timer(const Duration(milliseconds: 500), () {
+          //   widget.scrollStateListener(false);
+          // });
         }
 
         _jumpToBarPosition();
@@ -464,13 +438,9 @@ class ArrowCustomPainter extends CustomPainter {
     final baseY = size.height / 2;
 
     canvas.drawPath(
-      _trianglePath(Offset(baseX, baseY - 2.0), width, height, true),
-      paint,
-    );
+        _trianglePath(Offset(baseX, baseY - 2.0), width, height, true), paint);
     canvas.drawPath(
-      _trianglePath(Offset(baseX, baseY + 2.0), width, height, false),
-      paint,
-    );
+        _trianglePath(Offset(baseX, baseY + 2.0), width, height, false), paint);
   }
 
   static Path _trianglePath(Offset o, double width, double height, bool isUp) {
@@ -502,9 +472,7 @@ class ArrowClipper extends CustomClipper<Path> {
     path.lineTo(startPointX + arrowWidth, startPointY);
     path.lineTo(startPointX + arrowWidth, startPointY + 1.0);
     path.lineTo(
-      startPointX + arrowWidth / 2,
-      startPointY - arrowWidth / 2 + 1.0,
-    );
+        startPointX + arrowWidth / 2, startPointY - arrowWidth / 2 + 1.0);
     path.lineTo(startPointX, startPointY + 1.0);
     path.close();
 
@@ -514,9 +482,7 @@ class ArrowClipper extends CustomClipper<Path> {
     path.lineTo(startPointX, startPointY);
     path.lineTo(startPointX, startPointY - 1.0);
     path.lineTo(
-      startPointX + arrowWidth / 2,
-      startPointY + arrowWidth / 2 - 1.0,
-    );
+        startPointX + arrowWidth / 2, startPointY + arrowWidth / 2 - 1.0);
     path.lineTo(startPointX + arrowWidth, startPointY - 1.0);
     path.close();
 
@@ -531,11 +497,8 @@ class SlideFadeTransition extends StatelessWidget {
   final Animation<double> animation;
   final Widget child;
 
-  const SlideFadeTransition({
-    super.key,
-    required this.animation,
-    required this.child,
-  });
+  const SlideFadeTransition(
+      {super.key, required this.animation, required this.child});
 
   @override
   Widget build(BuildContext context) {
@@ -544,14 +507,10 @@ class SlideFadeTransition extends StatelessWidget {
       builder: (context, child) =>
           animation.value == 0.0 ? const SizedBox() : child!,
       child: SlideTransition(
-        position: Tween(
-          begin: const Offset(0.3, 0.0),
-          end: const Offset(0.0, 0.0),
-        ).animate(animation),
-        child: FadeTransition(
-          opacity: animation,
-          child: child,
-        ),
+        position:
+            Tween(begin: const Offset(0.3, 0.0), end: const Offset(0.0, 0.0))
+                .animate(animation),
+        child: FadeTransition(opacity: animation, child: child),
       ),
     );
   }

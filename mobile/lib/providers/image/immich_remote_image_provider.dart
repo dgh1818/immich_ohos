@@ -35,16 +35,13 @@ class ImmichRemoteImageProvider
   /// that describes the precise image to load.
   @override
   Future<ImmichRemoteImageProvider> obtainKey(
-    ImageConfiguration configuration,
-  ) {
+      ImageConfiguration configuration) {
     return SynchronousFuture(this);
   }
 
   @override
   ImageStreamCompleter loadImage(
-    ImmichRemoteImageProvider key,
-    ImageDecoderCallback decode,
-  ) {
+      ImmichRemoteImageProvider key, ImageDecoderCallback decode) {
     //final cache = cacheManager ?? RemoteImageCacheManager();
     final chunkEvents = StreamController<ImageChunkEvent>();
     return MultiImageStreamCompleter(
@@ -55,10 +52,8 @@ class ImmichRemoteImageProvider
   }
 
   /// Whether to show the original file or load a compressed version
-  bool get _useOriginal => Store.get(
-        AppSettingsEnum.loadOriginal.storeKey,
-        AppSettingsEnum.loadOriginal.defaultValue,
-      );
+  bool get _useOriginal => Store.get(AppSettingsEnum.loadOriginal.storeKey,
+      AppSettingsEnum.loadOriginal.defaultValue);
 
   // Streams in each stage of the image as we ask for it
   Stream<ui.Codec> _codec(
@@ -68,28 +63,19 @@ class ImmichRemoteImageProvider
     StreamController<ImageChunkEvent> chunkEvents,
   ) async* {
     // Load the higher resolution version of the image
-    final url = getThumbnailUrlForRemoteId(
-      key.assetId,
-      type: api.AssetMediaSize.preview,
-    );
-    final codec = await ImageLoader.loadImageFromCache(
-      url,
-      cache: cache,
-      decode: decode,
-      chunkEvents: chunkEvents,
-    );
+    final url = getThumbnailUrlForRemoteId(key.assetId,
+        type: api.AssetMediaSize.preview);
+    final codec = await ImageLoader.loadImageFromCache(url,
+        cache: cache, decode: decode, chunkEvents: chunkEvents);
     yield codec;
 
     // Load the final remote image
     if (_useOriginal) {
       // Load the original image
       final url = getOriginalUrlForRemoteId(key.assetId, is_image: is_image);
-      final codec = await ImageLoader.loadImageFromCache(
-        url,
-        cache: cache,
-        decode: decode,
-        chunkEvents: chunkEvents,
-      );
+      final codec = await ImageLoader.loadImageFromCache(url,
+          cache: cache, decode: decode, chunkEvents: chunkEvents);
+
       yield codec;
     }
     await chunkEvents.close();

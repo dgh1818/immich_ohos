@@ -18,10 +18,8 @@ import 'package:flutter/services.dart';
 class MapLocationPickerPage extends HookConsumerWidget {
   final LatLng initialLatLng;
 
-  const MapLocationPickerPage({
-    super.key,
-    this.initialLatLng = const LatLng(0, 0),
-  });
+  const MapLocationPickerPage(
+      {super.key, this.initialLatLng = const LatLng(0, 0)});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -88,9 +86,8 @@ class MapLocationPickerPage extends HookConsumerWidget {
               clipBehavior: Clip.antiAliasWithSaveLayer,
               decoration: const BoxDecoration(
                 borderRadius: BorderRadius.only(
-                  bottomLeft: Radius.circular(40),
-                  bottomRight: Radius.circular(40),
-                ),
+                    bottomLeft: Radius.circular(40),
+                    bottomRight: Radius.circular(40)),
               ),
               child: MapLibreMap(
                 initialCameraPosition:
@@ -131,9 +128,7 @@ class _AppBar extends StatelessWidget implements PreferredSizeWidget {
         alignment: Alignment.centerLeft,
         child: ElevatedButton(
           onPressed: onClose,
-          style: ElevatedButton.styleFrom(
-            shape: const CircleBorder(),
-          ),
+          style: ElevatedButton.styleFrom(shape: const CircleBorder()),
           child: const Icon(Icons.arrow_back_ios_new_rounded),
         ),
       ),
@@ -149,11 +144,10 @@ class _BottomBar extends StatelessWidget {
   final Function() onUseLocation;
   final Function() onGetCurrentLocation;
 
-  const _BottomBar({
-    required this.selectedLatLng,
-    required this.onUseLocation,
-    required this.onGetCurrentLocation,
-  });
+  const _BottomBar(
+      {required this.selectedLatLng,
+      required this.onUseLocation,
+      required this.onGetCurrentLocation});
 
   @override
   Widget build(BuildContext context) {
@@ -173,8 +167,7 @@ class _BottomBar extends StatelessWidget {
                 ValueListenableBuilder(
                   valueListenable: selectedLatLng,
                   builder: (_, value, __) => Text(
-                    "${value.latitude.toStringAsFixed(4)}, ${value.longitude.toStringAsFixed(4)}",
-                  ),
+                      "${value.latitude.toStringAsFixed(4)}, ${value.longitude.toStringAsFixed(4)}"),
                 ),
               ],
             ),
@@ -187,9 +180,8 @@ class _BottomBar extends StatelessWidget {
                       const Text("map_location_picker_page_use_location").tr(),
                 ),
                 ElevatedButton(
-                  onPressed: onGetCurrentLocation,
-                  child: const Icon(Icons.my_location),
-                ),
+                    onPressed: onGetCurrentLocation,
+                    child: const Icon(Icons.my_location)),
               ],
             ),
           ],

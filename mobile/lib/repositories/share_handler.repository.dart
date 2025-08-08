@@ -4,9 +4,7 @@
 // import 'package:immich_mobile/models/upload/share_intent_attachment.model.dart';
 // import 'package:share_handler/share_handler.dart';
 
-// final shareHandlerRepositoryProvider = Provider(
-//   (ref) => ShareHandlerRepository(),
-// );
+// final shareHandlerRepositoryProvider = Provider((ref) => ShareHandlerRepository());
 
 // class ShareHandlerRepository {
 //   ShareHandlerRepository();
@@ -28,9 +26,7 @@
 //     });
 //   }
 
-//   List<ShareIntentAttachment> _buildPayload(
-//     List<SharedAttachment?> attachments,
-//   ) {
+//   List<ShareIntentAttachment> _buildPayload(List<SharedAttachment?> attachments) {
 //     final payload = <ShareIntentAttachment>[];
 
 //     for (final attachment in attachments) {

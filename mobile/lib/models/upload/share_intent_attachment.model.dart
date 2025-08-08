@@ -5,21 +5,9 @@
 // import 'package:immich_mobile/utils/bytes_units.dart';
 // import 'package:path/path.dart';
 
-// enum ShareIntentAttachmentType {
-//   image,
-//   video,
-// }
+// enum ShareIntentAttachmentType { image, video }
 
-// enum UploadStatus {
-//   enqueued,
-//   running,
-//   complete,
-//   notFound,
-//   failed,
-//   canceled,
-//   waitingToRetry,
-//   paused,
-// }
+// enum UploadStatus { enqueued, running, complete, notFound, failed, canceled, waitingToRetry, paused }
 
 // class ShareIntentAttachment {
 //   final String path;
@@ -91,9 +79,7 @@
 //   String toJson() => json.encode(toMap());
 
 //   factory ShareIntentAttachment.fromJson(String source) =>
-//       ShareIntentAttachment.fromMap(
-//         json.decode(source) as Map<String, dynamic>,
-//       );
+//       ShareIntentAttachment.fromMap(json.decode(source) as Map<String, dynamic>);
 
 //   @override
 //   String toString() {

@@ -27,14 +27,7 @@ import 'package:isar/isar.dart';
 import 'package:logging/logging.dart';
 import 'package:permission_handler/permission_handler.dart';
 
-enum AppLifeCycleEnum {
-  active,
-  inactive,
-  paused,
-  resumed,
-  detached,
-  hidden,
-}
+enum AppLifeCycleEnum { active, inactive, paused, resumed, detached, hidden }
 
 class AppLifeCycleNotifier extends StateNotifier<AppLifeCycleEnum> {
   final Ref _ref;
@@ -94,16 +87,14 @@ class AppLifeCycleNotifier extends StateNotifier<AppLifeCycleEnum> {
       // Ensure proper cleanup before starting new background tasks
       try {
         await Future.wait([
-          backgroundManager.syncLocal().then(
-            (_) {
-              Logger("AppLifeCycleNotifier")
-                  .fine("Hashing assets after syncLocal");
-              // Check if app is still active before hashing
-              if (state == AppLifeCycleEnum.resumed) {
-                backgroundManager.hashAssets();
-              }
-            },
-          ),
+          backgroundManager.syncLocal().then((_) {
+            Logger("AppLifeCycleNotifier")
+                .fine("Hashing assets after syncLocal");
+            // Check if app is still active before hashing
+            if (state == AppLifeCycleEnum.resumed) {
+              backgroundManager.hashAssets();
+            }
+          }),
           backgroundManager.syncRemote(),
         ]).then((_) async {
           final isEnableBackup = _ref
@@ -116,17 +107,12 @@ class AppLifeCycleNotifier extends StateNotifier<AppLifeCycleEnum> {
               return;
             }
 
-            // await _ref
-            //     .read(driftBackupProvider.notifier)
-            //     .handleBackupResume(currentUser.id);
+            //await _ref.read(driftBackupProvider.notifier).handleBackupResume(currentUser.id);
           }
         });
       } catch (e, stackTrace) {
-        Logger("AppLifeCycleNotifier").severe(
-          "Error during background sync",
-          e,
-          stackTrace,
-        );
+        Logger("AppLifeCycleNotifier")
+            .severe("Error during background sync", e, stackTrace);
       }
     }
 

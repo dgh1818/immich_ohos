@@ -6,10 +6,8 @@ import 'package:immich_mobile/providers/notification_permission.provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 final localNotificationService = Provider(
-  (ref) => LocalNotificationService(
-    ref.watch(notificationPermissionProvider),
-    ref,
-  ),
+  (ref) =>
+      LocalNotificationService(ref.watch(notificationPermissionProvider), ref),
 );
 
 class LocalNotificationService {
@@ -34,8 +32,8 @@ class LocalNotificationService {
     const iosSetting = DarwinInitializationSettings();
     const ohosSetting = OhosInitializationSettings('app_icon');
 
-    const initSettings =
-        InitializationSettings(android: androidSetting, iOS: iosSetting, ohos: ohosSetting);
+    const initSettings = InitializationSettings(
+        android: androidSetting, iOS: iosSetting, ohos: ohosSetting);
 
     await _localNotificationPlugin.initialize(
       initSettings,
@@ -103,17 +101,39 @@ class LocalNotificationService {
             actions: (showActions ?? false)
                 ? <AndroidNotificationAction>[
                     const AndroidNotificationAction(
+                        cancelUploadActionID, 'Cancel',
+                        showsUserInterface: true),
+                  ]
+                : null,
+          )
+        // Non-progress notification
+        : AndroidNotificationDetails(androidChannelID, androidChannelName,
+            playSound: false);
+
+    final ohosNotificationDetails = (maxProgress != null && progress != null)
+        ? OhosNotificationDetails(
+            OhosNotificationSlotType.CONTENT_INFORMATION,
+            slotDesc: title,
+            importance: OhosImportance.low,
+            playSound: false,
+            showProgress: true,
+            onlyAlertOnce: true,
+            maxProgress: maxProgress,
+            progress: progress,
+            indeterminate: false,
+            ongoing: true,
+            actions: (showActions ?? false)
+                ? <OhosNotificationAction>[
+                    const OhosNotificationAction(
                       cancelUploadActionID,
                       'Cancel',
-                      showsUserInterface: true,
                     ),
                   ]
                 : null,
           )
         // Non-progress notification
-        : AndroidNotificationDetails(
-            androidChannelID,
-            androidChannelName,
+        : OhosNotificationDetails(
+            OhosNotificationSlotType.CONTENT_INFORMATION,
             playSound: false,
           );
 
@@ -135,13 +155,14 @@ class LocalNotificationService {
                       cancelUploadActionID,
                       'Cancel',
                     ),
-                  ] 
+                  ]
                 : null,
           )
-          // Non-progress notification
-          : OhosNotificationDetails(OhosNotificationSlotType.CONTENT_INFORMATION,
+        // Non-progress notification
+        : OhosNotificationDetails(
+            OhosNotificationSlotType.CONTENT_INFORMATION,
             playSound: false,
-            );
+          );
     final iosNotificationDetails = DarwinNotificationDetails(
       presentBadge: true,
       presentList: true,
@@ -159,8 +180,7 @@ class LocalNotificationService {
   }
 
   void _onDidReceiveForegroundNotificationResponse(
-    NotificationResponse notificationResponse,
-  ) {
+      NotificationResponse notificationResponse) {
     // Handle notification actions
     switch (notificationResponse.actionId) {
       case cancelUploadActionID:

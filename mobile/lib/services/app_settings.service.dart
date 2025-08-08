@@ -6,26 +6,13 @@ enum AppSettingsEnum<T> {
   loadPreview<bool>(StoreKey.loadPreview, "loadPreview", false),
   loadOriginal<bool>(StoreKey.loadOriginal, "loadOriginal", true),
   themeMode<String>(
-    StoreKey.themeMode,
-    "themeMode",
-    "system",
-  ), // "light","dark","system"
+      StoreKey.themeMode, "themeMode", "system"), // "light","dark","system"
   primaryColor<String>(
-    StoreKey.primaryColor,
-    "primaryColor",
-    defaultColorPresetName,
-  ),
-  dynamicTheme<bool>(
-    StoreKey.dynamicTheme,
-    "dynamicTheme",
-    false,
-  ),
+      StoreKey.primaryColor, "primaryColor", defaultColorPresetName),
+  dynamicTheme<bool>(StoreKey.dynamicTheme, "dynamicTheme", false),
   colorfulInterface<bool>(
-    StoreKey.colorfulInterface,
-    "colorfulInterface",
-    true,
-  ),
-  tilesPerRow<int>(StoreKey.tilesPerRow, "tilesPerRow", 6),
+      StoreKey.colorfulInterface, "colorfulInterface", true),
+  tilesPerRow<int>(StoreKey.tilesPerRow, "tilesPerRow", 4),
   dynamicLayout<bool>(StoreKey.dynamicLayout, "dynamicLayout", false),
   groupAssetsBy<int>(StoreKey.groupAssetsBy, "groupBy", 0),
   uploadErrorNotificationGracePeriod<int>(
@@ -33,11 +20,8 @@ enum AppSettingsEnum<T> {
     "uploadErrorNotificationGracePeriod",
     2,
   ),
-  backgroundBackupTotalProgress<bool>(
-    StoreKey.backgroundBackupTotalProgress,
-    "backgroundBackupTotalProgress",
-    true,
-  ),
+  backgroundBackupTotalProgress<bool>(StoreKey.backgroundBackupTotalProgress,
+      "backgroundBackupTotalProgress", true),
   backgroundBackupSingleProgress<bool>(
     StoreKey.backgroundBackupSingleProgress,
     "backgroundBackupSingleProgress",
@@ -45,31 +29,19 @@ enum AppSettingsEnum<T> {
   ),
   storageIndicator<bool>(StoreKey.storageIndicator, "storageIndicator", true),
   thumbnailCacheSize<int>(
-    StoreKey.thumbnailCacheSize,
-    "thumbnailCacheSize",
-    10000,
-  ),
+      StoreKey.thumbnailCacheSize, "thumbnailCacheSize", 10000),
   imageCacheSize<int>(StoreKey.imageCacheSize, "imageCacheSize", 350),
   albumThumbnailCacheSize<int>(
-    StoreKey.albumThumbnailCacheSize,
-    "albumThumbnailCacheSize",
-    200,
-  ),
+      StoreKey.albumThumbnailCacheSize, "albumThumbnailCacheSize", 200),
   selectedAlbumSortOrder<int>(
-    StoreKey.selectedAlbumSortOrder,
-    "selectedAlbumSortOrder",
-    0,
-  ),
+      StoreKey.selectedAlbumSortOrder, "selectedAlbumSortOrder", 0),
   advancedTroubleshooting<bool>(StoreKey.advancedTroubleshooting, null, false),
   manageLocalMediaAndroid<bool>(StoreKey.manageLocalMediaAndroid, null, false),
   logLevel<int>(StoreKey.logLevel, null, 5), // Level.INFO = 5
   preferRemoteImage<bool>(StoreKey.preferRemoteImage, null, true),
   loopVideo<bool>(StoreKey.loopVideo, "loopVideo", true),
   loadOriginalVideo<bool>(
-    StoreKey.loadOriginalVideo,
-    "loadOriginalVideo",
-    true,
-  ),
+      StoreKey.loadOriginalVideo, "loadOriginalVideo", true),
   mapThemeMode<int>(StoreKey.mapThemeMode, null, 0),
   mapShowFavoriteOnly<bool>(StoreKey.mapShowFavoriteOnly, null, false),
   mapIncludeArchived<bool>(StoreKey.mapIncludeArchived, null, false),
@@ -78,21 +50,17 @@ enum AppSettingsEnum<T> {
   allowSelfSignedSSLCert<bool>(StoreKey.selfSignedCert, null, false),
   ignoreIcloudAssets<bool>(StoreKey.ignoreIcloudAssets, null, false),
   selectedAlbumSortReverse<bool>(
-    StoreKey.selectedAlbumSortReverse,
-    null,
-    false,
-  ),
+      StoreKey.selectedAlbumSortReverse, null, false),
   enableHapticFeedback<bool>(StoreKey.enableHapticFeedback, null, true),
   syncAlbums<bool>(StoreKey.syncAlbums, null, false),
   autoEndpointSwitching<bool>(StoreKey.autoEndpointSwitching, null, false),
-  photoManagerCustomFilter<bool>(
-    StoreKey.photoManagerCustomFilter,
-    null,
-    true,
-  ),
+  photoManagerCustomFilter<bool>(StoreKey.photoManagerCustomFilter, null, true),
   betaTimeline<bool>(StoreKey.betaTimeline, null, false),
   enableBackup<bool>(StoreKey.enableBackup, null, false),
-  ;
+  useCellularForUploadVideos<bool>(
+      StoreKey.useWifiForUploadVideos, null, false),
+  useCellularForUploadPhotos<bool>(
+      StoreKey.useWifiForUploadPhotos, null, false);
 
   const AppSettingsEnum(this.storeKey, this.hiveKey, this.defaultValue);
 

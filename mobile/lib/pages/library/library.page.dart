@@ -76,16 +76,14 @@ class LibraryPage extends ConsumerWidget {
               spacing: 8,
               runSpacing: 8,
               children: [
-                PlacesCollectionCard(),
                 PeopleCollectionCard(),
-                LocalAlbumsCollectionCard(),
+                PlacesCollectionCard(),
+                LocalAlbumsCollectionCard()
               ],
             ),
             const SizedBox(height: 12),
             const QuickAccessButtons(),
-            const SizedBox(
-              height: 32,
-            ),
+            const SizedBox(height: 32),
           ],
         ),
       ),
@@ -102,12 +100,8 @@ class QuickAccessButtons extends ConsumerWidget {
     return Container(
       decoration: BoxDecoration(
         border: Border.all(
-          color: context.colorScheme.onSurface.withAlpha(10),
-          width: 1,
-        ),
-        borderRadius: const BorderRadius.all(
-          Radius.circular(20),
-        ),
+            color: context.colorScheme.onSurface.withAlpha(10), width: 1),
+        borderRadius: const BorderRadius.all(Radius.circular(20)),
         gradient: LinearGradient(
           colors: [
             context.colorScheme.primary.withAlpha(10),
@@ -131,41 +125,29 @@ class QuickAccessButtons extends ConsumerWidget {
                 bottomRight: Radius.circular(partners.isEmpty ? 20 : 0),
               ),
             ),
-            leading: const Icon(
-              Icons.folder_outlined,
-              size: 26,
-            ),
+            leading: const Icon(Icons.folder_outlined, size: 26),
             title: Text(
               IntlKeys.folders.tr(),
-              style: context.textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.w500,
-              ),
+              style: context.textTheme.titleSmall
+                  ?.copyWith(fontWeight: FontWeight.w500),
             ),
             onTap: () => context.pushRoute(FolderRoute()),
           ),
           ListTile(
-            leading: const Icon(
-              Icons.lock_outline_rounded,
-              size: 26,
-            ),
+            leading: const Icon(Icons.lock_outline_rounded, size: 26),
             title: Text(
               IntlKeys.locked_folder.tr(),
-              style: context.textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.w500,
-              ),
+              style: context.textTheme.titleSmall
+                  ?.copyWith(fontWeight: FontWeight.w500),
             ),
             onTap: () => context.pushRoute(const LockedRoute()),
           ),
           ListTile(
-            leading: const Icon(
-              Icons.group_outlined,
-              size: 26,
-            ),
+            leading: const Icon(Icons.group_outlined, size: 26),
             title: Text(
               IntlKeys.partners.tr(),
-              style: context.textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.w500,
-              ),
+              style: context.textTheme.titleSmall
+                  ?.copyWith(fontWeight: FontWeight.w500),
             ),
             onTap: () => context.pushRoute(const PartnerRoute()),
           ),
@@ -197,24 +179,14 @@ class PartnerList extends ConsumerWidget {
               bottomRight: Radius.circular(isLastItem ? 20 : 0),
             ),
           ),
-          contentPadding: const EdgeInsets.only(
-            left: 12.0,
-            right: 18.0,
-          ),
+          contentPadding: const EdgeInsets.only(left: 12.0, right: 18.0),
           leading: userAvatar(context, partner, radius: 16),
           title: const Text(
             "partner_list_user_photos",
-            style: TextStyle(
-              fontWeight: FontWeight.w500,
-            ),
-          ).tr(
-            namedArgs: {
-              'user': partner.name,
-            },
-          ),
-          onTap: () => context.pushRoute(
-            (PartnerDetailRoute(partner: partner)),
-          ),
+            style: TextStyle(fontWeight: FontWeight.w500),
+          ).tr(namedArgs: {'user': partner.name}),
+          onTap: () =>
+              context.pushRoute((PartnerDetailRoute(partner: partner))),
         );
       },
     );
@@ -242,22 +214,19 @@ class PeopleCollectionCard extends ConsumerWidget {
                 height: size,
                 width: size,
                 decoration: BoxDecoration(
-                  borderRadius: const BorderRadius.all(
-                    Radius.circular(20),
-                  ),
+                  borderRadius: const BorderRadius.all(Radius.circular(20)),
                   gradient: LinearGradient(
                     colors: [
                       context.colorScheme.primary.withAlpha(30),
-                      context.colorScheme.primary.withAlpha(25),
+                      context.colorScheme.primary.withAlpha(25)
                     ],
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                   ),
                 ),
                 child: people.widgetWhen(
-                  onLoading: () => const Center(
-                    child: CircularProgressIndicator(),
-                  ),
+                  onLoading: () =>
+                      const Center(child: CircularProgressIndicator()),
                   onData: (people) {
                     return GridView.count(
                       crossAxisCount: 2,
@@ -309,9 +278,7 @@ class LocalAlbumsCollectionCard extends HookConsumerWidget {
         final size = context.width * widthFactor - 20.0;
 
         return GestureDetector(
-          onTap: () => context.pushRoute(
-            const LocalAlbumsRoute(),
-          ),
+          onTap: () => context.pushRoute(const LocalAlbumsRoute()),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -324,7 +291,7 @@ class LocalAlbumsCollectionCard extends HookConsumerWidget {
                     gradient: LinearGradient(
                       colors: [
                         context.colorScheme.primary.withAlpha(30),
-                        context.colorScheme.primary.withAlpha(25),
+                        context.colorScheme.primary.withAlpha(25)
                       ],
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
@@ -337,10 +304,7 @@ class LocalAlbumsCollectionCard extends HookConsumerWidget {
                     mainAxisSpacing: 8,
                     physics: const NeverScrollableScrollPhysics(),
                     children: albums.take(4).map((album) {
-                      return AlbumThumbnailCard(
-                        album: album,
-                        showTitle: false,
-                      );
+                      return AlbumThumbnailCard(album: album, showTitle: false);
                     }).toList(),
                   ),
                 ),
@@ -374,11 +338,8 @@ class PlacesCollectionCard extends StatelessWidget {
         final size = context.width * widthFactor - 20.0;
 
         return GestureDetector(
-          onTap: () => context.pushRoute(
-            PlacesCollectionRoute(
-              currentLocation: null,
-            ),
-          ),
+          onTap: () =>
+              context.pushRoute(PlacesCollectionRoute(currentLocation: null)),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -394,10 +355,7 @@ class PlacesCollectionCard extends StatelessWidget {
                   child: IgnorePointer(
                     child: MapThumbnail(
                       zoom: 8,
-                      centre: const LatLng(
-                        31.1019,
-                        121.3259,
-                      ),
+                      centre: const LatLng(31.1019, 121.3259),
                       showAttribution: false,
                       themeMode: context.isDarkTheme
                           ? ThemeMode.dark
@@ -429,12 +387,11 @@ class ActionButton extends StatelessWidget {
   final IconData icon;
   final String label;
 
-  const ActionButton({
-    super.key,
-    required this.onPressed,
-    required this.icon,
-    required this.label,
-  });
+  const ActionButton(
+      {super.key,
+      required this.onPressed,
+      required this.icon,
+      required this.label});
 
   @override
   Widget build(BuildContext context) {
@@ -443,13 +400,9 @@ class ActionButton extends StatelessWidget {
         onPressed: onPressed,
         label: Padding(
           padding: const EdgeInsets.only(left: 4.0),
-          child: Text(
-            label,
-            style: TextStyle(
-              color: context.colorScheme.onSurface,
-              fontSize: 15,
-            ),
-          ),
+          child: Text(label,
+              style: TextStyle(
+                  color: context.colorScheme.onSurface, fontSize: 15)),
         ),
         style: FilledButton.styleFrom(
           elevation: 0,
@@ -459,15 +412,10 @@ class ActionButton extends StatelessWidget {
           shape: RoundedRectangleBorder(
             borderRadius: const BorderRadius.all(Radius.circular(25)),
             side: BorderSide(
-              color: context.colorScheme.onSurface.withAlpha(10),
-              width: 1,
-            ),
+                color: context.colorScheme.onSurface.withAlpha(10), width: 1),
           ),
         ),
-        icon: Icon(
-          icon,
-          color: context.primaryColor,
-        ),
+        icon: Icon(icon, color: context.primaryColor),
       ),
     );
   }

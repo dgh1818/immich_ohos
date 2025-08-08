@@ -59,8 +59,7 @@ class PlacesCollectionPage extends HookConsumerWidget {
                 height: 200,
                 width: context.width,
                 child: MapThumbnail(
-                  // onTap: (_, __) => context
-                  //     .pushRoute(MapRoute(initialLocation: currentLocation)),
+                  //onTap: (_, __) => context.pushRoute(MapRoute(initialLocation: currentLocation)),
                   zoom: 8,
                   centre: currentLocation ??
                       const LatLng(
@@ -119,16 +118,11 @@ class PlaceTile extends StatelessWidget {
         SearchRoute(
           prefilter: SearchFilter(
             people: {},
-            location: SearchLocationFilter(
-              city: name,
-            ),
+            location: SearchLocationFilter(city: name),
             camera: SearchCameraFilter(),
             date: SearchDateFilter(),
             display: SearchDisplayFilters(
-              isNotInAlbum: false,
-              isArchive: false,
-              isFavorite: false,
-            ),
+                isNotInAlbum: false, isArchive: false, isFavorite: false),
             mediaType: AssetType.other,
           ),
         ),
@@ -137,16 +131,11 @@ class PlaceTile extends StatelessWidget {
 
     return LargeLeadingTile(
       onTap: () => navigateToPlace(),
-      title: Text(
-        name,
-        style: context.textTheme.titleMedium?.copyWith(
-          fontWeight: FontWeight.w500,
-        ),
-      ),
+      title: Text(name,
+          style: context.textTheme.titleMedium
+              ?.copyWith(fontWeight: FontWeight.w500)),
       leading: ClipRRect(
-        borderRadius: const BorderRadius.all(
-          Radius.circular(20),
-        ),
+        borderRadius: const BorderRadius.all(Radius.circular(20)),
         child: CachedNetworkImage(
           width: 80,
           height: 80,

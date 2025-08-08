@@ -36,8 +36,7 @@ class ImmichRemoteThumbnailProvider
   /// that describes the precise image to load.
   @override
   Future<ImmichRemoteThumbnailProvider> obtainKey(
-    ImageConfiguration configuration,
-  ) {
+      ImageConfiguration configuration) {
     return SynchronousFuture(this);
   }
 
@@ -54,22 +53,14 @@ class ImmichRemoteThumbnailProvider
   }
 
   // Streams in each stage of the image as we ask for it
-  Stream<ui.Codec> _codec(
-    ImmichRemoteThumbnailProvider key,
-    CacheManager cache,
-    ImageDecoderCallback decode,
-  ) async* {
+  Stream<ui.Codec> _codec(ImmichRemoteThumbnailProvider key, CacheManager cache,
+      ImageDecoderCallback decode) async* {
     // Load a preview to the chunk events
-    final preview = getThumbnailUrlForRemoteId(
-      key.assetId,
-      type: api.AssetMediaSize.thumbnail,
-    );
+    final preview = getThumbnailUrlForRemoteId(key.assetId,
+        type: api.AssetMediaSize.thumbnail);
 
-    yield await ImageLoader.loadImageFromCache(
-      preview,
-      cache: cache,
-      decode: decode,
-    );
+    yield await ImageLoader.loadImageFromCache(preview,
+        cache: cache, decode: decode);
   }
 
   @override

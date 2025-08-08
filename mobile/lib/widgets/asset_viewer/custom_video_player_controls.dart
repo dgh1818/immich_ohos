@@ -13,16 +13,13 @@ import 'package:immich_mobile/widgets/common/delayed_loading_indicator.dart';
 class CustomVideoPlayerControls extends HookConsumerWidget {
   final Duration hideTimerDuration;
 
-  const CustomVideoPlayerControls({
-    super.key,
-    this.hideTimerDuration = const Duration(seconds: 5),
-  });
+  const CustomVideoPlayerControls(
+      {super.key, this.hideTimerDuration = const Duration(seconds: 5)});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final assetIsVideo = ref.watch(
-      currentAssetProvider.select((asset) => asset != null && asset.isVideo),
-    );
+        currentAssetProvider.select((asset) => asset != null && asset.isVideo));
     final showControls = ref.watch(showControlsProvider);
     final VideoPlaybackState state =
         ref.watch(videoPlaybackValueProvider.select((value) => value.state));
@@ -30,24 +27,21 @@ class CustomVideoPlayerControls extends HookConsumerWidget {
     //final cast = ref.watch(castProvider);
 
     // A timer to hide the controls
-    final hideTimer = useTimer(
-      hideTimerDuration,
-      () {
-        if (!context.mounted) {
-          return;
-        }
-        final state = ref.read(videoPlaybackValueProvider).state;
+    final hideTimer = useTimer(hideTimerDuration, () {
+      if (!context.mounted) {
+        return;
+      }
+      final state = ref.read(videoPlaybackValueProvider).state;
 
-        // Do not hide on paused
-        if (state != VideoPlaybackState.paused &&
-            state != VideoPlaybackState.completed &&
-            assetIsVideo) {
-          ref.read(showControlsProvider.notifier).show = false;
-        }
-      },
-    );
-    // final showBuffering =
-    //     state == VideoPlaybackState.buffering && !cast.isCasting;
+      // Do not hide on paused
+      if (state != VideoPlaybackState.paused &&
+          state != VideoPlaybackState.completed &&
+          assetIsVideo) {
+        ref.read(showControlsProvider.notifier).show = false;
+      }
+    });
+    //final showBuffering = state == VideoPlaybackState.buffering && !cast.isCasting;
+
     final showBuffering = state == VideoPlaybackState.buffering;
 
     /// Shows the controls and starts the timer to hide them
@@ -100,10 +94,8 @@ class CustomVideoPlayerControls extends HookConsumerWidget {
           children: [
             if (showBuffering)
               const Center(
-                child: DelayedLoadingIndicator(
-                  fadeInDuration: Duration(milliseconds: 400),
-                ),
-              )
+                  child: DelayedLoadingIndicator(
+                      fadeInDuration: Duration(milliseconds: 400)))
             else
               GestureDetector(
                 onTap: () =>
@@ -112,9 +104,9 @@ class CustomVideoPlayerControls extends HookConsumerWidget {
                   backgroundColor: Colors.black54,
                   iconColor: Colors.white,
                   isFinished: state == VideoPlaybackState.completed,
+                  // isPlaying:
+                  //     state == VideoPlaybackState.playing || (cast.isCasting && cast.castState == CastState.playing),
                   isPlaying: state == VideoPlaybackState.playing,
-                  // isPlaying: state == VideoPlaybackState.playing ||
-                  //     (cast.isCasting && cast.castState == CastState.playing),
                   show: assetIsVideo && showControls,
                   onPressed: togglePlay,
                 ),

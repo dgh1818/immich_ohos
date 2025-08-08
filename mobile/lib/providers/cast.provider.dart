@@ -14,22 +14,22 @@
 
 //   List<(String, CastDestinationType, dynamic)> discovered = List.empty();
 
-//   CastNotifier(this._gCastService)
-//       : super(
-//           const CastManagerState(
-//             isCasting: false,
-//             currentTime: Duration.zero,
-//             duration: Duration.zero,
-//             receiverName: '',
-//             castState: CastState.idle,
-//           ),
-//         ) {
-//     _gCastService.onConnectionState = _onConnectionState;
-//     _gCastService.onCurrentTime = _onCurrentTime;
-//     _gCastService.onDuration = _onDuration;
-//     _gCastService.onReceiverName = _onReceiverName;
-//     _gCastService.onCastState = _onCastState;
-//   }
+  // CastNotifier(this._gCastService)
+  //   : super(
+  //       const CastManagerState(
+  //         isCasting: false,
+  //         currentTime: Duration.zero,
+  //         duration: Duration.zero,
+  //         receiverName: '',
+  //         castState: CastState.idle,
+  //       ),
+  //     ) {
+  //   _gCastService.onConnectionState = _onConnectionState;
+  //   _gCastService.onCurrentTime = _onCurrentTime;
+  //   _gCastService.onDuration = _onDuration;
+  //   _gCastService.onReceiverName = _onReceiverName;
+  //   _gCastService.onCastState = _onCastState;
+  // }
 
 //   void _onConnectionState(bool isCasting) {
 //     state = state.copyWith(isCasting: isCasting);
@@ -55,21 +55,21 @@
 //     _gCastService.loadMedia(asset, reload);
 //   }
 
-//   // TODO: remove this when we migrate to new timeline
-//   void loadMediaOld(old_asset_entity.Asset asset, bool reload) {
-//     final remoteAsset = RemoteAsset(
-//       id: asset.remoteId.toString(),
-//       name: asset.name,
-//       ownerId: asset.ownerId.toString(),
-//       checksum: asset.checksum,
-//       type: asset.type == old_asset_entity.AssetType.image
-//           ? AssetType.image
-//           : asset.type == old_asset_entity.AssetType.video
-//               ? AssetType.video
-//               : AssetType.other,
-//       createdAt: asset.fileCreatedAt,
-//       updatedAt: asset.updatedAt,
-//     );
+  // TODO: remove this when we migrate to new timeline
+  // void loadMediaOld(old_asset_entity.Asset asset, bool reload) {
+  //   final remoteAsset = RemoteAsset(
+  //     id: asset.remoteId.toString(),
+  //     name: asset.name,
+  //     ownerId: asset.ownerId.toString(),
+  //     checksum: asset.checksum,
+  //     type: asset.type == old_asset_entity.AssetType.image
+  //         ? AssetType.image
+  //         : asset.type == old_asset_entity.AssetType.video
+  //         ? AssetType.video
+  //         : AssetType.other,
+  //     createdAt: asset.fileCreatedAt,
+  //     updatedAt: asset.updatedAt,
+  //   );
 
 //     _gCastService.loadMedia(remoteAsset, reload);
 //   }

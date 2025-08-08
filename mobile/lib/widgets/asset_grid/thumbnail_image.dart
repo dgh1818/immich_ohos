@@ -53,10 +53,7 @@ class ThumbnailImage extends StatelessWidget {
           decoration: BoxDecoration(
             border: multiselectEnabled && isSelected
                 ? canDeselect
-                    ? Border.all(
-                        color: assetContainerColor,
-                        width: 8,
-                      )
+                    ? Border.all(color: assetContainerColor, width: 8)
                     : const Border(
                         top: BorderSide(color: Colors.grey, width: 8),
                         right: BorderSide(color: Colors.grey, width: 8),
@@ -78,20 +75,13 @@ class ThumbnailImage extends StatelessWidget {
               if (showStorageIndicator) _StorageIcon(storage: asset.storage),
               if (asset.isFavorite)
                 const Positioned(
-                  left: 8,
-                  bottom: 5,
-                  child: Icon(
-                    Icons.favorite,
-                    color: Colors.white,
-                    size: 16,
-                  ),
-                ),
+                    left: 8,
+                    bottom: 5,
+                    child: Icon(Icons.favorite, color: Colors.white, size: 16)),
               if (asset.isVideo) _VideoIcon(duration: asset.duration),
               if (asset.stackCount > 0)
                 _StackIcon(
-                  isVideo: asset.isVideo,
-                  stackCount: asset.stackCount,
-                ),
+                    isVideo: asset.isVideo, stackCount: asset.stackCount),
             ],
           ),
         ),
@@ -100,14 +90,9 @@ class ThumbnailImage extends StatelessWidget {
               ? const Padding(
                   padding: EdgeInsets.all(3.0),
                   child: Align(
-                    alignment: Alignment.topLeft,
-                    child: _SelectedIcon(),
-                  ),
+                      alignment: Alignment.topLeft, child: _SelectedIcon()),
                 )
-              : const Icon(
-                  Icons.circle_outlined,
-                  color: Colors.white,
-                ),
+              : const Icon(Icons.circle_outlined, color: Colors.white),
       ],
     );
   }
@@ -123,14 +108,9 @@ class _SelectedIcon extends StatelessWidget {
         : context.primaryColor.lighten(amount: 0.8);
 
     return DecoratedBox(
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: assetContainerColor,
-      ),
-      child: Icon(
-        Icons.check_circle_rounded,
-        color: context.primaryColor,
-      ),
+      decoration:
+          BoxDecoration(shape: BoxShape.circle, color: assetContainerColor),
+      child: Icon(Icons.check_circle_rounded, color: context.primaryColor),
     );
   }
 }
@@ -150,17 +130,11 @@ class _VideoIcon extends StatelessWidget {
           Text(
             duration.format(),
             style: const TextStyle(
-              color: Colors.white,
-              fontSize: 10,
-              fontWeight: FontWeight.bold,
-            ),
+                color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
           ),
           const SizedBox(width: 3),
-          const Icon(
-            Icons.play_circle_fill_rounded,
-            color: Colors.white,
-            size: 18,
-          ),
+          const Icon(Icons.play_circle_fill_rounded,
+              color: Colors.white, size: 18),
         ],
       ),
     );
@@ -184,20 +158,12 @@ class _StackIcon extends StatelessWidget {
             Text(
               "$stackCount",
               style: const TextStyle(
-                color: Colors.white,
-                fontSize: 10,
-                fontWeight: FontWeight.bold,
-              ),
+                  color: Colors.white,
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold),
             ),
-          if (stackCount > 1)
-            const SizedBox(
-              width: 3,
-            ),
-          const Icon(
-            Icons.burst_mode_rounded,
-            color: Colors.white,
-            size: 18,
-          ),
+          if (stackCount > 1) const SizedBox(width: 3),
+          const Icon(Icons.burst_mode_rounded, color: Colors.white, size: 18),
         ],
       ),
     );
@@ -219,13 +185,7 @@ class _StorageIcon extends StatelessWidget {
             Icons.cloud_off_outlined,
             color: Color.fromRGBO(255, 255, 255, 0.8),
             size: 16,
-            // shadows: [
-            //   Shadow(
-            //     blurRadius: 5.0,
-            //     color: Color.fromRGBO(0, 0, 0, 0.6),
-            //     offset: Offset(0.0, 0.0),
-            //   ),
-            // ],
+            //shadows: [Shadow(blurRadius: 5.0, color: Color.fromRGBO(0, 0, 0, 0.6), offset: Offset(0.0, 0.0))],
           ),
         ),
       AssetState.remote => const Positioned(
@@ -237,10 +197,9 @@ class _StorageIcon extends StatelessWidget {
             size: 16,
             shadows: [
               Shadow(
-                blurRadius: 5.0,
-                color: Color.fromRGBO(0, 0, 0, 0.6),
-                offset: Offset(0.0, 0.0),
-              ),
+                  blurRadius: 5.0,
+                  color: Color.fromRGBO(0, 0, 0, 0.6),
+                  offset: Offset(0.0, 0.0))
             ],
           ),
         ),
@@ -253,10 +212,9 @@ class _StorageIcon extends StatelessWidget {
             size: 16,
             shadows: [
               Shadow(
-                blurRadius: 5.0,
-                color: Color.fromRGBO(0, 0, 0, 0.6),
-                offset: Offset(0.0, 0.0),
-              ),
+                  blurRadius: 5.0,
+                  color: Color.fromRGBO(0, 0, 0, 0.6),
+                  offset: Offset(0.0, 0.0))
             ],
           ),
         ),
@@ -291,12 +249,7 @@ class _ImageIcon extends StatelessWidget {
         child: Stack(
           children: [
             SizedBox.expand(
-              child: ImmichThumbnail(
-                asset: asset,
-                height: 250,
-                width: 250,
-              ),
-            ),
+                child: ImmichThumbnail(asset: asset, height: 250, width: 250)),
             const DecoratedBox(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
@@ -326,9 +279,8 @@ class _ImageIcon extends StatelessWidget {
           ? BoxDecoration(color: assetContainerColor)
           : const BoxDecoration(color: Colors.grey),
       child: ClipRRect(
-        borderRadius: const BorderRadius.all(Radius.circular(15.0)),
-        child: image,
-      ),
+          borderRadius: const BorderRadius.all(Radius.circular(15.0)),
+          child: image),
     );
   }
 }

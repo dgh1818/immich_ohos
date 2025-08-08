@@ -29,17 +29,12 @@ class DriftMemoryCard extends StatelessWidget {
       color: Colors.black,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.all(Radius.circular(25.0)),
-        side: BorderSide(
-          color: Colors.black,
-          width: 1.0,
-        ),
+        side: BorderSide(color: Colors.black, width: 1.0),
       ),
       clipBehavior: Clip.hardEdge,
       child: Stack(
         children: [
-          SizedBox.expand(
-            child: _BlurredBackdrop(asset: asset),
-          ),
+          SizedBox.expand(child: _BlurredBackdrop(asset: asset)),
           LayoutBuilder(
             builder: (context, constraints) {
               // Determine the fit using the aspect ratio
@@ -57,11 +52,9 @@ class DriftMemoryCard extends StatelessWidget {
               }
 
               if (asset.isImage) {
-                return FullImage(
-                  asset,
-                  fit: fit,
-                  size: const Size(double.infinity, double.infinity),
-                );
+                return FullImage(asset,
+                    fit: fit,
+                    size: const Size(double.infinity, double.infinity));
               } else {
                 return SizedBox(
                   width: context.width,
@@ -71,11 +64,7 @@ class DriftMemoryCard extends StatelessWidget {
                     asset: asset,
                     showControls: false,
                     // playbackDelayFactor: 2,
-                    // image: FullImage(
-                    //   asset,
-                    //   size: Size(context.width, context.height),
-                    //   fit: BoxFit.contain,
-                    // ),
+                    // image: FullImage(asset, size: Size(context.width, context.height), fit: BoxFit.contain),
                   ),
                 );
               }
@@ -88,9 +77,7 @@ class DriftMemoryCard extends StatelessWidget {
               child: Text(
                 title,
                 style: context.textTheme.headlineMedium?.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w500,
-                ),
+                    color: Colors.white, fontWeight: FontWeight.w500),
               ),
             ),
         ],
@@ -111,16 +98,10 @@ class _BlurredBackdrop extends HookWidget {
       // Use a nice cheap blur hash image decoration
       return Container(
         decoration: BoxDecoration(
-          image: DecorationImage(
-            image: MemoryImage(
-              blurhash,
-            ),
-            fit: BoxFit.cover,
-          ),
+          image:
+              DecorationImage(image: MemoryImage(blurhash), fit: BoxFit.cover),
         ),
-        child: Container(
-          color: Colors.black.withValues(alpha: 0.2),
-        ),
+        child: Container(color: Colors.black.withValues(alpha: 0.2)),
       );
     } else {
       // Fall back to using a more expensive image filtered
@@ -131,16 +112,12 @@ class _BlurredBackdrop extends HookWidget {
         child: Container(
           decoration: BoxDecoration(
             image: DecorationImage(
-              image: getFullImageProvider(
-                asset,
-                size: Size(context.width, context.height),
-              ),
+              image: getFullImageProvider(asset,
+                  size: Size(context.width, context.height)),
               fit: BoxFit.cover,
             ),
           ),
-          child: Container(
-            color: Colors.black.withValues(alpha: 0.2),
-          ),
+          child: Container(color: Colors.black.withValues(alpha: 0.2)),
         ),
       );
     }

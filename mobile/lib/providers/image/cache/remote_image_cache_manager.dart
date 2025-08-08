@@ -10,11 +10,6 @@ class RemoteImageCacheManager extends CacheManager {
   }
 
   RemoteImageCacheManager._()
-      : super(
-          Config(
-            key,
-            maxNrOfCacheObjects: 100,
-            stalePeriod: const Duration(days: 30),
-          ),
-        );
+      : super(Config(key,
+            maxNrOfCacheObjects: 100, stalePeriod: const Duration(days: 30)));
 }
