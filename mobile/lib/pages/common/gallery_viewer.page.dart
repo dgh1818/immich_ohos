@@ -191,7 +191,7 @@ class GalleryViewerPage extends HookConsumerWidget {
     //   final asset = loadAsset(currentIndex.value);
 
     //   if (asset.isRemote) {
-    //     ref.read(castProvider.notifier).loadMedia(asset, false);
+    //     ref.read(castProvider.notifier).loadMediaOld(asset, false);
     //   } else {
     //     if (isCasting) {
     //       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -347,7 +347,7 @@ class GalleryViewerPage extends HookConsumerWidget {
 
     PhotoViewGalleryPageOptions buildImage(Asset asset) {
       return PhotoViewGalleryPageOptions(
-        onDragStart: (_, details, __) {
+        onDragStart: (_, details, __, ___) {
           localPosition.value = details.localPosition;
         },
         onDragUpdate: (_, details, __) {
@@ -376,7 +376,7 @@ class GalleryViewerPage extends HookConsumerWidget {
 
     PhotoViewGalleryPageOptions buildVideo(BuildContext context, Asset asset) {
       return PhotoViewGalleryPageOptions.customChild(
-        onDragStart: (_, details, __) =>
+        onDragStart: (_, details, __, ___) =>
             localPosition.value = details.localPosition,
         onDragUpdate: (_, details, __) => handleSwipeUpDown(details),
         heroAttributes: _getHeroAttributes(asset),
@@ -502,7 +502,7 @@ class GalleryViewerPage extends HookConsumerWidget {
                   ),
               itemCount: totalAssets.value,
               scrollDirection: Axis.horizontal,
-              onPageChanged: (value) {
+              onPageChanged: (value, _) {
                 ref.read(isPlayingMotionVideoProvider.notifier).playing = false;
 
                 final next = currentIndex.value < value ? value + 1 : value - 1;
@@ -542,9 +542,9 @@ class GalleryViewerPage extends HookConsumerWidget {
                 );
                 // context.scaffoldMessenger.hideCurrentSnackBar();
 
-                // // send image to casting if the server has it
+                // send image to casting if the server has it
                 // if (newAsset.isRemote) {
-                //   ref.read(castProvider.notifier).loadMedia(newAsset, false);
+                //   ref.read(castProvider.notifier).loadMediaOld(newAsset, false);
                 // } else {
                 //   context.scaffoldMessenger.clearSnackBars();
 

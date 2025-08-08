@@ -40,7 +40,8 @@ class ImmichSliverAppBar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isCasting = ref.watch(castProvider.select((c) => c.isCasting));
+    //final isCasting = ref.watch(castProvider.select((c) => c.isCasting));
+
     final isMultiSelectEnabled =
         ref.watch(multiSelectProvider.select((s) => s.isEnabled));
 
@@ -61,21 +62,21 @@ class ImmichSliverAppBar extends ConsumerWidget {
         centerTitle: false,
         title: title ?? const _ImmichLogoWithText(),
         actions: [
-          if (isCasting)
-            Padding(
-              padding: const EdgeInsets.only(right: 12),
-              child: IconButton(
-                onPressed: () {
-                  showDialog(
-                    context: context,
-                    builder: (context) => const CastDialog(),
-                  );
-                },
-                icon: Icon(
-                  isCasting ? Icons.cast_connected_rounded : Icons.cast_rounded,
-                ),
-              ),
-            ),
+          // if (isCasting)
+          //   Padding(
+          //     padding: const EdgeInsets.only(right: 12),
+          //     child: IconButton(
+          //       onPressed: () {
+          //         showDialog(
+          //           context: context,
+          //           builder: (context) => const CastDialog(),
+          //         );
+          //       },
+          //       icon: Icon(
+          //         isCasting ? Icons.cast_connected_rounded : Icons.cast_rounded,
+          //       ),
+          //     ),
+          //   ),
           const _SyncStatusIndicator(),
           if (actions != null)
             ...actions!.map(

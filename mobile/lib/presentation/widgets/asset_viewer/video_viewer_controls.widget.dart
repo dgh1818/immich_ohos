@@ -33,7 +33,7 @@ class VideoViewerControls extends HookConsumerWidget {
     final VideoPlaybackState state =
         ref.watch(videoPlaybackValueProvider.select((value) => value.state));
 
-    final cast = ref.watch(castProvider);
+    //final cast = ref.watch(castProvider);
 
     // A timer to hide the controls
     final hideTimer = useTimer(
@@ -71,21 +71,21 @@ class VideoViewerControls extends HookConsumerWidget {
     void togglePlay() {
       showControlsAndStartHideTimer();
 
-      if (cast.isCasting) {
-        if (cast.castState == CastState.playing) {
-          ref.read(castProvider.notifier).pause();
-        } else if (cast.castState == CastState.paused) {
-          ref.read(castProvider.notifier).play();
-        } else if (cast.castState == CastState.idle) {
-          // resend the play command since its finished
-          final asset = ref.read(currentAssetNotifier);
-          if (asset == null) {
-            return;
-          }
-          // ref.read(castProvider.notifier).loadMedia(asset, true);
-        }
-        return;
-      }
+      // if (cast.isCasting) {
+      //   if (cast.castState == CastState.playing) {
+      //     ref.read(castProvider.notifier).pause();
+      //   } else if (cast.castState == CastState.paused) {
+      //     ref.read(castProvider.notifier).play();
+      //   } else if (cast.castState == CastState.idle) {
+      //     // resend the play command since its finished
+      //     final asset = ref.read(currentAssetNotifier);
+      //     if (asset == null) {
+      //       return;
+      //     }
+      //     // ref.read(castProvider.notifier).loadMedia(asset, true);
+      //   }
+      //   return;
+      // }
 
       if (state == VideoPlaybackState.playing) {
         ref.read(videoPlayerControlsProvider.notifier).pause();

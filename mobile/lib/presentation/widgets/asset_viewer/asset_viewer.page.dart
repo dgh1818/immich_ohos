@@ -22,7 +22,7 @@ import 'package:immich_mobile/presentation/widgets/images/thumbnail.widget.dart'
 import 'package:immich_mobile/providers/asset_viewer/is_motion_video_playing.provider.dart';
 import 'package:immich_mobile/providers/asset_viewer/video_player_controls_provider.dart';
 import 'package:immich_mobile/providers/asset_viewer/video_player_value_provider.dart';
-import 'package:immich_mobile/providers/cast.provider.dart';
+//import 'package:immich_mobile/providers/cast.provider.dart';
 import 'package:immich_mobile/providers/infrastructure/asset_viewer/current_asset.provider.dart';
 import 'package:immich_mobile/providers/infrastructure/timeline.provider.dart';
 import 'package:immich_mobile/providers/routes.provider.dart';
@@ -197,40 +197,40 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
     });
     _delayedOperations.add(timer);
 
-    _handleCasting(asset);
+    //_handleCasting(asset);
   }
 
-  void _handleCasting(BaseAsset asset) {
-    if (!ref.read(castProvider).isCasting) return;
+  // void _handleCasting(BaseAsset asset) {
+  //   if (!ref.read(castProvider).isCasting) return;
 
-    // hide any casting snackbars if they exist
-    context.scaffoldMessenger.hideCurrentSnackBar();
+  //   // hide any casting snackbars if they exist
+  //   context.scaffoldMessenger.hideCurrentSnackBar();
 
-    // send image to casting if the server has it
-    if (asset.hasRemote) {
-      final remoteAsset = asset as RemoteAsset;
+  //   // send image to casting if the server has it
+  //   if (asset.hasRemote) {
+  //     final remoteAsset = asset as RemoteAsset;
 
-      ref.read(castProvider.notifier).loadMedia(remoteAsset, false);
-    } else {
-      // casting cannot show local assets
-      context.scaffoldMessenger.clearSnackBars();
+  //     ref.read(castProvider.notifier).loadMedia(remoteAsset, false);
+  //   } else {
+  //     // casting cannot show local assets
+  //     context.scaffoldMessenger.clearSnackBars();
 
-      if (ref.read(castProvider).isCasting) {
-        ref.read(castProvider.notifier).stop();
-        context.scaffoldMessenger.showSnackBar(
-          SnackBar(
-            duration: const Duration(seconds: 2),
-            content: Text(
-              "local_asset_cast_failed".tr(),
-              style: context.textTheme.bodyLarge?.copyWith(
-                color: context.primaryColor,
-              ),
-            ),
-          ),
-        );
-      }
-    }
-  }
+  //     if (ref.read(castProvider).isCasting) {
+  //       ref.read(castProvider.notifier).stop();
+  //       context.scaffoldMessenger.showSnackBar(
+  //         SnackBar(
+  //           duration: const Duration(seconds: 2),
+  //           content: Text(
+  //             "local_asset_cast_failed".tr(),
+  //             style: context.textTheme.bodyLarge?.copyWith(
+  //               color: context.primaryColor,
+  //             ),
+  //           ),
+  //         ),
+  //       );
+  //     }
+  //   }
+  // }
 
   void _onPageBuild(PhotoViewControllerBase controller) {
     viewController ??= controller;
@@ -610,18 +610,18 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
       child: SizedBox(
         width: ctx.width,
         height: ctx.height,
-        child: NativeVideoViewer(
+        child: VideoViewer(
           key: _getVideoPlayerKey(asset.heroTag),
           asset: asset,
-          image: Image(
-            key: ValueKey(asset),
-            image:
-                getFullImageProvider(asset, size: Size(ctx.width, ctx.height)),
-            fit: BoxFit.contain,
-            height: ctx.height,
-            width: ctx.width,
-            alignment: Alignment.center,
-          ),
+          // image: Image(
+          //   key: ValueKey(asset),
+          //   image:
+          //       getFullImageProvider(asset, size: Size(ctx.width, ctx.height)),
+          //   fit: BoxFit.contain,
+          //   height: ctx.height,
+          //   width: ctx.width,
+          //   alignment: Alignment.center,
+          // ),
         ),
       ),
     );
@@ -641,17 +641,17 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
     ref.watch(isPlayingMotionVideoProvider);
 
     // Listen for casting changes and send initial asset to the cast provider
-    ref.listen(castProvider.select((value) => value.isCasting),
-        (_, isCasting) async {
-      if (!isCasting) return;
+    // ref.listen(castProvider.select((value) => value.isCasting),
+    //     (_, isCasting) async {
+    //   if (!isCasting) return;
 
-      final asset = ref.read(currentAssetNotifier);
-      if (asset == null) return;
+    //   final asset = ref.read(currentAssetNotifier);
+    //   if (asset == null) return;
 
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _handleCasting(asset);
-      });
-    });
+    //   WidgetsBinding.instance.addPostFrameCallback((_) {
+    //     _handleCasting(asset);
+    //   });
+    // });
 
     final isInLockedView = ref.watch(inLockedViewProvider);
 
