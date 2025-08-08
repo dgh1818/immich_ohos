@@ -33,6 +33,7 @@
     "@ohos/flutter_module": "file:./entry",
     "@ohos/flutter_ohos": "file:./har/flutter.har",
     "flutter_geolocator_ohos": "file:./har/flutter_geolocator_ohos.har",
-    "sqflite": "file:./har/sqflite.har"
+    "sqflite": "file:./har/sqflite.har",
+    "flutter_secure_storage_ohos": "file:./har/flutter_secure_storage_ohos.har"
   }
 }

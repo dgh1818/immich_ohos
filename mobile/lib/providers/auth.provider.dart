@@ -80,7 +80,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
   Future<void> logout() async {
     try {
       await _secureStorageService.delete(kSecuredPinCode);
-      await _widgetService.clearCredentials();
+      //await _widgetService.clearCredentials();
 
       await _authService.logout();
     } finally {
@@ -118,10 +118,10 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }) async {
     await _apiService.setAccessToken(accessToken);
 
-    await _widgetService.writeCredentials(
-      Store.get(StoreKey.serverEndpoint),
-      accessToken,
-    );
+    // await _widgetService.writeCredentials(
+    //   Store.get(StoreKey.serverEndpoint),
+    //   accessToken,
+    // );
 
     // Get the deviceid from the store if it exists, otherwise generate a new one
     String deviceId =

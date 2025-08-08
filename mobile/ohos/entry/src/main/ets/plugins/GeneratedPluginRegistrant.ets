@@ -13,6 +13,7 @@ import DeviceInfoPlusOhosPlugin from 'device_info_plus';
 import SharePlusOhosPlugin from 'share_plus';
 import SqflitePlugin from 'sqflite';
 import FlutterLocalNotificationsPlugin from 'flutter_local_notifications';
+import FlutterSecureStorageOhosPlugin from 'flutter_secure_storage_ohos';
 import FlutterUdidPlugin from 'flutter_udid';
 import GeolocatorOhosPlugin from 'flutter_geolocator_ohos';
 import IsarFlutterLibsPlugin from 'isar_flutter_libs';
@@ -44,6 +45,7 @@ export class GeneratedPluginRegistrant {
       flutterEngine.getPlugins()?.add(new SharePlusOhosPlugin());
       flutterEngine.getPlugins()?.add(new SqflitePlugin());
       flutterEngine.getPlugins()?.add(new FlutterLocalNotificationsPlugin());
+      flutterEngine.getPlugins()?.add(new FlutterSecureStorageOhosPlugin());
       flutterEngine.getPlugins()?.add(new FlutterUdidPlugin());
       flutterEngine.getPlugins()?.add(new GeolocatorOhosPlugin());
       flutterEngine.getPlugins()?.add(new IsarFlutterLibsPlugin());
