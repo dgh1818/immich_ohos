@@ -24,7 +24,7 @@ final authProvider = StateNotifierProvider<AuthNotifier, AuthState>((ref) {
     ref.watch(authServiceProvider),
     ref.watch(apiServiceProvider),
     ref.watch(userServiceProvider),
-    ref.watch(uploadServiceProvider),
+    //ref.watch(uploadServiceProvider),
     ref.watch(secureStorageServiceProvider),
     ref.watch(widgetServiceProvider),
   );
@@ -34,7 +34,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
   final AuthService _authService;
   final ApiService _apiService;
   final UserService _userService;
-  final UploadService _uploadService;
+  //final UploadService _uploadService;
   final SecureStorageService _secureStorageService;
   final WidgetService _widgetService;
   final _log = Logger("AuthenticationNotifier");
@@ -45,7 +45,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     this._authService,
     this._apiService,
     this._userService,
-    this._uploadService,
+    //this._uploadService,
     this._secureStorageService,
     this._widgetService,
   ) : super(
@@ -87,7 +87,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       //await _widgetService.clearCredentials();
 
       await _authService.logout();
-      await _uploadService.cancelBackup();
+      //await _uploadService.cancelBackup();
     } finally {
       await _cleanUp();
     }

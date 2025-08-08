@@ -17,15 +17,19 @@ class DriftBackupOptionsPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     bool hasPopped = false;
-    final previousWifiReqForVideos = Store.tryGet(StoreKey.useWifiForUploadVideos) ?? false;
-    final previousWifiReqForPhotos = Store.tryGet(StoreKey.useWifiForUploadPhotos) ?? false;
+    final previousWifiReqForVideos =
+        Store.tryGet(StoreKey.useWifiForUploadVideos) ?? false;
+    final previousWifiReqForPhotos =
+        Store.tryGet(StoreKey.useWifiForUploadPhotos) ?? false;
     return PopScope(
       onPopInvokedWithResult: (didPop, result) async {
         // There is an issue with Flutter where the pop event
         // can be triggered multiple times, so we guard it with _hasPopped
 
-        final currentWifiReqForVideos = Store.tryGet(StoreKey.useWifiForUploadVideos) ?? false;
-        final currentWifiReqForPhotos = Store.tryGet(StoreKey.useWifiForUploadPhotos) ?? false;
+        final currentWifiReqForVideos =
+            Store.tryGet(StoreKey.useWifiForUploadVideos) ?? false;
+        final currentWifiReqForPhotos =
+            Store.tryGet(StoreKey.useWifiForUploadPhotos) ?? false;
 
         if (currentWifiReqForVideos == previousWifiReqForVideos &&
             currentWifiReqForPhotos == previousWifiReqForPhotos) {
@@ -40,8 +44,10 @@ class DriftBackupOptionsPage extends ConsumerWidget {
             return;
           }
 
-          await ref.read(driftBackupProvider.notifier).getBackupStatus(currentUser.id);
-          final isBackupEnabled = ref.read(appSettingsServiceProvider).getSetting(AppSettingsEnum.enableBackup);
+          //await ref.read(driftBackupProvider.notifier).getBackupStatus(currentUser.id);
+          final isBackupEnabled = ref
+              .read(appSettingsServiceProvider)
+              .getSetting(AppSettingsEnum.enableBackup);
           if (!isBackupEnabled) {
             return;
           }
@@ -53,10 +59,10 @@ class DriftBackupOptionsPage extends ConsumerWidget {
             ),
           );
 
-          final backupNotifier = ref.read(driftBackupProvider.notifier);
-          backupNotifier.cancel().then((_) {
-            backupNotifier.startBackup(currentUser.id);
-          });
+          //final backupNotifier = ref.read(driftBackupProvider.notifier);
+          // backupNotifier.cancel().then((_) {
+          //   backupNotifier.startBackup(currentUser.id);
+          // });
         }
       },
       child: Scaffold(
