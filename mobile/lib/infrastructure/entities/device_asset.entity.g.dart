@@ -63,7 +63,7 @@ const DeviceAssetEntitySchema = CollectionSchema(
   getId: _deviceAssetEntityGetId,
   getLinks: _deviceAssetEntityGetLinks,
   attach: _deviceAssetEntityAttach,
-  version: '3.1.8',
+  version: '3.1.0+1',
 );
 
 int _deviceAssetEntityEstimateSize(
