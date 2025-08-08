@@ -2,10 +2,10 @@ name: immich_mobile
 description: Immich - selfhosted backup media file on mobile phone
 
 publish_to: 'none'
-version: 1.136.0+205
+version: 1.137.3+3002
 
 environment:
-  sdk: '>=3.3.0 <4.0.0'
+  sdk: '>=3.8.0 <4.0.0'
   flutter: 3.32.4
 
 isar_version: &isar_version 3.1.0+1
@@ -66,6 +66,7 @@ dependencies:
   scrollable_positioned_list: ^0.3.8
   share_handler: ^0.0.22 #ohos待适配
   #share_plus: ^10.1.4
+  sliver_tools: ^0.2.12
   socket_io_client: ^2.0.3+1
   stream_transform: ^2.1.1
   thumbhash: 0.1.0+1
@@ -74,6 +75,7 @@ dependencies:
   uuid: ^4.5.1
   wakelock_plus: ^1.2.10
   worker_manager: ^7.2.3
+  scroll_date_picker: ^3.8.0
 
   native_video_player:
     git:
@@ -205,6 +207,13 @@ dependency_overrides:
       url: https://gitee.com/du_guang/isar.git
       path: 'packages/isar_flutter_libs'
       ref: dev3.1.0+1
+
+  # isar_generator:
+  #   git:
+  #     url: https://gitee.com/du_guang/isar.git
+  #     path: 'packages/isar_generator'
+  #     ref: dev3.1.0+1
+
   easy_localization:
     git:
       url: https://gitee.com/du_guang/easy_localization_ohos.git
