@@ -121,10 +121,7 @@ class GalleryViewerPage extends HookConsumerWidget {
           final asset = loadAsset(index);
           await precacheImage(
             ImmichImage.imageProvider(
-              asset: asset,
-              width: context.width,
-              height: context.height,
-            ),
+                asset: asset, width: context.width, height: context.height),
             context,
             onError: onError,
           );
@@ -202,9 +199,7 @@ class GalleryViewerPage extends HookConsumerWidget {
     //               duration: const Duration(seconds: 1),
     //               content: Text(
     //                 "local_asset_cast_failed".tr(),
-    //                 style: context.textTheme.bodyLarge?.copyWith(
-    //                   color: context.primaryColor,
-    //                 ),
+    //                 style: context.textTheme.bodyLarge?.copyWith(color: context.primaryColor),
     //               ),
     //             ),
     //           );
@@ -213,9 +208,7 @@ class GalleryViewerPage extends HookConsumerWidget {
     //     }
     //   }
     //   return null;
-    // }, [
-    //   ref.watch(castProvider).isCasting,
-    // ]);
+    // }, [ref.watch(castProvider).isCasting]);
 
     void showInfo() {
       final asset = ref.read(currentAssetProvider);
@@ -224,8 +217,7 @@ class GalleryViewerPage extends HookConsumerWidget {
       }
       showModalBottomSheet(
         shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.all(Radius.circular(15.0)),
-        ),
+            borderRadius: BorderRadius.all(Radius.circular(15.0))),
         barrierColor: Colors.transparent,
         isScrollControlled: true,
         showDragHandle: true,
@@ -240,20 +232,13 @@ class GalleryViewerPage extends HookConsumerWidget {
             expand: false,
             builder: (context, scrollController) {
               return Padding(
-                padding: EdgeInsets.only(
-                  bottom: context.viewInsets.bottom,
-                ),
+                padding: EdgeInsets.only(bottom: context.viewInsets.bottom),
                 child: ref.watch(appSettingsServiceProvider).getSetting<bool>(
-                          AppSettingsEnum.advancedTroubleshooting,
-                        )
+                        AppSettingsEnum.advancedTroubleshooting)
                     ? AdvancedBottomSheet(
-                        assetDetail: asset,
-                        scrollController: scrollController,
-                      )
+                        assetDetail: asset, scrollController: scrollController)
                     : DetailPanel(
-                        asset: asset,
-                        scrollController: scrollController,
-                      ),
+                        asset: asset, scrollController: scrollController),
               );
             },
           );
@@ -367,10 +352,8 @@ class GalleryViewerPage extends HookConsumerWidget {
         tightMode: true,
         initialScale: PhotoViewComputedScale.contained * 0.99,
         minScale: PhotoViewComputedScale.contained * 0.99,
-        errorBuilder: (context, error, stackTrace) => ImmichImage(
-          asset,
-          fit: BoxFit.contain,
-        ),
+        errorBuilder: (context, error, stackTrace) =>
+            ImmichImage(asset, fit: BoxFit.contain),
       );
     }
 
@@ -479,16 +462,11 @@ class GalleryViewerPage extends HookConsumerWidget {
                     fit: StackFit.expand,
                     children: [
                       BackdropFilter(
-                        filter: ui.ImageFilter.blur(
-                          sigmaX: 10,
-                          sigmaY: 10,
-                        ),
-                      ),
+                          filter: ui.ImageFilter.blur(sigmaX: 10, sigmaY: 10)),
                       ImmichThumbnail(
-                        key: ValueKey(asset),
-                        asset: asset,
-                        fit: BoxFit.contain,
-                      ),
+                          key: ValueKey(asset),
+                          asset: asset,
+                          fit: BoxFit.contain),
                     ],
                   ),
                 );
@@ -548,20 +526,18 @@ class GalleryViewerPage extends HookConsumerWidget {
                 // } else {
                 //   context.scaffoldMessenger.clearSnackBars();
 
-                //   // if (isCasting) {
-                //   //   ref.read(castProvider.notifier).stop();
-                //   //   context.scaffoldMessenger.showSnackBar(
-                //   //     SnackBar(
-                //   //       duration: const Duration(seconds: 2),
-                //   //       content: Text(
-                //   //         "local_asset_cast_failed".tr(),
-                //   //         style: context.textTheme.bodyLarge?.copyWith(
-                //   //           color: context.primaryColor,
-                //   //         ),
-                //   //       ),
-                //   //     ),
-                //   //   );
-                //   // }
+                // if (isCasting) {
+                //   ref.read(castProvider.notifier).stop();
+                //   context.scaffoldMessenger.showSnackBar(
+                //     SnackBar(
+                //       duration: const Duration(seconds: 2),
+                //       content: Text(
+                //         "local_asset_cast_failed".tr(),
+                //         style: context.textTheme.bodyLarge?.copyWith(color: context.primaryColor),
+                //       ),
+                //     ),
+                //   );
+                // }
                 // }
               },
               builder: buildAsset,
@@ -571,9 +547,7 @@ class GalleryViewerPage extends HookConsumerWidget {
               left: 0,
               right: 0,
               child: GalleryAppBar(
-                key: const ValueKey('app-bar'),
-                showInfo: showInfo,
-              ),
+                  key: const ValueKey('app-bar'), showInfo: showInfo),
             ),
             Positioned(
               bottom: 0,

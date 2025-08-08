@@ -81,10 +81,9 @@ class BottomGalleryBar extends ConsumerWidget {
 
     void handleDelete() async {
       Future<bool> onDelete(bool force) async {
-        final isDeleted = await ref.read(assetProvider.notifier).deleteAssets(
-          {asset},
-          force: force,
-        );
+        final isDeleted = await ref
+            .read(assetProvider.notifier)
+            .deleteAssets({asset}, force: force);
         if (isDeleted && isStackPrimaryAsset) {
           // Workaround for asset remaining in the gallery
           renderList.deleteAsset(asset);
@@ -114,11 +113,10 @@ class BottomGalleryBar extends ConsumerWidget {
           // Can only trash assets stored in server. Local assets are always permanently removed for now
           if (context.mounted && asset.isRemote && isStackPrimaryAsset) {
             ImmichToast.show(
-              durationInSecond: 1,
-              context: context,
-              msg: 'Asset trashed',
-              gravity: ToastGravity.BOTTOM,
-            );
+                durationInSecond: 1,
+                context: context,
+                msg: 'Asset trashed',
+                gravity: ToastGravity.BOTTOM);
           }
           removeAssetFromStack();
         }
@@ -172,10 +170,9 @@ class BottomGalleryBar extends ConsumerWidget {
                       ctx.pop();
                       context.maybePop();
                     },
-                    title: const Text(
-                      "viewer_unstack",
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ).tr(),
+                    title: const Text("viewer_unstack",
+                            style: TextStyle(fontWeight: FontWeight.bold))
+                        .tr(),
                   ),
                 ],
               ),
@@ -206,11 +203,8 @@ class BottomGalleryBar extends ConsumerWidget {
 
       context.navigator.push(
         MaterialPageRoute(
-          builder: (context) => EditImagePage(
-            asset: asset,
-            image: image,
-            isEdited: false,
-          ),
+          builder: (context) =>
+              EditImagePage(asset: asset, image: image, isEdited: false),
         ),
       );
     }
@@ -238,9 +232,7 @@ class BottomGalleryBar extends ConsumerWidget {
     //     return;
     //   }
 
-    //   ref.read(downloadStateProvider.notifier).downloadAsset(
-    //         asset,
-    //       );
+    //   //ref.read(downloadStateProvider.notifier).downloadAsset(asset);
     // }
 
     handleRemoveFromAlbum() async {
@@ -276,9 +268,9 @@ class BottomGalleryBar extends ConsumerWidget {
     final List<Map<BottomNavigationBarItem, Function(int)>> albumActions = [
       {
         BottomNavigationBarItem(
-          icon: Icon(
-            Platform.isAndroid ? Icons.share_rounded : Icons.ios_share_rounded,
-          ),
+          icon: Icon(Platform.isAndroid
+              ? Icons.share_rounded
+              : Icons.ios_share_rounded),
           label: 'share'.tr(),
           tooltip: 'share'.tr(),
         ): (_) => shareAsset(),
@@ -327,7 +319,8 @@ class BottomGalleryBar extends ConsumerWidget {
       //       icon: const Icon(Icons.download_outlined),
       //       label: 'download'.tr(),
       //       tooltip: 'download'.tr(),
-      //     ): (_) => handleDownload(),
+      //     ): (_) =>
+      //         handleDownload(),
       //   },
       if (isInAlbum)
         {
@@ -363,15 +356,13 @@ class BottomGalleryBar extends ConsumerWidget {
                   unselectedIconTheme: const IconThemeData(color: Colors.white),
                   selectedIconTheme: const IconThemeData(color: Colors.white),
                   unselectedLabelStyle: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w500,
-                    height: 2.3,
-                  ),
+                      color: Colors.white,
+                      fontWeight: FontWeight.w500,
+                      height: 2.3),
                   selectedLabelStyle: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w500,
-                    height: 2.3,
-                  ),
+                      color: Colors.white,
+                      fontWeight: FontWeight.w500,
+                      height: 2.3),
                   unselectedFontSize: 14,
                   selectedFontSize: 14,
                   selectedItemColor: Colors.white,

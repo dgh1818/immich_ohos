@@ -137,32 +137,6 @@ class LocalNotificationService {
             playSound: false,
           );
 
-    final ohosNotificationDetails = (maxProgress != null && progress != null)
-        ? OhosNotificationDetails(
-            OhosNotificationSlotType.CONTENT_INFORMATION,
-            slotDesc: title,
-            importance: OhosImportance.low,
-            playSound: false,
-            showProgress: true,
-            onlyAlertOnce: true,
-            maxProgress: maxProgress,
-            progress: progress,
-            indeterminate: false,
-            ongoing: true,
-            actions: (showActions ?? false)
-                ? <OhosNotificationAction>[
-                    const OhosNotificationAction(
-                      cancelUploadActionID,
-                      'Cancel',
-                    ),
-                  ]
-                : null,
-          )
-        // Non-progress notification
-        : OhosNotificationDetails(
-            OhosNotificationSlotType.CONTENT_INFORMATION,
-            playSound: false,
-          );
     final iosNotificationDetails = DarwinNotificationDetails(
       presentBadge: true,
       presentList: true,

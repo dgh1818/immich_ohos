@@ -15,13 +15,12 @@ class MemoryCard extends StatelessWidget {
   final bool showTitle;
   final Function()? onVideoEnded;
 
-  const MemoryCard({
-    required this.asset,
-    required this.title,
-    required this.showTitle,
-    this.onVideoEnded,
-    super.key,
-  });
+  const MemoryCard(
+      {required this.asset,
+      required this.title,
+      required this.showTitle,
+      this.onVideoEnded,
+      super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -29,17 +28,12 @@ class MemoryCard extends StatelessWidget {
       color: Colors.black,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.all(Radius.circular(25.0)),
-        side: BorderSide(
-          color: Colors.black,
-          width: 1.0,
-        ),
+        side: BorderSide(color: Colors.black, width: 1.0),
       ),
       clipBehavior: Clip.hardEdge,
       child: Stack(
         children: [
-          SizedBox.expand(
-            child: _BlurredBackdrop(asset: asset),
-          ),
+          SizedBox.expand(child: _BlurredBackdrop(asset: asset)),
           LayoutBuilder(
             builder: (context, constraints) {
               // Determine the fit using the aspect ratio
@@ -59,12 +53,10 @@ class MemoryCard extends StatelessWidget {
               if (asset.isImage) {
                 return Hero(
                   tag: 'memory-${asset.id}',
-                  child: ImmichImage(
-                    asset,
-                    fit: fit,
-                    height: double.infinity,
-                    width: double.infinity,
-                  ),
+                  child: ImmichImage(asset,
+                      fit: fit,
+                      height: double.infinity,
+                      width: double.infinity),
                 );
               } else {
                 return Hero(
@@ -89,17 +81,11 @@ class MemoryCard extends StatelessWidget {
                       asset: asset,
                       isMotionVideo: asset.livePhotoVideoId != null,
                       showControls: false,
-                      placeholder: Image(
-                        image: ImmichImage.imageProvider(
-                          asset: asset,
+                      //playbackDelayFactor: 2,
+                      placeholder: ImmichImage(asset,
                           width: context.width,
                           height: context.height,
-                        ),
-                        fit: BoxFit.contain,
-                        height: context.height,
-                        width: context.width,
-                        alignment: Alignment.center,
-                      ),
+                          fit: BoxFit.contain),
                     ),
                   ),
                 );
@@ -113,9 +99,7 @@ class MemoryCard extends StatelessWidget {
               child: Text(
                 title,
                 style: context.textTheme.headlineMedium?.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w500,
-                ),
+                    color: Colors.white, fontWeight: FontWeight.w500),
               ),
             ),
         ],
@@ -133,43 +117,32 @@ class _BlurredBackdrop extends HookWidget {
   Widget build(BuildContext context) {
     //final blurhash = useBlurHashRef(asset).value;
     final blurhash = null;
-    if (blurhash != null) {
-      // Use a nice cheap blur hash image decoration
-      return Container(
+    // if (blurhash != null) {
+    //   // Use a nice cheap blur hash image decoration
+    //   return Container(
+    //     decoration: BoxDecoration(
+    //       image:
+    //           DecorationImage(image: MemoryImage(blurhash), fit: BoxFit.cover),
+    //     ),
+    //     child: Container(color: Colors.black.withValues(alpha: 0.2)),
+    //   );
+    // } else {
+    // Fall back to using a more expensive image filtered
+    // Since the ImmichImage is already precached, we can
+    // safely use that as the image provider
+    return ImageFiltered(
+      imageFilter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
+      child: Container(
         decoration: BoxDecoration(
           image: DecorationImage(
-            image: MemoryImage(
-              blurhash,
-            ),
+            image: ImmichImage.imageProvider(
+                asset: asset, height: context.height, width: context.width),
             fit: BoxFit.cover,
           ),
         ),
-        child: Container(
-          color: Colors.black.withValues(alpha: 0.2),
-        ),
-      );
-    } else {
-      // Fall back to using a more expensive image filtered
-      // Since the ImmichImage is already precached, we can
-      // safely use that as the image provider
-      return ImageFiltered(
-        imageFilter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
-        child: Container(
-          decoration: BoxDecoration(
-            image: DecorationImage(
-              image: ImmichImage.imageProvider(
-                asset: asset,
-                height: context.height,
-                width: context.width,
-              ),
-              fit: BoxFit.cover,
-            ),
-          ),
-          child: Container(
-            color: Colors.black.withValues(alpha: 0.2),
-          ),
-        ),
-      );
-    }
+        child: Container(color: Colors.black.withValues(alpha: 0.2)),
+      ),
+    );
+    //}
   }
 }

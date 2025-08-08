@@ -89,12 +89,11 @@ class VideoPlaybackValue {
     );
   }
 
-  VideoPlaybackValue copyWith({
-    Duration? position,
-    Duration? duration,
-    VideoPlaybackState? state,
-    double? volume,
-  }) {
+  VideoPlaybackValue copyWith(
+      {Duration? position,
+      Duration? duration,
+      VideoPlaybackState? state,
+      double? volume}) {
     return VideoPlaybackValue(
       position: position ?? this.position,
       duration: duration ?? this.duration,
