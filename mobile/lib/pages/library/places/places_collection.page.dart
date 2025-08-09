@@ -61,14 +61,9 @@ class PlacesCollectionPage extends HookConsumerWidget {
                 child: MapThumbnail(
                   //onTap: (_, __) => context.pushRoute(MapRoute(initialLocation: currentLocation)),
                   zoom: 8,
-                  centre: currentLocation ??
-                      const LatLng(
-                        31.1019,
-                        121.3259,
-                      ),
+                  centre: currentLocation ?? const LatLng(31.171944, 121.549722),
                   showAttribution: false,
-                  themeMode:
-                      context.isDarkTheme ? ThemeMode.dark : ThemeMode.light,
+                  themeMode: context.isDarkTheme ? ThemeMode.dark : ThemeMode.light,
                   isZoomControlsEnabled: false,
                 ),
               ),
@@ -77,9 +72,7 @@ class PlacesCollectionPage extends HookConsumerWidget {
             data: (places) {
               if (search.value != null) {
                 places = places.where((place) {
-                  return place.label
-                      .toLowerCase()
-                      .contains(search.value!.toLowerCase());
+                  return place.label.toLowerCase().contains(search.value!.toLowerCase());
                 }).toList();
               }
               return ListView.builder(
@@ -110,8 +103,7 @@ class PlaceTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final thumbnailUrl =
-        '${Store.get(StoreKey.serverEndpoint)}/assets/$id/thumbnail';
+    final thumbnailUrl = '${Store.get(StoreKey.serverEndpoint)}/assets/$id/thumbnail';
 
     void navigateToPlace() {
       context.pushRoute(
@@ -121,8 +113,7 @@ class PlaceTile extends StatelessWidget {
             location: SearchLocationFilter(city: name),
             camera: SearchCameraFilter(),
             date: SearchDateFilter(),
-            display: SearchDisplayFilters(
-                isNotInAlbum: false, isArchive: false, isFavorite: false),
+            display: SearchDisplayFilters(isNotInAlbum: false, isArchive: false, isFavorite: false),
             mediaType: AssetType.other,
           ),
         ),
@@ -131,9 +122,7 @@ class PlaceTile extends StatelessWidget {
 
     return LargeLeadingTile(
       onTap: () => navigateToPlace(),
-      title: Text(name,
-          style: context.textTheme.titleMedium
-              ?.copyWith(fontWeight: FontWeight.w500)),
+      title: Text(name, style: context.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w500)),
       leading: ClipRRect(
         borderRadius: const BorderRadius.all(Radius.circular(20)),
         child: CachedNetworkImage(
@@ -142,8 +131,7 @@ class PlaceTile extends StatelessWidget {
           fit: BoxFit.cover,
           imageUrl: thumbnailUrl,
           httpHeaders: ApiService.getRequestHeaders(),
-          errorWidget: (context, url, error) =>
-              const Icon(Icons.image_not_supported_outlined),
+          errorWidget: (context, url, error) => const Icon(Icons.image_not_supported_outlined),
         ),
       ),
     );
