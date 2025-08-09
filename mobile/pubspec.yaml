@@ -91,23 +91,35 @@ dependencies:
 
   drift_sqflite: ^2.0.1
 
+  network_info_plus_ohos: ^0.0.4
+  pigeon: ^25.3.1
+
 dependency_overrides:
+  pigeon:
+    git:
+      url: 'https://gitcode.com/openharmony-sig/flutter_packages.git'
+      path: 'packages/pigeon'
+      ref: br_pigeon-v25.3.2_ohos
   sqflite:
     git:
-      url: "https://gitcode.com/openharmony-sig/flutter_sqflite"
+      url: "https://gitcode.com/dgh18/flutter_sqflite.git"
       path: "sqflite"
+      ref: br_v2.4.1_ohos
   sqflite_common:
     git:
-      url: "https://gitcode.com/openharmony-sig/flutter_sqflite.git"
+      url: "https://gitcode.com/dgh18/flutter_sqflite.git"
       path: "sqflite_common"
+      ref: br_v2.4.1_ohos
   sqflite_common_ffi:
     git:
-      url: "https://gitcode.com/openharmony-sig/flutter_sqflite.git"
+      url: "https://gitcode.com/dgh18/flutter_sqflite.git"
       path: "sqflite_common_ffi"
+      ref: br_v2.4.1_ohos
   sqflite_common_ffi_web:
     git:
-      url: "https://gitcode.com/openharmony-sig/flutter_sqflite.git"
+      url: "https://gitcode.com/dgh18/flutter_sqflite.git"
       path: "packages_web/sqflite_common_ffi_web"
+      ref: br_v2.4.1_ohos
 
   flutter_secure_storage:
     git:
@@ -246,6 +258,11 @@ dependency_overrides:
       url: 'https://gitcode.com/openharmony-sig/flutter_plus_plugins.git'
       path: 'packages/share_plus/share_plus'
       ref: master
+  # pigeon:
+  #   git:
+  #     url: 'https://gitcode.com/openharmony-sig/flutter_packages.git'
+  #     path: 'packages/pigeon'
+  #     ref: br_pigeon-v25.3.2_ohos
   intl: 0.20.2
   uuid: ^4.4.2
   #easy_localization_generator: ^0.3.3
@@ -291,18 +308,18 @@ dev_dependencies:
   file: ^7.0.1 # for MemoryFileSystem ??
   # Drift generator
   drift_dev: ^2.23.1  #??
-  pigeon: ^25.3.1
+  #pigeon: ^25.3.1
 
 dev_dependency_overrides:
   isar_generator:
     git:
       url: https://gitee.com/openharmony-sig/fluttertpc_isar.git
       path: 'packages/isar_generator'
-  pigeon:
-    git:
-      url: https://gitcode.com/openharmony-sig/flutter_packages.git
-      path: 'packages/pigeon'
-      ref: br_pigeon-v25.3.2_ohos
+  # pigeon:
+  #   git:
+  #     url: https://gitcode.com/openharmony-sig/flutter_packages.git
+  #     path: 'packages/pigeon'
+  #     ref: br_pigeon-v25.3.2_ohos
   drift_dev:
     git:
       url: https://gitcode.com/kaicc/drift.git
