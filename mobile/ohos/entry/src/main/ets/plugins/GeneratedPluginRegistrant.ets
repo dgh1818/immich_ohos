@@ -11,13 +11,14 @@ import PackageInfoPlugin from 'package_info_plus';
 import ConnectivityPlugin from 'connectivity_plus';
 import DeviceInfoPlusOhosPlugin from 'device_info_plus';
 import SharePlusOhosPlugin from 'share_plus';
-import SqflitePlugin from 'sqflite';
+import SqflitePlugin from 'sqflite_ohos';
 import FlutterLocalNotificationsPlugin from 'flutter_local_notifications';
 import FlutterSecureStorageOhosPlugin from 'flutter_secure_storage_ohos';
 import FlutterUdidPlugin from 'flutter_udid';
 import GeolocatorOhosPlugin from 'flutter_geolocator_ohos';
 import IsarFlutterLibsPlugin from 'isar_flutter_libs';
 import SharedPreferencesPlugin from 'shared_preferences_ohos';
+import NetworkInfoPlusOhosPlugin from 'network_info_plus_ohos';
 
 /**
  * Generated file. Do not edit.
@@ -50,6 +51,7 @@ export class GeneratedPluginRegistrant {
       flutterEngine.getPlugins()?.add(new GeolocatorOhosPlugin());
       flutterEngine.getPlugins()?.add(new IsarFlutterLibsPlugin());
       flutterEngine.getPlugins()?.add(new SharedPreferencesPlugin());
+      flutterEngine.getPlugins()?.add(new NetworkInfoPlusOhosPlugin());
     } catch (e) {
       Log.e(
         TAG,

@@ -34,6 +34,8 @@
     "@ohos/flutter_ohos": "file:./har/flutter.har",
     "flutter_geolocator_ohos": "file:./har/flutter_geolocator_ohos.har",
     "sqflite": "file:./har/sqflite.har",
-    "flutter_secure_storage_ohos": "file:./har/flutter_secure_storage_ohos.har"
+    "flutter_secure_storage_ohos": "file:./har/flutter_secure_storage_ohos.har",
+    "sqflite_ohos": "file:./har/sqflite_ohos.har",
+    "network_info_plus_ohos": "file:./har/network_info_plus_ohos.har"
   }
 }

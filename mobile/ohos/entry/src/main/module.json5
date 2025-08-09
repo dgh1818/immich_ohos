@@ -71,13 +71,12 @@
           when: "always",
         },
       },
-//      {
-//        "name": "ohos.permission.GET_NETWORK_INFO",
-//        reason: "$string:backup_desc",
-//        usedScene: {
-//          when: "inuse",
-//        }
-//      },
+      {"name" :  "ohos.permission.GET_WIFI_INFO",
+        reason: "$string:backup_desc",
+        usedScene: {
+          when: "always",
+        }
+      },
 //      },
       //      {
       //        name: "ohos.permission.SYSTEM_FLOAT_WINDOW",

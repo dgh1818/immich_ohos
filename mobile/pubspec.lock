@@ -226,14 +226,6 @@ packages:
       url: "https://pub.flutter-io.cn"
     source: hosted
     version: "0.1.0"
-  cli_config:
-    dependency: transitive
-    description:
-      name: cli_config
-      sha256: ac20a183a07002b700f0c25e61b7ee46b23c309d76ab7b7640a028f18e4d99ec
-      url: "https://pub.flutter-io.cn"
-    source: hosted
-    version: "0.2.0"
   cli_util:
     dependency: transitive
     description:
@@ -300,14 +292,6 @@ packages:
       url: "https://github.com/dgh1818/coordtransform_dart.git"
     source: git
     version: "1.0.4"
-  coverage:
-    dependency: transitive
-    description:
-      name: coverage
-      sha256: "5da775aa218eaf2151c721b16c01c7676fbfdd99cebba2bf64e8b807a28ff94d"
-      url: "https://pub.flutter-io.cn"
-    source: hosted
-    version: "1.15.0"
   crop_image:
     dependency: "direct main"
     description:
@@ -420,14 +404,6 @@ packages:
       url: "https://pub.flutter-io.cn"
     source: hosted
     version: "1.1.2+11"
-  dev_test:
-    dependency: transitive
-    description:
-      name: dev_test
-      sha256: f6cf8e6c55a71ca9494641ef84fe014ae03e73f9fdfb2aa08fb14a2502b77a20
-      url: "https://pub.flutter-io.cn"
-    source: hosted
-    version: "1.0.1"
   device_info_plus:
     dependency: "direct main"
     description:
@@ -1258,11 +1234,20 @@ packages:
   network_info_plus:
     dependency: "direct main"
     description:
-      name: network_info_plus
-      sha256: f926b2ba86aa0086a0dfbb9e5072089bc213d854135c1712f1d29fc89ba3c877
+      path: "packages/network_info_plus/network_info_plus"
+      ref: HEAD
+      resolved-ref: d87ccca66ffb8e82fd89cb5656876374080c3203
+      url: "https://github.com/dgh1818/plus_plugins.git"
+    source: git
+    version: "6.1.4"
+  network_info_plus_ohos:
+    dependency: transitive
+    description:
+      name: network_info_plus_ohos
+      sha256: "5668aae6240ca6d2754619360c09c5c7872f4f132752561290e91a6402fdc612"
       url: "https://pub.flutter-io.cn"
     source: hosted
-    version: "6.1.4"
+    version: "0.0.4"
   network_info_plus_platform_interface:
     dependency: transitive
     description:
@@ -1467,12 +1452,13 @@ packages:
     source: path
     version: "2.2.0"
   pigeon:
-    dependency: "direct dev"
+    dependency: "direct main"
     description:
-      name: pigeon
-      sha256: "5889b1a88204ed646229447a898e8c3389a8f906b087ea1d3d4b09338730b3c9"
-      url: "https://pub.flutter-io.cn"
-    source: hosted
+      path: "packages/pigeon"
+      ref: "br_pigeon-v25.3.2_ohos"
+      resolved-ref: "8c2176f485cb01c97ab3e4052495e1ff7057ee25"
+      url: "https://gitcode.com/openharmony-sig/flutter_packages.git"
+    source: git
     version: "25.5.0"
   pinput:
     dependency: "direct main"
@@ -1803,22 +1789,6 @@ packages:
       url: "https://pub.flutter-io.cn"
     source: hosted
     version: "2.0.0"
-  source_map_stack_trace:
-    dependency: transitive
-    description:
-      name: source_map_stack_trace
-      sha256: c0713a43e323c3302c2abe2a1cc89aa057a387101ebd280371d6a6c9fa68516b
-      url: "https://pub.flutter-io.cn"
-    source: hosted
-    version: "2.1.2"
-  source_maps:
-    dependency: transitive
-    description:
-      name: source_maps
-      sha256: "190222579a448b03896e0ca6eca5998fa810fda630c1d65e2f78b3f638f54812"
-      url: "https://pub.flutter-io.cn"
-    source: hosted
-    version: "0.10.13"
   source_span:
     dependency: transitive
     description:
@@ -1839,38 +1809,71 @@ packages:
     dependency: "direct overridden"
     description:
       path: sqflite
-      ref: HEAD
-      resolved-ref: "8c8971886957e6b1b0761507cc048b01f3a6cc15"
-      url: "https://gitcode.com/openharmony-sig/flutter_sqflite"
+      ref: "br_v2.4.1_ohos"
+      resolved-ref: cd5c1d0f224d1bbac215905e356a012383c3a686
+      url: "https://gitcode.com/dgh18/flutter_sqflite.git"
     source: git
-    version: "2.2.8+3"
+    version: "2.4.1"
+  sqflite_android:
+    dependency: transitive
+    description:
+      name: sqflite_android
+      sha256: "2b3070c5fa881839f8b402ee4a39c1b4d561704d4ebbbcfb808a119bc2a1701b"
+      url: "https://pub.flutter-io.cn"
+    source: hosted
+    version: "2.4.1"
   sqflite_common:
     dependency: "direct overridden"
     description:
       path: sqflite_common
-      ref: HEAD
-      resolved-ref: "8c8971886957e6b1b0761507cc048b01f3a6cc15"
-      url: "https://gitcode.com/openharmony-sig/flutter_sqflite.git"
+      ref: "br_v2.4.1_ohos"
+      resolved-ref: cd5c1d0f224d1bbac215905e356a012383c3a686
+      url: "https://gitcode.com/dgh18/flutter_sqflite.git"
     source: git
-    version: "2.4.5+1"
+    version: "2.5.4+5"
   sqflite_common_ffi:
     dependency: "direct overridden"
     description:
       path: sqflite_common_ffi
-      ref: HEAD
-      resolved-ref: "8c8971886957e6b1b0761507cc048b01f3a6cc15"
-      url: "https://gitcode.com/openharmony-sig/flutter_sqflite.git"
+      ref: "br_v2.4.1_ohos"
+      resolved-ref: cd5c1d0f224d1bbac215905e356a012383c3a686
+      url: "https://gitcode.com/dgh18/flutter_sqflite.git"
     source: git
-    version: "2.2.5"
+    version: "2.3.4"
   sqflite_common_ffi_web:
     dependency: "direct overridden"
     description:
       path: "packages_web/sqflite_common_ffi_web"
-      ref: HEAD
-      resolved-ref: "8c8971886957e6b1b0761507cc048b01f3a6cc15"
+      ref: "br_v2.4.1_ohos"
+      resolved-ref: cd5c1d0f224d1bbac215905e356a012383c3a686
+      url: "https://gitcode.com/dgh18/flutter_sqflite.git"
+    source: git
+    version: "0.4.5+3"
+  sqflite_darwin:
+    dependency: transitive
+    description:
+      name: sqflite_darwin
+      sha256: "279832e5cde3fe99e8571879498c9211f3ca6391b0d818df4e17d9fff5c6ccb3"
+      url: "https://pub.flutter-io.cn"
+    source: hosted
+    version: "2.4.2"
+  sqflite_ohos:
+    dependency: transitive
+    description:
+      path: sqflite_ohos
+      ref: "br_v2.4.1_ohos"
+      resolved-ref: "6d559e44da1e80b9e2442bf8b30d488b2a70064f"
       url: "https://gitcode.com/openharmony-sig/flutter_sqflite.git"
     source: git
-    version: "0.4.0"
+    version: "2.4.1"
+  sqflite_platform_interface:
+    dependency: transitive
+    description:
+      name: sqflite_platform_interface
+      sha256: "8dd4515c7bdcae0a785b0062859336de775e8c65db81ae33dd5445f35be61920"
+      url: "https://pub.flutter-io.cn"
+    source: hosted
+    version: "2.4.0"
   sqlite3:
     dependency: transitive
     description:
@@ -1959,14 +1962,6 @@ packages:
       url: "https://pub.flutter-io.cn"
     source: hosted
     version: "0.7.4"
-  test_core:
-    dependency: transitive
-    description:
-      name: test_core
-      sha256: "84d17c3486c8dfdbe5e12a50c8ae176d15e2a771b96909a9442b40173649ccaa"
-      url: "https://pub.flutter-io.cn"
-    source: hosted
-    version: "0.6.8"
   thumbhash:
     dependency: "direct main"
     description:
