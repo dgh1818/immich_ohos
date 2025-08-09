@@ -7,6 +7,8 @@ import 'package:pigeon/pigeon.dart';
     swiftOptions: SwiftOptions(),
     kotlinOut: 'android/app/src/main/kotlin/app/alextran/immich/sync/Messages.g.kt',
     kotlinOptions: KotlinOptions(package: 'app.alextran.immich.sync'),
+    arkTSOut: 'ohos/entry/src/main/ets/sync/Messages.g.ets',
+    arkTSOptions: ArkTSOptions(),
     dartOptions: DartOptions(),
     dartPackageName: 'immich_mobile',
   ),
