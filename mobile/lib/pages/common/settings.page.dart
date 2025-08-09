@@ -22,35 +22,30 @@ import 'package:immich_mobile/widgets/settings/settings_card.dart';
 enum SettingSection {
   beta('beta_sync', Icons.sync_outlined, "beta_sync_subtitle"),
   advanced('advanced', Icons.build_outlined, "advanced_settings_tile_subtitle"),
-  assetViewer('asset_viewer_settings_title', Icons.image_outlined,
-      "asset_viewer_settings_subtitle"),
+  assetViewer('asset_viewer_settings_title', Icons.image_outlined, "asset_viewer_settings_subtitle"),
   backup('backup', Icons.cloud_upload_outlined, "backup_settings_subtitle"),
   languages('language', Icons.language, "setting_languages_subtitle"),
-  //networking('networking_settings', Icons.wifi, "networking_subtitle"),
-  notifications('notifications', Icons.notifications_none_rounded,
-      "setting_notifications_subtitle"),
-  preferences('preferences_settings_title', Icons.interests_outlined,
-      "preferences_settings_subtitle"),
-  timeline('asset_list_settings_title', Icons.auto_awesome_mosaic_outlined,
-      "asset_list_settings_subtitle");
+  networking('networking_settings', Icons.wifi, "networking_subtitle"),
+  notifications('notifications', Icons.notifications_none_rounded, "setting_notifications_subtitle"),
+  preferences('preferences_settings_title', Icons.interests_outlined, "preferences_settings_subtitle"),
+  timeline('asset_list_settings_title', Icons.auto_awesome_mosaic_outlined, "asset_list_settings_subtitle");
 
   final String title;
   final String subtitle;
   final IconData icon;
 
   Widget get widget => switch (this) {
-        SettingSection.beta => const _BetaLandscapeToggle(),
-        SettingSection.advanced => const AdvancedSettings(),
-        SettingSection.assetViewer => const AssetViewerSettings(),
-        SettingSection.backup => Store.tryGet(StoreKey.betaTimeline) ?? false
-            ? const DriftBackupSettings()
-            : const BackupSettings(),
-        SettingSection.languages => const LanguageSettings(),
-        //SettingSection.networking => const NetworkingSettings(),
-        SettingSection.notifications => const NotificationSetting(),
-        SettingSection.preferences => const PreferenceSetting(),
-        SettingSection.timeline => const AssetListSettings(),
-      };
+    SettingSection.beta => const _BetaLandscapeToggle(),
+    SettingSection.advanced => const AdvancedSettings(),
+    SettingSection.assetViewer => const AssetViewerSettings(),
+    SettingSection.backup =>
+      Store.tryGet(StoreKey.betaTimeline) ?? false ? const DriftBackupSettings() : const BackupSettings(),
+    SettingSection.languages => const LanguageSettings(),
+    SettingSection.networking => const NetworkingSettings(),
+    SettingSection.notifications => const NotificationSetting(),
+    SettingSection.preferences => const PreferenceSetting(),
+    SettingSection.timeline => const AssetListSettings(),
+  };
 
   const SettingSection(this.title, this.icon, this.subtitle);
 }
@@ -108,8 +103,7 @@ class _TabletLayout extends HookWidget {
   const _TabletLayout();
   @override
   Widget build(BuildContext context) {
-    final selectedSection =
-        useState<SettingSection>(SettingSection.values.first);
+    final selectedSection = useState<SettingSection>(SettingSection.values.first);
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.start,
@@ -149,8 +143,7 @@ class _BetaLandscapeToggle extends HookWidget {
       mainAxisAlignment: MainAxisAlignment.start,
       children: [
         const SizedBox(height: 100, child: BetaTimelineListTile()),
-        if (Store.isBetaTimelineEnabled)
-          const Expanded(child: BetaSyncSettings()),
+        if (Store.isBetaTimelineEnabled) const Expanded(child: BetaSyncSettings()),
       ],
     );
   }
