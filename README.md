@@ -77,6 +77,7 @@ GEOCODE_WITH_AMAP: 'true' // 启用高德 逆地理编码 个人开发者国内�
 5. 桌面小组件 <br/>
 6. dynamic_color <br/>
 7. wifi信息获取：network_info_plus已发现适配版 <br/>
+8. beta时间线数据库迁移同步：work_manager未适配 <br/>
 
 </h1>
 
