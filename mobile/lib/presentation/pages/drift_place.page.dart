@@ -52,8 +52,7 @@ class _PlaceSliverAppBar extends StatelessWidget {
       pinned: true,
       snap: false,
       backgroundColor: context.colorScheme.surfaceContainer,
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.all(Radius.circular(5))),
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(5))),
       automaticallyImplyLeading: search.value == null,
       centerTitle: true,
       title: search.value != null
@@ -97,10 +96,11 @@ class _Map extends StatelessWidget {
                 child: MapThumbnail(
                   //onTap: (_, __) => context.pushRoute(MapRoute(initialLocation: currentLocation)),
                   zoom: 8,
-                  centre: currentLocation ?? const LatLng(31.1020, 121.3260),
+                  centre: currentLocation ?? const LatLng(31.171944, 121.549722),
                   showAttribution: false,
-                  themeMode:
-                      context.isDarkTheme ? ThemeMode.dark : ThemeMode.light,
+                  themeMode: context.isDarkTheme ? ThemeMode.dark : ThemeMode.light,
+
+                  isZoomControlsEnabled: false,
                 ),
               ),
             ),
@@ -121,9 +121,7 @@ class _PlaceList extends ConsumerWidget {
     return places.when(
       loading: () => const SliverToBoxAdapter(
         child: Center(
-          child: Padding(
-              padding: EdgeInsets.all(20.0),
-              child: CircularProgressIndicator()),
+          child: Padding(padding: EdgeInsets.all(20.0), child: CircularProgressIndicator()),
         ),
       ),
       error: (error, stack) => SliverToBoxAdapter(
@@ -165,13 +163,10 @@ class _PlaceTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return LargeLeadingTile(
       onTap: () => context.pushRoute(DriftPlaceDetailRoute(place: place.$1)),
-      title: Text(place.$1,
-          style: context.textTheme.titleMedium
-              ?.copyWith(fontWeight: FontWeight.w500)),
+      title: Text(place.$1, style: context.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w500)),
       leading: ClipRRect(
         borderRadius: const BorderRadius.all(Radius.circular(20)),
-        child: Thumbnail(
-            size: const Size(80, 80), fit: BoxFit.cover, remoteId: place.$2),
+        child: Thumbnail(size: const Size(80, 80), fit: BoxFit.cover, remoteId: place.$2),
       ),
     );
   }
