@@ -16,13 +16,16 @@
 import { FlutterAbility, FlutterEngine } from '@ohos/flutter_ohos';
 import { GeneratedPluginRegistrant } from '../plugins/GeneratedPluginRegistrant';
 import { BackgroundServicePlugin } from '../../../main/ets/plugins/BackgroundServicePlugin';
-import { NativeSyncApi } from '../../../main/ets/plugins/sync/Messages.g';
+import { NativeSyncApiOhos } from '../../../main/ets/plugins/sync/Messages_ohos.g';
+import {MessagesImplBase} from '../plugins/sync/MessagesImplBase'
 
 export default class EntryAbility extends FlutterAbility {
   configureFlutterEngine(flutterEngine: FlutterEngine) {
     super.configureFlutterEngine(flutterEngine)
     GeneratedPluginRegistrant.registerWith(flutterEngine)
     this.addPlugin(new BackgroundServicePlugin()); // 加载插件
-    //NativeSyncApi.setup(flutterEngine.dartExecutor.getBinaryMessenger(), nativeSyncApiImpl)
+    let nativeSyncApiImpl = new MessagesImplBase(this.getAbility().context);
+
+    NativeSyncApiOhos.setup(flutterEngine.dartExecutor.getBinaryMessenger(), nativeSyncApiImpl)
   }
 }
