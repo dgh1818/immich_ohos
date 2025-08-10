@@ -41,20 +41,16 @@ class DriftMemoryCard extends StatelessWidget {
               BoxFit fit = BoxFit.contain;
               if (asset.width != null && asset.height != null) {
                 final aspectRatio = asset.width! / asset.height!;
-                final phoneAspectRatio =
-                    constraints.maxWidth / constraints.maxHeight;
+                final phoneAspectRatio = constraints.maxWidth / constraints.maxHeight;
                 // Look for a 25% difference in either direction
-                if (phoneAspectRatio * .75 < aspectRatio &&
-                    phoneAspectRatio * 1.25 > aspectRatio) {
+                if (phoneAspectRatio * .75 < aspectRatio && phoneAspectRatio * 1.25 > aspectRatio) {
                   // Cover to look nice if we have nearly the same aspect ratio
                   fit = BoxFit.cover;
                 }
               }
 
               if (asset.isImage) {
-                return FullImage(asset,
-                    fit: fit,
-                    size: const Size(double.infinity, double.infinity));
+                return FullImage(asset, fit: fit, size: const Size(double.infinity, double.infinity));
               } else {
                 return SizedBox(
                   width: context.width,
@@ -76,8 +72,7 @@ class DriftMemoryCard extends StatelessWidget {
               bottom: 18.0,
               child: Text(
                 title,
-                style: context.textTheme.headlineMedium?.copyWith(
-                    color: Colors.white, fontWeight: FontWeight.w500),
+                style: context.textTheme.headlineMedium?.copyWith(color: Colors.white, fontWeight: FontWeight.w500),
               ),
             ),
         ],
@@ -93,33 +88,32 @@ class _BlurredBackdrop extends HookWidget {
 
   @override
   Widget build(BuildContext context) {
-    final blurhash = useDriftBlurHashRef(asset).value;
-    if (blurhash != null) {
-      // Use a nice cheap blur hash image decoration
-      return Container(
+    // final blurhash = useDriftBlurHashRef(asset).value;
+    // if (blurhash != null) {
+    //   // Use a nice cheap blur hash image decoration
+    //   return Container(
+    //     decoration: BoxDecoration(
+    //       image:
+    //           DecorationImage(image: MemoryImage(blurhash), fit: BoxFit.cover),
+    //     ),
+    //     child: Container(color: Colors.black.withValues(alpha: 0.2)),
+    //   );
+    // } else {
+    // Fall back to using a more expensive image filtered
+    // Since the ImmichImage is already precached, we can
+    // safely use that as the image provider
+    return ImageFiltered(
+      imageFilter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
+      child: Container(
         decoration: BoxDecoration(
-          image:
-              DecorationImage(image: MemoryImage(blurhash), fit: BoxFit.cover),
+          image: DecorationImage(
+            image: getFullImageProvider(asset, size: Size(context.width, context.height)),
+            fit: BoxFit.cover,
+          ),
         ),
         child: Container(color: Colors.black.withValues(alpha: 0.2)),
-      );
-    } else {
-      // Fall back to using a more expensive image filtered
-      // Since the ImmichImage is already precached, we can
-      // safely use that as the image provider
-      return ImageFiltered(
-        imageFilter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
-        child: Container(
-          decoration: BoxDecoration(
-            image: DecorationImage(
-              image: getFullImageProvider(asset,
-                  size: Size(context.width, context.height)),
-              fit: BoxFit.cover,
-            ),
-          ),
-          child: Container(color: Colors.black.withValues(alpha: 0.2)),
-        ),
-      );
-    }
+      ),
+    );
+    //}
   }
 }

@@ -18,14 +18,14 @@ class Thumbnail extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final thumbHash = asset is RemoteAsset ? (asset as RemoteAsset).thumbHash : null;
+    //final thumbHash = asset is RemoteAsset ? (asset as RemoteAsset).thumbHash : null;
     final provider = getThumbnailImageProvider(asset: asset, remoteId: remoteId, size: size);
 
     return OctoImage.fromSet(
       image: provider,
       octoSet: OctoSet(
-        placeholderBuilder: _blurHashPlaceholderBuilder(thumbHash, fit: fit),
-        errorBuilder: _blurHashErrorBuilder(thumbHash, provider: provider, fit: fit, asset: asset),
+        // placeholderBuilder: _blurHashPlaceholderBuilder(thumbHash, fit: fit),
+        // errorBuilder: _blurHashErrorBuilder(thumbHash, provider: provider, fit: fit, asset: asset),
       ),
       fadeOutDuration: const Duration(milliseconds: 100),
       fadeInDuration: Duration.zero,
