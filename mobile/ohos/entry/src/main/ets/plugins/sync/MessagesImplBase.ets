@@ -8,35 +8,35 @@ import { NativeSyncApiOhos,SyncDelta,PlatformAsset,PlatformAlbum } from './Messa
 import { BusinessError } from '@kit.BasicServicesKit';
 
 export class MessagesImplBase extends NativeSyncApiOhos {
-  public async hashPaths(paths: string[]): Promise<Uint8Array[]> {
-    try {
-      const results = await Promise.all(
-        paths.map(path =>
-        new Promise<Uint8Array | null>((resolve) => {
-          hash.hash(path, 'sha1', (err: BusinessError, digest: string) => {
-            if (err) {
-              console.error(`Cannot calculate digest of ${path}: ${err.message}`);
-              resolve(null);
-            } else {
-              try {
-                const bytes: Uint8Array = this.hexStringToBytes(digest);
-                resolve(bytes);
-              } catch (e) {
-                console.error(`Invalid digest format`);
-                resolve(null);
-              }
-            }
-          });
-        })
-        )
-      );
+  public async hashPaths(paths: string[]): Promise<(Uint8Array | null)[]> {
+    
+    const args2: string[] = paths;
+    const digest:string = "sha1"
+    const hashes: Promise<Uint8Array | null>[] = [];
 
-      // 过滤 null
-      return results.filter(x => x !== null) as Uint8Array[];
-    } catch (error) {
-      console.error(`hashPaths failed: ${(error as BusinessError).message}`);
-      return [];
+    for (let i = 0; i < args2.length; i++) {
+      const promise = new Promise<Uint8Array | null>((resolve) => {
+        hash.hash(args2[i], digest, (err: BusinessError, digest: string) => {
+          if (err) {
+            console.error(`Cannot calculate digest of ${args2[i]}: ${err.message}`);
+            resolve(null);
+          } else {
+            try {
+              const bytes: Uint8Array = this.hexStringToBytes(digest);
+              resolve(bytes);
+            } catch (e) {
+              console.error(`Invalid digest format for ${args2[i]}: ${e}`);
+              resolve(null);
+            }
+          }
+        });
+      });
+      hashes.push(promise);
     }
+
+    const results = await Promise.all(hashes);
+    // 直接用 results 就是 hashes 的结果数组
+    return results;
   }
 
   hexStringToBytes(hex: string): Uint8Array {

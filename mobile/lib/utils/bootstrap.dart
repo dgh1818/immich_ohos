@@ -43,6 +43,8 @@ abstract final class Bootstrap {
         if (Platform.isAndroid) AndroidDeviceAssetSchema,
         if (Platform.isIOS) IOSDeviceAssetSchema,
         if (defaultTargetPlatform == TargetPlatform.ohos) IOSDeviceAssetSchema,
+
+        DeviceAssetEntitySchema,
       ],
       directory: dir.path,
       maxSizeMiB: 2048,
