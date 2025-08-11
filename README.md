@@ -38,6 +38,81 @@
   <a href="readme_i18n/README_th_TH.md">ภาษาไทย</a>
 </p>
 
+# Harmonyos Next 鸿蒙端的 Immich
+
+**IMMICH 1.129.0 搭配 本项目下服务器 使用**
+<h1>签名有关注意事项：</h1>
+1. 本目录下服务器可实现华为jpeg动态照片解析<br/>
+2. 本目录下服务器搭配PETAL MAP的API KEY可实现中文逆地理编码（中文地名）<br/>
+.env 文件设置：<br/>
+PETALMAP_GEOCODE_KEYS: //华为 App Gallery Connect API KEY.<br/>
+GEOCODE_WITH_PETALMAP: 'true' // 启用 Petal Map 逆地理编码. 80000次/月免费 包括国内和国际<br/>
+
+AMAP_GEOCODE_KEYS: //高德地图 key.<br/>
+GEOCODE_WITH_AMAP: 'true' // 启用高德 逆地理编码 个人开发者国内免费 5000 次每天，国际收费.<br/>
+也可以搭配官方1.129.0服务器版本使用，但无上述功能。过高的服务器版本可能导致无法登陆<br/>
+
+1. 要实现应用内地图显示，需在APPGALLERY CONNECT中申请签名的同时开通地图权限 <br/>
+控制台地址：https://developer.huawei.com/consumer/cn/service/josp/agc/index.html <br/>
+教程地址：https://ost.51cto.com/answer/23898 mapkit <br/>
+2. 要实现照片的备份，要申请开通ACL权限(测试还是很容易开通的，上架可能比较难申请）： <br/>
+   "ohos.permission.READ_IMAGEVIDEO" <br/>
+   "ohos.permission.WRITE_IMAGEVIDEO" <br/>
+   
+<h1>Additional Features：</h1>
+1. 实现了 HDR 图片和视频的显示  <br/>
+2. 优化了ui布局 点击左上角logo可收起侧栏  <br/>
+3. 小地图替换成了petalmap  <br/>
+4. 增加了photopicker，无需ACL可手动上传媒体 <br/>
+
+<h1>已知问题：</h1>
+1. 语言切换显示功能
+2. 每行显示数量更改不即时生效（原版app也存在）
+
+<h1>未完成的功能：</h1>
+1. beta时间线数据库迁移同步：work_manager未适配 <br/>
+2.  照片同步功能以及后台上传下载功能：background_downloader未适配 <br/>
+3. 大地图：[maplibre/flutter-maplibre-gl](https://github.com/maplibre/flutter-maplibre-gl) Huawei mapkit缺少热力图功能 <br/>
+4. wifi信息获取：network_info_plus已发现适配版 <br/>
+5.  投屏功能：gcast谷歌投屏 <br/>
+6. 桌面小组件 <br/>
+7.  链接分享和接收功能：share_plus <br/>
+8. dynamic_color <br/>
+
+</h1>
+
+<h2>History：</h2>
+
+To Do：
+
+1. 华为动态照片的播放显示（修改 Server 端？）初步完成！需使用本项目服务器，重新分析元数据
+2. 替换地图：ExifInfo 小地图初步完成！大地图 Mapkit 尚未有热力图功能，待官方功能完善 （需App Gallery Connect开通地图权限并签名才能显示地图）
+https://ost.51cto.com/answer/23898 mapkit开通教程
+3. AI HDR（待完成）
+4. 地理反向编码中文化：完成！（需使用本项目服务器，重新分析元数据）（需App Gallery Connect开通地图权限并签名）
+5. 当前 flutter 版本受限（3.27），无法使用最新 flutter 版本（3.32），后续更新<br/>
+
+<h2>备忘：</h2>
+1. photopicker最大媒体数量从9修改为了500
+
+
+
+<h2>DEMO:</h2>
+
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/bcd88029-4e22-4742-95ae-77477a2fc855" alt="平板1" width="800" />
+</p>
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/79e9e708-26d7-49d8-b2fc-e61859f581d3" alt="平板2" width="800" />
+</p>
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/b9087716-ef8e-4f24-b3dc-3728fc6400a6" alt="平板3" width="800" />
+</p>
+
+
+
+
+
 ## Disclaimer
 
 - ⚠️ The project is under **very active** development.
