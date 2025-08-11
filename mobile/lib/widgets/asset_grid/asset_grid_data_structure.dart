@@ -65,8 +65,8 @@ class RenderList {
 
         final bool forward = _bufOffset < offset;
         // if the requested offset is greater than the cached offset, the user scrolls forward "down"
-        const batchSize = 256;
-        const oppositeSize = 64;
+        const batchSize = 512;
+        const oppositeSize = 128;
 
         // make sure to load a meaningful amount of data (and not only the requested slice)
         // otherwise, each call to [loadAssets] would result in DB call trashing performance
@@ -121,7 +121,7 @@ class RenderList {
     final List<RenderAssetGridElement> elements = [];
 
     const pageSize = 50000;
-    const sectionSize = 60; // divides evenly by 2,3,4,5,6
+    const sectionSize = 240; // divides evenly by 2,3,4,5,6
 
     if (groupBy == GroupAssetsBy.none) {
       final int total = assets?.length ?? query!.countSync();

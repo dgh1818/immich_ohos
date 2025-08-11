@@ -1,3 +1,4 @@
+/*
 import 'package:background_downloader/background_downloader.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
@@ -114,3 +115,4 @@ class DownloadTaskTile extends StatelessWidget {
     );
   }
 }
+*/

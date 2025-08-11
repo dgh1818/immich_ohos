@@ -24,7 +24,7 @@ final authProvider = StateNotifierProvider<AuthNotifier, AuthState>((ref) {
     ref.watch(authServiceProvider),
     ref.watch(apiServiceProvider),
     ref.watch(userServiceProvider),
-    ref.watch(uploadServiceProvider),
+    //ref.watch(uploadServiceProvider),
     ref.watch(secureStorageServiceProvider),
     ref.watch(widgetServiceProvider),
   );
@@ -34,7 +34,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
   final AuthService _authService;
   final ApiService _apiService;
   final UserService _userService;
-  final UploadService _uploadService;
+  //final UploadService _uploadService;
   final SecureStorageService _secureStorageService;
   final WidgetService _widgetService;
   final _log = Logger("AuthenticationNotifier");
@@ -45,7 +45,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     this._authService,
     this._apiService,
     this._userService,
-    this._uploadService,
+    //this._uploadService,
     this._secureStorageService,
     this._widgetService,
   ) : super(
@@ -84,10 +84,10 @@ class AuthNotifier extends StateNotifier<AuthState> {
   Future<void> logout() async {
     try {
       await _secureStorageService.delete(kSecuredPinCode);
-      await _widgetService.clearCredentials();
+      //await _widgetService.clearCredentials();
 
       await _authService.logout();
-      await _uploadService.cancelBackup();
+      //await _uploadService.cancelBackup();
     } finally {
       await _cleanUp();
     }
@@ -121,7 +121,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
   Future<bool> saveAuthInfo({required String accessToken}) async {
     await _apiService.setAccessToken(accessToken);
 
-    await _widgetService.writeCredentials(Store.get(StoreKey.serverEndpoint), accessToken);
+    //await _widgetService.writeCredentials(Store.get(StoreKey.serverEndpoint), accessToken);
 
     // Get the deviceid from the store if it exists, otherwise generate a new one
     String deviceId = Store.tryGet(StoreKey.deviceId) ?? await FlutterUdid.consistentUdid;

@@ -44,7 +44,7 @@ class BackupVerification extends _$BackupVerification {
         }
         return;
       }
-      WakelockPlus.enable();
+      //WakelockPlus.enable();
 
       const limit = 100;
       final toDelete = await ref.read(backupVerificationServiceProvider).findWronglyBackedUpAssets(limit: limit);
@@ -73,7 +73,7 @@ class BackupVerification extends _$BackupVerification {
         }
       }
     } finally {
-      WakelockPlus.disable();
+      //WakelockPlus.disable();
       state = false;
     }
   }

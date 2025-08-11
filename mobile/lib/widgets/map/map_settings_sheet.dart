@@ -1,3 +1,4 @@
+/*
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:immich_mobile/providers/map/map_state.provider.dart';
@@ -59,3 +60,4 @@ class MapSettingsSheet extends HookConsumerWidget {
     );
   }
 }
+*/

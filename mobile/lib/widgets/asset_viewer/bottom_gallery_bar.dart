@@ -13,7 +13,7 @@ import 'package:immich_mobile/providers/album/current_album.provider.dart';
 import 'package:immich_mobile/providers/asset.provider.dart';
 import 'package:immich_mobile/providers/asset_viewer/asset_stack.provider.dart';
 import 'package:immich_mobile/providers/asset_viewer/current_asset.provider.dart';
-import 'package:immich_mobile/providers/asset_viewer/download.provider.dart';
+// import 'package:immich_mobile/providers/asset_viewer/download.provider.dart';
 import 'package:immich_mobile/providers/asset_viewer/show_controls.provider.dart';
 import 'package:immich_mobile/providers/routes.provider.dart';
 import 'package:immich_mobile/providers/server_info.provider.dart';
@@ -26,6 +26,8 @@ import 'package:immich_mobile/widgets/asset_grid/delete_dialog.dart';
 import 'package:immich_mobile/widgets/asset_viewer/video_controls.dart';
 import 'package:immich_mobile/widgets/common/immich_image.dart';
 import 'package:immich_mobile/widgets/common/immich_toast.dart';
+
+import 'package:immich_mobile/utils/selection_handlers.dart';
 
 class BottomGalleryBar extends ConsumerWidget {
   final ValueNotifier<int> assetIndex;
@@ -167,7 +169,7 @@ class BottomGalleryBar extends ConsumerWidget {
         );
         return;
       }
-      ref.read(downloadStateProvider.notifier).shareAsset(asset, context);
+      //ref.read(downloadStateProvider.notifier).shareAsset(asset, context);
     }
 
     void handleEdit() async {
@@ -189,6 +191,7 @@ class BottomGalleryBar extends ConsumerWidget {
       removeAssetFromStack();
     }
 
+    /*
     handleDownload() {
       if (asset.isLocal) {
         return;
@@ -203,8 +206,9 @@ class BottomGalleryBar extends ConsumerWidget {
         return;
       }
 
-      ref.read(downloadStateProvider.notifier).downloadAsset(asset);
+      //ref.read(downloadStateProvider.notifier).downloadAsset(asset);
     }
+*/
 
     handleRemoveFromAlbum() async {
       final album = ref.read(currentAlbumProvider);
@@ -286,6 +290,7 @@ class BottomGalleryBar extends ConsumerWidget {
           ): (_) =>
               handleDelete(),
         },
+      /*
       if (!isOwner)
         {
           BottomNavigationBarItem(
@@ -295,6 +300,7 @@ class BottomGalleryBar extends ConsumerWidget {
           ): (_) =>
               handleDownload(),
         },
+*/
       if (isInAlbum)
         {
           BottomNavigationBarItem(

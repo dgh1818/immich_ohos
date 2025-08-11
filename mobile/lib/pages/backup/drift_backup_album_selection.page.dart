@@ -8,7 +8,7 @@ import 'package:immich_mobile/extensions/build_context_extensions.dart';
 import 'package:immich_mobile/extensions/translate_extensions.dart';
 import 'package:immich_mobile/providers/app_settings.provider.dart';
 import 'package:immich_mobile/providers/backup/backup_album.provider.dart';
-import 'package:immich_mobile/providers/backup/drift_backup.provider.dart';
+//import 'package:immich_mobile/providers/backup/drift_backup.provider.dart';
 import 'package:immich_mobile/providers/user.provider.dart';
 import 'package:immich_mobile/services/app_settings.service.dart';
 import 'package:immich_mobile/widgets/backup/drift_album_info_list_tile.dart';
@@ -41,7 +41,7 @@ class _DriftBackupAlbumSelectionPageState extends ConsumerState<DriftBackupAlbum
     _enableSyncUploadAlbum.value = ref.read(appSettingsServiceProvider).getSetting(AppSettingsEnum.syncAlbums);
     ref.read(backupAlbumProvider.notifier).getAll();
 
-    _initialTotalAssetCount = ref.read(driftBackupProvider.select((p) => p.totalCount));
+    //_initialTotalAssetCount = ref.read(driftBackupProvider.select((p) => p.totalCount));
   }
 
   @override
@@ -86,6 +86,7 @@ class _DriftBackupAlbumSelectionPageState extends ConsumerState<DriftBackupAlbum
             return;
           }
 
+          /*
           await ref.read(driftBackupProvider.notifier).getBackupStatus(currentUser.id);
           final currentTotalAssetCount = ref.read(driftBackupProvider.select((p) => p.totalCount));
 
@@ -100,7 +101,8 @@ class _DriftBackupAlbumSelectionPageState extends ConsumerState<DriftBackupAlbum
             backupNotifier.cancel().then((_) {
               backupNotifier.startBackup(currentUser.id);
             });
-          }
+          } 
+*/
         }
       },
       child: Scaffold(

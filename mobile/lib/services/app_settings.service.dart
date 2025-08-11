@@ -3,13 +3,13 @@ import 'package:immich_mobile/domain/models/store.model.dart';
 import 'package:immich_mobile/entities/store.entity.dart';
 
 enum AppSettingsEnum<T> {
-  loadPreview<bool>(StoreKey.loadPreview, "loadPreview", true),
-  loadOriginal<bool>(StoreKey.loadOriginal, "loadOriginal", false),
+  loadPreview<bool>(StoreKey.loadPreview, "loadPreview", false),
+  loadOriginal<bool>(StoreKey.loadOriginal, "loadOriginal", true),
   themeMode<String>(StoreKey.themeMode, "themeMode", "system"), // "light","dark","system"
   primaryColor<String>(StoreKey.primaryColor, "primaryColor", defaultColorPresetName),
   dynamicTheme<bool>(StoreKey.dynamicTheme, "dynamicTheme", false),
   colorfulInterface<bool>(StoreKey.colorfulInterface, "colorfulInterface", true),
-  tilesPerRow<int>(StoreKey.tilesPerRow, "tilesPerRow", 4),
+  tilesPerRow<int>(StoreKey.tilesPerRow, "tilesPerRow", 6),
   dynamicLayout<bool>(StoreKey.dynamicLayout, "dynamicLayout", false),
   groupAssetsBy<int>(StoreKey.groupAssetsBy, "groupBy", 0),
   uploadErrorNotificationGracePeriod<int>(
@@ -31,9 +31,9 @@ enum AppSettingsEnum<T> {
   advancedTroubleshooting<bool>(StoreKey.advancedTroubleshooting, null, false),
   manageLocalMediaAndroid<bool>(StoreKey.manageLocalMediaAndroid, null, false),
   logLevel<int>(StoreKey.logLevel, null, 5), // Level.INFO = 5
-  preferRemoteImage<bool>(StoreKey.preferRemoteImage, null, false),
+  preferRemoteImage<bool>(StoreKey.preferRemoteImage, null, true),
   loopVideo<bool>(StoreKey.loopVideo, "loopVideo", true),
-  loadOriginalVideo<bool>(StoreKey.loadOriginalVideo, "loadOriginalVideo", false),
+  loadOriginalVideo<bool>(StoreKey.loadOriginalVideo, "loadOriginalVideo", true),
   mapThemeMode<int>(StoreKey.mapThemeMode, null, 0),
   mapShowFavoriteOnly<bool>(StoreKey.mapShowFavoriteOnly, null, false),
   mapIncludeArchived<bool>(StoreKey.mapIncludeArchived, null, false),

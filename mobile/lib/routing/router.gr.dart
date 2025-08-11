@@ -1186,22 +1186,6 @@ class DriftTrashRoute extends PageRouteInfo<void> {
 }
 
 /// generated route for
-/// [DriftUploadDetailPage]
-class DriftUploadDetailRoute extends PageRouteInfo<void> {
-  const DriftUploadDetailRoute({List<PageRouteInfo>? children})
-    : super(DriftUploadDetailRoute.name, initialChildren: children);
-
-  static const String name = 'DriftUploadDetailRoute';
-
-  static PageInfo page = PageInfo(
-    name,
-    builder: (data) {
-      return const DriftUploadDetailPage();
-    },
-  );
-}
-
-/// generated route for
 /// [DriftUserSelectionPage]
 class DriftUserSelectionRoute
     extends PageRouteInfo<DriftUserSelectionRouteArgs> {
@@ -1710,42 +1694,6 @@ class MapLocationPickerRouteArgs {
 }
 
 /// generated route for
-/// [MapPage]
-class MapRoute extends PageRouteInfo<MapRouteArgs> {
-  MapRoute({Key? key, LatLng? initialLocation, List<PageRouteInfo>? children})
-    : super(
-        MapRoute.name,
-        args: MapRouteArgs(key: key, initialLocation: initialLocation),
-        initialChildren: children,
-      );
-
-  static const String name = 'MapRoute';
-
-  static PageInfo page = PageInfo(
-    name,
-    builder: (data) {
-      final args = data.argsAs<MapRouteArgs>(
-        orElse: () => const MapRouteArgs(),
-      );
-      return MapPage(key: args.key, initialLocation: args.initialLocation);
-    },
-  );
-}
-
-class MapRouteArgs {
-  const MapRouteArgs({this.key, this.initialLocation});
-
-  final Key? key;
-
-  final LatLng? initialLocation;
-
-  @override
-  String toString() {
-    return 'MapRouteArgs{key: $key, initialLocation: $initialLocation}';
-  }
-}
-
-/// generated route for
 /// [MemoryPage]
 class MemoryRoute extends PageRouteInfo<MemoryRouteArgs> {
   MemoryRoute({
@@ -1794,70 +1742,6 @@ class MemoryRouteArgs {
   @override
   String toString() {
     return 'MemoryRouteArgs{memories: $memories, memoryIndex: $memoryIndex, key: $key}';
-  }
-}
-
-/// generated route for
-/// [NativeVideoViewerPage]
-class NativeVideoViewerRoute extends PageRouteInfo<NativeVideoViewerRouteArgs> {
-  NativeVideoViewerRoute({
-    Key? key,
-    required Asset asset,
-    required Widget image,
-    bool showControls = true,
-    int playbackDelayFactor = 1,
-    List<PageRouteInfo>? children,
-  }) : super(
-         NativeVideoViewerRoute.name,
-         args: NativeVideoViewerRouteArgs(
-           key: key,
-           asset: asset,
-           image: image,
-           showControls: showControls,
-           playbackDelayFactor: playbackDelayFactor,
-         ),
-         initialChildren: children,
-       );
-
-  static const String name = 'NativeVideoViewerRoute';
-
-  static PageInfo page = PageInfo(
-    name,
-    builder: (data) {
-      final args = data.argsAs<NativeVideoViewerRouteArgs>();
-      return NativeVideoViewerPage(
-        key: args.key,
-        asset: args.asset,
-        image: args.image,
-        showControls: args.showControls,
-        playbackDelayFactor: args.playbackDelayFactor,
-      );
-    },
-  );
-}
-
-class NativeVideoViewerRouteArgs {
-  const NativeVideoViewerRouteArgs({
-    this.key,
-    required this.asset,
-    required this.image,
-    this.showControls = true,
-    this.playbackDelayFactor = 1,
-  });
-
-  final Key? key;
-
-  final Asset asset;
-
-  final Widget image;
-
-  final bool showControls;
-
-  final int playbackDelayFactor;
-
-  @override
-  String toString() {
-    return 'NativeVideoViewerRouteArgs{key: $key, asset: $asset, image: $image, showControls: $showControls, playbackDelayFactor: $playbackDelayFactor}';
   }
 }
 
@@ -2256,43 +2140,6 @@ class SettingsSubRouteArgs {
   @override
   String toString() {
     return 'SettingsSubRouteArgs{section: $section, key: $key}';
-  }
-}
-
-/// generated route for
-/// [ShareIntentPage]
-class ShareIntentRoute extends PageRouteInfo<ShareIntentRouteArgs> {
-  ShareIntentRoute({
-    Key? key,
-    required List<ShareIntentAttachment> attachments,
-    List<PageRouteInfo>? children,
-  }) : super(
-         ShareIntentRoute.name,
-         args: ShareIntentRouteArgs(key: key, attachments: attachments),
-         initialChildren: children,
-       );
-
-  static const String name = 'ShareIntentRoute';
-
-  static PageInfo page = PageInfo(
-    name,
-    builder: (data) {
-      final args = data.argsAs<ShareIntentRouteArgs>();
-      return ShareIntentPage(key: args.key, attachments: args.attachments);
-    },
-  );
-}
-
-class ShareIntentRouteArgs {
-  const ShareIntentRouteArgs({this.key, required this.attachments});
-
-  final Key? key;
-
-  final List<ShareIntentAttachment> attachments;
-
-  @override
-  String toString() {
-    return 'ShareIntentRouteArgs{key: $key, attachments: $attachments}';
   }
 }
 

@@ -8,6 +8,8 @@ import 'package:immich_mobile/providers/asset.provider.dart';
 import 'package:immich_mobile/utils/selection_handlers.dart';
 import 'package:immich_mobile/widgets/asset_viewer/detail_panel/exif_map.dart';
 
+final exifLocationTextProvider = StateProvider<String>((ref) => " ");
+
 class AssetLocation extends HookConsumerWidget {
   final Asset asset;
 
@@ -22,6 +24,15 @@ class AssetLocation extends HookConsumerWidget {
     void editLocation() {
       handleEditLocation(ref, context, [assetWithExif.value ?? asset]);
     }
+
+    if (exifInfo == null) {
+      ref.read(exifLocationTextProvider.notifier).state = '';
+    } else {
+      if (!exifInfo!.hasCoordinates) {
+        ref.read(exifLocationTextProvider.notifier).state = '';
+      }
+    }
+    final locationText = ref.watch(exifLocationTextProvider);
 
     // Guard no lat/lng
     if (!hasCoordinates) {
@@ -77,6 +88,7 @@ class AssetLocation extends HookConsumerWidget {
           ExifMap(exifInfo: exifInfo!, markerId: asset.remoteId),
           const SizedBox(height: 16),
           getLocationName(),
+          Text(locationText, style: context.textTheme.labelLarge),
           Text(
             "${exifInfo.latitude!.toStringAsFixed(4)}, ${exifInfo.longitude!.toStringAsFixed(4)}",
             style: context.textTheme.labelMedium?.copyWith(color: context.textTheme.labelMedium?.color?.withAlpha(150)),

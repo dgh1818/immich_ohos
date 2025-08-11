@@ -1,4 +1,4 @@
-import 'package:background_downloader/background_downloader.dart';
+//import 'package:background_downloader/background_downloader.dart';
 import 'package:flutter/material.dart';
 import 'package:immich_mobile/constants/enums.dart';
 import 'package:immich_mobile/domain/models/asset/base_asset.model.dart';
@@ -7,9 +7,9 @@ import 'package:immich_mobile/providers/infrastructure/asset_viewer/current_asse
 import 'package:immich_mobile/providers/timeline/multiselect.provider.dart';
 import 'package:immich_mobile/providers/user.provider.dart';
 import 'package:immich_mobile/services/action.service.dart';
-import 'package:immich_mobile/services/download.service.dart';
+//import 'package:immich_mobile/services/download.service.dart';
 import 'package:immich_mobile/services/timeline.service.dart';
-import 'package:immich_mobile/services/upload.service.dart';
+//import 'package:immich_mobile/services/upload.service.dart';
 import 'package:logging/logging.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -32,21 +32,24 @@ class ActionResult {
 class ActionNotifier extends Notifier<void> {
   final Logger _logger = Logger('ActionNotifier');
   late ActionService _service;
-  late UploadService _uploadService;
-  late DownloadService _downloadService;
+  // late UploadService _uploadService;
+  // late DownloadService _downloadService;
 
   ActionNotifier() : super();
 
   @override
   void build() {
-    _uploadService = ref.watch(uploadServiceProvider);
+    //_uploadService = ref.watch(uploadServiceProvider);
     _service = ref.watch(actionServiceProvider);
+    /*
     _downloadService = ref.watch(downloadServiceProvider);
     _downloadService.onImageDownloadStatus = _downloadImageCallback;
     _downloadService.onVideoDownloadStatus = _downloadVideoCallback;
     _downloadService.onLivePhotoDownloadStatus = _downloadLivePhotoCallback;
+*/
   }
 
+  /*
   void _downloadImageCallback(TaskStatusUpdate update) {
     if (update.status == TaskStatus.complete) {
       _downloadService.saveImageWithPath(update.task);
@@ -65,6 +68,7 @@ class ActionNotifier extends Notifier<void> {
       _downloadService.saveLivePhotos(update.task, livePhotosId);
     }
   }
+*/
 
   List<String> _getRemoteIdsForSource(ActionSource source) {
     return _getAssets(source).whereType<RemoteAsset>().toIds().toList(growable: false);
@@ -342,6 +346,7 @@ class ActionNotifier extends Notifier<void> {
     }
   }
 
+  /*
   Future<ActionResult> downloadAll(ActionSource source) async {
     final assets = _getAssets(source).whereType<RemoteAsset>().toList(growable: false);
 
@@ -365,6 +370,7 @@ class ActionNotifier extends Notifier<void> {
       return ActionResult(count: assets.length, success: false, error: error.toString());
     }
   }
+*/
 }
 
 extension on Iterable<RemoteAsset> {

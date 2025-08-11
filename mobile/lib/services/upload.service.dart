@@ -1,3 +1,4 @@
+/*
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -401,3 +402,4 @@ class UploadTaskMetadata {
   @override
   int get hashCode => localAssetId.hashCode ^ isLivePhotos.hashCode ^ livePhotoVideoId.hashCode;
 }
+*/

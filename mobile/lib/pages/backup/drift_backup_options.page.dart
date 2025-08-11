@@ -40,7 +40,7 @@ class DriftBackupOptionsPage extends ConsumerWidget {
             return;
           }
 
-          await ref.read(driftBackupProvider.notifier).getBackupStatus(currentUser.id);
+          //await ref.read(driftBackupProvider.notifier).getBackupStatus(currentUser.id);
           final isBackupEnabled = ref.read(appSettingsServiceProvider).getSetting(AppSettingsEnum.enableBackup);
           if (!isBackupEnabled) {
             return;
@@ -52,11 +52,12 @@ class DriftBackupOptionsPage extends ConsumerWidget {
               duration: const Duration(seconds: 4),
             ),
           );
-
+          /*
           final backupNotifier = ref.read(driftBackupProvider.notifier);
           backupNotifier.cancel().then((_) {
             backupNotifier.startBackup(currentUser.id);
           });
+*/
         }
       },
       child: Scaffold(

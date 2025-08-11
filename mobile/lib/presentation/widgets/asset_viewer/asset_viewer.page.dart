@@ -22,7 +22,7 @@ import 'package:immich_mobile/presentation/widgets/images/thumbnail.widget.dart'
 import 'package:immich_mobile/providers/asset_viewer/is_motion_video_playing.provider.dart';
 import 'package:immich_mobile/providers/asset_viewer/video_player_controls_provider.dart';
 import 'package:immich_mobile/providers/asset_viewer/video_player_value_provider.dart';
-import 'package:immich_mobile/providers/cast.provider.dart';
+//import 'package:immich_mobile/providers/cast.provider.dart';
 import 'package:immich_mobile/providers/infrastructure/asset_viewer/current_asset.provider.dart';
 import 'package:immich_mobile/providers/infrastructure/timeline.provider.dart';
 import 'package:immich_mobile/providers/routes.provider.dart';
@@ -183,9 +183,10 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
     });
     _delayedOperations.add(timer);
 
-    _handleCasting(asset);
+    //_handleCasting(asset);
   }
 
+  /*
   void _handleCasting(BaseAsset asset) {
     if (!ref.read(castProvider).isCasting) return;
 
@@ -215,6 +216,7 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
       }
     }
   }
+*/
 
   void _onPageBuild(PhotoViewControllerBase controller) {
     viewController ??= controller;
@@ -557,9 +559,10 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
       child: SizedBox(
         width: ctx.width,
         height: ctx.height,
-        child: NativeVideoViewer(
+        child: VideoViewer(
           key: _getVideoPlayerKey(asset.heroTag),
           asset: asset,
+          /*
           image: Image(
             key: ValueKey(asset),
             image: getFullImageProvider(asset, size: Size(ctx.width, ctx.height)),
@@ -568,6 +571,7 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
             width: ctx.width,
             alignment: Alignment.center,
           ),
+*/
         ),
       ),
     );
@@ -586,7 +590,8 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
     ref.watch(assetViewerProvider.select((s) => s.stackIndex));
     ref.watch(isPlayingMotionVideoProvider);
 
-    // Listen for casting changes and send initial asset to the cast provider
+    /*
+    Listen for casting changes and send initial asset to the cast provider
     ref.listen(castProvider.select((value) => value.isCasting), (_, isCasting) async {
       if (!isCasting) return;
 
@@ -597,6 +602,7 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
         _handleCasting(asset);
       });
     });
+*/
 
     final isInLockedView = ref.watch(inLockedViewProvider);
 

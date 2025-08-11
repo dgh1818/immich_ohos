@@ -57,6 +57,3 @@ libisar.so
 
 # FVM Version
 .fvm/
-
-# Translation file
-lib/generated/

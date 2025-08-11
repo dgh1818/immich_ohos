@@ -15,7 +15,7 @@ import 'package:immich_mobile/models/folder/recursive_folder.model.dart';
 import 'package:immich_mobile/models/memories/memory.model.dart';
 import 'package:immich_mobile/models/search/search_filter.model.dart';
 import 'package:immich_mobile/models/shared_link/shared_link.model.dart';
-import 'package:immich_mobile/models/upload/share_intent_attachment.model.dart';
+//import 'package:immich_mobile/models/upload/share_intent_attachment.model.dart';
 import 'package:immich_mobile/pages/album/album_additional_shared_user_selection.page.dart';
 import 'package:immich_mobile/pages/album/album_asset_selection.page.dart';
 import 'package:immich_mobile/pages/album/album_options.page.dart';
@@ -38,7 +38,7 @@ import 'package:immich_mobile/pages/common/change_experience.page.dart';
 import 'package:immich_mobile/pages/common/create_album.page.dart';
 import 'package:immich_mobile/pages/common/gallery_viewer.page.dart';
 import 'package:immich_mobile/pages/common/headers_settings.page.dart';
-import 'package:immich_mobile/pages/common/native_video_viewer.page.dart';
+//import 'package:immich_mobile/pages/common/native_video_viewer.page.dart';
 import 'package:immich_mobile/pages/common/settings.page.dart';
 import 'package:immich_mobile/pages/common/splash_screen.page.dart';
 import 'package:immich_mobile/pages/common/tab_controller.page.dart';
@@ -70,13 +70,15 @@ import 'package:immich_mobile/pages/search/all_motion_videos.page.dart';
 import 'package:immich_mobile/pages/search/all_people.page.dart';
 import 'package:immich_mobile/pages/search/all_places.page.dart';
 import 'package:immich_mobile/pages/search/all_videos.page.dart';
-import 'package:immich_mobile/pages/search/map/map.page.dart';
+// import 'package:immich_mobile/pages/search/map/map.page.dart';
 import 'package:immich_mobile/pages/search/map/map_location_picker.page.dart';
 import 'package:immich_mobile/pages/search/person_result.page.dart';
 import 'package:immich_mobile/pages/search/recently_taken.page.dart';
 import 'package:immich_mobile/pages/search/search.page.dart';
 import 'package:immich_mobile/pages/settings/beta_sync_settings.page.dart';
-import 'package:immich_mobile/pages/share_intent/share_intent.page.dart';
+
+//import 'package:immich_mobile/pages/share_intent/share_intent.page.dart';
+
 import 'package:immich_mobile/presentation/pages/dev/feat_in_development.page.dart';
 import 'package:immich_mobile/presentation/pages/dev/main_timeline.page.dart';
 import 'package:immich_mobile/presentation/pages/dev/media_stat.page.dart';
@@ -241,7 +243,8 @@ class AppRouter extends RootStackRouter {
     AutoRoute(page: PersonResultRoute.page, guards: [_authGuard, _duplicateGuard]),
     AutoRoute(page: AllPeopleRoute.page, guards: [_authGuard, _duplicateGuard]),
     AutoRoute(page: MemoryRoute.page, guards: [_authGuard, _duplicateGuard]),
-    AutoRoute(page: MapRoute.page, guards: [_authGuard, _duplicateGuard]),
+
+    //AutoRoute(page: MapRoute.page, guards: [_authGuard, _duplicateGuard]),
     AutoRoute(page: AlbumOptionsRoute.page, guards: [_authGuard, _duplicateGuard]),
     CustomRoute(
       page: TrashRoute.page,
@@ -283,8 +286,9 @@ class AppRouter extends RootStackRouter {
       guards: [_authGuard, _duplicateGuard],
       transitionsBuilder: TransitionsBuilders.slideLeft,
     ),
-    AutoRoute(page: NativeVideoViewerRoute.page, guards: [_authGuard, _duplicateGuard]),
-    AutoRoute(page: ShareIntentRoute.page, guards: [_authGuard, _duplicateGuard]),
+
+    // AutoRoute(page: NativeVideoViewerRoute.page, guards: [_authGuard, _duplicateGuard]),
+    // AutoRoute(page: ShareIntentRoute.page, guards: [_authGuard, _duplicateGuard]),
     AutoRoute(page: LockedRoute.page, guards: [_authGuard, _lockedGuard, _duplicateGuard]),
     AutoRoute(page: PinAuthRoute.page, guards: [_authGuard, _duplicateGuard]),
     AutoRoute(page: FeatInDevRoute.page, guards: [_authGuard, _duplicateGuard]),
@@ -324,7 +328,8 @@ class AppRouter extends RootStackRouter {
     AutoRoute(page: DriftUserSelectionRoute.page, guards: [_authGuard, _duplicateGuard]),
     AutoRoute(page: ChangeExperienceRoute.page, guards: [_authGuard, _duplicateGuard]),
     AutoRoute(page: DriftPartnerRoute.page, guards: [_authGuard, _duplicateGuard]),
-    AutoRoute(page: DriftUploadDetailRoute.page, guards: [_authGuard, _duplicateGuard]),
+
+    //AutoRoute(page: DriftUploadDetailRoute.page, guards: [_authGuard, _duplicateGuard]),
     AutoRoute(page: BetaSyncSettingsRoute.page, guards: [_authGuard, _duplicateGuard]),
     AutoRoute(page: DriftPeopleCollectionRoute.page, guards: [_authGuard, _duplicateGuard]),
     AutoRoute(page: DriftPersonRoute.page, guards: [_authGuard]),

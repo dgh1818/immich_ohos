@@ -16,7 +16,7 @@ class PartnerDetailBottomSheet extends ConsumerWidget {
       shouldCloseOnMinExtent: false,
       actions: [
         ShareActionButton(source: ActionSource.timeline),
-        DownloadActionButton(source: ActionSource.timeline),
+        //DownloadActionButton(source: ActionSource.timeline),
       ],
     );
   }

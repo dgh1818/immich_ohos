@@ -2,7 +2,9 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:auto_route/auto_route.dart';
-import 'package:background_downloader/background_downloader.dart';
+
+//import 'package:background_downloader/background_downloader.dart';
+
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/foundation.dart';
@@ -15,7 +17,7 @@ import 'package:immich_mobile/constants/locales.dart';
 import 'package:immich_mobile/extensions/build_context_extensions.dart';
 import 'package:immich_mobile/generated/codegen_loader.g.dart';
 import 'package:immich_mobile/providers/app_life_cycle.provider.dart';
-import 'package:immich_mobile/providers/asset_viewer/share_intent_upload.provider.dart';
+//import 'package:immich_mobile/providers/asset_viewer/share_intent_upload.provider.dart';
 import 'package:immich_mobile/providers/db.provider.dart';
 import 'package:immich_mobile/providers/infrastructure/db.provider.dart';
 import 'package:immich_mobile/providers/locale_provider.dart';
@@ -37,6 +39,8 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:logging/logging.dart';
 import 'package:timezone/data/latest.dart';
 import 'package:worker_manager/worker_manager.dart';
+
+final RouteObserver<ModalRoute> routeObserver = RouteObserver<ModalRoute>();
 
 void main() async {
   ImmichWidgetsBinding();
@@ -90,6 +94,7 @@ Future<void> initApp() async {
 
   initializeTimeZones();
 
+  /*
   // Initialize the file downloader
   await FileDownloader().configure(
     // maxConcurrent: 6, maxConcurrentByHost(server):6, maxConcurrentByGroup: 3
@@ -99,6 +104,7 @@ Future<void> initApp() async {
   await FileDownloader().trackTasksInGroup(kDownloadGroupLivePhoto, markDownloadedComplete: false);
 
   await FileDownloader().trackTasks();
+  */
 
   LicenseRegistry.addLicense(() async* {
     for (final license in nonPubLicenses.entries) {
@@ -159,7 +165,7 @@ class ImmichAppState extends ConsumerState<ImmichApp> with WidgetsBindingObserve
     SystemChrome.setSystemUIOverlayStyle(overlayStyle);
     await ref.read(localNotificationService).setup();
   }
-
+  /*
   void _configureFileDownloaderNotifications() {
     FileDownloader().configureNotificationForGroup(
       kDownloadGroupImage,
@@ -182,6 +188,7 @@ class ImmichAppState extends ConsumerState<ImmichApp> with WidgetsBindingObserve
       progressBar: true,
     );
   }
+  */
 
   Future<DeepLink> _deepLinkBuilder(PlatformDeepLink deepLink) async {
     final deepLinkHandler = ref.read(deepLinkServiceProvider);
@@ -209,7 +216,7 @@ class ImmichAppState extends ConsumerState<ImmichApp> with WidgetsBindingObserve
     super.didChangeDependencies();
     Intl.defaultLocale = context.locale.toLanguageTag();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _configureFileDownloaderNotifications();
+      //_configureFileDownloaderNotifications();
     });
   }
 
@@ -222,7 +229,7 @@ class ImmichAppState extends ConsumerState<ImmichApp> with WidgetsBindingObserve
       ref.read(backgroundServiceProvider).resumeServiceIfEnabled();
     });
 
-    ref.read(shareIntentUploadProvider.notifier).init();
+    //ref.read(shareIntentUploadProvider.notifier).init();
   }
 
   @override
@@ -249,7 +256,7 @@ class ImmichAppState extends ConsumerState<ImmichApp> with WidgetsBindingObserve
         theme: getThemeData(colorScheme: immichTheme.light, locale: context.locale),
         routerConfig: router.config(
           deepLinkBuilder: _deepLinkBuilder,
-          navigatorObservers: () => [AppNavigationObserver(ref: ref), HeroController()],
+          navigatorObservers: () => [AppNavigationObserver(ref: ref), HeroController(), routeObserver],
         ),
       ),
     );

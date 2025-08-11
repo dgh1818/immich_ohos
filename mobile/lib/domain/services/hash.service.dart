@@ -5,7 +5,7 @@ import 'package:immich_mobile/domain/models/asset/base_asset.model.dart';
 import 'package:immich_mobile/infrastructure/repositories/local_album.repository.dart';
 import 'package:immich_mobile/infrastructure/repositories/local_asset.repository.dart';
 import 'package:immich_mobile/infrastructure/repositories/storage.repository.dart';
-import 'package:immich_mobile/platform/native_sync_api.g.dart';
+import 'package:immich_mobile/platform/native_sync_api_ohos.g.dart';
 import 'package:immich_mobile/presentation/pages/dev/dev_logger.dart';
 import 'package:logging/logging.dart';
 
@@ -15,14 +15,14 @@ class HashService {
   final DriftLocalAlbumRepository _localAlbumRepository;
   final DriftLocalAssetRepository _localAssetRepository;
   final StorageRepository _storageRepository;
-  final NativeSyncApi _nativeSyncApi;
+  final NativeSyncApiOhos _nativeSyncApi;
   final _log = Logger('HashService');
 
   HashService({
     required DriftLocalAlbumRepository localAlbumRepository,
     required DriftLocalAssetRepository localAssetRepository,
     required StorageRepository storageRepository,
-    required NativeSyncApi nativeSyncApi,
+    required NativeSyncApiOhos nativeSyncApi,
     this.batchSizeLimit = kBatchHashSizeLimit,
     this.batchFileLimit = kBatchHashFileLimit,
   }) : _localAlbumRepository = localAlbumRepository,

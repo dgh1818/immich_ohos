@@ -43,11 +43,11 @@ class ViewerTopAppBar extends ConsumerWidget implements PreferredSizeWidget {
       opacity = 0;
     }
 
-    final isCasting = ref.watch(castProvider.select((c) => c.isCasting));
+    //final isCasting = ref.watch(castProvider.select((c) => c.isCasting));
     final websocketConnected = ref.watch(websocketProvider.select((c) => c.isConnected));
 
     final actions = <Widget>[
-      if (isCasting || (asset.hasRemote && websocketConnected)) const CastActionButton(menuItem: true),
+      //if (isCasting || (asset.hasRemote && websocketConnected)) const CastActionButton(menuItem: true),
       if (showViewInTimelineButton)
         IconButton(
           onPressed: () async {
@@ -67,7 +67,7 @@ class ViewerTopAppBar extends ConsumerWidget implements PreferredSizeWidget {
     ];
 
     final lockedViewActions = <Widget>[
-      if (isCasting || (asset.hasRemote && websocketConnected)) const CastActionButton(menuItem: true),
+      //if (isCasting || (asset.hasRemote && websocketConnected)) const CastActionButton(menuItem: true),
       const _KebabMenu(),
     ];
 

@@ -8,13 +8,35 @@ import 'package:immich_mobile/extensions/build_context_extensions.dart';
 import 'package:immich_mobile/models/backup/backup_state.model.dart';
 import 'package:immich_mobile/models/server_info/server_info.model.dart';
 import 'package:immich_mobile/providers/backup/backup.provider.dart';
-import 'package:immich_mobile/providers/cast.provider.dart';
+//import 'package:immich_mobile/providers/cast.provider.dart';
 import 'package:immich_mobile/providers/server_info.provider.dart';
 import 'package:immich_mobile/providers/user.provider.dart';
 import 'package:immich_mobile/routing/router.dart';
-import 'package:immich_mobile/widgets/asset_viewer/cast_dialog.dart';
+//import 'package:immich_mobile/widgets/asset_viewer/cast_dialog.dart';
 import 'package:immich_mobile/widgets/common/app_bar_dialog/app_bar_dialog.dart';
 import 'package:immich_mobile/widgets/common/user_circle_avatar.dart';
+
+import 'package:immich_mobile/services/backup.service.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:immich_mobile/providers/api.provider.dart';
+import 'package:immich_mobile/providers/app_settings.provider.dart';
+import 'package:immich_mobile/repositories/album_media.repository.dart';
+import 'package:immich_mobile/services/album.service.dart';
+import 'package:immich_mobile/repositories/file_media.repository.dart';
+import 'package:immich_mobile/repositories/asset.repository.dart';
+import 'package:immich_mobile/repositories/asset_media.repository.dart';
+
+final backupServiceProvider = Provider(
+  (ref) => BackupService(
+    ref.watch(apiServiceProvider),
+    ref.watch(appSettingsServiceProvider),
+    ref.watch(albumServiceProvider),
+    ref.watch(albumMediaRepositoryProvider),
+    ref.watch(fileMediaRepositoryProvider),
+    ref.watch(assetRepositoryProvider),
+    ref.watch(assetMediaRepositoryProvider),
+  ),
+);
 
 class ImmichAppBar extends ConsumerWidget implements PreferredSizeWidget {
   @override
@@ -32,7 +54,7 @@ class ImmichAppBar extends ConsumerWidget implements PreferredSizeWidget {
     final user = ref.watch(currentUserProvider);
     final isDarkTheme = context.isDarkTheme;
     const widgetSize = 30.0;
-    final isCasting = ref.watch(castProvider.select((c) => c.isCasting));
+    //final isCasting = ref.watch(castProvider.select((c) => c.isCasting));
 
     buildProfileIndicator() {
       return InkWell(
@@ -121,8 +143,54 @@ class ImmichAppBar extends ConsumerWidget implements PreferredSizeWidget {
       );
     }
 
+    Future<void> pickUploadImage() async {
+      final List<XFile> medias = await ImagePicker().pickMultipleMedia();
+
+      if (medias.isEmpty) return;
+
+      final backupService = ref.read(backupServiceProvider);
+      int successCount = 0;
+
+      for (final xfile in medias) {
+        try {
+          // 调用您提供的 uploadImageDirectly 方法
+          await backupService.uploadImageDirectly(xfile);
+          successCount++;
+
+          // 每成功上传一个文件显示消息
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('“${xfile.name}” 上传成功'), duration: const Duration(seconds: 1)));
+        } catch (e) {
+          debugPrint('上传失败: ${xfile.name} — $e');
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('“${xfile.name}” 上传失败: ${e.toString()}'),
+              backgroundColor: Colors.redAccent,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
+      }
+
+      // 显示总结消息
+      if (successCount > 0) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('✅ $successCount 个照片/视频上传完成'), duration: const Duration(seconds: 2)));
+      }
+    }
+
+    Widget buildUploadIndicator() {
+      return InkWell(
+        onTap: () => pickUploadImage(),
+        borderRadius: BorderRadius.circular(12),
+        child: SvgPicture.asset('assets/HMOS_arrowshape_up.svg', height: 40),
+      );
+    }
+
     return AppBar(
-      backgroundColor: context.themeData.appBarTheme.backgroundColor,
+      backgroundColor: Colors.transparent,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(5))),
       automaticallyImplyLeading: false,
       centerTitle: false,
@@ -134,12 +202,14 @@ class ImmichAppBar extends ConsumerWidget implements PreferredSizeWidget {
                 builder: (context) {
                   return Padding(
                     padding: const EdgeInsets.only(top: 3.0),
+                    /*
                     child: SvgPicture.asset(
                       context.isDarkTheme
                           ? 'assets/immich-logo-inline-dark.svg'
                           : 'assets/immich-logo-inline-light.svg',
                       height: 40,
                     ),
+                    */
                   );
                 },
               ),
@@ -150,11 +220,14 @@ class ImmichAppBar extends ConsumerWidget implements PreferredSizeWidget {
       actions: [
         if (actions != null)
           ...actions!.map((action) => Padding(padding: const EdgeInsets.only(right: 16), child: action)),
+        Padding(padding: const EdgeInsets.only(right: 20), child: buildUploadIndicator()),
+
         if (kDebugMode || kProfileMode)
           IconButton(
             icon: const Icon(Icons.science_rounded),
             onPressed: () => context.pushRoute(const FeatInDevRoute()),
           ),
+        /*
         if (isCasting)
           Padding(
             padding: const EdgeInsets.only(right: 12),
@@ -165,6 +238,7 @@ class ImmichAppBar extends ConsumerWidget implements PreferredSizeWidget {
               icon: Icon(isCasting ? Icons.cast_connected_rounded : Icons.cast_rounded),
             ),
           ),
+*/
         if (showUploadButton) Padding(padding: const EdgeInsets.only(right: 20), child: buildBackupIndicator()),
         Padding(padding: const EdgeInsets.only(right: 20), child: buildProfileIndicator()),
       ],

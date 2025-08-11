@@ -41,7 +41,8 @@ class ImmichSliverAppBar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isCasting = ref.watch(castProvider.select((c) => c.isCasting));
+    //final isCasting = ref.watch(castProvider.select((c) => c.isCasting));
+
     final isMultiSelectEnabled = ref.watch(multiSelectProvider.select((s) => s.isEnabled));
 
     return SliverAnimatedOpacity(
@@ -57,6 +58,7 @@ class ImmichSliverAppBar extends ConsumerWidget {
         centerTitle: false,
         title: title ?? const _ImmichLogoWithText(),
         actions: [
+          /*
           if (isCasting)
             Padding(
               padding: const EdgeInsets.only(right: 12),
@@ -67,6 +69,7 @@ class ImmichSliverAppBar extends ConsumerWidget {
                 icon: Icon(isCasting ? Icons.cast_connected_rounded : Icons.cast_rounded),
               ),
             ),
+*/
           const _SyncStatusIndicator(),
           if (actions != null)
             ...actions!.map((action) => Padding(padding: const EdgeInsets.only(right: 16), child: action)),
@@ -197,7 +200,8 @@ class _BackupIndicator extends ConsumerWidget {
     final backupStateStream = ref.watch(settingsProvider).watch(Setting.enableBackup);
     final isDarkTheme = context.isDarkTheme;
     final iconColor = isDarkTheme ? Colors.white : Colors.black;
-    final isUploading = ref.watch(driftBackupProvider.select((state) => state.uploadItems.isNotEmpty));
+    // final isUploading = ref.watch(
+    //     driftBackupProvider.select((state) => state.uploadItems.isNotEmpty));
 
     return StreamBuilder(
       stream: backupStateStream,
@@ -213,13 +217,14 @@ class _BackupIndicator extends ConsumerWidget {
             semanticLabel: 'backup_controller_page_backup'.tr(),
           );
         }
-
+        /*
         if (isUploading) {
           return Container(
             padding: const EdgeInsets.all(3.5),
             child: Theme(
               data: context.themeData.copyWith(
-                progressIndicatorTheme: context.themeData.progressIndicatorTheme.copyWith(year2023: true),
+                progressIndicatorTheme: context.themeData.progressIndicatorTheme
+                    .copyWith(year2023: true),
               ),
               child: CircularProgressIndicator(
                 strokeWidth: 2,
@@ -230,6 +235,7 @@ class _BackupIndicator extends ConsumerWidget {
             ),
           );
         }
+*/
 
         return Icon(
           Icons.check_outlined,

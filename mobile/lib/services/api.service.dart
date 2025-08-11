@@ -12,6 +12,8 @@ import 'package:logging/logging.dart';
 import 'package:openapi/api.dart';
 import 'package:immich_mobile/utils/user_agent.dart';
 
+import 'package:flutter/foundation.dart';
+
 class ApiService implements Authentication {
   late ApiClient _apiClient;
 
@@ -173,6 +175,11 @@ class ApiService implements Authentication {
       final iosInfo = await deviceInfoPlugin.iosInfo;
       authenticationApi.apiClient.addDefaultHeader('deviceModel', iosInfo.utsname.machine);
       authenticationApi.apiClient.addDefaultHeader('deviceType', 'iOS');
+    } else if (defaultTargetPlatform == TargetPlatform.ohos) {
+      final ohosInfo = await deviceInfoPlugin.ohosInfo;
+      authenticationApi.apiClient
+          .addDefaultHeader('deviceModel', ohosInfo.marketName.toString());
+      authenticationApi.apiClient.addDefaultHeader('deviceType', 'OHOS');
     } else if (Platform.isAndroid) {
       final androidInfo = await deviceInfoPlugin.androidInfo;
       authenticationApi.apiClient.addDefaultHeader('deviceModel', androidInfo.model);

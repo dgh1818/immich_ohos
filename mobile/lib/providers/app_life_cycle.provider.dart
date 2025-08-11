@@ -11,7 +11,7 @@ import 'package:immich_mobile/providers/asset.provider.dart';
 import 'package:immich_mobile/providers/auth.provider.dart';
 import 'package:immich_mobile/providers/background_sync.provider.dart';
 import 'package:immich_mobile/providers/backup/backup.provider.dart';
-import 'package:immich_mobile/providers/backup/drift_backup.provider.dart';
+//import 'package:immich_mobile/providers/backup/drift_backup.provider.dart';
 import 'package:immich_mobile/providers/backup/ios_background_settings.provider.dart';
 import 'package:immich_mobile/providers/backup/manual_upload.provider.dart';
 import 'package:immich_mobile/providers/gallery_permission.provider.dart';
@@ -103,7 +103,7 @@ class AppLifeCycleNotifier extends StateNotifier<AppLifeCycleEnum> {
               return;
             }
 
-            await _ref.read(driftBackupProvider.notifier).handleBackupResume(currentUser.id);
+            //await _ref.read(driftBackupProvider.notifier).handleBackupResume(currentUser.id);
           }
         });
       } catch (e, stackTrace) {

@@ -1,3 +1,4 @@
+/*
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:immich_mobile/constants/enums.dart';
 import 'package:flutter/material.dart';
@@ -51,3 +52,4 @@ class DownloadActionButton extends ConsumerWidget {
     );
   }
 }
+*/

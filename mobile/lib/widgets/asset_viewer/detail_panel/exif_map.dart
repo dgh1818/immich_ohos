@@ -16,6 +16,7 @@ class ExifMap extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final hasCoordinates = exifInfo.hasCoordinates;
+    /*
     Future<Uri?> createCoordinatesUri() async {
       if (!hasCoordinates) {
         return null;
@@ -26,22 +27,22 @@ class ExifMap extends StatelessWidget {
 
       const zoomLevel = 16;
 
-      if (Platform.isAndroid) {
-        Uri uri = Uri(
-          scheme: 'geo',
-          host: '$latitude,$longitude',
-          queryParameters: {'z': '$zoomLevel', 'q': '$latitude,$longitude'},
-        );
-        if (await canLaunchUrl(uri)) {
-          return uri;
-        }
-      } else if (Platform.isIOS) {
-        var params = {'ll': '$latitude,$longitude', 'q': '$latitude,$longitude', 'z': '$zoomLevel'};
-        Uri uri = Uri.https('maps.apple.com', '/', params);
-        if (await canLaunchUrl(uri)) {
-          return uri;
-        }
+    if (Platform.isAndroid) {
+      Uri uri = Uri(
+        scheme: 'geo',
+        host: '$latitude,$longitude',
+        queryParameters: {'z': '$zoomLevel', 'q': '$latitude,$longitude'},
+      );
+      if (await canLaunchUrl(uri)) {
+        return uri;
       }
+    } else if (Platform.isIOS) {
+      var params = {'ll': '$latitude,$longitude', 'q': '$latitude,$longitude', 'z': '$zoomLevel'};
+      Uri uri = Uri.https('maps.apple.com', '/', params);
+      if (await canLaunchUrl(uri)) {
+        return uri;
+      }
+    }
 
       return Uri(
         scheme: 'https',
@@ -50,6 +51,7 @@ class ExifMap extends StatelessWidget {
         fragment: 'map=$zoomLevel/$latitude/$longitude',
       );
     }
+*/
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -59,6 +61,7 @@ class ExifMap extends StatelessWidget {
           width: constraints.maxWidth,
           zoom: 12.0,
           assetMarkerRemoteId: markerId,
+          /*
           onTap: (tapPosition, latLong) async {
             Uri? uri = await createCoordinatesUri();
 
@@ -69,6 +72,7 @@ class ExifMap extends StatelessWidget {
             debugPrint('Opening Map Uri: $uri');
             launchUrl(uri);
           },
+*/
           onCreated: onMapCreated,
         );
       },

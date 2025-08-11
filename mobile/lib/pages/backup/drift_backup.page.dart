@@ -8,7 +8,7 @@ import 'package:immich_mobile/extensions/theme_extensions.dart';
 import 'package:immich_mobile/extensions/translate_extensions.dart';
 import 'package:immich_mobile/presentation/widgets/backup/backup_toggle_button.widget.dart';
 import 'package:immich_mobile/providers/backup/backup_album.provider.dart';
-import 'package:immich_mobile/providers/backup/drift_backup.provider.dart';
+//import 'package:immich_mobile/providers/backup/drift_backup.provider.dart';
 import 'package:immich_mobile/providers/user.provider.dart';
 import 'package:immich_mobile/routing/router.dart';
 import 'package:immich_mobile/widgets/backup/backup_info_card.dart';
@@ -30,7 +30,7 @@ class _DriftBackupPageState extends ConsumerState<DriftBackupPage> {
       return;
     }
 
-    ref.read(driftBackupProvider.notifier).getBackupStatus(currentUser.id);
+    //ref.read(driftBackupProvider.notifier).getBackupStatus(currentUser.id);
   }
 
   Future<void> startBackup() async {
@@ -38,14 +38,17 @@ class _DriftBackupPageState extends ConsumerState<DriftBackupPage> {
     if (currentUser == null) {
       return;
     }
-
+    /*
     await ref.read(driftBackupProvider.notifier).getBackupStatus(currentUser.id);
     await ref.read(driftBackupProvider.notifier).startBackup(currentUser.id);
+*/
   }
 
+  /*
   Future<void> stopBackup() async {
     await ref.read(driftBackupProvider.notifier).cancel();
   }
+*/
 
   @override
   Widget build(BuildContext context) {
@@ -88,12 +91,14 @@ class _DriftBackupPageState extends ConsumerState<DriftBackupPage> {
                   const _BackupCard(),
                   const _RemainderCard(),
                   const Divider(),
+                  /*
                   BackupToggleButton(onStart: () async => await startBackup(), onStop: () async => await stopBackup()),
                   TextButton.icon(
                     icon: const Icon(Icons.info_outline_rounded),
                     onPressed: () => context.pushRoute(const DriftUploadDetailRoute()),
                     label: Text("view_details".t(context: context)),
                   ),
+*/
                 ],
               ],
             ),
@@ -191,6 +196,7 @@ class _BackupAlbumSelectionCard extends ConsumerWidget {
             ],
           ),
         ),
+        /*
         trailing: ElevatedButton(
           onPressed: () async {
             await context.pushRoute(const DriftBackupAlbumSelectionRoute());
@@ -202,6 +208,7 @@ class _BackupAlbumSelectionCard extends ConsumerWidget {
           },
           child: const Text("select", style: TextStyle(fontWeight: FontWeight.bold)).tr(),
         ),
+        */
       ),
     );
   }
@@ -212,12 +219,14 @@ class _TotalCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final totalCount = ref.watch(driftBackupProvider.select((p) => p.totalCount));
+    //final totalCount = ref.watch(driftBackupProvider.select((p) => p.totalCount));
 
     return BackupInfoCard(
       title: "total".tr(),
       subtitle: "backup_controller_page_total_sub".tr(),
-      info: totalCount.toString(),
+
+      //info: totalCount.toString(),
+      info: '0',
     );
   }
 }
@@ -227,12 +236,14 @@ class _BackupCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final backupCount = ref.watch(driftBackupProvider.select((p) => p.backupCount));
+    //final backupCount = ref.watch(driftBackupProvider.select((p) => p.backupCount));
 
     return BackupInfoCard(
       title: "backup_controller_page_backup".tr(),
       subtitle: "backup_controller_page_backup_sub".tr(),
-      info: backupCount.toString(),
+      info: '0',
+
+      //info: backupCount.toString(),
     );
   }
 }
@@ -242,11 +253,14 @@ class _RemainderCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final remainderCount = ref.watch(driftBackupProvider.select((p) => p.remainderCount));
+    //final remainderCount = ref.watch(driftBackupProvider.select((p) => p.remainderCount));
     return BackupInfoCard(
       title: "backup_controller_page_remainder".tr(),
       subtitle: "backup_controller_page_remainder_sub".tr(),
-      info: remainderCount.toString(),
+
+      info: '0',
+
+      //info: remainderCount.toString(),
     );
   }
 }

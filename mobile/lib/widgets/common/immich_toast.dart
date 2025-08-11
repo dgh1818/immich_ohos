@@ -49,7 +49,7 @@ class ImmichToast {
           ],
         ),
       ),
-      positionedToastBuilder: (context, child, gravity) {
+      positionedToastBuilder: (context, child) {
         return Positioned(
           top: gravity == ToastGravity.TOP ? 150 : null,
           bottom: gravity == ToastGravity.BOTTOM ? 150 : null,
