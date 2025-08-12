@@ -143,7 +143,7 @@ LazyDatabase _openConnection() {
   return LazyDatabase(() async {
     final docs = await getApplicationDocumentsDirectory();
     final file = File(join(docs.path, 'immich.sqlite'));
-    return SqfliteQueryExecutor(path: file.path, logStatements: true);
+    return SqfliteQueryExecutor(path: file.path, singleInstance: false);
   });
 }
 
