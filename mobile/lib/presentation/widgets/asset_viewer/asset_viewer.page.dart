@@ -223,8 +223,8 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
       ref.read(videoPlayerControlsProvider.notifier).pause();
     }
 
-    final provider = getFullImageProvider(asset);
     if (asset.isImage) {
+      final provider = getFullImageProvider(asset);
       setDisplayMode(provider, context);
     } else {
       ui.SetHdr.setHdrMode(hdr: 0, is_image: true);
