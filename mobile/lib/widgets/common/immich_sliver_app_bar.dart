@@ -45,6 +45,8 @@ class ImmichSliverAppBar extends ConsumerWidget {
 
     final isMultiSelectEnabled = ref.watch(multiSelectProvider.select((s) => s.isEnabled));
 
+    final isScreenLandscape = context.orientation == Orientation.landscape;
+
     return SliverAnimatedOpacity(
       duration: Durations.medium1,
       opacity: isMultiSelectEnabled ? 0 : 1,
@@ -79,8 +81,9 @@ class ImmichSliverAppBar extends ConsumerWidget {
               icon: const Icon(Icons.science_rounded),
               onPressed: () => context.pushRoute(const FeatInDevRoute()),
             ),
-          // if (showUploadButton) const Padding(padding: EdgeInsets.only(right: 20), child: BackupIndicator()),
-          // const Padding(padding: EdgeInsets.only(right: 20), child: ProfileIndicator()),
+          if (!isScreenLandscape && showUploadButton)
+            const Padding(padding: EdgeInsets.only(right: 20), child: BackupIndicator()),
+          if (!isScreenLandscape) const Padding(padding: EdgeInsets.only(right: 20), child: ProfileIndicator()),
         ],
       ),
     );
