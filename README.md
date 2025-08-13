@@ -40,7 +40,7 @@
 
 # Harmonyos Next 鸿蒙端的 Immich
 
-**IMMICH 1.129.0 搭配 本项目下服务器 使用**
+**IMMICH 搭配对应版本 本项目下服务器 使用**
 <h1>签名有关注意事项：</h1>
 1. 本目录下服务器可实现华为jpeg动态照片解析<br/>
 2. 本目录下服务器搭配PETAL MAP的API KEY可实现中文逆地理编码（中文地名）<br/>
@@ -50,7 +50,7 @@ GEOCODE_WITH_PETALMAP: 'true' // 启用 Petal Map 逆地理编码. 80000次/月�
 
 AMAP_GEOCODE_KEYS: //高德地图 key.<br/>
 GEOCODE_WITH_AMAP: 'true' // 启用高德 逆地理编码 个人开发者国内免费 5000 次每天，国际收费.<br/>
-也可以搭配官方1.129.0服务器版本使用，但无上述功能。过高的服务器版本可能导致无法登陆<br/>
+也可以搭配官方对应版本服务器版本使用，但无上述功能。过高的服务器版本可能导致无法登陆<br/>
 
 1. 要实现应用内地图显示，需在APPGALLERY CONNECT中申请签名的同时开通地图权限 <br/>
 控制台地址：https://developer.huawei.com/consumer/cn/service/josp/agc/index.html <br/>
@@ -66,18 +66,20 @@ GEOCODE_WITH_AMAP: 'true' // 启用高德 逆地理编码 个人开发者国内�
 4. 增加了photopicker，无需ACL可手动上传媒体 <br/>
 
 <h1>已知问题：</h1>
-1. 语言切换显示功能
-2. 每行显示数量更改不即时生效（原版app也存在）
+1. beta时间线数据库迁移同步时，不会自动显示完成，需等待一段实现后重启app才能使用 <br/>
+2. Beta时间线sqflite的错误以及被意外关闭
+3. 语言切换显示功能
+4. 每行显示数量更改不即时生效（原版app也存在）
 
 <h1>未完成的功能：</h1>
-1. beta时间线数据库迁移同步：work_manager未适配 <br/>
-2.  照片同步功能以及后台上传下载功能：background_downloader未适配 <br/>
-3. 大地图：[maplibre/flutter-maplibre-gl](https://github.com/maplibre/flutter-maplibre-gl) Huawei mapkit缺少热力图功能 <br/>
-4. wifi信息获取：network_info_plus已发现适配版 <br/>
-5.  投屏功能：gcast谷歌投屏 <br/>
-6. 桌面小组件 <br/>
-7.  链接分享和接收功能：share_plus <br/>
-8. dynamic_color <br/>
+
+1.  照片同步功能以及后台上传下载功能：background_downloader未适配 <br/>
+2. 大地图：[maplibre/flutter-maplibre-gl](https://github.com/maplibre/flutter-maplibre-gl) Huawei mapkit缺少热力图功能 <br/>
+3. wifi信息获取：network_info_plus已发现适配版 <br/>
+4.  投屏功能：gcast谷歌投屏 <br/>
+5. 桌面小组件 <br/>
+6.  链接分享和接收功能：share_plus <br/>
+7. dynamic_color <br/>
 
 </h1>
 
