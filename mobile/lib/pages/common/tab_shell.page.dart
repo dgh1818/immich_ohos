@@ -20,6 +20,10 @@ import 'package:immich_mobile/routing/router.dart';
 import 'package:immich_mobile/services/app_settings.service.dart';
 import 'package:immich_mobile/utils/migration.dart';
 
+import 'package:flutter_svg/svg.dart';
+import 'package:immich_mobile/widgets/common/immich_sliver_app_bar.dart';
+import 'package:image_picker/image_picker.dart';
+
 @RoutePage()
 class TabShellPage extends ConsumerStatefulWidget {
   const TabShellPage({super.key});
@@ -28,10 +32,15 @@ class TabShellPage extends ConsumerStatefulWidget {
   ConsumerState<TabShellPage> createState() => _TabShellPageState();
 }
 
-class _TabShellPageState extends ConsumerState<TabShellPage> {
+class _TabShellPageState extends ConsumerState<TabShellPage> with SingleTickerProviderStateMixin {
+  bool isRailExpanded = true;
+  late final AnimationController animationController;
+
   @override
   void initState() {
     super.initState();
+
+    animationController = AnimationController(vsync: this, duration: const Duration(milliseconds: 400));
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       ref.read(websocketProvider.notifier).connect();
@@ -54,8 +63,26 @@ class _TabShellPageState extends ConsumerState<TabShellPage> {
   }
 
   @override
+  void dispose() {
+    animationController.dispose();
+    super.dispose();
+  }
+
+  void toggleRail() {
+    if (isRailExpanded) {
+      animationController.forward();
+    } else {
+      animationController.reverse();
+    }
+
+    setState(() => isRailExpanded = !isRailExpanded);
+  }
+
+  @override
   Widget build(BuildContext context) {
     final isScreenLandscape = context.orientation == Orientation.landscape;
+
+    const railWidth = 72.0;
 
     final navigationDestinations = [
       NavigationDestination(
@@ -81,16 +108,96 @@ class _TabShellPageState extends ConsumerState<TabShellPage> {
     ];
 
     Widget navigationRail(TabsRouter tabsRouter) {
-      return NavigationRail(
-        destinations: navigationDestinations
-            .map((e) => NavigationRailDestination(icon: e.icon, label: Text(e.label), selectedIcon: e.selectedIcon))
-            .toList(),
-        onDestinationSelected: (index) => _onNavigationSelected(tabsRouter, index, ref),
-        selectedIndex: tabsRouter.activeIndex,
-        labelType: NavigationRailLabelType.all,
-        groupAlignment: 0.0,
+      return AnimatedPositioned(
+        duration: const Duration(milliseconds: 400),
+        curve: Curves.easeInOut,
+        left: isRailExpanded ? 0 : -72, // 收起时向左移出屏幕
+        top: 0,
+        bottom: 0,
+        child: Material(
+          elevation: 4,
+          child: NavigationRail(
+            destinations: navigationDestinations
+                .map((e) => NavigationRailDestination(icon: e.icon, label: Text(e.label), selectedIcon: e.selectedIcon))
+                .toList(),
+            onDestinationSelected: (index) => _onNavigationSelected(tabsRouter, index, ref),
+            selectedIndex: tabsRouter.activeIndex,
+            labelType: NavigationRailLabelType.all,
+            groupAlignment: 0.0,
+          ),
+        ),
       );
     }
+
+    /*
+    Future<void> pickUploadImage() async {
+      final List<XFile> medias = await ImagePicker().pickMultipleMedia();
+
+      if (medias.isEmpty) return;
+
+      final backupService = ref.read(backupServiceProvider);
+      int successCount = 0;
+
+      for (final xfile in medias) {
+        try {
+          // 调用您提供的 uploadImageDirectly 方法
+          await backupService.uploadImageDirectly(xfile);
+          successCount++;
+
+          // 每成功上传一个文件显示消息
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('“${xfile.name}” 上传成功'), duration: const Duration(seconds: 1)));
+        } catch (e) {
+          debugPrint('上传失败: ${xfile.name} — $e');
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('“${xfile.name}” 上传失败: ${e.toString()}'),
+              backgroundColor: Colors.redAccent,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
+      }
+
+      // 显示总结消息
+      if (successCount > 0) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('✅ $successCount 个照片/视频上传完成'), duration: const Duration(seconds: 2)));
+      }
+    }
+*/
+    Widget buildLogo() {
+      return Badge(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+        backgroundColor: context.primaryColor,
+        alignment: Alignment.centerRight,
+        offset: const Offset(16, -8),
+        label: Text(
+          'β',
+          style: TextStyle(
+            fontSize: 11,
+            color: context.colorScheme.onPrimary,
+            fontWeight: FontWeight.bold,
+            fontFamily: 'OverpassMono',
+            height: 1.2,
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.only(top: 3.0),
+          child: SvgPicture.asset(
+            context.isDarkTheme ? 'assets/immich-logo.svg' : 'assets/immich-logo.svg',
+            height: 40,
+          ),
+        ),
+      );
+    }
+
+    final screenWidth = MediaQuery.of(context).size.width;
+    final baseWidth = screenWidth - railWidth; // assume base when rail expanded
+    final collapsedAvailable = screenWidth; // when rail is hidden (右边不变，左边扩展到 0)
+    final targetScale = collapsedAvailable / baseWidth; // >1, 比例放大值
 
     return AutoTabsRouter(
       routes: [const MainTimelineRoute(), DriftSearchRoute(), const DriftAlbumsRoute(), const DriftLibraryRoute()],
@@ -98,17 +205,77 @@ class _TabShellPageState extends ConsumerState<TabShellPage> {
       transitionBuilder: (context, child, animation) => FadeTransition(opacity: animation, child: child),
       builder: (context, child) {
         final tabsRouter = AutoTabsRouter.of(context);
+        final heroedChild = HeroControllerScope(controller: HeroController(), child: child);
         return PopScope(
           canPop: tabsRouter.activeIndex == 0,
           onPopInvokedWithResult: (didPop, _) => !didPop ? tabsRouter.setActiveIndex(0) : null,
           child: Scaffold(
             resizeToAvoidBottomInset: false,
             body: isScreenLandscape
-                ? Row(
+                ? Stack(
                     children: [
+                      // 左侧导航栏
                       navigationRail(tabsRouter),
-                      const VerticalDivider(),
-                      Expanded(child: child),
+                      AnimatedPositioned(
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeInOut,
+                        top: 0,
+                        bottom: 0,
+                        left: isRailExpanded ? railWidth : 0,
+                        right: 0,
+                        child: ClipRect(
+                          // Positioned.fill(
+                          //   left: isRailExpanded ? railWidth : 0, // 用 left 控制点击时的动画起点（可选）
+                          //   child: ClipRect(
+                          // 防止溢出的绘制
+                          child: Align(
+                            alignment: Alignment.topRight, // 缩放以右上角为锚点（右边固定）
+                            child: AnimatedBuilder(
+                              animation: animationController,
+                              builder: (context, _) {
+                                // 从 1.0 到 targetScale 线性插值；你可以用 CurvedAnimation 包装 controller
+                                final scale = 1.0 + (targetScale - 1.0) * animationController.value;
+                                return Transform.scale(
+                                  scale: scale,
+                                  alignment: Alignment.bottomRight, // 关键：右边保持不动
+                                  child: SizedBox(
+                                    // 这个宽度是缩放前的“基准宽度”，也就是内容本来能占用的宽度
+                                    width: baseWidth,
+                                    // 如果希望竖直方向也受限制，可以加 height
+                                    child: heroedChild, // 你的 AutoTabsRouter 的 child
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        ),
+                      ),
+                      //Logo按钮（放在Stack顶层）
+                      Positioned(
+                        top: 30,
+                        left: 10,
+                        child: GestureDetector(
+                          onTap: toggleRail, // 点击切换状态
+                          child: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.transparent,
+                              borderRadius: BorderRadius.circular(12),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.1),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 0),
+                                ),
+                              ],
+                            ),
+                            child: buildLogo(),
+                          ),
+                        ),
+                      ),
+                      const Positioned(top: 30, right: 20, child: ProfileIndicator()),
+                      const Positioned(top: 30, right: 70, child: BackupIndicator()),
+                      const Positioned(top: 30, right: 90, child: SyncStatusIndicator()),
                     ],
                   )
                 : child,

@@ -57,20 +57,21 @@ class ImmichSliverAppBar extends ConsumerWidget {
         automaticallyImplyLeading: false,
         centerTitle: false,
         title: title ?? const _ImmichLogoWithText(),
+        backgroundColor: Colors.transparent,
         actions: [
           /*
-          if (isCasting)
-            Padding(
-              padding: const EdgeInsets.only(right: 12),
-              child: IconButton(
-                onPressed: () {
-                  showDialog(context: context, builder: (context) => const CastDialog());
-                },
-                icon: Icon(isCasting ? Icons.cast_connected_rounded : Icons.cast_rounded),
-              ),
-            ),
-*/
-          const _SyncStatusIndicator(),
+                if (isCasting)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 12),
+                    child: IconButton(
+                      onPressed: () {
+                        showDialog(context: context, builder: (context) => const CastDialog());
+                      },
+                      icon: Icon(isCasting ? Icons.cast_connected_rounded : Icons.cast_rounded),
+                    ),
+                  ),
+      */
+          //const SyncStatusIndicator(),
           if (actions != null)
             ...actions!.map((action) => Padding(padding: const EdgeInsets.only(right: 16), child: action)),
           if (kDebugMode || kProfileMode)
@@ -78,8 +79,8 @@ class ImmichSliverAppBar extends ConsumerWidget {
               icon: const Icon(Icons.science_rounded),
               onPressed: () => context.pushRoute(const FeatInDevRoute()),
             ),
-          if (showUploadButton) const Padding(padding: EdgeInsets.only(right: 20), child: _BackupIndicator()),
-          const Padding(padding: EdgeInsets.only(right: 20), child: _ProfileIndicator()),
+          // if (showUploadButton) const Padding(padding: EdgeInsets.only(right: 20), child: BackupIndicator()),
+          // const Padding(padding: EdgeInsets.only(right: 20), child: ProfileIndicator()),
         ],
       ),
     );
@@ -97,6 +98,7 @@ class _ImmichLogoWithText extends StatelessWidget {
           children: [
             Builder(
               builder: (context) {
+                return const SizedBox.shrink();
                 return Badge(
                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
                   backgroundColor: context.primaryColor,
@@ -131,8 +133,8 @@ class _ImmichLogoWithText extends StatelessWidget {
   }
 }
 
-class _ProfileIndicator extends ConsumerWidget {
-  const _ProfileIndicator();
+class ProfileIndicator extends ConsumerWidget {
+  const ProfileIndicator();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -164,13 +166,13 @@ class _ProfileIndicator extends ConsumerWidget {
   }
 }
 
-class _BackupIndicator extends ConsumerWidget {
-  const _BackupIndicator();
+class BackupIndicator extends ConsumerWidget {
+  const BackupIndicator();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     const widgetSize = 30.0;
-    final indicatorIcon = _getBackupBadgeIcon(context, ref);
+    final indicatorIcon = getBackupBadgeIcon(context, ref);
     final badgeBackground = context.colorScheme.surfaceContainer;
 
     return InkWell(
@@ -196,7 +198,7 @@ class _BackupIndicator extends ConsumerWidget {
     );
   }
 
-  Widget? _getBackupBadgeIcon(BuildContext context, WidgetRef ref) {
+  Widget? getBackupBadgeIcon(BuildContext context, WidgetRef ref) {
     final backupStateStream = ref.watch(settingsProvider).watch(Setting.enableBackup);
     final isDarkTheme = context.isDarkTheme;
     final iconColor = isDarkTheme ? Colors.white : Colors.black;
@@ -248,14 +250,14 @@ class _BackupIndicator extends ConsumerWidget {
   }
 }
 
-class _SyncStatusIndicator extends ConsumerStatefulWidget {
-  const _SyncStatusIndicator();
+class SyncStatusIndicator extends ConsumerStatefulWidget {
+  const SyncStatusIndicator();
 
   @override
-  ConsumerState<_SyncStatusIndicator> createState() => _SyncStatusIndicatorState();
+  ConsumerState<SyncStatusIndicator> createState() => _SyncStatusIndicatorState();
 }
 
-class _SyncStatusIndicatorState extends ConsumerState<_SyncStatusIndicator> with TickerProviderStateMixin {
+class _SyncStatusIndicatorState extends ConsumerState<SyncStatusIndicator> with TickerProviderStateMixin {
   late AnimationController _rotationController;
   late AnimationController _dismissalController;
   late Animation<double> _rotationAnimation;
