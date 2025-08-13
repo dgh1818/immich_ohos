@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui' as ui;
 
 import 'package:auto_route/auto_route.dart';
 import 'package:easy_localization/easy_localization.dart';
@@ -29,6 +30,8 @@ import 'package:immich_mobile/providers/routes.provider.dart';
 import 'package:immich_mobile/widgets/photo_view/photo_view.dart';
 import 'package:immich_mobile/widgets/photo_view/photo_view_gallery.dart';
 import 'package:platform/platform.dart';
+
+import 'package:immich_mobile/main.dart';
 
 @RoutePage()
 class AssetViewerPage extends StatelessWidget {
@@ -71,6 +74,10 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
   PhotoViewControllerBase? viewController;
   StreamSubscription? reloadSubscription;
 
+  ImageProvider? currentImageProvider; // 替代 useRef
+  late final _MyRouteAware routeAware; // 替代 useMemoized
+  ImageStreamListener? imageListener;
+
   late Platform platform;
   late final int heroOffset;
   late PhotoViewControllerValue initialPhotoViewState;
@@ -98,8 +105,17 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
     platform = widget.platform ?? const LocalPlatform();
     totalAssets = ref.read(timelineServiceProvider).totalAssets;
     bottomSheetController = DraggableScrollableController();
+
+    routeAware = _MyRouteAware();
+    ui.SetHdr.enableHdr(enable_hdr: true);
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _onAssetChanged(widget.initialIndex);
+
+      final modalRoute = ModalRoute.of(context);
+      if (modalRoute is PageRoute) {
+        routeObserver.subscribe(routeAware, modalRoute);
+      }
     });
     reloadSubscription = EventStream.shared.listen(_onEvent);
     heroOffset = widget.heroOffset ?? TabsRouterScope.of(context)?.controller.activeIndex ?? 0;
@@ -111,6 +127,8 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
     bottomSheetController.dispose();
     _cancelTimers();
     reloadSubscription?.cancel();
+    routeObserver.unsubscribe(routeAware);
+    removeImageListener();
     super.dispose();
   }
 
@@ -157,6 +175,42 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
     );
   }
 
+  void removeImageListener() {
+    if (imageListener != null && currentImageProvider != null) {
+      try {
+        currentImageProvider!.resolve(ImageConfiguration.empty).removeListener(imageListener!);
+      } catch (e) {
+        // 忽略可能的异常
+      } finally {
+        imageListener = null;
+        currentImageProvider = null;
+      }
+    }
+  }
+
+  void getImageColorSpace(ImageProvider provider, BuildContext context) async {
+    if (imageListener != null && currentImageProvider != null) {
+      currentImageProvider!.resolve(ImageConfiguration.empty).removeListener(imageListener!);
+    }
+
+    ImageStream stream = provider.resolve(ImageConfiguration.empty);
+
+    imageListener = ImageStreamListener((ImageInfo info, bool synchronousCall) {
+      if (info.image.colorSpace == ui.ColorSpace.extendedSRGB) {
+        ui.SetHdr.setHdrMode(hdr: 1, is_image: true);
+      } else {
+        ui.SetHdr.setHdrMode(hdr: 0, is_image: true);
+      }
+    }, onError: (_, __) {});
+
+    currentImageProvider = provider;
+    stream.addListener(imageListener!);
+  }
+
+  void setDisplayMode(ImageProvider provider, BuildContext context) async {
+    getImageColorSpace(provider, context);
+  }
+
   void _onAssetChanged(int index) {
     final asset = ref.read(timelineServiceProvider).getAsset(index);
     // Always holds the current asset from the timeline
@@ -169,6 +223,13 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
       ref.read(videoPlayerControlsProvider.notifier).pause();
     }
 
+    final provider = getFullImageProvider(asset);
+    if (asset.isImage) {
+      setDisplayMode(provider, context);
+    } else {
+      ui.SetHdr.setHdrMode(hdr: 0, is_image: true);
+    }
+
     unawaited(ref.read(timelineServiceProvider).preCacheAssets(index));
     _cancelTimers();
     // This will trigger the pre-caching of adjacent assets ensuring
@@ -176,6 +237,10 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
     final timer = Timer(Durations.medium4, () {
       // Check if widget is still mounted before proceeding
       if (!mounted) return;
+
+      if (!asset.isImage) {
+        ui.SetHdr.setHdrMode(hdr: -1, is_image: false);
+      }
 
       for (final offset in [-1, 1]) {
         unawaited(_precacheImage(index + offset));
@@ -641,5 +706,13 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
               ),
       ),
     );
+  }
+}
+
+class _MyRouteAware extends RouteAware {
+  @override
+  void didPop() {
+    ui.SetHdr.setHdrMode(hdr: 0, is_image: true);
+    super.didPop();
   }
 }
