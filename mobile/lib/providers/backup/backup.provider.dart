@@ -377,8 +377,7 @@ class BackupNotifier extends StateNotifier<BackUpState> {
   /// which albums are selected or excluded
   /// and then update the UI according to those information
   Future<void> getBackupInfo() async {
-    //final isEnabled = await _backgroundService.isBackgroundBackupEnabled();
-    final isEnabled = false;
+    final isEnabled = await _backgroundService.isBackgroundBackupEnabled();
 
     state = state.copyWith(backgroundBackup: isEnabled);
     if (isEnabled != Store.get(StoreKey.backgroundBackup, !isEnabled)) {

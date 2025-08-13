@@ -75,6 +75,7 @@ export class BackgroundServicePlugin implements FlutterPlugin, MethodCallHandler
 
   async onMethodCall(call: MethodCall, result: MethodResult): Promise<void> {
     let ctx = this.uiContext;
+    console.error(call.method);
     switch (call.method) {
       case "enable":
         let args0:ArrayList<ESObject> = call.args as ArrayList<ESObject>;
@@ -117,23 +118,34 @@ export class BackgroundServicePlugin implements FlutterPlugin, MethodCallHandler
       case "disable":
         if(this.sendableCtx!=undefined) {
           let object: SendableObject = new SendableObject("disable", this.sendableCtx)
-          this.ContentObserverWorker?.postMessageWithSharedSendable(object);
-          this.ContentObserverWorker?.terminate();
+          if(this.ContentObserverWorker!=undefined) {
+            this.ContentObserverWorker?.postMessageWithSharedSendable(object);
+            this.ContentObserverWorker?.terminate();
+          }
 
-          let object5: SendableObject = new SendableObject("stopWork", this.sendableCtx)
-          ContentObserverWorker.BackupWorkerInstance_public?.postMessageWithSharedSendable(object5);
-          ContentObserverWorker.BackupWorkerInstance_public?.terminate();
+          if(ContentObserverWorker.BackupWorkerInstance_public!=undefined) {
+            let object5: SendableObject = new SendableObject("stopWork", this.sendableCtx)
+            ContentObserverWorker.BackupWorkerInstance_public?.postMessageWithSharedSendable(object5);
+            ContentObserverWorker.BackupWorkerInstance_public?.terminate();
+          }
           result.success(true);
         }
         break;
       case "isEnabled":
         if(this.sendableCtx == undefined) {
-          return result.error("sendableCtx","sendableCtx is underfined",null);
+          result.error("sendableCtx","sendableCtx is underfined",null);
+          return;
         }
+
+        if(ContentObserverWorker.BackupWorkerInstance_public==undefined) {
+          result.success(false);
+          return;
+        }
+
         let object: SendableObject = new SendableObject("isEnabled", this.sendableCtx)
 
 
-        this.ContentObserverWorker!.onmessage = (e: MessageEvents): void => {
+        ContentObserverWorker.BackupWorkerInstance_public!.onmessage = (e: MessageEvents): void => {
           // 接收Worker子线程的结果
           let contentObserverMessage = e.data as string;
           switch(contentObserverMessage) {
@@ -144,6 +156,8 @@ export class BackgroundServicePlugin implements FlutterPlugin, MethodCallHandler
               return result.success(false);
           }
         }
+
+        ContentObserverWorker.BackupWorkerInstance_public?.postMessageWithSharedSendable(object)
 
         break;
       case "isIgnoringBatteryOptimizations":
