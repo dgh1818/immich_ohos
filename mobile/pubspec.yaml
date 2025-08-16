@@ -19,7 +19,7 @@ dependencies:
   video_player: ^2.9.2
   video_player_android: 2.6.0
   chewie: ^1.7.4
-  #background_downloader: ^9.2.0  #ohos待适配
+  background_downloader: ^9.2.0  #ohos待适配
   cached_network_image: ^3.4.1
   cancellation_token_http: ^2.1.0
   #cast: ^2.1.0
@@ -241,6 +241,8 @@ dependency_overrides:
       ref: ohos_dev
   photo_manager:
     path: ./flutter_photo_manager
+  background_downloader:
+    path: ../../package_flutter/background_downloader_ohos
   coordtransform_dart:
     git:
       url: https://github.com/dgh1818/coordtransform_dart.git
@@ -259,7 +261,7 @@ dependency_overrides:
     git:
       url: 'https://gitcode.com/openharmony-sig/flutter_plus_plugins.git'
       path: 'packages/share_plus/share_plus'
-      ref: master
+      ref: br_share_plus-v10.1.1_ohos
   intl: 0.20.2
   uuid: ^4.4.2
 

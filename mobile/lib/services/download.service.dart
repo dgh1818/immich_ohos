@@ -1,4 +1,3 @@
-/*
 import 'dart:io';
 
 import 'package:background_downloader/background_downloader.dart';
@@ -201,4 +200,3 @@ TaskRecord _findTaskRecord(List<TaskRecord> records, String livePhotosId, LivePh
     return metadata.id == livePhotosId && metadata.part == part;
   });
 }
-*/

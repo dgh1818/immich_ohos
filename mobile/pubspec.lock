@@ -73,6 +73,13 @@ packages:
       url: "https://pub.flutter-io.cn"
     source: hosted
     version: "9.3.1"
+  background_downloader:
+    dependency: "direct main"
+    description:
+      path: "../../package_flutter/background_downloader_ohos"
+      relative: true
+    source: path
+    version: "9.2.3"
   boolean_selector:
     dependency: transitive
     description:
@@ -1202,10 +1209,10 @@ packages:
     dependency: transitive
     description:
       name: mime
-      sha256: "801fd0b26f14a4a58ccb09d5892c3fbdeff209594300a542492cf13fba9d247a"
+      sha256: "41a20518f0cb1256669420fdba0cd90d21561e560ac240f26ef8322e45bb7ed6"
       url: "https://pub.flutter-io.cn"
     source: hosted
-    version: "1.0.6"
+    version: "2.0.0"
   mocktail:
     dependency: "direct dev"
     description:
@@ -1656,20 +1663,20 @@ packages:
     dependency: "direct overridden"
     description:
       path: "packages/share_plus/share_plus"
-      ref: master
-      resolved-ref: d3e5d900c9033b572380c63e91511c00421fc119
+      ref: "br_share_plus-v10.1.1_ohos"
+      resolved-ref: "30eb5a271d915b47f74a2a5808a886b83c0f328b"
       url: "https://gitcode.com/openharmony-sig/flutter_plus_plugins.git"
     source: git
-    version: "7.2.0"
+    version: "10.1.1"
   share_plus_platform_interface:
     dependency: transitive
     description:
       path: "packages/share_plus/share_plus_platform_interface"
-      ref: master
-      resolved-ref: d3e5d900c9033b572380c63e91511c00421fc119
+      ref: "br_share_plus-v10.1.1_ohos"
+      resolved-ref: "30eb5a271d915b47f74a2a5808a886b83c0f328b"
       url: "https://gitcode.com/openharmony-sig/flutter_plus_plugins.git"
     source: git
-    version: "3.3.0"
+    version: "5.0.1"
   shared_preferences:
     dependency: transitive
     description:
@@ -1810,7 +1817,7 @@ packages:
     description:
       path: sqflite
       ref: "br_v2.4.1_ohos"
-      resolved-ref: cd5c1d0f224d1bbac215905e356a012383c3a686
+      resolved-ref: bc15cab9f52e02b1f90d9aebd7b5b320c2d648c6
       url: "https://gitcode.com/dgh18/flutter_sqflite.git"
     source: git
     version: "2.4.1"
@@ -1827,7 +1834,7 @@ packages:
     description:
       path: sqflite_common
       ref: "br_v2.4.1_ohos"
-      resolved-ref: cd5c1d0f224d1bbac215905e356a012383c3a686
+      resolved-ref: bc15cab9f52e02b1f90d9aebd7b5b320c2d648c6
       url: "https://gitcode.com/dgh18/flutter_sqflite.git"
     source: git
     version: "2.5.4+5"
@@ -1836,7 +1843,7 @@ packages:
     description:
       path: sqflite_common_ffi
       ref: "br_v2.4.1_ohos"
-      resolved-ref: cd5c1d0f224d1bbac215905e356a012383c3a686
+      resolved-ref: bc15cab9f52e02b1f90d9aebd7b5b320c2d648c6
       url: "https://gitcode.com/dgh18/flutter_sqflite.git"
     source: git
     version: "2.3.4"
@@ -1845,7 +1852,7 @@ packages:
     description:
       path: "packages_web/sqflite_common_ffi_web"
       ref: "br_v2.4.1_ohos"
-      resolved-ref: cd5c1d0f224d1bbac215905e356a012383c3a686
+      resolved-ref: bc15cab9f52e02b1f90d9aebd7b5b320c2d648c6
       url: "https://gitcode.com/dgh18/flutter_sqflite.git"
     source: git
     version: "0.4.5+3"
@@ -1862,8 +1869,8 @@ packages:
     description:
       path: sqflite_ohos
       ref: "br_v2.4.1_ohos"
-      resolved-ref: "6d559e44da1e80b9e2442bf8b30d488b2a70064f"
-      url: "https://gitcode.com/openharmony-sig/flutter_sqflite.git"
+      resolved-ref: bc15cab9f52e02b1f90d9aebd7b5b320c2d648c6
+      url: "https://gitcode.com/dgh18/flutter_sqflite.git"
     source: git
     version: "2.4.1"
   sqflite_platform_interface:

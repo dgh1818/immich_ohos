@@ -9,7 +9,8 @@ import { BusinessError } from '@kit.BasicServicesKit';
 
 export class MessagesImplBase extends NativeSyncApiOhos {
   public async hashPaths(paths: string[]): Promise<(Uint8Array | null)[]> {
-    
+    console.info("enter hashPaths")
+
     const args2: string[] = paths;
     const digest:string = "sha1"
     const hashes: Promise<Uint8Array | null>[] = [];
@@ -158,6 +159,7 @@ export class MessagesImplBase extends NativeSyncApiOhos {
   }
 
   public async getAlbums(): Promise<PlatformAlbum[]> {
+    console.error("enter 2")
     let albums: PlatformAlbum[] = [];
     //let albumsCount: Map<string, number>;
 
@@ -167,7 +169,8 @@ export class MessagesImplBase extends NativeSyncApiOhos {
     ];
 
     let predicates: dataSharePredicates.DataSharePredicates = new dataSharePredicates.DataSharePredicates();
-    predicates.orderByAsc(photoAccessHelper.AlbumKeys.URI);
+    console.error("11");
+
     let fetchOptions: photoAccessHelper.FetchOptions = {
       fetchColumns: fetchColumns,
       predicates: predicates
@@ -185,6 +188,7 @@ export class MessagesImplBase extends NativeSyncApiOhos {
           fetchOptions);
       //let album: photoAccessHelper.Album = await fetchResult.getFirstObject();
       let iter: number = 0;
+      console.error("12");
 
       while (!fetchResult.isAfterLast()) {
         let asset = await fetchResult.getNextObject()
@@ -195,8 +199,10 @@ export class MessagesImplBase extends NativeSyncApiOhos {
     } catch (e) {
       console.error('getAlbums', e);
     }
+    console.error("13");
 
     let sortedMap = this.sortMapByValue(assets_count_map);
+    console.error("14");
 
     for (let entry of sortedMap) {
       let currrent_asset = assets[entry[0]];
@@ -236,6 +242,7 @@ export class MessagesImplBase extends NativeSyncApiOhos {
   }
 
   public async getAssetIdsForAlbum(albumPath: string): Promise<Array<string>> {
+    console.error("enter 3")
 
     let albumUri = fileUri.getUriFromPath(albumPath);
 
@@ -284,7 +291,9 @@ export class MessagesImplBase extends NativeSyncApiOhos {
   }
 
   public async getAssetsCountSince(albumId: string, timestamp: number): Promise<number> {
+    console.error("enter 4")
     const phAccessHelper = photoAccessHelper.getPhotoAccessHelper(this.ctx);
+
 
     let assetsCountfetchColumns: string[] = [
       photoAccessHelper.PhotoKeys.URI,
@@ -305,6 +314,7 @@ export class MessagesImplBase extends NativeSyncApiOhos {
   }
 
   public async getAssetsForAlbum(albumId: string, updatedTimeCond?: number): Promise<Array<PlatformAsset>> {
+    console.error("enter 5")
     let predicates_album: dataSharePredicates.DataSharePredicates = new dataSharePredicates.DataSharePredicates();
 
     let albumName: photoAccessHelper.AlbumKeys = photoAccessHelper.AlbumKeys.ALBUM_NAME;

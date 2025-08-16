@@ -215,6 +215,7 @@ export class BackupWorker implements MethodCallHandler {
   }
 
   async onMethodCall(call: MethodCall, result: MethodResult): Promise<void> {
+    console.error("call.method");
     switch (call.method) {
       case "initialized" :
         this.timeBackupStarted = process.uptime() * 1000;

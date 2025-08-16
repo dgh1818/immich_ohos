@@ -1,5 +1,6 @@
 import { FlutterEngine, Log } from '@ohos/flutter_ohos';
 import PhotoManagerPlugin from 'photo_manager';
+import BDPlugin from 'background_downloader';
 import MapLibreMapsPlugin from 'maplibre_gl';
 import FluttertoastPlugin from 'fluttertoast';
 import ImagePickerPlugin from 'image_picker_ohos';
@@ -7,10 +8,10 @@ import PathProviderPlugin from 'path_provider_ohos';
 import UrlLauncherPlugin from 'url_launcher_ohos';
 import VideoPlayerPlugin from 'video_player_ohos';
 import PermissionHandlerPlugin from 'permission_handler_ohos';
+import SharePlusOhosPlugin from 'share_plus';
 import PackageInfoPlugin from 'package_info_plus';
 import ConnectivityPlugin from 'connectivity_plus';
 import DeviceInfoPlusOhosPlugin from 'device_info_plus';
-import SharePlusOhosPlugin from 'share_plus';
 import SqflitePlugin from 'sqflite_ohos';
 import FlutterLocalNotificationsPlugin from 'flutter_local_notifications';
 import FlutterSecureStorageOhosPlugin from 'flutter_secure_storage_ohos';
@@ -33,6 +34,7 @@ export class GeneratedPluginRegistrant {
   static registerWith(flutterEngine: FlutterEngine) {
     try {
       flutterEngine.getPlugins()?.add(new PhotoManagerPlugin());
+      flutterEngine.getPlugins()?.add(new BDPlugin());
       flutterEngine.getPlugins()?.add(new MapLibreMapsPlugin());
       flutterEngine.getPlugins()?.add(new FluttertoastPlugin());
       flutterEngine.getPlugins()?.add(new ImagePickerPlugin());
@@ -40,10 +42,10 @@ export class GeneratedPluginRegistrant {
       flutterEngine.getPlugins()?.add(new UrlLauncherPlugin());
       flutterEngine.getPlugins()?.add(new VideoPlayerPlugin());
       flutterEngine.getPlugins()?.add(new PermissionHandlerPlugin());
+      flutterEngine.getPlugins()?.add(new SharePlusOhosPlugin());
       flutterEngine.getPlugins()?.add(new PackageInfoPlugin());
       flutterEngine.getPlugins()?.add(new ConnectivityPlugin());
       flutterEngine.getPlugins()?.add(new DeviceInfoPlusOhosPlugin());
-      flutterEngine.getPlugins()?.add(new SharePlusOhosPlugin());
       flutterEngine.getPlugins()?.add(new SqflitePlugin());
       flutterEngine.getPlugins()?.add(new FlutterLocalNotificationsPlugin());
       flutterEngine.getPlugins()?.add(new FlutterSecureStorageOhosPlugin());

@@ -1,4 +1,4 @@
 import { BackupWorker } from './BackupWorkerImpl';
 
 
-let BackupWorkerClass = new BackupWorker();
+//let BackupWorkerClass = new BackupWorker();

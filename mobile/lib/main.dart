@@ -3,7 +3,7 @@ import 'dart:io';
 
 import 'package:auto_route/auto_route.dart';
 
-//import 'package:background_downloader/background_downloader.dart';
+import 'package:background_downloader/background_downloader.dart';
 
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:easy_localization/easy_localization.dart';
@@ -94,7 +94,6 @@ Future<void> initApp() async {
 
   initializeTimeZones();
 
-  /*
   // Initialize the file downloader
   await FileDownloader().configure(
     // maxConcurrent: 6, maxConcurrentByHost(server):6, maxConcurrentByGroup: 3
@@ -104,7 +103,6 @@ Future<void> initApp() async {
   await FileDownloader().trackTasksInGroup(kDownloadGroupLivePhoto, markDownloadedComplete: false);
 
   await FileDownloader().trackTasks();
-  */
 
   LicenseRegistry.addLicense(() async* {
     for (final license in nonPubLicenses.entries) {
@@ -165,7 +163,7 @@ class ImmichAppState extends ConsumerState<ImmichApp> with WidgetsBindingObserve
     SystemChrome.setSystemUIOverlayStyle(overlayStyle);
     await ref.read(localNotificationService).setup();
   }
-  /*
+
   void _configureFileDownloaderNotifications() {
     FileDownloader().configureNotificationForGroup(
       kDownloadGroupImage,
@@ -188,7 +186,6 @@ class ImmichAppState extends ConsumerState<ImmichApp> with WidgetsBindingObserve
       progressBar: true,
     );
   }
-  */
 
   Future<DeepLink> _deepLinkBuilder(PlatformDeepLink deepLink) async {
     final deepLinkHandler = ref.read(deepLinkServiceProvider);

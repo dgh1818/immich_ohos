@@ -7,7 +7,7 @@ import 'package:immich_mobile/entities/asset.entity.dart';
 import 'package:immich_mobile/providers/album/current_album.provider.dart';
 import 'package:immich_mobile/providers/asset.provider.dart';
 import 'package:immich_mobile/providers/asset_viewer/current_asset.provider.dart';
-//import 'package:immich_mobile/providers/asset_viewer/download.provider.dart';
+import 'package:immich_mobile/providers/asset_viewer/download.provider.dart';
 import 'package:immich_mobile/providers/asset_viewer/scroll_to_date_notifier.provider.dart';
 import 'package:immich_mobile/providers/asset_viewer/show_controls.provider.dart';
 import 'package:immich_mobile/providers/backup/manual_upload.provider.dart';
@@ -79,11 +79,9 @@ class GalleryAppBar extends ConsumerWidget {
       );
     }
 
-    /*
     handleDownloadAsset() {
       ref.read(downloadStateProvider.notifier).downloadAsset(asset);
     }
-*/
 
     handleLocateAsset() async {
       // Go back to the gallery
@@ -110,7 +108,7 @@ class GalleryAppBar extends ConsumerWidget {
             onFavorite: toggleFavorite,
             onRestorePressed: () => handleRestore(asset),
             onUploadPressed: asset.isLocal ? () => handleUpload(asset) : null,
-            onDownloadPressed: asset.isLocal ? null : null,
+            onDownloadPressed: asset.isLocal ? null : handleDownloadAsset,
             onAddToAlbumPressed: () => addToAlbum(asset),
             onActivitiesPressed: handleActivities,
           ),
