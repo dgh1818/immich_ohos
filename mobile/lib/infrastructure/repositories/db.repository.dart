@@ -149,7 +149,7 @@ LazyDatabase _openConnection() {
   return LazyDatabase(() async {
     final docs = await getApplicationDocumentsDirectory();
     final file = File(join(docs.path, 'immich.sqlite'));
-    return SqfliteQueryExecutor(path: file.path, singleInstance: false);
+    return SqfliteQueryExecutor(path: file.path, singleInstance: true);
   });
 }
 
@@ -203,6 +203,9 @@ class Drift extends $Drift implements IDatabaseRepository {
             await m.addColumn(v6.remoteAssetEntity, v6.remoteAssetEntity.libraryId);
             await m.create(v6.uQRemoteAssetsOwnerChecksum);
             await m.create(v6.uQRemoteAssetsOwnerLibraryChecksum);
+          },
+          from6To7: (m, v7) async {
+            await m.createIndex(v7.idxLatLng);
           },
         ),
       );
