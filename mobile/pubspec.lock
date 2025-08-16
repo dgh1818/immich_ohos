@@ -263,7 +263,7 @@ packages:
     description:
       path: "packages/connectivity_plus/connectivity_plus"
       ref: "br_connectivity_plus-v6.1.0_ohos"
-      resolved-ref: cd46a890e2a9694c35915950fbfac022221828de
+      resolved-ref: "8cddd8e493ff922392f2c4446f3e540593c0c768"
       url: "https://gitcode.com/openharmony-sig/flutter_plus_plugins.git"
     source: git
     version: "6.1.0"
@@ -409,7 +409,7 @@ packages:
     description:
       path: "packages/device_info_plus/device_info_plus"
       ref: HEAD
-      resolved-ref: d3e5d900c9033b572380c63e91511c00421fc119
+      resolved-ref: "03507cc39ab148fe9f5827cd991b3e04aed2bcc3"
       url: "https://gitcode.com/openharmony-sig/flutter_plus_plugins.git"
     source: git
     version: "9.1.0"
@@ -589,10 +589,10 @@ packages:
     dependency: "direct main"
     description:
       name: flutter_hooks
-      sha256: b772e710d16d7a20c0740c4f855095026b31c7eb5ba3ab67d2bd52021cd9461d
+      sha256: c3df76c62bb3a9f9bee75c57cdab40abab6123b734c1cd7e9b26a5dbd436eceb
       url: "https://pub.flutter-io.cn"
     source: hosted
-    version: "0.21.2"
+    version: "0.21.3"
   flutter_launcher_icons:
     dependency: "direct dev"
     description:
@@ -941,42 +941,42 @@ packages:
     dependency: transitive
     description:
       name: image_picker_android
-      sha256: b08e9a04d0f8d91f4a6e767a745b9871bfbc585410205c311d0492de20a7ccd6
+      sha256: e83b2b05141469c5e19d77e1dfa11096b6b1567d09065b2265d7c6904560050c
       url: "https://pub.flutter-io.cn"
     source: hosted
-    version: "0.8.12+25"
+    version: "0.8.13"
   image_picker_for_web:
     dependency: transitive
     description:
       name: image_picker_for_web
-      sha256: "717eb042ab08c40767684327be06a5d8dbb341fe791d514e4b92c7bbe1b7bb83"
+      sha256: "40c2a6a0da15556dc0f8e38a3246064a971a9f512386c3339b89f76db87269b6"
       url: "https://pub.flutter-io.cn"
     source: hosted
-    version: "3.0.6"
+    version: "3.1.0"
   image_picker_ios:
     dependency: transitive
     description:
       name: image_picker_ios
-      sha256: "05da758e67bc7839e886b3959848aa6b44ff123ab4b28f67891008afe8ef9100"
+      sha256: eb06fe30bab4c4497bad449b66448f50edcc695f1c59408e78aa3a8059eb8f0e
       url: "https://pub.flutter-io.cn"
     source: hosted
-    version: "0.8.12+2"
+    version: "0.8.13"
   image_picker_linux:
     dependency: transitive
     description:
       name: image_picker_linux
-      sha256: "34a65f6740df08bbbeb0a1abd8e6d32107941fd4868f67a507b25601651022c9"
+      sha256: "1f81c5f2046b9ab724f85523e4af65be1d47b038160a8c8deed909762c308ed4"
       url: "https://pub.flutter-io.cn"
     source: hosted
-    version: "0.2.1+2"
+    version: "0.2.2"
   image_picker_macos:
     dependency: transitive
     description:
       name: image_picker_macos
-      sha256: "1b90ebbd9dcf98fb6c1d01427e49a55bd96b5d67b8c67cf955d60a5de74207c1"
+      sha256: d58cd9d67793d52beefd6585b12050af0a7663c0c2a6ece0fb110a35d6955e04
       url: "https://pub.flutter-io.cn"
     source: hosted
-    version: "0.2.1+2"
+    version: "0.2.2"
   image_picker_ohos:
     dependency: transitive
     description:
@@ -990,18 +990,18 @@ packages:
     dependency: transitive
     description:
       name: image_picker_platform_interface
-      sha256: "886d57f0be73c4b140004e78b9f28a8914a09e50c2d816bdd0520051a71236a0"
+      sha256: "9f143b0dba3e459553209e20cc425c9801af48e6dfa4f01a0fcf927be3f41665"
       url: "https://pub.flutter-io.cn"
     source: hosted
-    version: "2.10.1"
+    version: "2.11.0"
   image_picker_windows:
     dependency: transitive
     description:
       name: image_picker_windows
-      sha256: "6ad07afc4eb1bc25f3a01084d28520496c4a3bb0cb13685435838167c9dcedeb"
+      sha256: d248c86554a72b5495a31c56f060cf73a41c7ff541689327b1a7dbccc33adfae
       url: "https://pub.flutter-io.cn"
     source: hosted
-    version: "0.2.1+1"
+    version: "0.2.2"
   immich_mobile_immich_lint:
     dependency: "direct dev"
     description:
@@ -1657,7 +1657,7 @@ packages:
     description:
       path: "packages/share_plus/share_plus"
       ref: master
-      resolved-ref: d3e5d900c9033b572380c63e91511c00421fc119
+      resolved-ref: "03507cc39ab148fe9f5827cd991b3e04aed2bcc3"
       url: "https://gitcode.com/openharmony-sig/flutter_plus_plugins.git"
     source: git
     version: "7.2.0"
@@ -1666,7 +1666,7 @@ packages:
     description:
       path: "packages/share_plus/share_plus_platform_interface"
       ref: master
-      resolved-ref: d3e5d900c9033b572380c63e91511c00421fc119
+      resolved-ref: "03507cc39ab148fe9f5827cd991b3e04aed2bcc3"
       url: "https://gitcode.com/openharmony-sig/flutter_plus_plugins.git"
     source: git
     version: "3.3.0"
@@ -1810,7 +1810,7 @@ packages:
     description:
       path: sqflite
       ref: "br_v2.4.1_ohos"
-      resolved-ref: cd5c1d0f224d1bbac215905e356a012383c3a686
+      resolved-ref: bc15cab9f52e02b1f90d9aebd7b5b320c2d648c6
       url: "https://gitcode.com/dgh18/flutter_sqflite.git"
     source: git
     version: "2.4.1"
@@ -1827,7 +1827,7 @@ packages:
     description:
       path: sqflite_common
       ref: "br_v2.4.1_ohos"
-      resolved-ref: cd5c1d0f224d1bbac215905e356a012383c3a686
+      resolved-ref: bc15cab9f52e02b1f90d9aebd7b5b320c2d648c6
       url: "https://gitcode.com/dgh18/flutter_sqflite.git"
     source: git
     version: "2.5.4+5"
@@ -1836,7 +1836,7 @@ packages:
     description:
       path: sqflite_common_ffi
       ref: "br_v2.4.1_ohos"
-      resolved-ref: cd5c1d0f224d1bbac215905e356a012383c3a686
+      resolved-ref: bc15cab9f52e02b1f90d9aebd7b5b320c2d648c6
       url: "https://gitcode.com/dgh18/flutter_sqflite.git"
     source: git
     version: "2.3.4"
@@ -1845,7 +1845,7 @@ packages:
     description:
       path: "packages_web/sqflite_common_ffi_web"
       ref: "br_v2.4.1_ohos"
-      resolved-ref: cd5c1d0f224d1bbac215905e356a012383c3a686
+      resolved-ref: bc15cab9f52e02b1f90d9aebd7b5b320c2d648c6
       url: "https://gitcode.com/dgh18/flutter_sqflite.git"
     source: git
     version: "0.4.5+3"
@@ -1862,8 +1862,8 @@ packages:
     description:
       path: sqflite_ohos
       ref: "br_v2.4.1_ohos"
-      resolved-ref: "6d559e44da1e80b9e2442bf8b30d488b2a70064f"
-      url: "https://gitcode.com/openharmony-sig/flutter_sqflite.git"
+      resolved-ref: bc15cab9f52e02b1f90d9aebd7b5b320c2d648c6
+      url: "https://gitcode.com/dgh18/flutter_sqflite.git"
     source: git
     version: "2.4.1"
   sqflite_platform_interface:
@@ -2120,10 +2120,10 @@ packages:
     dependency: transitive
     description:
       name: vector_graphics_compiler
-      sha256: "557a315b7d2a6dbb0aaaff84d857967ce6bdc96a63dc6ee2a57ce5a6ee5d3331"
+      sha256: ca81fdfaf62a5ab45d7296614aea108d2c7d0efca8393e96174bf4d51e6725b0
       url: "https://pub.flutter-io.cn"
     source: hosted
-    version: "1.1.17"
+    version: "1.1.18"
   vector_math:
     dependency: transitive
     description:
@@ -2154,10 +2154,10 @@ packages:
     dependency: transitive
     description:
       name: video_player_avfoundation
-      sha256: f52261d11f97bf14c43e8ed5714f71d8ce4538552b8cc87f45e5d87d3c205e41
+      sha256: f9a780aac57802b2892f93787e5ea53b5f43cc57dc107bee9436458365be71cd
       url: "https://pub.flutter-io.cn"
     source: hosted
-    version: "2.8.3"
+    version: "2.8.4"
   video_player_ohos:
     dependency: transitive
     description:
