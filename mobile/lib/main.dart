@@ -16,6 +16,7 @@ import 'package:immich_mobile/constants/constants.dart';
 import 'package:immich_mobile/constants/locales.dart';
 import 'package:immich_mobile/extensions/build_context_extensions.dart';
 import 'package:immich_mobile/generated/codegen_loader.g.dart';
+import 'package:immich_mobile/infrastructure/repositories/logger_db.repository.dart';
 import 'package:immich_mobile/providers/app_life_cycle.provider.dart';
 //import 'package:immich_mobile/providers/asset_viewer/share_intent_upload.provider.dart';
 import 'package:immich_mobile/providers/db.provider.dart';
@@ -45,7 +46,8 @@ final RouteObserver<ModalRoute> routeObserver = RouteObserver<ModalRoute>();
 void main() async {
   ImmichWidgetsBinding();
   final db = await Bootstrap.initIsar();
-  await Bootstrap.initDomain(db);
+  final logDb = DriftLogger();
+  await Bootstrap.initDomain(db, logDb);
   await initApp();
   // Warm-up isolate pool for worker manager
   await workerManager.init(dynamicSpawning: true);
@@ -87,7 +89,6 @@ Future<void> initApp() async {
   };
 
   PlatformDispatcher.instance.onError = (error, stack) {
-    debugPrint("FlutterError - Catch all: $error \n $stack");
     log.severe('PlatformDispatcher - Catch all', error, stack);
     return true;
   };
