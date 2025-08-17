@@ -15,7 +15,7 @@ LazyDatabase _openConnection() {
   return LazyDatabase(() async {
     final docs = await getApplicationDocumentsDirectory();
     final file = File(join(docs.path, 'immich_logs'));
-    return SqfliteQueryExecutor(path: file.path, singleInstance: true);
+    return SqfliteQueryExecutor(path: file.path, singleInstance: false);
   });
 }
 
@@ -30,7 +30,7 @@ class DriftLogger extends $DriftLogger implements IDatabaseRepository {
   MigrationStrategy get migration => MigrationStrategy(
     beforeOpen: (details) async {
       await customStatement('PRAGMA foreign_keys = ON');
-      await customStatement('PRAGMA synchronous = NORMAL');
+      //await customStatement('PRAGMA synchronous = NORMAL');
       await customStatement('PRAGMA journal_mode = WAL');
       await customStatement('PRAGMA busy_timeout = 500');
     },

@@ -14,6 +14,8 @@ import 'package:immich_mobile/utils/http_ssl_options.dart';
 import 'package:logging/logging.dart';
 import 'package:worker_manager/worker_manager.dart';
 
+import 'package:immich_mobile/infrastructure/repositories/db.repository.dart';
+
 class InvalidIsolateUsageException implements Exception {
   const InvalidIsolateUsageException();
 
@@ -34,16 +36,21 @@ Cancelable<T?> runInIsolateGentle<T>({
   return workerManager.executeGentle((cancelledChecker) async {
     BackgroundIsolateBinaryMessenger.ensureInitialized(token);
     DartPluginRegistrant.ensureInitialized();
+    //final drift_db = Drift();
 
     final db = await Bootstrap.initIsar();
     final logDb = DriftLogger();
     await Bootstrap.initDomain(db, logDb, shouldBufferLogs: false);
+
+    final driftDb = Drift();
+
     final ref = ProviderContainer(
       overrides: [
         // TODO: Remove once isar is removed
         dbProvider.overrideWithValue(db),
         isarProvider.overrideWithValue(db),
         cancellationProvider.overrideWithValue(cancelledChecker),
+        driftProvider.overrideWithValue(driftDb),
       ],
     );
 
@@ -60,7 +67,7 @@ Cancelable<T?> runInIsolateGentle<T>({
       try {
         await LogService.I.flush();
         await logDb.close();
-        await ref.read(driftProvider).close();
+        //await ref.read(driftProvider).close();
 
         // Close Isar safely
         try {
@@ -72,7 +79,13 @@ Cancelable<T?> runInIsolateGentle<T>({
           debugPrint("Error closing Isar: $e");
         }
 
-        ref.dispose();
+        try {
+          await driftDb.close();
+        } catch (e) {
+          log.severe("Error in close driftDb");
+        }
+
+        //ref.dispose();
       } catch (error) {
         debugPrint("Error closing resources in isolate: $error");
       } finally {
