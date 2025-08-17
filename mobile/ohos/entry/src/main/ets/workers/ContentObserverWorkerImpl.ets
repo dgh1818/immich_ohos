@@ -18,123 +18,21 @@ interface WorkerMessage {
 export class ContentObserverWorker{
   constructor() {
 
-    this.workerPort.onmessage = (event: MessageEvents) => {
-      let input: SendableObject = event.data;
-      let command: string = input.command;
-      this.context_input = input.sendableContext;
-      this.ui_context = sendableContextManager.convertToUIAbilityContext(this.context_input);
 
-      switch (command) {
-        case "doWork":
-          this.context_input = input.sendableContext;
-          this.ui_context = sendableContextManager.convertToUIAbilityContext(this.context_input);
-
-          if (this.triggeredContentUris.length > 0) {
-            this.startBackupWorker(this.ui_context, 0);
-          }
-
-          this.enqueueObserverWorker(this.ui_context);
-          break;
-        case "enable":
-          let immediate = input.immediate ?? false;
-          this.enqueueObserverWorker(this.ui_context);
-          console.info(this.TAG, "enabled ContentObserverWorker")
-          if (immediate) {
-            this.startBackupWorker(this.ui_context, 5000)
-          }
-          break;
-
-        case "configureWork":
-          let requireWifi = input.requireWifi ?? false;
-          let requireCharging = input.requireCharging ?? false;
-          let triggerUpdateDelay = input.triggerUpdateDelay ?? 5000;
-          let triggerMaxDelay = input.triggerMaxDelay ?? 5000;
-
-          dataPreferences.getPreferences(this.ui_context, BackupWorker.SHARED_PREF_NAME, (err, sp) => {
-            if (err) {
-              console.error('获取Preferences实例失败:', err)
-              return
-            }
-
-            if (this.context_input == undefined) {
-              return;
-            }
-
-            sp.putSync(ContentObserverWorker.SHARED_PREF_SERVICE_ENABLED, true);
-            sp.putSync(ContentObserverWorker.SHARED_PREF_REQUIRE_WIFI, requireWifi);
-            sp.putSync(ContentObserverWorker.SHARED_PREF_REQUIRE_CHARGING, requireCharging);
-            sp.putSync(ContentObserverWorker.SHARED_PREF_TRIGGER_UPDATE_DELAY, triggerUpdateDelay);
-            sp.putSync(ContentObserverWorker.SHARED_PREF_TRIGGER_MAX_DELAY, triggerMaxDelay);
-            sp.flushSync();
-            let object2: SendableObject =
-              new SendableObject("updateBackupWorker", this.context_input, undefined, requireWifi, requireCharging);
-            this.BackupWorkerInstance?.postMessageWithSharedSendable(object2);
-          })
-          break;
-
-        case "disable":
-          dataPreferences.getPreferences(this.ui_context, BackupWorker.SHARED_PREF_NAME, (err, sp) => {
-            if (err) {
-              console.error('获取Preferences实例失败:', err)
-              return
-            }
-
-            if (this.context_input == undefined) {
-              return;
-            }
-
-            sp.putSync(ContentObserverWorker.SHARED_PREF_SERVICE_ENABLED, false);
-            sp.flushSync();
-            if (this.phAccessHelper == undefined) {
-              return;
-            }
-            console.info(this.TAG,"disabled ContentObserverWorker");
-            this.phAccessHelper.unRegisterChange(photoAccessHelper.DefaultChangeUri.DEFAULT_PHOTO_URI);
-            //ContentObserverWorkerClass = undefined;
-          })
-         break;
-
-        case "isEnabled":
-          dataPreferences.getPreferences(this.ui_context, BackupWorker.SHARED_PREF_NAME, (err, sp) => {
-            let result = sp.getSync(ContentObserverWorker.SHARED_PREF_SERVICE_ENABLED, false) as boolean
-            if(result) {
-              this.workerPort.postMessage("contentObserver_is_enabled");
-            } else {
-              this.workerPort.postMessage("contentObserver_is_disabled");
-            }
-          });
-          break;
-        case "workManagerAppClearedWorkaround":
-          if (this.phAccessHelper == undefined) {
-            return;
-          }
-
-          this.ContentObserverWorker = new worker.ThreadWorker('../workers/ContentObserverWorker');
-          let object: SendableObject = new SendableObject("doWork", this.context_input!);
-          this.ContentObserverWorker.postMessageWithSharedSendable(object);
-
-          //backgroundTaskManager.startBackgroundRunning(this.ui_context,)
-          break;
-        case "startBackupWorker":
-          this.startBackupWorker(this.ui_context!, 5000);
-          break;
-      }
-
-    };
     let object: SendableObject = new SendableObject("doWork", this.context_input!);
   };
 
-  private workerPort: ThreadWorkerGlobalScope = worker.workerPort;
+  public workerPort: ThreadWorkerGlobalScope = worker.workerPort;
   //workerPort.postMessage("doWork");
-  private ui_context?: common.UIAbilityContext;
-  private triggeredContentUris: string[] = [];
-  private context_input?: sendableContextManager.SendableContext;
-  private BackupWorkerInstance?: worker.ThreadWorker;
+  public ui_context?: common.UIAbilityContext;
+  public triggeredContentUris: string[] = [];
+  public context_input?: sendableContextManager.SendableContext;
+  public BackupWorkerInstance?: worker.ThreadWorker;
   public static BackupWorkerInstance_public?: worker.ThreadWorker;
-  private phAccessHelper?: photoAccessHelper.PhotoAccessHelper;
-  private TAG = "ContentObserverWorker";
+  public phAccessHelper?: photoAccessHelper.PhotoAccessHelper;
+  public TAG = "ContentObserverWorker";
 
-  private ContentObserverWorker?: worker.ThreadWorker;
+  public ContentObserverWorker?: worker.ThreadWorker;
 
   static readonly SHARED_PREF_SERVICE_ENABLED = "serviceEnabled"
   static readonly SHARED_PREF_REQUIRE_WIFI = "requireWifi"
@@ -144,7 +42,7 @@ export class ContentObserverWorker{
 
   static readonly TASK_NAME_OBSERVER = "immich/ContentObserver"
 
-  private async startBackupWorker(context: common.UIAbilityContext, delayMilliseconds: number) {
+  public async startBackupWorker(context: common.UIAbilityContext, delayMilliseconds: number) {
     dataPreferences.getPreferences(context, BackupWorker.SHARED_PREF_NAME, (err, sp) => {
       if (err) {
         console.error('获取Preferences实例失败:', err)
@@ -183,7 +81,7 @@ export class ContentObserverWorker{
     })
   }
 
-  private async enqueueObserverWorker(context: common.UIAbilityContext) {
+  public async enqueueObserverWorker(context: common.UIAbilityContext) {
     this.phAccessHelper = photoAccessHelper.getPhotoAccessHelper(context);
     let predicates: dataSharePredicates.DataSharePredicates = new dataSharePredicates.DataSharePredicates();
     let albumName: photoAccessHelper.AlbumKeys = photoAccessHelper.AlbumKeys.ALBUM_NAME;

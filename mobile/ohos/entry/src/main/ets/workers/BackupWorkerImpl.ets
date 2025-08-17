@@ -17,134 +17,24 @@ import { process } from '@kit.ArkTS';
 import { workScheduler, WorkSchedulerExtensionAbility } from '@kit.BackgroundTasksKit';
 
 export class BackupWorker implements MethodCallHandler {
-  private readonly TAG = "BackupWorker"
+  public readonly TAG = "BackupWorker"
 
-  private resolvableFuture = new ResolvablePromise<ResultCode>();
-  private engine?: FlutterEngine;
-  private backgroundChannel?: MethodChannel;
+  public  resolvableFuture = new ResolvablePromise<ResultCode>();
+  public engine?: FlutterEngine;
+  public backgroundChannel?: MethodChannel;
   // private notificationManager = notificationManager; //ohos直接调用
-  private isIgnoringBatteryOptimizations = true;
+  public isIgnoringBatteryOptimizations = true;
   //private isIgnoringBatteryOptimizations = isIgnoringBatteryOptimizations(applicationContext)
-  private timeBackupStarted: number = 0;
-  private notificationBuilder?: notificationManager.NotificationRequest;
-  private notificationDetailBuilder?: notificationManager.NotificationRequest;
-  private fgFuture?: Promise<void>;
+  public timeBackupStarted: number = 0;
+  public notificationBuilder?: notificationManager.NotificationRequest;
+  public notificationDetailBuilder?: notificationManager.NotificationRequest;
+  public fgFuture?: Promise<void>;
 
   constructor() {
-    this.workerPort.onmessage = (event: MessageEvents) => {
-      let input: SendableObject = event.data;
-      let command: string = input.command;
-      this.ui_context = sendableContextManager.convertToUIAbilityContext(input.sendableContext);
 
-
-      switch (command) {
-        case "startWork":
-          this.ui_context = sendableContextManager.convertToUIAbilityContext(input.sendableContext);
-
-          if (!this.flutterLoader?.initialized) {
-            this.flutterLoader?.startInitialization(this.ui_context);
-          }
-
-          // Create a Notification channel
-          //this.createChannel(title);
-          dataPreferences.getPreferences(this.ui_context, BackupWorker.SHARED_PREF_NAME, (err, sp) => {
-
-            let title = sp.getSync(BackupWorker.SHARED_PREF_NOTIFICATION_TITLE, BackupWorker.NOTIFICATION_DEFAULT_TITLE) as string;
-
-          // if (isIgnoringBatteryOptimizations) {
-          //   // normal background services can only up to 10 minutes
-          //   // foreground services are allowed to run indefinitely
-          //   // requires battery optimizations to be disabled (either manually by the user
-          //   // or by the system learning that immich is important to the user)
-          //   val title = ctx.getSharedPreferences(SHARED_PREF_NAME, Context.MODE_PRIVATE)
-          //     .getString(SHARED_PREF_NOTIFICATION_TITLE, NOTIFICATION_DEFAULT_TITLE)!!
-          //   showInfo(getInfoBuilder(title, indeterminate = true).build())
-          // }
-
-            this.showInfo(this.getInfoBuilder(title, undefined,false,0,0,true));
-
-            this.engine = new FlutterEngine(this.ui_context!,null,null,null);
-            const flutterShellArgs = new FlutterShellArgs();
-
-            let appBundlePath = this.flutterLoader?.findAppBundlePath();
-            this.ensureInitializationCompleteAsync(this.ui_context!,appBundlePath).then(()=>{
-              this.runDart();
-            })
-          });
-
-          //return this.resolvableFuture; //待完善
-          break;
-
-        case "onStopped":
-          console.info(this.TAG,"onStopped");
-          // called when the system has to stop this worker because constraints are
-          // no longer met or the system needs resources for more important tasks
-
-          Promise.resolve().then(() => {
-            if (this.backgroundChannel) {
-              this.backgroundChannel.invokeMethod("systemStop", undefined);
-            }
-            this.waitOnSetForegroundAsync();
-
-            setTimeout(() => {
-              // 这里的 this 就是你的类实例
-              this.stopEngine(ResultCode.SUCCESS);
-              //this.BackupWorkerClass = undefined;
-            }, 5000);
-          });
-            break;
-
-          case "enqueueBackupWorker":
-            let requireWifi = input.requireWifi;
-            let requireCharging = input.requireCharging;
-            let delayMilliseconds = input.triggerUpdateDelay;
-            this.backupWorkInfo = this.buildWorkRequest(requireWifi, requireCharging, delayMilliseconds)
-            workScheduler.startWork(this.backupWorkInfo);
-            break;
-
-          case "updateBackupWorker":
-            let context = this.ui_context;
-            let requireWifi2: boolean = false;
-            let requireCharging2: boolean = false
-
-            //let workInfoFuture = workScheduler.getWorkStatus(BackupWorker.TASK_NAME_BACKUP_ID);
-
-            try{
-              workScheduler.obtainAllWorks((error: BusinessError, workInfoList: Array<workScheduler.WorkInfo>) =>{
-                if (error) {
-                  console.error(`workschedulerLog obtainAllWorks failed. code is ${error.code} message is ${error.message}`);
-
-                } else {
-                  if(!workInfoList==undefined) {
-                    for (const workInfo of workInfoList) {
-                      let workRequest = this.buildWorkRequest(requireWifi, requireCharging)
-                      workScheduler.stopWork(workInfo); // 先停止原来的
-                      workScheduler.startWork(workRequest);
-                      console.info(this.TAG, "updateBackupWorker updated BackupWorker constraints");
-
-                      return;
-                    }
-                  }
-                  console.info(this.TAG, "updateBackupWorker: BackupWorker not enqueued");
-                }
-              });
-            } catch(error) {
-              console.error('updateBackupWorker failed:', error);
-            }
-            break;
-
-          case "stopWork":
-            workScheduler.stopWork(this.backupWorkInfo); // 先停止原来的
-            console.info(this.TAG, 'stopWork: BackupWorker cancelled');
-            break;
-
-          case "isIgnoringBatteryOptimizations":
-            break;
-      }
-    };
   }
 
-  private runDart() {
+  public runDart() {
     dataPreferences.getPreferences(this.ui_context, BackupWorker.SHARED_PREF_NAME, (err, sp) => {
       let callbackDispatcherHandle = sp.getSync("SHARED_PREF_CALLBACK_KEY",0) as number;
       let callbackInformation = FlutterCallbackInformation.lookupCallbackInformation(callbackDispatcherHandle);
@@ -166,7 +56,7 @@ export class BackupWorker implements MethodCallHandler {
     });
   };
 
-  private waitOnSetForegroundAsync() {
+  public waitOnSetForegroundAsync() {
     let fgFuture = this.fgFuture
     let finished = false;
 
@@ -193,14 +83,14 @@ export class BackupWorker implements MethodCallHandler {
     });
   }
 
-  private async ensureInitializationCompleteAsync(ctx:common.UIAbilityContext,appBundlePath?:string) {
+  public  async ensureInitializationCompleteAsync(ctx:common.UIAbilityContext,appBundlePath?:string) {
     const flutterShellArgs = new FlutterShellArgs();
     this.flutterLoader?.ensureInitializationComplete(flutterShellArgs.toArray() ?? []);
 
     return;
   }
 
-  private stopEngine(result: ResultCode) {
+  public stopEngine(result: ResultCode) {
     this.clearBackgroundNotification();
     this.engine?.destroy();
     this.engine = undefined;
@@ -276,7 +166,7 @@ export class BackupWorker implements MethodCallHandler {
     }
   }
 
-  private showError(title: string, content?: string, individualTag?: string) {
+  public showError(title: string, content?: string, individualTag?: string) {
     let notification:notificationManager.NotificationRequest = {
       id: BackupWorker.NOTIFICATION_ERROR_ID,
       content: {
@@ -297,16 +187,16 @@ export class BackupWorker implements MethodCallHandler {
     };
   }
 
-  private clearErrorNotifications() {
+  public clearErrorNotifications() {
     notificationManager.cancel(BackupWorker.NOTIFICATION_ERROR_ID);
   }
 
-  private clearBackgroundNotification() {
+  public  clearBackgroundNotification() {
     notificationManager.cancel(BackupWorker.NOTIFICATION_ID);
     notificationManager.cancel(BackupWorker.NOTIFICATION_DETAIL_ID);
   }
 
-  private showInfo(notification: notificationManager.NotificationRequest, isDetail: Boolean = false) {
+  public  showInfo(notification: notificationManager.NotificationRequest, isDetail: Boolean = false) {
     let id = isDetail ? BackupWorker.NOTIFICATION_DETAIL_ID : BackupWorker.NOTIFICATION_ID
 
     //if (isIgnoringBatteryOptimizations && !isDetail) {
@@ -318,7 +208,7 @@ export class BackupWorker implements MethodCallHandler {
     }
   }
 
-  private getInfoBuilder(
+  public getInfoBuilder(
     title?:string,
     content?: string,
     isDetail: boolean = false,
@@ -435,7 +325,7 @@ export class BackupWorker implements MethodCallHandler {
   //   };
   // }
 
-  private buildWorkRequest(
+  public buildWorkRequest(
   requireWifi: boolean = false,
   requireCharging: boolean = false,
   delayMilliseconds: number = 0
@@ -452,17 +342,17 @@ export class BackupWorker implements MethodCallHandler {
 
     return constraints;
 }
-  private ui_context?: common.UIAbilityContext
-  private context_input?: sendableContextManager.SendableContext;
+  public  ui_context?: common.UIAbilityContext
+  public context_input?: sendableContextManager.SendableContext;
 
-  private backupWorkInfo?:workScheduler.WorkInfo;
-  private flutterLoader?:FlutterLoader;
-  private NOTIFICATION_CHANNEL_ID:number = 1;
-  private NOTIFICATION_CHANNEL_name = "immich/backgroundService"
-  private foreground?: notificationManager.NotificationRequest
-  private error?:notificationManager.NotificationRequest
-  private NOTIFICATION_CHANNEL_ERROR_ID:number = 2;
-  private methodChannel?: MethodChannel = undefined;
+  public backupWorkInfo?:workScheduler.WorkInfo;
+  public flutterLoader?:FlutterLoader;
+  public NOTIFICATION_CHANNEL_ID:number = 1;
+  public NOTIFICATION_CHANNEL_name = "immich/backgroundService"
+  public foreground?: notificationManager.NotificationRequest
+  public error?:notificationManager.NotificationRequest
+  public NOTIFICATION_CHANNEL_ERROR_ID:number = 2;
+  public methodChannel?: MethodChannel = undefined;
 ;
   static readonly SHARED_PREF_NAME = "immichBackgroundService";
   static readonly SHARED_PREF_CALLBACK_KEY = "callbackDispatcherHandle";

@@ -24,7 +24,8 @@ export default class EntryAbility extends FlutterAbility {
     super.configureFlutterEngine(flutterEngine)
     GeneratedPluginRegistrant.registerWith(flutterEngine)
     this.addPlugin(new BackgroundServicePlugin()); // 加载插件
-    let nativeSyncApiImpl = new MessagesImplBase(this.getAbility().context);
+    let nativeSyncApiImpl = new MessagesImplBase(super.getAbility().context);
+
 
     NativeSyncApiOhos.setup(flutterEngine.dartExecutor.getBinaryMessenger(), nativeSyncApiImpl)
   }

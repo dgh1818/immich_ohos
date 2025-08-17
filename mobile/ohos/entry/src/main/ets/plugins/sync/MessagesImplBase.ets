@@ -394,13 +394,8 @@ export class MessagesImplBase extends NativeSyncApiOhos {
       let current_asset = await photoFetchResult.getNextObject();
       let uri_input: string[] = [current_asset.uri];
 
-      let fileUriResult_array = await fileUriService.convertFileUris(uri_input);
-      let fileUriResult = fileUriResult_array[0];
-      if (fileUriResult == undefined) {
-        continue;
-      }
+      let id = current_asset.get(photoAccessHelper.PhotoKeys.URI) .valueOf() as string;
 
-      let id = fileUriResult?.targetUri;
       let mediaType = current_asset.photoType;
       let name = current_asset.displayName;
       let createdAt: number = current_asset.get(photoAccessHelper.PhotoKeys.DATE_TAKEN) .valueOf() as number ??
@@ -437,65 +432,65 @@ export class MessagesImplBase extends NativeSyncApiOhos {
   }
 }
 
-class FileUtils {
-  private static readonly TAG = 'getPathFromUri'
-
-  public static getPathFromUri(context: common.Context | undefined, uri: string, defExtension?: string):string|undefined {
-    console.info(FileUtils.TAG, "getPathFromUri : " + uri);
-    let inputFile: fs.File;
-    try {
-      inputFile = fs.openSync(uri);
-    } catch (err) {
-      console.error(FileUtils.TAG, "open uri file failed err:" + err)
-      return undefined;
-    }
-    if (inputFile == undefined) {
-      return undefined;
-    }
-    const uuid = util.generateRandomUUID();
-    if (!context) {
-      return
-    }
-    {
-      const targetDirectoryPath = context.cacheDir + "/" + uuid;
-      try {
-        fs.mkdirSync(targetDirectoryPath);
-        let targetDir = fs.openSync(targetDirectoryPath);
-        console.info(FileUtils.TAG, "mkdirSync success targetDirectoryPath:" + targetDirectoryPath + " fd: " + targetDir.fd);
-        fs.closeSync(targetDir);
-      } catch (err) {
-        console.error(FileUtils.TAG, "mkdirSync failed err:" + err);
-        return undefined;
-      }
-
-      const inputFilePath = uri.substring(uri.lastIndexOf("/") + 1);
-      const inputFilePathSplits = inputFilePath.split(".");
-      console.info(FileUtils.TAG, "getPathFromUri inputFilePath: " + inputFilePath);
-      const outputFileName = inputFilePathSplits[0];
-      let extension: string;
-      if (inputFilePathSplits.length == 2) {
-        extension = "." + inputFilePathSplits[1];
-      } else {
-        if (defExtension) {
-          extension = defExtension;
-        } else {
-          extension = ".jpg";
-        }
-      }
-      const outputFilePath = targetDirectoryPath + "/" + outputFileName + extension;
-      const outputFile = fs.openSync(outputFilePath, fs.OpenMode.CREATE);
-      try {
-        console.info(FileUtils.TAG, "copyFileSync inputFile fd:" + inputFile.fd + " outputFile fd:" + outputFile.fd);
-        fs.copyFileSync(inputFile.fd, outputFilePath);
-      } catch (err) {
-       console.error(FileUtils.TAG, "copyFileSync failed err:" + err);
-        return undefined;
-      } finally {
-        fs.closeSync(inputFile);
-        fs.closeSync(outputFile);
-      }
-      return outputFilePath;
-    }
-  }
-}
+// class FileUtils {
+//   private static readonly TAG = 'getPathFromUri'
+//
+//   public static getPathFromUri(context: common.Context | undefined, uri: string, defExtension?: string):string|undefined {
+//     console.info(FileUtils.TAG, "getPathFromUri : " + uri);
+//     let inputFile: fs.File;
+//     try {
+//       inputFile = fs.openSync(uri);
+//     } catch (err) {
+//       console.error(FileUtils.TAG, "open uri file failed err:" + err)
+//       return undefined;
+//     }
+//     if (inputFile == undefined) {
+//       return undefined;
+//     }
+//     const uuid = util.generateRandomUUID();
+//     if (!context) {
+//       return
+//     }
+//     {
+//       const targetDirectoryPath = context.cacheDir + "/" + uuid;
+//       try {
+//         fs.mkdirSync(targetDirectoryPath);
+//         let targetDir = fs.openSync(targetDirectoryPath);
+//         console.info(FileUtils.TAG, "mkdirSync success targetDirectoryPath:" + targetDirectoryPath + " fd: " + targetDir.fd);
+//         fs.closeSync(targetDir);
+//       } catch (err) {
+//         console.error(FileUtils.TAG, "mkdirSync failed err:" + err);
+//         return undefined;
+//       }
+//
+//       const inputFilePath = uri.substring(uri.lastIndexOf("/") + 1);
+//       const inputFilePathSplits = inputFilePath.split(".");
+//       console.info(FileUtils.TAG, "getPathFromUri inputFilePath: " + inputFilePath);
+//       const outputFileName = inputFilePathSplits[0];
+//       let extension: string;
+//       if (inputFilePathSplits.length == 2) {
+//         extension = "." + inputFilePathSplits[1];
+//       } else {
+//         if (defExtension) {
+//           extension = defExtension;
+//         } else {
+//           extension = ".jpg";
+//         }
+//       }
+//       const outputFilePath = targetDirectoryPath + "/" + outputFileName + extension;
+//       const outputFile = fs.openSync(outputFilePath, fs.OpenMode.CREATE);
+//       try {
+//         console.info(FileUtils.TAG, "copyFileSync inputFile fd:" + inputFile.fd + " outputFile fd:" + outputFile.fd);
+//         fs.copyFileSync(inputFile.fd, outputFilePath);
+//       } catch (err) {
+//        console.error(FileUtils.TAG, "copyFileSync failed err:" + err);
+//         return undefined;
+//       } finally {
+//         fs.closeSync(inputFile);
+//         fs.closeSync(outputFile);
+//       }
+//       return outputFilePath;
+//     }
+//   }
+// }
 
