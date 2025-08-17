@@ -4,8 +4,8 @@ enum Setting<T> {
   tilesPerRow<int>(StoreKey.tilesPerRow, 4),
   groupAssetsBy<int>(StoreKey.groupAssetsBy, 0),
   showStorageIndicator<bool>(StoreKey.storageIndicator, true),
-  loadOriginal<bool>(StoreKey.loadOriginal, false),
-  loadOriginalVideo<bool>(StoreKey.loadOriginalVideo, false),
+  loadOriginal<bool>(StoreKey.loadOriginal, true),
+  loadOriginalVideo<bool>(StoreKey.loadOriginalVideo, true),
   preferRemoteImage<bool>(StoreKey.preferRemoteImage, false),
   advancedTroubleshooting<bool>(StoreKey.advancedTroubleshooting, false),
   enableBackup<bool>(StoreKey.enableBackup, false);
