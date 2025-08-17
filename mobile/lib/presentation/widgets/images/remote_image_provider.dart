@@ -73,7 +73,9 @@ class RemoteFullImageProvider extends ImageProvider<RemoteFullImageProvider> {
   final String assetId;
   final CacheManager? cacheManager;
 
-  const RemoteFullImageProvider({required this.assetId, this.cacheManager});
+  final bool? is_image;
+
+  const RemoteFullImageProvider({required this.assetId, this.cacheManager, this.is_image});
 
   @override
   Future<RemoteFullImageProvider> obtainKey(ImageConfiguration configuration) {
@@ -96,6 +98,12 @@ class RemoteFullImageProvider extends ImageProvider<RemoteFullImageProvider> {
       decode: decode,
     );
     yield await codec.getImageInfo();
+
+    if (is_image != null) {
+      if (!is_image!) {
+        return;
+      }
+    }
 
     if (AppSetting.get(Setting.loadOriginal)) {
       final codec = await ImageLoader.loadImageFromCache(
