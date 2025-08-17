@@ -19,7 +19,7 @@ export class FlutterError implements Error {
   /** The error stack. */
   public stack?: string;
 
-  constructor(code: string, name: string,  message: string, stack?: string) 
+  constructor(code: string, name: string,  message: string, stack?: string)
   {
     this.code = code;
     this.name = name;
@@ -461,7 +461,7 @@ export abstract class NativeSyncApiOhos {
 
   abstract getAssetsForAlbum(albumId: string , updatedTimeCond: number , result: Result<Array<PlatformAsset>>): void;
 
-  abstract hashPaths(paths: Array<string> , result: Result<Array<number[]>>): void;
+  abstract hashPaths(paths: Array<string> , result: Result<Uint8Array[]>): void;
   /** The codec used by NativeSyncApiOhos. */
   static getCodec(): MessageCodec<Object>{
     return PigeonCodec.INSTANCE;
@@ -675,8 +675,8 @@ export abstract class NativeSyncApiOhos {
         channel.setMessageHandler({
             onMessage(message: Object ,reply: Reply<Object> ) {
               let args: Array<Object> = message as Array<Object>;
-              class ResultImp implements Result<Array<number[]>>{
-                    success(result: Array<number[]>): void {
+              class ResultImp implements Result<Array<Uint8Array>>{
+                    success(result: Array<Uint8Array>): void {
                       let res: Array<Object> = [];
                       res.push(result);
                       reply.reply(res);
@@ -687,7 +687,7 @@ export abstract class NativeSyncApiOhos {
                       reply.reply(wrappedError);
                     }
               }
-              let resultCallback: Result<Array<number[]>> = new ResultImp();
+              let resultCallback: Result<Array<Uint8Array>> = new ResultImp();
 
               api!.hashPaths(args[0] as Array<string>, resultCallback);
             } });
