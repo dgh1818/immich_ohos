@@ -183,9 +183,9 @@ dependency_overrides:
       #ref: br_geolocator_v13.0.0_ohos
   flutter_udid:
     git:
-      url: https://gitcode.com/openharmony-sig/fluttertpc_flutter_udid.git
+      url: https://gitcode.com/dgh18/fluttertpc_flutter_udid.git
       path: ./
-      #ref: master
+      ref: master
   url_launcher:
     git:
       url: https://gitcode.com/openharmony-sig/flutter_packages.git

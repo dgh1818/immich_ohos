@@ -43,16 +43,16 @@
 
     ],
     "extensionAbilities": [
-      {
-        "name": "BackupWorkerTask",
-        "srcEntry": "./ets/workers/BackupWorkScheduler.ets",
-        "type": "workScheduler"
-      },
-      {
-        "name": "ContentObserverWorkerTask",
-        "srcEntry": "./ets/workers/ContentObserverWorkScheduler.ets",
-        "type": "workScheduler"
-      }
+//      {
+//        "name": "BackupWorkerTask",
+//        "srcEntry": "./ets/workers/BackupWorkScheduler.ets",
+//        "type": "workScheduler"
+//      },
+//      {
+//        "name": "ContentObserverWorkerTask",
+//        "srcEntry": "./ets/workers/ContentObserverWorkScheduler.ets",
+//        "type": "workScheduler"
+//      }
     ],
     requestPermissions: [
       { name: "ohos.permission.INTERNET" },
