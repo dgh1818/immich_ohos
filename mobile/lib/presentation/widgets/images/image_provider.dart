@@ -11,7 +11,15 @@ ImageProvider getFullImageProvider(BaseAsset asset, {Size size = const Size(1080
   final ImageProvider provider;
   if (_shouldUseLocalAsset(asset)) {
     final id = asset is LocalAsset ? asset.id : (asset as RemoteAsset).localId!;
-    provider = LocalFullImageProvider(id: id, size: size, type: asset.type, updatedAt: asset.updatedAt);
+
+    provider = LocalFullImageProvider(
+      id: id,
+      size: size,
+      type: asset.type,
+      updatedAt: asset.updatedAt,
+      name: asset.name,
+      modifyAt: asset.updatedAt.millisecondsSinceEpoch,
+    );
   } else {
     final String assetId;
     if (asset is LocalAsset && asset.hasRemote) {

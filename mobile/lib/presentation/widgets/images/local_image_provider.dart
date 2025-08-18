@@ -21,6 +21,9 @@ class LocalThumbProvider extends ImageProvider<LocalThumbProvider> {
   final AssetMediaRepository _assetMediaRepository = const AssetMediaRepository();
   final CacheManager? cacheManager;
 
+  final String? name;
+  final int? modifyAt;
+
   final String id;
   final DateTime updatedAt;
   final Size size;
@@ -30,6 +33,8 @@ class LocalThumbProvider extends ImageProvider<LocalThumbProvider> {
     required this.updatedAt,
     this.size = kThumbnailResolution,
     this.cacheManager,
+    this.name,
+    this.modifyAt,
   });
 
   @override
@@ -95,7 +100,17 @@ class LocalFullImageProvider extends ImageProvider<LocalFullImageProvider> {
   final AssetType type;
   final DateTime updatedAt; // temporary, only exists to fetch cached thumbnail until local disk cache is removed
 
-  const LocalFullImageProvider({required this.id, required this.size, required this.type, required this.updatedAt});
+  final String? name;
+  final int? modifyAt;
+
+  const LocalFullImageProvider({
+    required this.id,
+    required this.size,
+    required this.type,
+    required this.updatedAt,
+    this.name,
+    this.modifyAt,
+  });
 
   @override
   Future<LocalFullImageProvider> obtainKey(ImageConfiguration configuration) {
@@ -156,7 +171,16 @@ class LocalFullImageProvider extends ImageProvider<LocalFullImageProvider> {
   }
 
   Stream<ImageInfo> _decodeProgressive(LocalFullImageProvider key, ImageDecoderCallback decode) async* {
-    final file = await _storageRepository.getFileForAsset(key.id);
+    final File? file;
+    //final file = await _storageRepository.getFileForAsset(key.id);
+    if (key.name != null && key.modifyAt != null) {
+      file = await _storageRepository.getReadableFileForAsset(key.name!, key.modifyAt!);
+    } else {
+      file = await _storageRepository.getFileForAsset(key.id);
+    }
+
+    //
+
     if (file == null) {
       throw StateError("Opening file for asset ${key.id} failed");
     }
@@ -201,6 +225,9 @@ class LocalFullImageProvider extends ImageProvider<LocalFullImageProvider> {
     }
 
     final buffer = await ImmutableBuffer.fromFilePath(file.path);
+
+    file.delete();
+
     final codec = await decode(buffer);
     yield await codec.getImageInfo();
   }

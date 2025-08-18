@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:immich_mobile/domain/models/asset/base_asset.model.dart';
 import 'package:logging/logging.dart';
@@ -19,6 +20,24 @@ class StorageRepository {
       }
     } catch (error, stackTrace) {
       log.warning("Error getting file for asset $assetId", error, stackTrace);
+    }
+    return file;
+  }
+
+  Future<File?> getReadableFileForAsset(String name, int modifyAt) async {
+    File? file;
+    final log = Logger('StorageRepository');
+
+    try {
+      final path = await PhotoManagerPlugin().getFullFileReadable(name, modifyAt: modifyAt);
+
+      if (path == null) {
+        log.warning("Cannot get file for asset $name");
+      }
+
+      file = File(path!);
+    } catch (error, stackTrace) {
+      log.warning("Error getting file for asset $name", error, stackTrace);
     }
     return file;
   }
