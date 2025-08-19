@@ -42,14 +42,14 @@ enum ActionButtonType {
   shareLink,
   archive,
   unarchive,
-  download,
+  //download,
   trash,
   deletePermanent,
   delete,
   moveToLockFolder,
   removeFromLockFolder,
   deleteLocal,
-  upload,
+  //upload,
   removeFromAlbum,
   likeActivity;
 
@@ -69,10 +69,12 @@ enum ActionButtonType {
             !context.isInLockedView && //
             context.asset.hasRemote && //
             context.isArchived,
+      /*
       ActionButtonType.download =>
         !context.isInLockedView && //
             context.asset.hasRemote && //
             !context.asset.hasLocal,
+      */
       ActionButtonType.trash =>
         context.isOwner && //
             !context.isInLockedView && //
@@ -98,9 +100,11 @@ enum ActionButtonType {
       ActionButtonType.deleteLocal =>
         !context.isInLockedView && //
             context.asset.storage == AssetState.local,
+      /*
       ActionButtonType.upload =>
         !context.isInLockedView && //
             context.asset.storage == AssetState.local,
+      */
       ActionButtonType.removeFromAlbum =>
         context.isOwner && //
             !context.isInLockedView && //
@@ -119,14 +123,14 @@ enum ActionButtonType {
       ActionButtonType.shareLink => ShareLinkActionButton(source: context.source),
       ActionButtonType.archive => ArchiveActionButton(source: context.source),
       ActionButtonType.unarchive => UnArchiveActionButton(source: context.source),
-      ActionButtonType.download => DownloadActionButton(source: context.source),
+      //ActionButtonType.download => DownloadActionButton(source: context.source),
       ActionButtonType.trash => TrashActionButton(source: context.source),
       ActionButtonType.deletePermanent => DeletePermanentActionButton(source: context.source),
       ActionButtonType.delete => DeleteActionButton(source: context.source),
       ActionButtonType.moveToLockFolder => MoveToLockFolderActionButton(source: context.source),
       ActionButtonType.removeFromLockFolder => RemoveFromLockFolderActionButton(source: context.source),
       ActionButtonType.deleteLocal => DeleteLocalActionButton(source: context.source),
-      ActionButtonType.upload => UploadActionButton(source: context.source),
+      //ActionButtonType.upload => UploadActionButton(source: context.source),
       ActionButtonType.removeFromAlbum => RemoveFromAlbumActionButton(
         albumId: context.currentAlbum!.id,
         source: context.source,
@@ -143,14 +147,14 @@ class ActionButtonBuilder {
     ActionButtonType.likeActivity,
     ActionButtonType.archive,
     ActionButtonType.unarchive,
-    ActionButtonType.download,
+    //ActionButtonType.download,
     ActionButtonType.trash,
     ActionButtonType.deletePermanent,
     ActionButtonType.delete,
     ActionButtonType.moveToLockFolder,
     ActionButtonType.removeFromLockFolder,
     ActionButtonType.deleteLocal,
-    ActionButtonType.upload,
+    //ActionButtonType.upload,
     ActionButtonType.removeFromAlbum,
   ];
 
