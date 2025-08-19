@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:immich_mobile/constants/constants.dart';
 import 'package:immich_mobile/domain/models/asset/base_asset.model.dart';
@@ -53,9 +54,10 @@ class HashService {
   Future<void> _hashAssets(List<LocalAsset> assetsToHash) async {
     int bytesProcessed = 0;
     final toHash = <_AssetToPath>[];
+    File? file;
 
     for (final asset in assetsToHash) {
-      final file = await _storageRepository.getFileForAsset(asset.id);
+      file = await _storageRepository.getReadableFileForAsset(asset.name, asset.updatedAt.millisecondsSinceEpoch);
       if (file == null) {
         continue;
       }
@@ -71,6 +73,10 @@ class HashService {
     }
 
     await _processBatch(toHash);
+
+    if (file != null) {
+      file.delete();
+    }
   }
 
   /// Processes a batch of assets.

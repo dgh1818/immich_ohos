@@ -14,14 +14,11 @@ import 'package:logging/logging.dart';
 part 'video_viewer_controller_provider.g.dart';
 
 @riverpod
-Future<VideoPlayerController> videoViewerController(
-  VideoViewerControllerRef ref, {
-  required BaseAsset asset,
-}) async {
+Future<VideoPlayerController> videoViewerController(VideoViewerControllerRef ref, {required BaseAsset asset}) async {
   late VideoPlayerController controller;
   if (asset.hasLocal && asset.livePhotoVideoId == null) {
     final id = asset is LocalAsset ? asset.id : (asset as RemoteAsset).localId!;
-    final file = await StorageRepository().getFileForAsset(id);
+    final file = await StorageRepository().getReadableFileForAsset(asset.name, asset.updatedAt.millisecondsSinceEpoch);
 
     controller = VideoPlayerController.file(file!);
   } else {
