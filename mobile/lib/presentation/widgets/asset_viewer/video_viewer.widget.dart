@@ -430,9 +430,6 @@ import 'package:wakelock_plus/wakelock_plus.dart';
 
 import 'package:immich_mobile/domain/models/asset/base_asset.model.dart';
 
-import 'package:immich_mobile/providers/infrastructure/asset.provider.dart';
-import 'dart:async';
-
 bool _isCurrentAsset(BaseAsset asset, BaseAsset? currentAsset) {
   if (asset is RemoteAsset) {
     return switch (currentAsset) {
@@ -475,8 +472,6 @@ class VideoViewer extends HookConsumerWidget {
     final controller = ref.watch(videoViewerControllerProvider(asset: asset)).value;
     // The last volume of the video used when mute is toggled
     final lastVolume = useState(0.5);
-    final isVisible = useState(false);
-    final log = Logger('VideoViewerPage');
 
     //final isCasting = ref.watch(castProvider.select((c) => c.isCasting));
 
@@ -571,68 +566,55 @@ class VideoViewer extends HookConsumerWidget {
         });
       }
 
-      final timer = isVisible.value ? null : Timer(const Duration(milliseconds: 300), () => isVisible.value = true);
-
       // Subscribes to listener
       Future.microtask(() {
         controller.addListener(updateVideoPlayback);
       });
       return () {
         // Removes listener when we dispose
-        timer?.cancel();
         controller.removeListener(updateVideoPlayback);
         controller.pause();
       };
     }, [controller]);
-
-    final aspectRatio = useState<double?>(null);
-    useMemoized(() async {
-      if (!context.mounted || aspectRatio.value != null) {
-        return null;
-      }
-
-      try {
-        aspectRatio.value = await ref.read(assetServiceProvider).getAspectRatio(asset);
-      } catch (error) {
-        log.severe('Error getting aspect ratio for asset ${asset.name}: $error');
-      }
-    }, [asset.heroTag]);
 
     return PopScope(
       onPopInvokedWithResult: (didPop, _) {
         ref.read(videoPlaybackValueProvider.notifier).value = VideoPlaybackValue.uninitialized();
         controller?.dispose();
       },
-      child: Stack(
-        children: [
-          Center(key: ValueKey(asset.heroTag), child: image),
-          // This remains under the video to avoid flickering
-          // For motion videos, this is the image portion of the asset
-          //Center(key: ValueKey(asset.heroTag), child: image),
-          if (aspectRatio != null)
-            Visibility.maintain(
-              key: ValueKey(asset),
-              visible: isVisible.value,
-              child: Center(
-                key: ValueKey(asset),
-                child: AspectRatio(
-                  key: ValueKey(asset),
-                  aspectRatio: aspectRatio.value!,
-                  child: (controller != null)
-                      ? VideoPlayerViewer(
-                          controller: controller,
-                          isMotionVideo: isMotionVideo,
-                          placeholder: image,
-                          hideControlsTimer: hideControlsTimer,
-                          showControls: showControls,
-                          showDownloadingIndicator: showDownloadingIndicator,
-                          loopVideo: loopVideo,
-                        )
-                      : null,
-                ),
+      child: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 400),
+        child: Stack(
+          children: [
+            Visibility(
+              visible: controller == null,
+              //visible: controller == null && !isCasting,
+              child: Stack(
+                children: [
+                  if (image != null) image!,
+                  const Positioned.fill(
+                    child: Center(child: DelayedLoadingIndicator(fadeInDuration: Duration(milliseconds: 500))),
+                  ),
+                ],
               ),
             ),
-        ],
+            if (controller != null)
+              SizedBox(
+                key: ValueKey(asset),
+                height: context.height,
+                width: context.width,
+                child: VideoPlayerViewer(
+                  controller: controller,
+                  isMotionVideo: isMotionVideo,
+                  placeholder: image,
+                  hideControlsTimer: hideControlsTimer,
+                  showControls: showControls,
+                  showDownloadingIndicator: showDownloadingIndicator,
+                  loopVideo: loopVideo,
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
