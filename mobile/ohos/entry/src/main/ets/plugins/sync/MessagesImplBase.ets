@@ -1,5 +1,5 @@
 import { common } from '@kit.AbilityKit'
-import { photoAccessHelper } from '@kit.MediaLibraryKit';
+import { photoAccessHelper, sendablePhotoAccessHelper } from '@kit.MediaLibraryKit';
 import { dataSharePredicates } from '@kit.ArkData';
 import { fileUri, hash } from '@kit.CoreFileKit';
 import { fileUriService } from '@kit.ScenarioFusionKit';
@@ -381,7 +381,8 @@ export class MessagesImplBase extends NativeSyncApiOhos {
       photoAccessHelper.PhotoKeys.HEIGHT,
       photoAccessHelper.PhotoKeys.DURATION,
       photoAccessHelper.PhotoKeys.ORIENTATION,
-      photoAccessHelper.PhotoKeys.FAVORITE
+      photoAccessHelper.PhotoKeys.FAVORITE,
+
     ];
 
     let photoFetchOptions: photoAccessHelper.FetchOptions = {
@@ -404,7 +405,7 @@ export class MessagesImplBase extends NativeSyncApiOhos {
       let modifiedAt = current_asset.get(photoAccessHelper.PhotoKeys.DATE_MODIFIED) .valueOf() as number;
       let width = current_asset.get(photoAccessHelper.PhotoKeys.WIDTH) .valueOf() as number;
       let height = current_asset.get(photoAccessHelper.PhotoKeys.HEIGHT).valueOf() as number;
-      let duration = mediaType == photoAccessHelper.PhotoType.IMAGE ? 0 : 0; //ohos not support
+      let duration = current_asset.get(photoAccessHelper.PhotoKeys.DURATION) .valueOf() as number ; //
       //let bucketId = current_asset.get(bucketIdColumn);
       let bucketId = '-1';
       let orientation = current_asset.get(photoAccessHelper.PhotoKeys.ORIENTATION).valueOf() as number;

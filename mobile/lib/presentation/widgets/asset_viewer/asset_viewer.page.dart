@@ -166,7 +166,7 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
     unawaited(
       Future.wait([
         precacheImage(getThumbnailImageProvider(asset: asset), context, onError: (_, __) {}),
-        precacheImage(getFullImageProvider(asset, size: screenSize), context, onError: (_, __) {}),
+        if (asset.isImage) precacheImage(getFullImageProvider(asset, size: screenSize), context, onError: (_, __) {}),
       ]),
     );
   }

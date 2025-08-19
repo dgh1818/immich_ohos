@@ -600,6 +600,7 @@ class VideoViewer extends HookConsumerWidget {
             ),
             if (controller != null)
               SizedBox(
+                key: ValueKey(asset),
                 height: context.height,
                 width: context.width,
                 child: VideoPlayerViewer(
