@@ -230,6 +230,7 @@ Future<List<void>> runNewSync(WidgetRef ref, {bool full = false}) async {
   return Future.wait([
     backgroundManager.syncLocal(full: full).then((_) {
       Logger("runNewSync").fine("Hashing assets after syncLocal");
+      // To Do
       backgroundManager.hashAssets();
     }),
     backgroundManager.syncRemote(),

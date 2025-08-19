@@ -57,15 +57,16 @@ class HashService {
     File? file;
 
     for (final asset in assetsToHash) {
-      file = await _storageRepository.getReadableFileForAsset(asset.name, asset.updatedAt.millisecondsSinceEpoch);
-      if (file == null) {
-        continue;
-      }
+      // file = await _storageRepository.getFileForAsset(asset.id);
+      // if (file == null) {
+      //   continue;
+      // }
 
-      bytesProcessed += await file.length();
-      toHash.add(_AssetToPath(asset: asset, path: file.path));
+      //bytesProcessed += await file.length();
+      toHash.add(_AssetToPath(asset: asset, path: asset.id));
 
-      if (toHash.length >= batchFileLimit || bytesProcessed >= batchSizeLimit) {
+      if (toHash.length >= batchFileLimit) {
+        //if (toHash.length >= batchFileLimit || bytesProcessed >= batchSizeLimit) {
         await _processBatch(toHash);
         toHash.clear();
         bytesProcessed = 0;
@@ -73,10 +74,6 @@ class HashService {
     }
 
     await _processBatch(toHash);
-
-    if (file != null) {
-      file.delete();
-    }
   }
 
   /// Processes a batch of assets.
