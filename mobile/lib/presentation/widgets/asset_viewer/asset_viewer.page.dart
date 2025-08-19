@@ -657,16 +657,14 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
         child: VideoViewer(
           key: _getVideoPlayerKey(asset.heroTag),
           asset: asset,
-          /*
           image: Image(
             key: ValueKey(asset),
-            image: getFullImageProvider(asset, size: ctx.sizeData),
+            image: getThumbnailImageProvider(asset: asset),
             fit: BoxFit.contain,
             height: ctx.height,
             width: ctx.width,
             alignment: Alignment.center,
           ),
-*/
         ),
       ),
     );

@@ -21,7 +21,7 @@ class AssetViewerState {
   const AssetViewerState({
     this.backgroundOpacity = 255,
     this.showingBottomSheet = false,
-    this.showingControls = true,
+    this.showingControls = false,
     this.currentAsset,
     this.stackIndex = 0,
   });
