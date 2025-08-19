@@ -14,28 +14,41 @@ export class MessagesImplBase extends NativeSyncApiOhos {
   public async hashPaths(paths: string[],result: Result<Uint8Array[]>) {
 
     const args2: string[] = paths;
-    const digest:string = "sha1"
+    //const digest:string = "sha1"
     const hashes: Promise<Uint8Array>[] = [];
 
     for (let i = 0; i < args2.length; i++) {
       const promise = new Promise<Uint8Array>((resolve) => {
-        hash.hash(args2[i], digest, (err: BusinessError, digest: string) => {
-          const bytes: Uint8Array = this.hexStringToBytes(digest);
-          resolve(bytes);
-          // if (err) {
-          //   console.error(`Cannot calculate digest of ${args2[i]}: ${err.message}`);
-          //   resolve([]);
-          // } else {
-          //   try {
-          //     const bytes: number[] = this.hexStringToBytes(digest);
-          //     resolve(bytes);
-          //   } catch (e) {
-          //     console.error(`Invalid digest format for ${args2[i]}: ${e}`);
-          //     resolve([]);
-          //   }
-          //
-          // }
-        });
+        try{
+          hash.hash(args2[i], "sha1", (err: BusinessError, digest: string) => {
+            if (err) {
+              console.error('process hash:' + args2[i] + err);  //华为云端媒体也能获取asset，也有uri，但是本地不存在，因此报错
+              resolve(new Uint8Array());
+              return;
+            }
+            console.error('process hash:' + args2[i] + 'success');  //华为云端媒体也能获取asset，也有uri，但是本地不存在，因此报错
+            const bytes: Uint8Array = this.hexStringToBytes(digest);
+            resolve(bytes);
+            // if (err) {
+            //   console.error(`Cannot calculate digest of ${args2[i]}: ${err.message}`);
+            //   resolve([]);
+            // } else {
+            //   try {
+            //     const bytes: number[] = this.hexStringToBytes(digest);
+            //     resolve(bytes);
+            //   } catch (e) {
+            //     console.error(`Invalid digest format for ${args2[i]}: ${e}`);
+            //     resolve([]);
+            //   }
+            //
+            // }
+          });
+        } catch (e) {
+          // console.error('process hash:' + args2[i] + e);  //华为云端媒体也能获取asset，也有uri，但是本地不存在，因此报错
+          // resolve(new Uint8Array());
+          ;
+        }
+
       });
       hashes.push(promise);
     }
