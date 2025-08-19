@@ -37,6 +37,61 @@ class BackgroundSyncManager {
     this.onHashingError,
   });
 
+  // Future<void> isolate() async {
+  //   //Logger log = Logger("IsolateLogger");
+  //   // BackgroundIsolateBinaryMessenger.ensureInitialized(token);
+  //   // DartPluginRegistrant.ensureInitialized();
+  //   // log.info("finish ensureInitialized");
+
+  //   // final db = await Bootstrap.initIsar();
+  //   // final logDb = DriftLogger();
+  //   // await Bootstrap.initDomain(db, logDb, shouldBufferLogs: false);
+  //   // final ref = ProviderContainer(
+  //   //   overrides: [
+  //   //     // TODO: Remove once isar is removed
+  //   //     dbProvider.overrideWithValue(db),
+  //   //     isarProvider.overrideWithValue(db),
+  //   //     cancellationProvider.overrideWithValue(cancelledChecker),
+  //   //   ],
+  //   // );
+
+  //   //final drift_db = Drift();
+
+  //   try {
+  //     //HttpSSLOptions.apply(applyNative: false);
+  //    await ref.read(localSyncServiceProvider).sync(full: true)
+  //   } on CanceledError {
+  //     log.warning("Computation cancelled ${debugLabel == null ? '' : ' for $debugLabel'}");
+  //   } catch (error, stack) {
+  //     log.severe("Error in runInIsolateGentle ${debugLabel == null ? '' : ' for $debugLabel'}", error, stack);
+  //   } finally {
+  //     try {
+  //       await LogService.I.flush();
+  //       await logDb.close();
+  //       await ref.read(driftProvider).close();
+
+  //       // Close Isar safely
+  //       try {
+  //         final isar = ref.read(isarProvider);
+  //         if (isar.isOpen) {
+  //           await isar.close();
+  //         }
+  //       } catch (e) {
+  //         debugPrint("Error closing Isar: $e");
+  //       }
+
+  //       ref.dispose();
+  //     } catch (error) {
+  //       debugPrint("Error closing resources in isolate: $error");
+  //     } finally {
+  //       ref.dispose();
+  //       // Delay to ensure all resources are released
+  //       await Future.delayed(const Duration(seconds: 2));
+  //     }
+  //   }
+  //   return null;
+  // }
+
   Future<void> cancel() async {
     final futures = <Future>[];
 
