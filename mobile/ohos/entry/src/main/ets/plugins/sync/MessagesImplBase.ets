@@ -139,9 +139,9 @@ export class MessagesImplBase extends NativeSyncApiOhos {
 
   protected async getAssets(cursor: photoAccessHelper.FetchResult<photoAccessHelper.PhotoAsset>): Promise<Array<PlatformAsset>> {
     console.error("MessagesImplBase 3 ")
-    let a = await cursor.getNextObject();
     let path: string;
     let assetResult: Array<PlatformAsset> = [];
+    await cursor.getFirstObject();
     while (!cursor.isAfterLast()) {
       let current_asset = await cursor.getNextObject();
 
@@ -211,6 +211,7 @@ export class MessagesImplBase extends NativeSyncApiOhos {
         await phAccessHelper.getAlbums(photoAccessHelper.AlbumType.USER, photoAccessHelper.AlbumSubtype.USER_GENERIC);
       //let album: photoAccessHelper.Album = await fetchResult.getFirstObject();
       let iter: number = 0;
+      await fetchResult.getFirstObject();
 
       while (!fetchResult.isAfterLast()) {
         let asset = await fetchResult.getNextObject()
@@ -271,7 +272,7 @@ export class MessagesImplBase extends NativeSyncApiOhos {
     return new Map(entries);
   }
 
-  public async getAssetIdsForAlbum(albumPath: string): Promise<Array<string>> {
+  public async getAssetIdsForAlbum(albumPath: string,result: Result<Array<string>>) {
     console.error("MessagesImplBase 6 ")
 
     //let albumUri = fileUri.getUriFromPath(albumPath);
@@ -283,6 +284,8 @@ export class MessagesImplBase extends NativeSyncApiOhos {
     let predicates = new dataSharePredicates.DataSharePredicates();
     let albumId: photoAccessHelper.AlbumKeys = photoAccessHelper.AlbumKeys.URI;
     predicates.equalTo(albumId, albumPath);
+    predicates.equalTo(photoAccessHelper.PhotoKeys.POSITION, photoAccessHelper.PositionType.LOCAL_AND_CLOUD)
+    predicates.equalTo(photoAccessHelper.PhotoKeys.POSITION, photoAccessHelper.PositionType.LOCAL)
 
     let fetchOptions: photoAccessHelper.FetchOptions = {
       fetchColumns: fetchColumns,
@@ -316,11 +319,22 @@ export class MessagesImplBase extends NativeSyncApiOhos {
     let album = await fetch_result_album.getFirstObject();
     let photoFetchResult = await album.getAssets(photoFetchOptions);
     let photoAsset = await photoFetchResult.getAllObjects();
-    let assetsPath = photoAsset.map(pa => pa.uri);
-    return assetsPath;
+    let assetsUri = photoAsset.map(pa => pa.uri);
+    let assetsPath:Array<string> = [];
+
+    let i:number = 0;
+
+    for(i=0;i<assetsPath.length;i++) {
+      let fileUriObject = new fileUri.FileUri(assetsUri[i]);
+      console.error('get path success:' + fileUriObject.path);
+      assetsPath.push(fileUriObject.path);
+    }
+
+
+    return result.success(assetsUri);
   }
 
-  public async getAssetsCountSince(albumPath: string, timestamp: number): Promise<number> {
+  public async getAssetsCountSince(albumPath: string, timestamp: number, result: Result<number>) {
     console.error("MessagesImplBase 7 ")
     const phAccessHelper = photoAccessHelper.getPhotoAccessHelper(this.ctx);
 
@@ -337,24 +351,70 @@ export class MessagesImplBase extends NativeSyncApiOhos {
       await phAccessHelper.getAlbums(photoAccessHelper.AlbumType.USER, photoAccessHelper.AlbumSubtype.USER_GENERIC,
         fetchOptions);
     let album_result = await albumFetchResult.getFirstObject();
+    console.error('7:albumFetchResult.getFirstObject() success')
 
     let assetsCountfetchColumns: string[] = [
       photoAccessHelper.PhotoKeys.URI,
       photoAccessHelper.PhotoKeys.DATE_ADDED,
+      photoAccessHelper.PhotoKeys.POSITION
     ];
+
+    if(timestamp == undefined) {
+      timestamp = 0;
+    }
+
+    if(timestamp >= Date.now() / 1000) {
+      timestamp = Date.now() / 1000 - 1;
+    }
     let predicates: dataSharePredicates.DataSharePredicates = new dataSharePredicates.DataSharePredicates();
-    predicates.in(photoAccessHelper.PhotoKeys.DATE_ADDED, [timestamp, Math.floor(Date.now() / 1000) + 10000]);
+    //predicates.in(photoAccessHelper.PhotoKeys.DATE_ADDED, [timestamp, Math.floor(Date.now() / 1000)]);
+    predicates.equalTo(photoAccessHelper.PhotoKeys.POSITION, photoAccessHelper.PositionType.LOCAL_AND_CLOUD)
+    predicates.equalTo(photoAccessHelper.PhotoKeys.POSITION, photoAccessHelper.PositionType.LOCAL)
 
     let getAssetsCountetchOptions: photoAccessHelper.FetchOptions = {
       fetchColumns: assetsCountfetchColumns,
       predicates: predicates
     };
 
+    console.error('7:2 success')
 
 
-    let fetchResult = await album_result.getAssets(getAssetsCountetchOptions);
-    let count = fetchResult.getCount();
-    return count;
+    let count:number = 0;
+    let fetchResult:photoAccessHelper.FetchResult<photoAccessHelper.PhotoAsset>
+    try{
+      fetchResult = await album_result.getAssets(getAssetsCountetchOptions);
+    } catch (err) {
+      console.error(err);
+      console.error('getAssetsCountSince undefined')
+      return;
+    }
+
+      if(fetchResult!.getCount()==0) {
+        console.error('getAssetsCountSince count:0')
+        return result.success(0);
+      }
+
+    await fetchResult!.getFirstObject();
+    while(!fetchResult!.isAfterLast()) {
+      
+      let current_asset = await fetchResult!.getNextObject();
+      console.error('7:5 success' + current_asset.uri);
+      let id = current_asset.get(photoAccessHelper.PhotoKeys.URI) .valueOf() as string;
+      let res:boolean = false;
+      try {
+        res = fs.accessSync(id);
+
+      } catch (err) {
+        console.error("accessSync failed with error message: " + err.message + ", error code: " + err.code);
+      }
+
+      if(!res) {
+        continue;
+      }
+      count++;
+    }
+
+    return result.success(count);
 
   }
 
@@ -403,12 +463,27 @@ export class MessagesImplBase extends NativeSyncApiOhos {
       predicates: predicates_photo
     };
     let photoFetchResult = await album.getAssets(photoFetchOptions);
+    await photoFetchResult.getFirstObject();
 
     while (!photoFetchResult.isAfterLast()) {
       let current_asset = await photoFetchResult.getNextObject();
       let uri_input: string[] = [current_asset.uri];
 
       let id = current_asset.get(photoAccessHelper.PhotoKeys.URI) .valueOf() as string;
+
+      id = new fileUri.FileUri(id).path;
+
+      let res:boolean = false;
+      try {
+        res = fs.accessSync(id);
+
+      } catch (err) {
+        console.error("accessSync failed with error message: " + err.message + ", error code: " + err.code);
+      }
+
+      if(!res) {
+        continue;
+      }
 
       let mediaType = current_asset.photoType;
       let name = current_asset.displayName;
