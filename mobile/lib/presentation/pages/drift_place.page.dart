@@ -113,6 +113,10 @@ class _PlaceList extends ConsumerWidget {
 
   final ValueNotifier<String?> search;
 
+  bool containsChinese(String s) {
+    return s.runes.any((r) => r >= 0x4E00 && r <= 0x9FFF);
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final places = ref.watch(placesProvider);
@@ -140,6 +144,15 @@ class _PlaceList extends ConsumerWidget {
             return place.$1.toLowerCase().contains(search.value!.toLowerCase());
           }).toList();
         }
+
+        places.sort((a, b) {
+          final hasChineseA = containsChinese(a.$1);
+          final hasChineseB = containsChinese(b.$1);
+
+          if (hasChineseA && !hasChineseB) return -1;
+          if (!hasChineseA && hasChineseB) return 1;
+          return a.$1.compareTo(b.$1); // 同类再按字典序
+        });
 
         return SliverList.builder(
           itemCount: places.length,
