@@ -42,7 +42,7 @@ enum AppSettingsEnum<T> {
   allowSelfSignedSSLCert<bool>(StoreKey.selfSignedCert, null, false),
   ignoreIcloudAssets<bool>(StoreKey.ignoreIcloudAssets, null, false),
   selectedAlbumSortReverse<bool>(StoreKey.selectedAlbumSortReverse, null, false),
-  enableHapticFeedback<bool>(StoreKey.enableHapticFeedback, null, true),
+  enableHapticFeedback<bool>(StoreKey.enableHapticFeedback, null, false),
   syncAlbums<bool>(StoreKey.syncAlbums, null, false),
   autoEndpointSwitching<bool>(StoreKey.autoEndpointSwitching, null, false),
   photoManagerCustomFilter<bool>(StoreKey.photoManagerCustomFilter, null, true),
