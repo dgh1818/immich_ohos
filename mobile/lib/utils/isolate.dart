@@ -79,17 +79,17 @@ Cancelable<T?> runInIsolateGentle<T>({
           debugPrint("Error closing Isar: $e");
         }
 
-        try {
-          await driftDb.close();
-        } catch (e) {
-          log.severe("Error in close driftDb");
-        }
+        // try {
+        //   await driftDb.close();
+        // } catch (e) {
+        //   log.severe("Error in close driftDb");
+        // }
 
         //ref.dispose();
       } catch (error) {
         debugPrint("Error closing resources in isolate: $error");
       } finally {
-        ref.dispose();
+        //ref.dispose();
         // Delay to ensure all resources are released
         await Future.delayed(const Duration(seconds: 2));
       }
