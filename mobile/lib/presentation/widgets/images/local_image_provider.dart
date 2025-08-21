@@ -173,11 +173,11 @@ class LocalFullImageProvider extends ImageProvider<LocalFullImageProvider> {
   Stream<ImageInfo> _decodeProgressive(LocalFullImageProvider key, ImageDecoderCallback decode) async* {
     final File? file;
     //final file = await _storageRepository.getFileForAsset(key.id);
-    if (key.name != null && key.modifyAt != null) {
-      file = await _storageRepository.getReadableFileForAsset(key.name!, key.modifyAt!);
-    } else {
-      file = await _storageRepository.getFileForAsset(key.id);
-    }
+    // if (key.name != null && key.modifyAt != null) {
+    //   file = await _storageRepository.getReadableFileForAsset(key.name!, key.modifyAt!);
+    // } else {
+    file = await _storageRepository.getFileForAsset(key.id);
+    //}
 
     //
 

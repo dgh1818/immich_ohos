@@ -160,7 +160,7 @@ export class MessagesImplBase extends NativeSyncApiOhos {
       let updatedAt = current_asset.get(photoAccessHelper.PhotoKeys.DATE_MODIFIED) as number;
       let width = current_asset.get(photoAccessHelper.PhotoKeys.WIDTH) as number;
       let height = current_asset.get(photoAccessHelper.PhotoKeys.HEIGHT) as number;
-      let durationInSeconds = type == photoAccessHelper.PhotoType.IMAGE ? 0 : 0; //ohos not support
+      let durationInSeconds = type == photoAccessHelper.PhotoType.IMAGE ? 0 : Math.floor((current_asset.get(photoAccessHelper.PhotoKeys.DURATION) as number)/1000); //ohos not support
       //let bucketId = current_asset.get(bucketIdColumn);
       let bucketId = '-1';
       let orientation = current_asset.get(photoAccessHelper.PhotoKeys.ORIENTATION) as number;
@@ -208,10 +208,13 @@ export class MessagesImplBase extends NativeSyncApiOhos {
 
     try {
       let fetchResult: photoAccessHelper.FetchResult<photoAccessHelper.Album> =
-        await phAccessHelper.getAlbums(photoAccessHelper.AlbumType.USER, photoAccessHelper.AlbumSubtype.USER_GENERIC);
+        await phAccessHelper.getAlbums(photoAccessHelper.AlbumType.USER, photoAccessHelper.AlbumSubtype.ANY);
+      let fetchResult_sysytem: photoAccessHelper.FetchResult<photoAccessHelper.Album> =
+        await phAccessHelper.getAlbums(photoAccessHelper.AlbumType.SYSTEM, photoAccessHelper.AlbumSubtype.ANY);
       //let album: photoAccessHelper.Album = await fetchResult.getFirstObject();
       let iter: number = 0;
       await fetchResult.getFirstObject();
+      await fetchResult_sysytem.getFirstObject();
 
       while (!fetchResult.isAfterLast()) {
         let asset = await fetchResult.getNextObject()
@@ -220,10 +223,18 @@ export class MessagesImplBase extends NativeSyncApiOhos {
         console.info('getAlbums'+asset.albumName);
         iter++;
       }
+
+      while (!fetchResult_sysytem.isAfterLast()) {
+        let asset = await fetchResult_sysytem.getNextObject()
+        assets.push(asset);
+        assets_count_map.set(iter,asset.count)
+        console.info('getAlbums'+asset.albumName);
+        iter++;
+      }
     } catch (e) {
       console.error('getAlbums', e);
     }
-
+    let iter:number = 0;
     //let sortedMap = this.sortMapByValue(assets_count_map);
     for (let entry of assets) {
     //for (let entry of sortedMap) {
@@ -241,7 +252,11 @@ export class MessagesImplBase extends NativeSyncApiOhos {
       const fileUriResult = fileUriResult_array;
 
       const path = fileUriResult;
-      const name = currrent_asset.albumName;
+      let name = currrent_asset.albumName;
+      if(name=='' || name==undefined) {
+        name= iter.toString();
+        iter++;
+      }
       const updatedAt = -1;
       const isCloud: boolean = false;
       const assetCount = currrent_asset.count;
@@ -358,26 +373,24 @@ export class MessagesImplBase extends NativeSyncApiOhos {
     let albumFetchResult =
       await phAccessHelper.getAlbums(photoAccessHelper.AlbumType.USER, photoAccessHelper.AlbumSubtype.USER_GENERIC,
         fetchOptions);
+
+    if(albumFetchResult.getCount()==0 || albumFetchResult==undefined) {
+      albumFetchResult = await phAccessHelper.getAlbums(photoAccessHelper.AlbumType.SYSTEM, photoAccessHelper.AlbumSubtype.ANY,
+        fetchOptions);
+    }
+
     let album_result = await albumFetchResult.getFirstObject();
     console.error('7:albumFetchResult.getFirstObject() success')
 
     let assetsCountfetchColumns: string[] = [
       photoAccessHelper.PhotoKeys.URI,
       photoAccessHelper.PhotoKeys.DATE_ADDED,
-      photoAccessHelper.PhotoKeys.POSITION
+      photoAccessHelper.PhotoKeys.POSITION,
+      photoAccessHelper.PhotoKeys.DATE_MODIFIED,
     ];
 
-    if(timestamp == undefined) {
-      timestamp = 0;
-    }
 
-    if(timestamp >= Date.now() / 1000) {
-      timestamp = Date.now() / 1000 - 1;
-    }
     let predicates: dataSharePredicates.DataSharePredicates = new dataSharePredicates.DataSharePredicates();
-    //predicates.in(photoAccessHelper.PhotoKeys.DATE_ADDED, [timestamp, Math.floor(Date.now() / 1000)]);
-    // predicates.equalTo(photoAccessHelper.PhotoKeys.POSITION, photoAccessHelper.PositionType.LOCAL_AND_CLOUD)
-    // predicates.equalTo(photoAccessHelper.PhotoKeys.POSITION, photoAccessHelper.PositionType.LOCAL)
 
     let getAssetsCountetchOptions: photoAccessHelper.FetchOptions = {
       fetchColumns: assetsCountfetchColumns,
@@ -411,6 +424,14 @@ export class MessagesImplBase extends NativeSyncApiOhos {
       let position = current_asset.get(photoAccessHelper.PhotoKeys.POSITION) as photoAccessHelper.PositionType;
       if(!(position==photoAccessHelper.PositionType.LOCAL) && !(position==photoAccessHelper.PositionType.LOCAL_AND_CLOUD)) {
         continue;
+      }
+
+      if(timestamp != undefined) {
+        let time_modified = current_asset.get(photoAccessHelper.PhotoKeys.DATE_MODIFIED).valueOf() as number;
+
+        if (time_modified < timestamp) {
+          continue;
+        }
       }
 
       let id = current_asset.get(photoAccessHelper.PhotoKeys.URI) .valueOf() as string;
@@ -447,15 +468,16 @@ export class MessagesImplBase extends NativeSyncApiOhos {
     const phAccessHelper = photoAccessHelper.getPhotoAccessHelper(this.ctx);
 
     let albumFetchResult =
-      await phAccessHelper.getAlbums(photoAccessHelper.AlbumType.USER, photoAccessHelper.AlbumSubtype.USER_GENERIC,
+      await phAccessHelper.getAlbums(photoAccessHelper.AlbumType.USER, photoAccessHelper.AlbumSubtype.ANY,
         albumFetchOptions);
+    if(albumFetchResult.getCount()==0 || albumFetchResult==undefined) {
+      albumFetchResult =
+        await phAccessHelper.getAlbums(photoAccessHelper.AlbumType.SYSTEM, photoAccessHelper.AlbumSubtype.ANY,
+        albumFetchOptions);
+    }
     let assetResult: Array<PlatformAsset> = [];
     let album = await albumFetchResult.getFirstObject();
     let predicates_photo: dataSharePredicates.DataSharePredicates = new dataSharePredicates.DataSharePredicates();
-    if (updatedTimeCond != undefined) {
-      predicates_photo.in(photoAccessHelper.PhotoKeys.DATE_ADDED,
-        [updatedTimeCond, Math.floor(Date.now() / 1000) + 10000]);
-    }
     // predicates_photo.equalTo(photoAccessHelper.PhotoKeys.POSITION, photoAccessHelper.PositionType.LOCAL_AND_CLOUD)
     // predicates_photo.equalTo(photoAccessHelper.PhotoKeys.POSITION, photoAccessHelper.PositionType.LOCAL)
     let assetForAlbumfetchColumns: string[] = [
@@ -491,6 +513,14 @@ export class MessagesImplBase extends NativeSyncApiOhos {
         continue;
       }
 
+      if(updatedTimeCond!=undefined) {
+        let time_modified = current_asset.get(photoAccessHelper.PhotoKeys.DATE_MODIFIED).valueOf() as number;
+
+        if (time_modified < updatedTimeCond) {
+          continue;
+        }
+      }
+
       let id = current_asset.get(photoAccessHelper.PhotoKeys.URI) .valueOf() as string;
 
       id = new fileUri.FileUri(id).path;
@@ -515,7 +545,7 @@ export class MessagesImplBase extends NativeSyncApiOhos {
       let modifiedAt = current_asset.get(photoAccessHelper.PhotoKeys.DATE_MODIFIED) .valueOf() as number;
       let width = current_asset.get(photoAccessHelper.PhotoKeys.WIDTH) .valueOf() as number;
       let height = current_asset.get(photoAccessHelper.PhotoKeys.HEIGHT).valueOf() as number;
-      let duration = current_asset.get(photoAccessHelper.PhotoKeys.DURATION) .valueOf() as number ; //
+      let duration = Math.floor((current_asset.get(photoAccessHelper.PhotoKeys.DURATION) .valueOf() as number)/1000) ; //
       //let bucketId = current_asset.get(bucketIdColumn);
       let bucketId = '-1';
       let orientation = current_asset.get(photoAccessHelper.PhotoKeys.ORIENTATION).valueOf() as number;
