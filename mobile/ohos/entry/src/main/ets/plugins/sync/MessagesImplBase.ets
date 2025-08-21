@@ -284,8 +284,6 @@ export class MessagesImplBase extends NativeSyncApiOhos {
     let predicates = new dataSharePredicates.DataSharePredicates();
     let albumId: photoAccessHelper.AlbumKeys = photoAccessHelper.AlbumKeys.URI;
     predicates.equalTo(albumId, albumPath);
-    predicates.equalTo(photoAccessHelper.PhotoKeys.POSITION, photoAccessHelper.PositionType.LOCAL_AND_CLOUD)
-    predicates.equalTo(photoAccessHelper.PhotoKeys.POSITION, photoAccessHelper.PositionType.LOCAL)
 
     let fetchOptions: photoAccessHelper.FetchOptions = {
       fetchColumns: fetchColumns,
@@ -324,12 +322,22 @@ export class MessagesImplBase extends NativeSyncApiOhos {
 
     let i:number = 0;
 
-    for(i=0;i<assetsPath.length;i++) {
-      let fileUriObject = new fileUri.FileUri(assetsUri[i]);
+    await photoFetchResult!.getFirstObject();
+    while(!photoFetchResult!.isAfterLast()) {
+
+      let current_asset = await photoFetchResult!.getNextObject();
+      console.error('7:5 success' + current_asset.uri);
+
+      let position = current_asset.get(photoAccessHelper.PhotoKeys.POSITION) as photoAccessHelper.PositionType;
+      if (!(position == photoAccessHelper.PositionType.LOCAL) &&
+        !(position == photoAccessHelper.PositionType.LOCAL_AND_CLOUD)) {
+        continue;
+      }
+
+      let fileUriObject = new fileUri.FileUri(current_asset.uri);
       console.error('get path success:' + fileUriObject.path);
       assetsPath.push(fileUriObject.path);
     }
-
 
     return result.success(assetsUri);
   }
@@ -368,8 +376,8 @@ export class MessagesImplBase extends NativeSyncApiOhos {
     }
     let predicates: dataSharePredicates.DataSharePredicates = new dataSharePredicates.DataSharePredicates();
     //predicates.in(photoAccessHelper.PhotoKeys.DATE_ADDED, [timestamp, Math.floor(Date.now() / 1000)]);
-    predicates.equalTo(photoAccessHelper.PhotoKeys.POSITION, photoAccessHelper.PositionType.LOCAL_AND_CLOUD)
-    predicates.equalTo(photoAccessHelper.PhotoKeys.POSITION, photoAccessHelper.PositionType.LOCAL)
+    // predicates.equalTo(photoAccessHelper.PhotoKeys.POSITION, photoAccessHelper.PositionType.LOCAL_AND_CLOUD)
+    // predicates.equalTo(photoAccessHelper.PhotoKeys.POSITION, photoAccessHelper.PositionType.LOCAL)
 
     let getAssetsCountetchOptions: photoAccessHelper.FetchOptions = {
       fetchColumns: assetsCountfetchColumns,
@@ -396,9 +404,15 @@ export class MessagesImplBase extends NativeSyncApiOhos {
 
     await fetchResult!.getFirstObject();
     while(!fetchResult!.isAfterLast()) {
-      
+
       let current_asset = await fetchResult!.getNextObject();
       console.error('7:5 success' + current_asset.uri);
+
+      let position = current_asset.get(photoAccessHelper.PhotoKeys.POSITION) as photoAccessHelper.PositionType;
+      if(!(position==photoAccessHelper.PositionType.LOCAL) && !(position==photoAccessHelper.PositionType.LOCAL_AND_CLOUD)) {
+        continue;
+      }
+
       let id = current_asset.get(photoAccessHelper.PhotoKeys.URI) .valueOf() as string;
       let res:boolean = false;
       try {
@@ -442,6 +456,8 @@ export class MessagesImplBase extends NativeSyncApiOhos {
       predicates_photo.in(photoAccessHelper.PhotoKeys.DATE_ADDED,
         [updatedTimeCond, Math.floor(Date.now() / 1000) + 10000]);
     }
+    // predicates_photo.equalTo(photoAccessHelper.PhotoKeys.POSITION, photoAccessHelper.PositionType.LOCAL_AND_CLOUD)
+    // predicates_photo.equalTo(photoAccessHelper.PhotoKeys.POSITION, photoAccessHelper.PositionType.LOCAL)
     let assetForAlbumfetchColumns: string[] = [
       photoAccessHelper.PhotoKeys.URI,
       photoAccessHelper.PhotoKeys.DISPLAY_NAME,
@@ -455,6 +471,7 @@ export class MessagesImplBase extends NativeSyncApiOhos {
       photoAccessHelper.PhotoKeys.DURATION,
       photoAccessHelper.PhotoKeys.ORIENTATION,
       photoAccessHelper.PhotoKeys.FAVORITE,
+      photoAccessHelper.PhotoKeys.POSITION
 
     ];
 
@@ -468,6 +485,11 @@ export class MessagesImplBase extends NativeSyncApiOhos {
     while (!photoFetchResult.isAfterLast()) {
       let current_asset = await photoFetchResult.getNextObject();
       let uri_input: string[] = [current_asset.uri];
+      let position = current_asset.get(photoAccessHelper.PhotoKeys.POSITION) as photoAccessHelper.PositionType;
+      if(!(position==photoAccessHelper.PositionType.LOCAL) && !(position==photoAccessHelper.PositionType.LOCAL_AND_CLOUD)) {
+        console.error(current_asset.uri + ": is cloud" );
+        continue;
+      }
 
       let id = current_asset.get(photoAccessHelper.PhotoKeys.URI) .valueOf() as string;
 
@@ -513,7 +535,7 @@ export class MessagesImplBase extends NativeSyncApiOhos {
         orientation,
         isFavorite
       )
-
+      console.error('get assets for album' + ':' + id );
       assetResult.push(asset);
     }
     result?.success(assetResult);
