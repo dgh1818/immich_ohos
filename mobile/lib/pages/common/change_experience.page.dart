@@ -60,11 +60,11 @@ class _ChangeExperiencePageState extends ConsumerState<ChangeExperiencePage> {
       ref.read(websocketProvider.notifier).startListeningToBetaEvents();
 
       final permission = await ref.read(galleryPermissionNotifier.notifier).requestGalleryPermission();
+      await ref.read(backgroundSyncProvider).syncRemote();
 
       if (permission.isGranted) {
         await migrateDeviceAssetToSqlite(ref.read(isarProvider), ref.read(driftProvider));
         await migrateBackupAlbumsToSqlite(ref.read(isarProvider), ref.read(driftProvider));
-        await ref.read(backgroundSyncProvider).syncRemote();
         ref.read(backgroundSyncProvider).syncLocal(full: true);
       }
     } else {
