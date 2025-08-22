@@ -213,8 +213,8 @@ export class MessagesImplBase extends NativeSyncApiOhos {
         await phAccessHelper.getAlbums(photoAccessHelper.AlbumType.SYSTEM, photoAccessHelper.AlbumSubtype.ANY);
       //let album: photoAccessHelper.Album = await fetchResult.getFirstObject();
       let iter: number = 0;
-      await fetchResult.getFirstObject();
-      await fetchResult_sysytem.getFirstObject();
+      // await fetchResult.getFirstObject();
+      // await fetchResult_sysytem.getFirstObject();
 
       while (!fetchResult.isAfterLast()) {
         let asset = await fetchResult.getNextObject()
@@ -250,11 +250,12 @@ export class MessagesImplBase extends NativeSyncApiOhos {
       let fileUriResult_array = entry.albumUri;
       //let fileUriResult_array = FileUtils.getPathFromUri(getContext(),currrent_asset.albumUri)
       const fileUriResult = fileUriResult_array;
+      const album_name = ['所有','视频','图片'];
 
       const path = fileUriResult;
       let name = currrent_asset.albumName;
       if(name=='' || name==undefined) {
-        name= iter.toString();
+        name= album_name[iter];
         iter++;
       }
       const updatedAt = -1;
@@ -337,7 +338,7 @@ export class MessagesImplBase extends NativeSyncApiOhos {
 
     let i:number = 0;
 
-    await photoFetchResult!.getFirstObject();
+    //await photoFetchResult!.getFirstObject();
     while(!photoFetchResult!.isAfterLast()) {
 
       let current_asset = await photoFetchResult!.getNextObject();
@@ -415,7 +416,7 @@ export class MessagesImplBase extends NativeSyncApiOhos {
         return result.success(0);
       }
 
-    await fetchResult!.getFirstObject();
+    //await fetchResult!.getFirstObject();
     while(!fetchResult!.isAfterLast()) {
 
       let current_asset = await fetchResult!.getNextObject();
@@ -502,7 +503,7 @@ export class MessagesImplBase extends NativeSyncApiOhos {
       predicates: predicates_photo
     };
     let photoFetchResult = await album.getAssets(photoFetchOptions);
-    await photoFetchResult.getFirstObject();
+    //await photoFetchResult.getFirstObject();
 
     while (!photoFetchResult.isAfterLast()) {
       let current_asset = await photoFetchResult.getNextObject();
