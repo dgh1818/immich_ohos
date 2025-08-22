@@ -298,7 +298,9 @@ export class MetadataService extends BaseService {
       this.applyTagList(asset, exifTags),
     ];
 
-    if (this.isMotionPhoto(asset, exifTags) || await this.checkOhosLivePhoto(asset.originalPath)) {
+    const { hasOhosLivePhoto, ohosFileSize, ohosVideoOffset } = await this.checkOhosLivePhoto(asset.originalPath);
+
+    if (this.isMotionPhoto(asset, exifTags) || hasOhosLivePhoto) {
       promises.push(this.applyMotionPhotos(asset, exifTags, dates, stats));
     }
 
