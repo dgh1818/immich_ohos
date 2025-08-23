@@ -46,6 +46,15 @@ interface LivePhotoSearchOptions {
   type: AssetType;
 }
 
+interface OhosLivePhotoSearchOptions {
+  ownerId: string;
+  libraryId?: string | null;
+  path: string;
+  name: string;
+  otherAssetId: string;
+  type: AssetType;
+}
+
 interface AssetBuilderOptions {
   isFavorite?: boolean;
   isTrashed?: boolean;
@@ -476,6 +485,20 @@ export class AssetRepository {
       .where('ownerId', '=', asUuid(ownerId))
       .where('type', '=', type)
       .where('asset_exif.livePhotoCID', '=', livePhotoCID)
+      .limit(1)
+      .executeTakeFirst();
+  }
+
+  findOhosLivePhotoMatch(options: OhosLivePhotoSearchOptions) {
+    const { ownerId, otherAssetId, path, name, type} = options;
+    return this.db
+      .selectFrom('asset')
+      .select(['asset.id', 'asset.ownerId'])
+      .innerJoin('asset_exif', 'asset.id', 'asset_exif.assetId')
+      .where('id', '!=', asUuid(otherAssetId))
+      .where('ownerId', '=', asUuid(ownerId))
+      .where('type', '=', type)
+      .where('asset.originalFileName', '=', name)
       .limit(1)
       .executeTakeFirst();
   }
