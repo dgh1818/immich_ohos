@@ -163,7 +163,7 @@ export class MetadataService extends BaseService {
   }
 
   private async linkLivePhotos(
-    asset: { id: string; type: AssetType; ownerId: string; libraryId: string | null },
+    asset: { id: string; type: AssetType; originalFilePath :string, ownerId: string; libraryId: string | null; },
     exifInfo: Insertable<AssetExifTable>,
   ): Promise<void> {
     if (!exifInfo.livePhotoCID) {
@@ -182,6 +182,39 @@ export class MetadataService extends BaseService {
     if (!match) {
       return;
     }
+
+    const [photoAsset, motionAsset] = asset.type === AssetType.Image ? [asset, match] : [match, asset];
+    await Promise.all([
+      this.assetRepository.update({ id: photoAsset.id, livePhotoVideoId: motionAsset.id }),
+      this.assetRepository.update({ id: motionAsset.id, visibility: AssetVisibility.Hidden }),
+      this.albumRepository.removeAssetsFromAll([motionAsset.id]),
+    ]);
+
+    await this.eventRepository.emit('AssetHide', { assetId: motionAsset.id, userId: motionAsset.ownerId });
+  }
+
+  private async linkOhosLivePhotos(
+    asset: { id: string; type: AssetType; originalPath :string, originalFileName:string,ownerId: string; libraryId: string | null; },
+    exifInfo: Insertable<AssetExifTable>,
+  ): Promise<void> {
+
+
+    const otherType = asset.type === AssetType.Video ? AssetType.Image : AssetType.Video;
+    const match = await this.assetRepository.findOhosLivePhotoMatch({
+      path: `${path.parse(asset.originalPath).dir}/${path.parse(asset.originalPath).name}.mp4`,
+      name: `${path.parse(asset.originalFileName).name}.mp4`,
+      ownerId: asset.ownerId,
+      libraryId: asset.libraryId,
+      otherAssetId: asset.id,
+      type: otherType,
+    });
+
+    if (!match) {
+      this.logger.log(`error: not find match`);
+      return;
+    }
+
+    this.logger.log(`success:  find match`);
 
     const [photoAsset, motionAsset] = asset.type === AssetType.Image ? [asset, match] : [match, asset];
     await Promise.all([
@@ -300,7 +333,7 @@ export class MetadataService extends BaseService {
 
     const { hasOhosLivePhoto, ohosFileSize, ohosVideoOffset } = await this.checkOhosLivePhoto(asset.originalPath);
 
-    if (this.isMotionPhoto(asset, exifTags) || hasOhosLivePhoto) {
+    if (this.isMotionPhoto(asset, exifTags) || hasOhosLivePhoto==1) {
       promises.push(this.applyMotionPhotos(asset, exifTags, dates, stats));
     }
 
@@ -311,6 +344,11 @@ export class MetadataService extends BaseService {
     await Promise.all(promises);
     if (exifData.livePhotoCID) {
       await this.linkLivePhotos(asset, exifData);
+    }
+
+    if( hasOhosLivePhoto==2 ) {
+      this.logger.log(`Is Ohos Next livephoto (${asset.id})`);
+      await this.linkOhosLivePhotos(asset,exifData);
     }
 
     await this.assetRepository.upsertJobStatus({ assetId: asset.id, metadataExtractedAt: new Date() });
@@ -521,9 +559,9 @@ export class MetadataService extends BaseService {
       length = videoOffset;
     }
 
-    if (hasOhosLivePhoto) {
+    if (hasOhosLivePhoto == 1) {
       length = ohosVideoOffset;
-      this.logger.log(`Is Ohos JPEG-encoded livephoto (${asset.id})`);
+      this.logger.log(`Is Ohos JPEG-encoded livephoto (${asset.id})`)      ;
     }
 
     if (!length && !hasEmbeddedVideoFile && !hasMotionPhotoVideo && !hasOhosLivePhoto) {
@@ -545,7 +583,7 @@ export class MetadataService extends BaseService {
         video = await this.metadataRepository.extractBinaryTag(asset.originalPath, 'EmbeddedVideoFile');
       }
       //     Ohos LivePhoto video extraction; JPEG-encoded
-      else if (hasOhosLivePhoto) {
+      else if (hasOhosLivePhoto == 1) {
         video = await this.processOhosLivePhoto(asset.originalPath, ohosFileSize, ohosVideoOffset);
       }
       // Default video extraction
@@ -1013,11 +1051,9 @@ export class MetadataService extends BaseService {
       const byte = metadataBuffer.readUInt8(i);
       liveStr += String.fromCharCode(byte);
     }
-    if (liveStr != 'LIVE_') {
-      return { hasOhosLivePhoto, ohosFileSize, ohosVideoOffset };
-    } else {
+    if (liveStr == 'LIVE_') {
       hasOhosLivePhoto = 1;
-    }
+    };
 
     let numberStr = '';
     if (hasOhosLivePhoto) {
@@ -1040,6 +1076,35 @@ export class MetadataService extends BaseService {
       } else {
         return { hasOhosLivePhoto, ohosFileSize, ohosVideoOffset };
       }
+    }
+
+    let startPos:number = 0;
+
+    if(!hasOhosLivePhoto) {
+      startPos = ohosFileSize - 8320;
+    }
+
+    if (startPos < 0) {
+      hasOhosLivePhoto = 0;
+      return { hasOhosLivePhoto, ohosFileSize, ohosVideoOffset };
+    }
+
+    const buffer = Buffer.alloc(14);
+    const fd_2 = await fs.open(filePath, 'r');
+    try {
+      const { bytesRead } = await fd_2.read(buffer, 0, 14, startPos);
+    } finally {
+      await fd_2.close();
+    }
+
+    const foundString = buffer.toString('utf8');
+    const isMatch = foundString === 'MovingPhotoMeta';
+    if(isMatch) {
+      hasOhosLivePhoto = 2;
+      return { hasOhosLivePhoto, ohosFileSize, ohosVideoOffset };
+    } else {
+      hasOhosLivePhoto = 0;
+      return { hasOhosLivePhoto, ohosFileSize, ohosVideoOffset };
     }
 
     return { hasOhosLivePhoto, ohosFileSize, ohosVideoOffset };
