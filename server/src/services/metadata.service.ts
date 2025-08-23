@@ -163,7 +163,7 @@ export class MetadataService extends BaseService {
   }
 
   private async linkLivePhotos(
-    asset: { id: string; type: AssetType; originalFilePath :string, ownerId: string; libraryId: string | null; },
+    asset: { id: string; type: AssetType; ownerId: string; libraryId: string | null },
     exifInfo: Insertable<AssetExifTable>,
   ): Promise<void> {
     if (!exifInfo.livePhotoCID) {
