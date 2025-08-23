@@ -1086,18 +1086,20 @@ export class MetadataService extends BaseService {
 
     if (startPos < 0) {
       hasOhosLivePhoto = 0;
+      this.logger.log(`startPos is ${startPos} `);
       return { hasOhosLivePhoto, ohosFileSize, ohosVideoOffset };
     }
 
     const buffer = Buffer.alloc(14);
     const fd_2 = await fs.open(filePath, 'r');
     try {
-      const { bytesRead } = await fd_2.read(buffer, 0, 14, startPos);
+      const { bytesRead } = await fd_2.read(buffer, 0, 15, startPos);
     } finally {
       await fd_2.close();
     }
 
     const foundString = buffer.toString('utf8');
+    this.logger.log(`foundString is ${foundString}`);
     const isMatch = foundString === 'MovingPhotoMeta';
     if(isMatch) {
       hasOhosLivePhoto = 2;

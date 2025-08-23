@@ -55,7 +55,6 @@ interface OhosLivePhotoSearchOptions {
   type: AssetType;
 }
 
-
 interface AssetBuilderOptions {
   isFavorite?: boolean;
   isTrashed?: boolean;
