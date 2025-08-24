@@ -94,6 +94,7 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
   BuildContext? scaffoldContext;
   Map<String, GlobalKey> videoPlayerKeys = {};
   int imageHdrState = -1;
+  int lastPlayingState = 0;
 
   // Delayed operations that should be cancelled on disposal
   final List<Timer> _delayedOperations = [];
@@ -585,6 +586,7 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
     ui.SetHdr.setHdrMode(hdr: 0, is_image: true);
     ui.SetHdr.setHdrMode(hdr: -1, is_image: false);
     ref.read(isPlayingMotionVideoProvider.notifier).playing = true;
+    lastPlayingState = 1;
   }
 
   PhotoViewGalleryPageOptions _assetBuilder(BuildContext ctx, int index) {
@@ -613,12 +615,17 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
 
     final isPlayingMotionVideo = ref.read(isPlayingMotionVideoProvider);
     if (displayAsset.isImage && !isPlayingMotionVideo) {
-      if (imageHdrState == 1) {
-        ui.SetHdr.setHdrMode(hdr: 1, is_image: true);
+      if (lastPlayingState == 1) {
+        if (imageHdrState == 1) {
+          ui.SetHdr.setHdrMode(hdr: 1, is_image: true);
+        }
+        if (imageHdrState == 0) {
+          ui.SetHdr.setHdrMode(hdr: 0, is_image: true);
+        }
       }
-      if (imageHdrState == 0) {
-        ui.SetHdr.setHdrMode(hdr: 0, is_image: true);
-      }
+
+      lastPlayingState = 0;
+
       return _imageBuilder(ctx, displayAsset);
     }
 
