@@ -207,9 +207,12 @@ dependency_overrides:
       path: 'flutter_local_notifications'
       #ref: master
   image_picker:
-    git:
-      url: https://gitcode.com/openharmony-sig/flutter_packages.git
-      path: 'packages/image_picker/image_picker'
+    path: ../../package_flutter/image_picker/image_picker
+    # git:
+    #   url: https://gitcode.com/openharmony-sig/flutter_packages.git
+    #   path: 'packages/image_picker/image_picker'
+    #https://github.com/dgh1818/image_picker_ohos
+      
       #ref: br_image_picker-v1.1.2_ohos
   isar:
     git:

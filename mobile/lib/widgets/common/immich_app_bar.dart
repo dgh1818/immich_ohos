@@ -26,6 +26,8 @@ import 'package:immich_mobile/repositories/file_media.repository.dart';
 import 'package:immich_mobile/repositories/asset.repository.dart';
 import 'package:immich_mobile/repositories/asset_media.repository.dart';
 
+import 'dart:io';
+
 final backupServiceProvider = Provider(
   (ref) => BackupService(
     ref.watch(apiServiceProvider),
@@ -161,6 +163,8 @@ class ImmichAppBar extends ConsumerWidget implements PreferredSizeWidget {
           ScaffoldMessenger.of(
             context,
           ).showSnackBar(SnackBar(content: Text('“${xfile.name}” 上传成功'), duration: const Duration(seconds: 1)));
+          final file = File(xfile.path);
+          file.delete();
         } catch (e) {
           debugPrint('上传失败: ${xfile.name} — $e');
           ScaffoldMessenger.of(context).showSnackBar(
