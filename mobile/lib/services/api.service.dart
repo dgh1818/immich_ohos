@@ -177,8 +177,7 @@ class ApiService implements Authentication {
       authenticationApi.apiClient.addDefaultHeader('deviceType', 'iOS');
     } else if (defaultTargetPlatform == TargetPlatform.ohos) {
       final ohosInfo = await deviceInfoPlugin.ohosInfo;
-      authenticationApi.apiClient
-          .addDefaultHeader('deviceModel', ohosInfo.marketName.toString());
+      authenticationApi.apiClient.addDefaultHeader('deviceModel', ohosInfo.marketName ?? "Unkonwn HMOS device");
       authenticationApi.apiClient.addDefaultHeader('deviceType', 'OHOS');
     } else if (Platform.isAndroid) {
       final androidInfo = await deviceInfoPlugin.androidInfo;
