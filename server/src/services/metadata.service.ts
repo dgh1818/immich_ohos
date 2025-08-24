@@ -1110,19 +1110,19 @@ export class MetadataService extends BaseService {
     let startPos3:number = 0;
 
     if(!hasOhosLivePhoto) {
-      startPos = ohosFileSize - 126;
+      startPos3 = ohosFileSize - 126;
     }
 
     if (startPos3 < 0) {
       hasOhosLivePhoto = 0;
-      this.logger.log(`startPos is ${startPos} `);
+      this.logger.log(`startPos is ${startPos3} `);
       return { hasOhosLivePhoto, ohosFileSize, ohosVideoOffset };
     }
 
     const buffer3 = Buffer.alloc(29);
     const fd_3 = await fs.open(filePath, 'r');
     try {
-      const { bytesRead } = await fd_3.read(buffer3, 0, 29, startPos);
+      const { bytesRead } = await fd_3.read(buffer3, 0, 29, startPos3);
     } finally {
       await fd_3.close();
     }
