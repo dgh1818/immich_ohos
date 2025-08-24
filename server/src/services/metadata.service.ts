@@ -1124,11 +1124,11 @@ export class MetadataService extends BaseService {
     try {
       const { bytesRead } = await fd_3.read(buffer3, 0, 29, startPos);
     } finally {
-      await fd_2.close();
+      await fd_3.close();
     }
 
     const foundString3 = buffer.toString('utf8');
-    this.logger.log(`foundString is ${foundString}`);
+    this.logger.log(`foundString is ${foundString3}`);
     const isMatch3 = foundString3 === 'mdtacom.openharmony.covertime';
     if(isMatch3) {
       hasOhosLivePhoto = 2;
