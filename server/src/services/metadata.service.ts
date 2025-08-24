@@ -198,9 +198,10 @@ export class MetadataService extends BaseService {
     exifInfo: Insertable<AssetExifTable>,
   ): Promise<void> {
     const otherType = asset.type === AssetType.Video ? AssetType.Image : AssetType.Video;
+    
     const match = await this.assetRepository.findOhosLivePhotoMatch({
-      path: `${path.parse(asset.originalPath).dir}/${path.parse(asset.originalFileName).name}.mp4`,
-      name: `${path.parse(asset.originalFileName).name}.mp4`,
+      path: otherType === AssetType.Video?`${path.parse(asset.originalPath).dir}/${path.parse(asset.originalFileName).name}.mp4`:`${path.parse(asset.originalPath).dir}/${path.parse(asset.originalFileName).name}.jpg`,
+      name: otherType === AssetType.Video?`${path.parse(asset.originalFileName).name}.mp4`:`${path.parse(asset.originalFileName).name}.jpg`,
       ownerId: asset.ownerId,
       libraryId: asset.libraryId,
       otherAssetId: asset.id,
@@ -1100,6 +1101,36 @@ export class MetadataService extends BaseService {
     this.logger.log(`foundString is ${foundString}`);
     const isMatch = foundString === 'MovingPhotoMeta';
     if(isMatch) {
+      hasOhosLivePhoto = 2;
+      return { hasOhosLivePhoto, ohosFileSize, ohosVideoOffset };
+    }
+
+    //-------------------HM0S NEXT 5.1-------------------------
+
+    let startPos3:number = 0;
+
+    if(!hasOhosLivePhoto) {
+      startPos = ohosFileSize - 126;
+    }
+
+    if (startPos3 < 0) {
+      hasOhosLivePhoto = 0;
+      this.logger.log(`startPos is ${startPos} `);
+      return { hasOhosLivePhoto, ohosFileSize, ohosVideoOffset };
+    }
+
+    const buffer3 = Buffer.alloc(29);
+    const fd_3 = await fs.open(filePath, 'r');
+    try {
+      const { bytesRead } = await fd_3.read(buffer3, 0, 29, startPos);
+    } finally {
+      await fd_2.close();
+    }
+
+    const foundString3 = buffer.toString('utf8');
+    this.logger.log(`foundString is ${foundString}`);
+    const isMatch3 = foundString3 === 'mdtacom.openharmony.covertime';
+    if(isMatch3) {
       hasOhosLivePhoto = 2;
       return { hasOhosLivePhoto, ohosFileSize, ohosVideoOffset };
     } else {
