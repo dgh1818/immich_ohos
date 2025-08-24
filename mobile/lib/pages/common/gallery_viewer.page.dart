@@ -40,6 +40,9 @@ import 'package:immich_mobile/main.dart';
 import 'package:immich_mobile/pages/common/video_viewer.page.dart';
 import 'package:immich_mobile/utils/cache/custom_image_cache.dart';
 
+int imageHdrState = -1;
+int lastPlayingState = 0;
+
 @RoutePage()
 // ignore: must_be_immutable
 /// Expects [currentAssetProvider] to be set before navigating to this page
@@ -139,8 +142,10 @@ class GalleryViewerPage extends HookConsumerWidget {
       imageListener.value = ImageStreamListener((ImageInfo info, bool synchronousCall) {
         if (info.image.colorSpace == ui.ColorSpace.extendedSRGB) {
           ui.SetHdr.setHdrMode(hdr: 1, is_image: true);
+          imageHdrState = 1;
         } else {
           ui.SetHdr.setHdrMode(hdr: 0, is_image: true);
+          imageHdrState = 0;
         }
 
         // if (info.image.width > 2000 || info.image.height > 2000) {
@@ -319,7 +324,10 @@ class GalleryViewerPage extends HookConsumerWidget {
         },
         onLongPressStart: asset.isMotionPhoto
             ? (_, __, ___) {
+                ui.SetHdr.setHdrMode(hdr: 0, is_image: true);
                 ref.read(isPlayingMotionVideoProvider.notifier).playing = true;
+                ui.SetHdr.setHdrMode(hdr: -1, is_image: false);
+                lastPlayingState = 1;
               }
             : null,
         imageProvider: ImmichImage.imageProvider(asset: asset),
@@ -390,6 +398,15 @@ class GalleryViewerPage extends HookConsumerWidget {
       }
 
       if (newAsset.isImage && !isPlayingMotionVideo) {
+        if (lastPlayingState == 1) {
+          if (imageHdrState == 1) {
+            ui.SetHdr.setHdrMode(hdr: 1, is_image: true);
+          }
+          if (imageHdrState == 0) {
+            ui.SetHdr.setHdrMode(hdr: 0, is_image: true);
+          }
+        }
+        lastPlayingState = 0;
         return buildImage(newAsset);
       }
       return buildVideo(context, newAsset);
@@ -417,6 +434,15 @@ class GalleryViewerPage extends HookConsumerWidget {
 
                 //if (asset.isImage && !ref.read(isPlayingMotionVideoProvider)) {
                 if (asset.isImage && !isPlayingMotionVideo) {
+                  if (lastPlayingState == 1) {
+                    if (imageHdrState == 1) {
+                      ui.SetHdr.setHdrMode(hdr: 1, is_image: true);
+                    }
+                    if (imageHdrState == 0) {
+                      ui.SetHdr.setHdrMode(hdr: 0, is_image: true);
+                    }
+                  }
+                  lastPlayingState = 0;
                   isZoomed.value = state != PhotoViewScaleState.initial;
                   ref.read(showControlsProvider.notifier).show = !isZoomed.value;
                 }
@@ -464,6 +490,8 @@ class GalleryViewerPage extends HookConsumerWidget {
                 final ImageProvider provider = ImmichImage.imageProvider(asset: a);
 
                 if (a.isImage) {
+                  lastPlayingState = 0;
+                  imageHdrState = -1;
                   setDisplayMode(provider, context);
                 } else {
                   ui.SetHdr.setHdrMode(hdr: 0, is_image: true);
