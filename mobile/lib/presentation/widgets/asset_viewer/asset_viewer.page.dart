@@ -93,6 +93,7 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
   int stackIndex = 0;
   BuildContext? scaffoldContext;
   Map<String, GlobalKey> videoPlayerKeys = {};
+  int imageHdrState = -1;
 
   // Delayed operations that should be cancelled on disposal
   final List<Timer> _delayedOperations = [];
@@ -194,8 +195,10 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
     imageListener = ImageStreamListener((ImageInfo info, bool synchronousCall) {
       if (info.image.colorSpace == ui.ColorSpace.extendedSRGB) {
         ui.SetHdr.setHdrMode(hdr: 1, is_image: true);
+        imageHdrState = 1;
       } else {
         ui.SetHdr.setHdrMode(hdr: 0, is_image: true);
+        imageHdrState = -1;
       }
     }, onError: (_, __) {});
 
@@ -211,6 +214,7 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
     // Validate index bounds and try to get asset, loading buffer if needed
     final timelineService = ref.read(timelineServiceProvider);
     final asset = await timelineService.getAssetAsync(index);
+    imageHdrState = -1;
 
     if (asset == null) {
       return;
@@ -578,6 +582,8 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
   }
 
   void _onLongPress(_, __, ___) {
+    ui.SetHdr.setHdrMode(hdr: 0, is_image: true);
+    ui.SetHdr.setHdrMode(hdr: -1, is_image: false);
     ref.read(isPlayingMotionVideoProvider.notifier).playing = true;
   }
 
@@ -607,6 +613,12 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
 
     final isPlayingMotionVideo = ref.read(isPlayingMotionVideoProvider);
     if (displayAsset.isImage && !isPlayingMotionVideo) {
+      if (imageHdrState == 1) {
+        ui.SetHdr.setHdrMode(hdr: 1, is_image: true);
+      }
+      if (imageHdrState == 0) {
+        ui.SetHdr.setHdrMode(hdr: 0, is_image: true);
+      }
       return _imageBuilder(ctx, displayAsset);
     }
 
