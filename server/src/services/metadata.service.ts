@@ -1127,7 +1127,7 @@ export class MetadataService extends BaseService {
       await fd_3.close();
     }
 
-    const foundString3 = buffer.toString('utf8');
+    const foundString3 = buffer3.toString('utf8');
     this.logger.log(`foundString is ${foundString3}`);
     const isMatch3 = foundString3 === 'mdtacom.openharmony.covertime';
     if(isMatch3) {
