@@ -11,6 +11,8 @@ import 'package:immich_mobile/domain/models/store.model.dart';
 import 'package:flutter/foundation.dart';
 import 'package:logging/logging.dart';
 
+import 'dart:io';
+
 part 'video_viewer_controller_provider.g.dart';
 
 @riverpod
@@ -18,7 +20,8 @@ Future<VideoPlayerController> videoViewerController(VideoViewerControllerRef ref
   late VideoPlayerController controller;
   if (asset.hasLocal && asset.livePhotoVideoId == null) {
     final id = asset is LocalAsset ? asset.id : (asset as RemoteAsset).localId!;
-    final file = await StorageRepository().getFileForAsset(id);
+    //final file = await StorageRepository().getFileForAsset(id);
+    final file = File(id);
     //final file = await StorageRepository().getReadableFileForAsset(asset.name, asset.updatedAt.millisecondsSinceEpoch);
 
     controller = VideoPlayerController.file(file!);

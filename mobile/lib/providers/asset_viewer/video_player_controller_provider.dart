@@ -9,17 +9,17 @@ import 'package:immich_mobile/domain/models/store.model.dart';
 import 'package:flutter/foundation.dart';
 import 'package:logging/logging.dart';
 
+import 'dart:io';
+
 part 'video_player_controller_provider.g.dart';
 
 @riverpod
-Future<VideoPlayerController> videoPlayerController(
-  VideoPlayerControllerRef ref, {
-  required Asset asset,
-}) async {
+Future<VideoPlayerController> videoPlayerController(VideoPlayerControllerRef ref, {required Asset asset}) async {
   late VideoPlayerController controller;
   if (asset.isLocal && asset.livePhotoVideoId == null) {
     // Use a local file for the video player controller
-    final file = await asset.local!.file;
+    //final file = await asset.local!.file;
+    final file = File(asset.local!.id);
     if (file == null) {
       throw Exception('No file found for the video');
     }

@@ -32,6 +32,7 @@ import 'package:photo_manager/photo_manager.dart' show PMProgressHandler;
 
 import 'package:image_picker/image_picker.dart';
 import 'package:path/path.dart';
+import 'package:flutter/foundation.dart';
 
 final backupServiceProvider = Provider(
   (ref) => BackupService(
@@ -409,7 +410,7 @@ class BackupService {
         anyErrors = true;
         continue;
       } finally {
-        if (Platform.isIOS) {
+        if (Platform.isIOS || defaultTargetPlatform == TargetPlatform.ohos) {
           try {
             await file?.delete();
             await livePhotoFile?.delete();
