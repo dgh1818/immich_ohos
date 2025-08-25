@@ -1132,6 +1132,36 @@ export class MetadataService extends BaseService {
     if(isMatch3) {
       hasOhosLivePhoto = 2;
       return { hasOhosLivePhoto, ohosFileSize, ohosVideoOffset };
+    } 
+
+    //----------------------------------------------------picker--------------------------
+
+    let startPos4:number = 0;
+
+    if(!hasOhosLivePhoto) {
+      startPos4 = ohosFileSize - 65;
+    }
+
+    if (startPos4 < 0) {
+      hasOhosLivePhoto = 0;
+      this.logger.log(`startPos is ${startPos4} `);
+      return { hasOhosLivePhoto, ohosFileSize, ohosVideoOffset };
+    }
+
+    const buffer4 = Buffer.alloc(29);
+    const fd_4 = await fs.open(filePath, 'r');
+    try {
+      const { bytesRead } = await fd_4.read(buffer4, 0, 29, startPos4);
+    } finally {
+      await fd_4.close();
+    }
+
+    const foundString4 = buffer4.toString('utf8');
+    //this.logger.log(`foundString is ${foundString3}`);
+    const isMatch4 = foundString4 === 'mdtacom.openharmony.covertime';
+    if(isMatch4) {
+      hasOhosLivePhoto = 2;
+      return { hasOhosLivePhoto, ohosFileSize, ohosVideoOffset };
     } else {
       hasOhosLivePhoto = 0;
       return { hasOhosLivePhoto, ohosFileSize, ohosVideoOffset };
