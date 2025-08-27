@@ -70,7 +70,7 @@ import 'package:immich_mobile/pages/search/all_motion_videos.page.dart';
 import 'package:immich_mobile/pages/search/all_people.page.dart';
 import 'package:immich_mobile/pages/search/all_places.page.dart';
 import 'package:immich_mobile/pages/search/all_videos.page.dart';
-// import 'package:immich_mobile/pages/search/map/map.page.dart';
+import 'package:immich_mobile/pages/search/map/map.page.dart';
 import 'package:immich_mobile/pages/search/map/map_location_picker.page.dart';
 import 'package:immich_mobile/pages/search/person_result.page.dart';
 import 'package:immich_mobile/pages/search/recently_taken.page.dart';
@@ -250,7 +250,7 @@ class AppRouter extends RootStackRouter {
     AutoRoute(page: AllPeopleRoute.page, guards: [_authGuard, _duplicateGuard]),
     AutoRoute(page: MemoryRoute.page, guards: [_authGuard, _duplicateGuard]),
 
-    //AutoRoute(page: MapRoute.page, guards: [_authGuard, _duplicateGuard]),
+    AutoRoute(page: MapRoute.page, guards: [_authGuard, _duplicateGuard]),
     AutoRoute(page: AlbumOptionsRoute.page, guards: [_authGuard, _duplicateGuard]),
     CustomRoute(
       page: TrashRoute.page,

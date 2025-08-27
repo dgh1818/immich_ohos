@@ -17,7 +17,7 @@ class SearchMapThumbnail extends StatelessWidget {
     return ThumbnailWithInfoContainer(
       label: 'search_page_your_map'.tr(),
       onTap: () {
-        //context.pushRoute(MapRoute());
+        context.pushRoute(MapRoute());
       },
       child: IgnorePointer(
         child: MapThumbnail(

@@ -1,4 +1,3 @@
-/*
 import 'dart:math' as math;
 
 import 'package:collection/collection.dart';
@@ -288,4 +287,3 @@ class _MapSheetDragRegion extends StatelessWidget {
     );
   }
 }
-*/

@@ -1,4 +1,3 @@
-/*
 import 'dart:math';
 
 import 'package:auto_route/auto_route.dart';
@@ -33,6 +32,8 @@ import 'package:immich_mobile/widgets/map/map_theme_override.dart';
 import 'package:immich_mobile/widgets/map/positioned_asset_marker_icon.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 
+import 'package:logging/logging.dart';
+
 @RoutePage()
 class MapPage extends HookConsumerWidget {
   const MapPage({super.key, this.initialLocation});
@@ -52,6 +53,7 @@ class MapPage extends HookConsumerWidget {
     final markerDebouncer = useDebouncer(interval: const Duration(milliseconds: 800));
     final selectedAssets = useValueNotifier<Set<Asset>>({});
     const mapZoomToAssetLevel = 12.0;
+    final Logger _log = Logger("map service");
 
     // updates the markersInBounds value with the map markers that are visible in the current
     // map camera bounds
@@ -119,6 +121,7 @@ class MapPage extends HookConsumerWidget {
 
     // finds the nearest asset marker from the tap point and store it as the selectedMarker
     Future<void> onMarkerClicked(Point<double> point, LatLng coords) async {
+      _log.severe("enter onMarkerClicked");
       // Guard map not created
       if (mapController.value == null) {
         return;
@@ -172,6 +175,7 @@ class MapPage extends HookConsumerWidget {
     /// BOTTOM SHEET CALLBACKS
 
     Future<void> onMapMoved() async {
+      _log.severe("enter onMapMoved");
       assetsDebouncer.run(updateAssetsInBounds);
     }
 
@@ -381,4 +385,3 @@ class _MapWithMarker extends StatelessWidget {
     );
   }
 }
-*/

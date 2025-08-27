@@ -1919,6 +1919,42 @@ class MapLocationPickerRouteArgs {
 }
 
 /// generated route for
+/// [MapPage]
+class MapRoute extends PageRouteInfo<MapRouteArgs> {
+  MapRoute({Key? key, LatLng? initialLocation, List<PageRouteInfo>? children})
+    : super(
+        MapRoute.name,
+        args: MapRouteArgs(key: key, initialLocation: initialLocation),
+        initialChildren: children,
+      );
+
+  static const String name = 'MapRoute';
+
+  static PageInfo page = PageInfo(
+    name,
+    builder: (data) {
+      final args = data.argsAs<MapRouteArgs>(
+        orElse: () => const MapRouteArgs(),
+      );
+      return MapPage(key: args.key, initialLocation: args.initialLocation);
+    },
+  );
+}
+
+class MapRouteArgs {
+  const MapRouteArgs({this.key, this.initialLocation});
+
+  final Key? key;
+
+  final LatLng? initialLocation;
+
+  @override
+  String toString() {
+    return 'MapRouteArgs{key: $key, initialLocation: $initialLocation}';
+  }
+}
+
+/// generated route for
 /// [MemoryPage]
 class MemoryRoute extends PageRouteInfo<MemoryRouteArgs> {
   MemoryRoute({
