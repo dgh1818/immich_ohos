@@ -1104,67 +1104,84 @@ export class MetadataService extends BaseService {
       return { hasOhosLivePhoto, ohosFileSize, ohosVideoOffset };
     }
 
-    //-------------------HM0S NEXT 5.1-------------------------
+    // //-------------------HM0S NEXT 5.1-------------------------
 
-    let startPos3:number = 0;
+    // let startPos3:number = 0;
 
-    if(!hasOhosLivePhoto) {
-      startPos3 = ohosFileSize - 126;
-    }
+    // if(!hasOhosLivePhoto) {
+    //   startPos3 = ohosFileSize - 126;
+    // }
 
-    if (startPos3 < 0) {
-      hasOhosLivePhoto = 0;
-      this.logger.log(`startPos is ${startPos3} `);
-      return { hasOhosLivePhoto, ohosFileSize, ohosVideoOffset };
-    }
+    // if (startPos3 < 0) {
+    //   hasOhosLivePhoto = 0;
+    //   this.logger.log(`startPos is ${startPos3} `);
+    //   return { hasOhosLivePhoto, ohosFileSize, ohosVideoOffset };
+    // }
 
-    const buffer3 = Buffer.alloc(29);
-    const fd_3 = await fs.open(filePath, 'r');
-    try {
-      const { bytesRead } = await fd_3.read(buffer3, 0, 29, startPos3);
-    } finally {
-      await fd_3.close();
-    }
+    // const buffer3 = Buffer.alloc(29);
+    // const fd_3 = await fs.open(filePath, 'r');
+    // try {
+    //   const { bytesRead } = await fd_3.read(buffer3, 0, 29, startPos3);
+    // } finally {
+    //   await fd_3.close();
+    // }
 
-    const foundString3 = buffer3.toString('utf8');
-    //this.logger.log(`foundString is ${foundString3}`);
-    const isMatch3 = foundString3 === 'mdtacom.openharmony.covertime';
-    if(isMatch3) {
-      hasOhosLivePhoto = 2;
-      return { hasOhosLivePhoto, ohosFileSize, ohosVideoOffset };
-    } 
+    // const foundString3 = buffer3.toString('utf8');
+    // //this.logger.log(`foundString is ${foundString3}`);
+    // const isMatch3 = foundString3 === 'mdtacom.openharmony.covertime';
+    // if(isMatch3) {
+    //   hasOhosLivePhoto = 2;
+    //   return { hasOhosLivePhoto, ohosFileSize, ohosVideoOffset };
+    // } 
 
     //----------------------------------------------------picker--------------------------
 
-    let startPos4:number = 0;
+    // let startPos4:number = 0;
 
-    if(!hasOhosLivePhoto) {
-      startPos4 = ohosFileSize - 65;
-    }
+    // if(!hasOhosLivePhoto) {
+    //   startPos4 = ohosFileSize - 65;
+    // }
 
-    if (startPos4 < 0) {
-      hasOhosLivePhoto = 0;
-      this.logger.log(`startPos is ${startPos4} `);
-      return { hasOhosLivePhoto, ohosFileSize, ohosVideoOffset };
-    }
+    // if (startPos4 < 0) {
+    //   hasOhosLivePhoto = 0;
+    //   this.logger.log(`startPos is ${startPos4} `);
+    //   return { hasOhosLivePhoto, ohosFileSize, ohosVideoOffset };
+    // }
 
-    const buffer4 = Buffer.alloc(29);
-    const fd_4 = await fs.open(filePath, 'r');
+    // const buffer4 = Buffer.alloc(29);
+    // const fd_4 = await fs.open(filePath, 'r');
+    // try {
+    //   const { bytesRead } = await fd_4.read(buffer4, 0, 29, startPos4);
+    // } finally {
+    //   await fd_4.close();
+    // }
+
+    // const foundString4 = buffer4.toString('utf8');
+    // //this.logger.log(`foundString is ${foundString3}`);
+    // const isMatch4 = foundString4 === 'mdtacom.openharmony.covertime';
+    // if(isMatch4) {
+    //   hasOhosLivePhoto = 2;
+    //   return { hasOhosLivePhoto, ohosFileSize, ohosVideoOffset };
+    // } else {
+    //   hasOhosLivePhoto = 0;
+    //   return { hasOhosLivePhoto, ohosFileSize, ohosVideoOffset };
+    // }
+
+    const tailLen = 200;
+    const startPos4 = Math.max(0, ohosFileSize - tailLen);
+
+    const buffer4 = Buffer.alloc(tailLen);
+    const fd4 = await fs.open(filePath, 'r');
     try {
-      const { bytesRead } = await fd_4.read(buffer4, 0, 29, startPos4);
+      const { bytesRead } = await fd4.read(buffer4, 0, tailLen, startPos4);
+      const hay = buffer4.slice(0, bytesRead); // 只取有效字节
+      const needle = Buffer.from('mdtacom.openharmony.covertime', 'utf8');
+      const foundIndex = hay.indexOf(needle);
+      const isMatch = foundIndex !== -1;
+      hasOhosLivePhoto = isMatch ? 2 : 0;
+      return { hasOhosLivePhoto, ohosFileSize, ohosVideoOffset };
     } finally {
-      await fd_4.close();
-    }
-
-    const foundString4 = buffer4.toString('utf8');
-    //this.logger.log(`foundString is ${foundString3}`);
-    const isMatch4 = foundString4 === 'mdtacom.openharmony.covertime';
-    if(isMatch4) {
-      hasOhosLivePhoto = 2;
-      return { hasOhosLivePhoto, ohosFileSize, ohosVideoOffset };
-    } else {
-      hasOhosLivePhoto = 0;
-      return { hasOhosLivePhoto, ohosFileSize, ohosVideoOffset };
+      await fd4.close();
     }
 
     return { hasOhosLivePhoto, ohosFileSize, ohosVideoOffset };
