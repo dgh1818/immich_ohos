@@ -428,13 +428,20 @@ class BackupService {
     return !anyErrors;
   }
 
-  Future<void> uploadImageDirectly(XFile image) async {
+  Future<void> uploadImageDirectly(XFile image, XFile? liveFile) async {
     final deviceId = Store.get(StoreKey.deviceId);
     final endpoint = Store.get(StoreKey.serverEndpoint);
     final accessToken = Store.get(StoreKey.accessToken);
 
     // 1. 准备文件
     final file = File(image.path);
+    late final File? livePhotoFile;
+    if (liveFile != null) {
+      livePhotoFile = File(liveFile.path);
+    } else {
+      livePhotoFile = null;
+    }
+
     final stat = await file.stat();
 
     // 2. 创建唯一标识 - 使用文件路径哈希
@@ -456,13 +463,42 @@ class BackupService {
 
     // 6. 添加表单字段
     baseRequest.fields.addAll({
-      'deviceAssetId': deviceAssetId,
+      'deviceAssetId': file.path,
       'deviceId': deviceId,
       'fileCreatedAt': fileCreatedAt.toUtc().toIso8601String(),
       'fileModifiedAt': fileModifiedAt.toUtc().toIso8601String(),
       'isFavorite': 'false',
       'duration': '0',
     });
+
+    if (liveFile != null && livePhotoFile != null) {
+      final livePhotoTitle = liveFile.name;
+      final livePhotoRawUploadData = http.MultipartFile(
+        "assetData",
+        livePhotoFile.openRead(),
+        livePhotoFile.lengthSync(),
+        filename: livePhotoTitle,
+      );
+      final baseRequest2 = http.MultipartRequest('POST', Uri.parse('$endpoint/assets'))
+        ..headers.addAll(baseRequest.headers)
+        ..fields.addAll(baseRequest.fields);
+
+      baseRequest2.files.add(livePhotoRawUploadData);
+
+      final response = await http.Response.fromStream(await baseRequest2.send());
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final json = jsonDecode(response.body);
+        final id = json.containsKey('id') ? json['id'] : null;
+        if (id != null) {
+          baseRequest.fields['livePhotoVideoId'] = id;
+        }
+        debugPrint('LIVE视频上传成功! 资产ID: ${json['id']}');
+      } else {
+        final error = jsonDecode(response.body);
+        throw Exception('上传失败: ${error['message']}');
+      }
+    }
 
     // 7. 添加文件
     baseRequest.files.add(http.MultipartFile('assetData', file.openRead(), file.lengthSync(), filename: image.name));
