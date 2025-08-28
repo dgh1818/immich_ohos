@@ -7,6 +7,8 @@ import 'package:immich_mobile/models/map/map_marker.model.dart';
 import 'package:immich_mobile/utils/map_utils.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 
+import 'package:flutter/foundation.dart';
+
 extension MapMarkers on MapLibreMapController {
   static var _completer = Completer()..complete();
 
@@ -38,6 +40,17 @@ extension MapMarkers on MapLibreMapController {
     }
 
     await addGeoJSONSourceForMarkers(markers);
+
+    final List<LatLng> totalData = [];
+
+    for (final marker in markers) {
+      totalData.add(marker.latLng);
+      // 使用 marker 的属性或方法
+    }
+
+    if (defaultTargetPlatform == TargetPlatform.ohos) {
+      await addHeatmapData_Ohos(totalData);
+    }
 
     if (Platform.isAndroid) {
       await addCircleLayer(
