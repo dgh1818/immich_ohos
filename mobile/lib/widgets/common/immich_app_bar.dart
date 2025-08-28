@@ -27,6 +27,7 @@ import 'package:immich_mobile/repositories/asset.repository.dart';
 import 'package:immich_mobile/repositories/asset_media.repository.dart';
 
 import 'dart:io';
+import 'package:path/path.dart' as p;
 
 final backupServiceProvider = Provider(
   (ref) => BackupService(
@@ -153,11 +154,33 @@ class ImmichAppBar extends ConsumerWidget implements PreferredSizeWidget {
       final backupService = ref.read(backupServiceProvider);
       int successCount = 0;
 
-      for (final xfile in medias) {
+      for (int i = 0; i < medias.length; i++) {
+        final xfile = medias[i];
         try {
-          // 调用您提供的 uploadImageDirectly 方法
-          await backupService.uploadImageDirectly(xfile);
-          successCount++;
+          if ((i + 1) < medias.length) {
+            final xfileNext = medias[i + 1];
+            final String nextNameWithoutExt = p.basenameWithoutExtension(xfileNext.name);
+            final String nameWithoutExt = p.basenameWithoutExtension(xfile.name);
+            if (nameWithoutExt == nextNameWithoutExt) {
+              await backupService.uploadImageDirectly(xfile, xfileNext);
+              successCount = successCount + 2;
+              i++;
+              final file = File(xfile.path);
+              file.delete();
+              final fileNext = File(xfileNext.path);
+              fileNext.delete();
+            } else {
+              await backupService.uploadImageDirectly(xfile, null);
+              successCount++;
+              final file = File(xfile.path);
+              file.delete();
+            }
+          } else {
+            await backupService.uploadImageDirectly(xfile, null);
+            successCount++;
+            final file = File(xfile.path);
+            file.delete();
+          }
 
           // 每成功上传一个文件显示消息
           ScaffoldMessenger.of(
