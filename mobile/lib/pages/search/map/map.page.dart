@@ -33,6 +33,7 @@ import 'package:immich_mobile/widgets/map/positioned_asset_marker_icon.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 
 import 'package:logging/logging.dart';
+import 'package:coordtransform_dart/coordtransform_dart.dart';
 
 @RoutePage()
 class MapPage extends HookConsumerWidget {
@@ -114,7 +115,9 @@ class MapPage extends HookConsumerWidget {
 
     // updates the selected markers position based on the current map camera
     Future<void> updateAssetMarkerPosition(MapMarker marker, {bool shouldAnimate = true}) async {
-      final assetPoint = await mapController.value!.toScreenLocation(marker.latLng);
+      final outLngLat = CoordinateTransformUtil.wgs84ToGcj02(marker.latLng.longitude, marker.latLng.latitude);
+      final LatLng centreProcessed = LatLng(outLngLat[1], outLngLat[0]);
+      final assetPoint = await mapController.value!.toScreenLocation(centreProcessed);
       selectedMarker.value = _AssetMarkerMeta(point: assetPoint, marker: marker, shouldAnimate: shouldAnimate);
       (assetPoint, marker, shouldAnimate);
     }
