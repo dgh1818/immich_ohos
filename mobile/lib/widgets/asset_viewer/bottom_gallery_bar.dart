@@ -29,6 +29,8 @@ import 'package:immich_mobile/widgets/common/immich_toast.dart';
 
 import 'package:immich_mobile/utils/selection_handlers.dart';
 
+import 'dart:ui';
+
 class BottomGalleryBar extends ConsumerWidget {
   final ValueNotifier<int> assetIndex;
   final bool showStack;
@@ -169,6 +171,11 @@ class BottomGalleryBar extends ConsumerWidget {
         );
         return;
       }
+
+      final List<Asset> assetList = [asset];
+      // Share = Download + Send to OS specific share sheet
+      handleShareAssets(ref, context, assetList);
+
       //ref.read(downloadStateProvider.notifier).shareAsset(asset, context);
     }
 
@@ -354,5 +361,80 @@ class BottomGalleryBar extends ConsumerWidget {
         ),
       ),
     );
+    // return IgnorePointer(
+    //   ignoring: !showControls,
+    //   child: AnimatedOpacity(
+    //     duration: const Duration(milliseconds: 100),
+    //     opacity: showControls ? 1.0 : 0.0,
+    //     child: ClipRRect(
+    //       borderRadius: BorderRadius.zero, // 如需圆角改为 BorderRadius.circular(12)
+    //       child: Stack(
+    //         children: [
+    //           // 不响应点击的模糊层（这样下面的按钮可以正常接收事件）
+    //           IgnorePointer(
+    //             ignoring: true,
+    //             child: BackdropFilter(
+    //               filter: ImageFilter.blur(sigmaX: 12.0, sigmaY: 12.0),
+    //               child: Container(
+    //                 // 这里填充半透明颜色以增强毛玻璃视觉（可改为白/黑任意透明度）
+    //                 color: Colors.black.withOpacity(0.25),
+    //               ),
+    //             ),
+    //           ),
+
+    //           // 可选：在模糊上加渐变以保留原先效果
+    //           IgnorePointer(
+    //             ignoring: true,
+    //             child: Container(
+    //               decoration: const BoxDecoration(
+    //                 gradient: LinearGradient(
+    //                   begin: Alignment.bottomCenter,
+    //                   end: Alignment.topCenter,
+    //                   colors: [Color(0x66000000), Colors.transparent],
+    //                 ),
+    //               ),
+    //             ),
+    //           ),
+
+    //           // 真正的交互子控件
+    //           Padding(
+    //             padding: const EdgeInsets.only(top: 40.0),
+    //             child: Column(
+    //               children: [
+    //                 if (asset.isVideo) const VideoControls(),
+    //                 BottomNavigationBar(
+    //                   elevation: 0.0,
+    //                   backgroundColor: Colors.transparent,
+    //                   unselectedIconTheme: const IconThemeData(color: Colors.white),
+    //                   selectedIconTheme: const IconThemeData(color: Colors.white),
+    //                   unselectedLabelStyle: const TextStyle(
+    //                     color: Colors.white,
+    //                     fontWeight: FontWeight.w500,
+    //                     height: 2.3,
+    //                   ),
+    //                   selectedLabelStyle: const TextStyle(
+    //                     color: Colors.white,
+    //                     fontWeight: FontWeight.w500,
+    //                     height: 2.3,
+    //                   ),
+    //                   unselectedFontSize: 14,
+    //                   selectedFontSize: 14,
+    //                   selectedItemColor: Colors.white,
+    //                   unselectedItemColor: Colors.white,
+    //                   showSelectedLabels: true,
+    //                   showUnselectedLabels: true,
+    //                   items: albumActions.map((e) => e.keys.first).toList(growable: false),
+    //                   onTap: (index) {
+    //                     albumActions[index].values.first.call(index);
+    //                   },
+    //                 ),
+    //               ],
+    //             ),
+    //           ),
+    //         ],
+    //       ),
+    //     ),
+    //   ),
+    // );
   }
 }
