@@ -97,9 +97,22 @@ https://ost.51cto.com/answer/23898 mapkit开通教程
 <h2>备忘：</h2>
 1. photopicker最大媒体数量从9修改为了500
 
-
+https://github.com/dgh1818/immich_ohos/blob/v1.137.3-merge/%E5%BE%AE%E4%BF%A1%E5%9B%BE%E7%89%87_20250830025443_89_165.jpg?raw=true
 
 <h2>DEMO:</h2>
+
+
+<table align="center">
+  <tr>
+    <td>
+      <img src="https://github.com/dgh1818/immich_ohos/blob/v1.137.3-merge/%E5%BE%AE%E4%BF%A1%E5%9B%BE%E7%89%87_20250830024549_88_165.jpg" alt="手机1" width="400">
+    </td>
+    <td>
+      <img src="https://github.com/dgh1818/immich_ohos/blob/v1.137.3-merge/%E5%BE%AE%E4%BF%A1%E5%9B%BE%E7%89%87_20250830025443_89_165.jpg" alt="手机2" width="400">
+    </td>
+  </tr>
+</table>
+
 
 <p align="center">
   <img src="https://github.com/user-attachments/assets/bcd88029-4e22-4742-95ae-77477a2fc855" alt="平板1" width="800" />
