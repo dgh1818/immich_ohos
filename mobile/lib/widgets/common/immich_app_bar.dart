@@ -183,16 +183,19 @@ class ImmichAppBar extends ConsumerWidget implements PreferredSizeWidget {
           }
 
           // 每成功上传一个文件显示消息
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text('“${xfile.name}” 上传成功'), duration: const Duration(seconds: 1)));
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('“${xfile.name}” 上传成功: $successCount / ${medias.length}'),
+              duration: const Duration(seconds: 1),
+            ),
+          );
         } catch (e) {
           debugPrint('上传失败: ${xfile.name} — $e');
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('“${xfile.name}” 上传失败: ${e.toString()}'),
               backgroundColor: Colors.redAccent,
-              duration: const Duration(seconds: 3),
+              duration: const Duration(seconds: 10),
             ),
           );
         }
