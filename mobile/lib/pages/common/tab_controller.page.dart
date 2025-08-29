@@ -15,6 +15,8 @@ import 'package:immich_mobile/routing/router.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:flutter_hooks/flutter_hooks.dart' hide Store;
 
+import 'dart:ui';
+
 @RoutePage()
 class TabControllerPage extends HookConsumerWidget {
   const TabControllerPage({super.key});
@@ -111,10 +113,40 @@ class TabControllerPage extends HookConsumerWidget {
     ];
 
     Widget bottomNavigationBar(TabsRouter tabsRouter) {
-      return NavigationBar(
-        selectedIndex: tabsRouter.activeIndex,
-        onDestinationSelected: (index) => onNavigationSelected(tabsRouter, index),
-        destinations: navigationDestinations,
+      return Stack(
+        children: [
+          // 1. 毛玻璃背景 - 延伸到屏幕底部，使用IgnorePointer不拦截点击
+          Positioned.fill(
+            child: IgnorePointer(
+              child: ClipRect(
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
+                  child: Container(decoration: BoxDecoration(color: Colors.white.withOpacity(0.2))),
+                ),
+              ),
+            ),
+          ),
+
+          // 2. 导航栏内容 - 可点击部分，使用SafeArea确保图标不被系统UI遮挡
+          Positioned(
+            left: 0,
+            right: 0,
+            //bottom: 0.5 * bottomPadding, // 考虑安全区
+            bottom: 0, // 考虑安全区
+            child: SafeArea(
+              bottom: false,
+              child: Container(
+                height: kBottomNavigationBarHeight,
+                child: NavigationBar(
+                  selectedIndex: tabsRouter.activeIndex,
+                  onDestinationSelected: (index) => onNavigationSelected(tabsRouter, index),
+                  destinations: navigationDestinations,
+                  backgroundColor: Colors.transparent,
+                ),
+              ),
+            ),
+          ),
+        ],
       );
     }
 
@@ -210,8 +242,33 @@ class TabControllerPage extends HookConsumerWidget {
                       ),
                     ],
                   )
-                : child,
-            bottomNavigationBar: multiselectEnabled || isScreenLandscape ? null : bottomNavigationBar(tabsRouter),
+                : Stack(
+                    children: [
+                      // 1) 页面主体：移除系统 top/bottom padding（防止被顶起）
+                      Positioned.fill(
+                        child: MediaQuery.removePadding(
+                          context: context,
+                          removeTop: false,
+                          removeBottom: true,
+                          child: heroedChild,
+                        ),
+                      ),
+
+                      // 3) 把底部导航栏作为 Stack 最上层的 Positioned（仅在未开启多选且竖屏时显示）
+                      if (!multiselectEnabled)
+                        Positioned(
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          child: Container(
+                            height: 0.8 * kBottomNavigationBarHeight + MediaQuery.of(context).padding.bottom,
+                            child: bottomNavigationBar(tabsRouter),
+                          ),
+                        ),
+                    ],
+                  ),
+            //bottomNavigationBar: multiselectEnabled || isScreenLandscape ? null : bottomNavigationBar(tabsRouter),
+            bottomNavigationBar: null,
           ),
         );
       },

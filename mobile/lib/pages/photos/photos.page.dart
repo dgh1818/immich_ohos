@@ -133,6 +133,7 @@ class PhotosPage extends HookConsumerWidget {
 
     return Scaffold(
       extendBodyBehindAppBar: true,
+      extendBody: true,
       body: Stack(
         children: [
           // 1. 网格——去掉任何 top padding

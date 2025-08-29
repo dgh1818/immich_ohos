@@ -212,6 +212,7 @@ class _TabShellPageState extends ConsumerState<TabShellPage> with SingleTickerPr
           canPop: tabsRouter.activeIndex == 0,
           onPopInvokedWithResult: (didPop, _) => !didPop ? tabsRouter.setActiveIndex(0) : null,
           child: Scaffold(
+            extendBody: !isScreenLandscape,
             resizeToAvoidBottomInset: false,
             body: isScreenLandscape
                 ? Stack(
