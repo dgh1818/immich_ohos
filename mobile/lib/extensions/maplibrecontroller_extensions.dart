@@ -26,9 +26,22 @@ extension MapMarkers on MapLibreMapController {
     }
     _completer = Completer();
 
+    final List<LatLng> totalData = [];
+
+    for (final marker in markers) {
+      totalData.add(marker.latLng);
+      // 使用 marker 的属性或方法
+    }
+
+    if (defaultTargetPlatform == TargetPlatform.ohos) {
+      print("enter addHeatmapData_Ohos");
+      await addHeatmapData_Ohos(totalData);
+    }
+
     // !! Make sure to remove layers before sources else the native
     // maplibre library would crash when removing the source saying that
     // the source is still in use
+    /*
     final existingLayers = await getLayerIds();
     if (existingLayers.contains(MapUtils.defaultHeatMapLayerId)) {
       await removeLayer(MapUtils.defaultHeatMapLayerId);
@@ -40,17 +53,6 @@ extension MapMarkers on MapLibreMapController {
     }
 
     await addGeoJSONSourceForMarkers(markers);
-
-    final List<LatLng> totalData = [];
-
-    for (final marker in markers) {
-      totalData.add(marker.latLng);
-      // 使用 marker 的属性或方法
-    }
-
-    if (defaultTargetPlatform == TargetPlatform.ohos) {
-      await addHeatmapData_Ohos(totalData);
-    }
 
     if (Platform.isAndroid) {
       await addCircleLayer(
@@ -75,6 +77,7 @@ extension MapMarkers on MapLibreMapController {
         MapUtils.defaultHeatMapLayerProperties,
       );
     }
+*/
 
     _completer.complete();
   }
