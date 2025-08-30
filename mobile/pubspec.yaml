@@ -91,8 +91,13 @@ dependencies:
 
   drift_sqflite: ^2.0.1
   pigeon: ^25.3.1
+  image_gallery_saver: ^2.0.3
 
 dependency_overrides:
+  image_gallery_saver:
+     git:
+      url: 'https://gitcode.com/openharmony-sig/flutter_image_gallery_saver.git'
+      path: './'
   network_info_plus:
      git:
       url: 'https://github.com/dgh1818/plus_plugins.git'
@@ -136,7 +141,7 @@ dependency_overrides:
     git:
       url: https://gitcode.com/openharmony-sig/flutter_packages.git
       path: 'packages/path_provider/path_provider'
-      #ref: 8c61f19e816168efc212cca5c4fbf9ac183ee90e
+      #ref: br_path_provider-v2.1.5_ohos
   package_info_plus:
     git:
       url: https://gitcode.com/openharmony-sig/flutter_plus_plugins.git
@@ -190,7 +195,7 @@ dependency_overrides:
     git:
       url: https://gitcode.com/openharmony-sig/flutter_packages.git
       path: 'packages/url_launcher/url_launcher'
-      #ref: 8c61f19e816168efc212cca5c4fbf9ac183ee90e
+      #ref: br_url_launcher-v6.3.0_ohos
   path_provider_platform_interface:
     git:
       url: https://gitcode.com/openharmony-sig/flutter_packages.git

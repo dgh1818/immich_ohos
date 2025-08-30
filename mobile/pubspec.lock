@@ -928,6 +928,15 @@ packages:
       url: "https://pub.flutter-io.cn"
     source: hosted
     version: "4.5.4"
+  image_gallery_saver:
+    dependency: "direct main"
+    description:
+      path: "."
+      ref: HEAD
+      resolved-ref: f61be7fe7f68cc5e97b8766cd9a06f264b847dad
+      url: "https://gitcode.com/openharmony-sig/flutter_image_gallery_saver.git"
+    source: git
+    version: "2.0.3"
   image_picker:
     dependency: "direct main"
     description:
@@ -978,9 +987,11 @@ packages:
   image_picker_ohos:
     dependency: transitive
     description:
-      path: "../../package_flutter/image_picker/image_picker_ohos"
-      relative: true
-    source: path
+      path: image_picker_ohos
+      ref: HEAD
+      resolved-ref: "6a904ca55c9796d81f4ad70a6ff0803936fb662f"
+      url: "https://github.com/dgh1818/image_picker_ohos.git"
+    source: git
     version: "0.8.7+4"
   image_picker_platform_interface:
     dependency: transitive
@@ -1321,7 +1332,7 @@ packages:
     description:
       path: "packages/path_provider/path_provider"
       ref: HEAD
-      resolved-ref: "28b2d08fbc1163ea7156da0f13c30d6fa49629c2"
+      resolved-ref: "2804fe116ffd69ef62519e50b6cbb2a4c647ca16"
       url: "https://gitcode.com/openharmony-sig/flutter_packages.git"
     source: git
     version: "2.1.0"
@@ -1354,7 +1365,7 @@ packages:
     description:
       path: "packages/path_provider/path_provider_ohos"
       ref: HEAD
-      resolved-ref: "28b2d08fbc1163ea7156da0f13c30d6fa49629c2"
+      resolved-ref: "2804fe116ffd69ef62519e50b6cbb2a4c647ca16"
       url: "https://gitcode.com/openharmony-tpc/flutter_packages.git"
     source: git
     version: "2.2.1"
@@ -1363,7 +1374,7 @@ packages:
     description:
       path: "packages/path_provider/path_provider_platform_interface"
       ref: HEAD
-      resolved-ref: "28b2d08fbc1163ea7156da0f13c30d6fa49629c2"
+      resolved-ref: "2804fe116ffd69ef62519e50b6cbb2a4c647ca16"
       url: "https://gitcode.com/openharmony-sig/flutter_packages.git"
     source: git
     version: "2.1.0"
@@ -1429,10 +1440,10 @@ packages:
     dependency: transitive
     description:
       name: petitparser
-      sha256: "07c8f0b1913bcde1ff0d26e57ace2f3012ccbf2b204e070290dad3bb22797646"
+      sha256: "1a97266a94f7350d30ae522c0af07890c70b8e62c71e8e3920d1db4d23c057d1"
       url: "https://pub.flutter-io.cn"
     source: hosted
-    version: "6.1.0"
+    version: "7.0.1"
   photo_manager:
     dependency: "direct main"
     description:
@@ -2019,7 +2030,7 @@ packages:
     description:
       path: "packages/url_launcher/url_launcher"
       ref: HEAD
-      resolved-ref: "28b2d08fbc1163ea7156da0f13c30d6fa49629c2"
+      resolved-ref: "2804fe116ffd69ef62519e50b6cbb2a4c647ca16"
       url: "https://gitcode.com/openharmony-sig/flutter_packages.git"
     source: git
     version: "6.1.12"
@@ -2060,7 +2071,7 @@ packages:
     description:
       path: "packages/url_launcher/url_launcher_ohos"
       ref: HEAD
-      resolved-ref: "28b2d08fbc1163ea7156da0f13c30d6fa49629c2"
+      resolved-ref: "2804fe116ffd69ef62519e50b6cbb2a4c647ca16"
       url: "https://gitcode.com/openharmony-tpc/flutter_packages.git"
     source: git
     version: "6.0.38"
@@ -2116,10 +2127,10 @@ packages:
     dependency: transitive
     description:
       name: vector_graphics_compiler
-      sha256: ca81fdfaf62a5ab45d7296614aea108d2c7d0efca8393e96174bf4d51e6725b0
+      sha256: d354a7ec6931e6047785f4db12a1f61ec3d43b207fc0790f863818543f8ff0dc
       url: "https://pub.flutter-io.cn"
     source: hosted
-    version: "1.1.18"
+    version: "1.1.19"
   vector_math:
     dependency: transitive
     description:
@@ -2208,10 +2219,10 @@ packages:
     dependency: transitive
     description:
       name: watcher
-      sha256: "0b7fd4a0bbc4b92641dbf20adfd7e3fd1398fe17102d94b674234563e110088a"
+      sha256: "5bf046f41320ac97a469d506261797f35254fa61c641741ef32dacda98b7d39c"
       url: "https://pub.flutter-io.cn"
     source: hosted
-    version: "1.1.2"
+    version: "1.1.3"
   web:
     dependency: transitive
     description:
@@ -2288,10 +2299,10 @@ packages:
     dependency: transitive
     description:
       name: xml
-      sha256: b015a8ad1c488f66851d762d3090a21c600e479dc75e68328c52774040cf9226
+      sha256: "971043b3a0d3da28727e40ed3e0b5d18b742fa5a68665cca88e74b7876d5e025"
       url: "https://pub.flutter-io.cn"
     source: hosted
-    version: "6.5.0"
+    version: "6.6.1"
   xxh3:
     dependency: transitive
     description:
