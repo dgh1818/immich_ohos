@@ -9,6 +9,7 @@ import 'package:logging/logging.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'api.service.dart';
+import 'package:image_gallery_saver/image_gallery_saver.dart';
 
 final shareServiceProvider = Provider((ref) => ShareService(ref.watch(apiServiceProvider)));
 
@@ -65,6 +66,34 @@ class ShareService {
       return true;
     } catch (error) {
       _log.severe("Share failed", error);
+    }
+    return false;
+  }
+
+  Future<bool> saveAssets(List<Asset> assets, BuildContext context) async {
+    try {
+      final downloadedXFiles = <XFile>[];
+
+      for (var asset in assets) {
+        final tempDir = await getTemporaryDirectory();
+        final fileName = asset.fileName;
+        final tempFile = await File('${tempDir.path}/$fileName').create();
+        final res = await _apiService.assetsApi.downloadAssetWithHttpInfo(asset.remoteId!);
+
+        if (res.statusCode != 200) {
+          _log.severe("Asset download for ${asset.fileName} failed", res.toLoggerString());
+          continue;
+        }
+
+        tempFile.writeAsBytesSync(res.bodyBytes);
+        downloadedXFiles.add(XFile(tempFile.path));
+        final result = await ImageGallerySaver.saveFile(tempFile.path, isReturnPathOfIOS: true);
+        tempFile.delete();
+        //}
+      }
+      return true;
+    } catch (error) {
+      _log.severe("Save failed", error);
     }
     return false;
   }

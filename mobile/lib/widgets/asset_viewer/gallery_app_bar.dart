@@ -22,6 +22,8 @@ import 'package:immich_mobile/widgets/asset_grid/upload_dialog.dart';
 import 'package:immich_mobile/widgets/asset_viewer/top_control_app_bar.dart';
 import 'package:immich_mobile/widgets/common/immich_toast.dart';
 
+import 'package:immich_mobile/utils/selection_handlers.dart';
+
 class GalleryAppBar extends ConsumerWidget {
   final void Function() showInfo;
 
@@ -79,11 +81,13 @@ class GalleryAppBar extends ConsumerWidget {
       );
     }
 
-    /*
-    handleDownloadAsset() {
-      ref.read(downloadStateProvider.notifier).downloadAsset(asset);
-    }
-*/
+    handleDownloadAsset(Asset asset) {
+      // if(asset.isMotionPhoto){
+      // TO DO
+
+      // }
+      handleSaveAssets(ref, context, [asset]);
+    } //
 
     handleLocateAsset() async {
       // Go back to the gallery
@@ -110,7 +114,7 @@ class GalleryAppBar extends ConsumerWidget {
             onFavorite: toggleFavorite,
             onRestorePressed: () => handleRestore(asset),
             onUploadPressed: asset.isLocal ? () => handleUpload(asset) : null,
-            onDownloadPressed: asset.isLocal ? null : null,
+            onDownloadPressed: asset.isLocal ? null : () => handleDownloadAsset(asset),
             onAddToAlbumPressed: () => addToAlbum(asset),
             onActivitiesPressed: handleActivities,
           ),
