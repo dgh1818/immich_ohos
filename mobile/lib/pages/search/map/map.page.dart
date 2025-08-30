@@ -34,6 +34,7 @@ import 'package:maplibre_gl/maplibre_gl.dart';
 
 import 'package:logging/logging.dart';
 import 'package:coordtransform_dart/coordtransform_dart.dart';
+import 'package:flutter/services.dart';
 
 @RoutePage()
 class MapPage extends HookConsumerWidget {
@@ -78,6 +79,13 @@ class MapPage extends HookConsumerWidget {
     // removes all sources and layers and re-adds them with the updated markers
     Future<void> reloadLayers() async {
       if (mapController.value != null) {
+        ByteData mapMarkData = await rootBundle.load("assets/location-pin.png");
+        if (initialLocation != null) {
+          final outLngLat = CoordinateTransformUtil.wgs84ToGcj02(initialLocation!.longitude, initialLocation!.latitude);
+          final LatLng centreProcessed = LatLng(outLngLat[1], outLngLat[0]);
+          await mapController.value?.addMarkerAtLatLng_Ohos(centreProcessed, mapMarkData, 0.15);
+        }
+
         layerDebouncer.run(() => mapController.value!.reloadAllLayersForMarkers(markers.value));
       }
     }

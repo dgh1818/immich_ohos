@@ -6,6 +6,9 @@ import 'package:immich_mobile/widgets/map/map_thumbnail.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import 'package:immich_mobile/routing/router.dart';
+import 'package:auto_route/auto_route.dart';
+
 class ExifMap extends StatelessWidget {
   final ExifInfo exifInfo;
   final String? markerId;
@@ -61,6 +64,11 @@ class ExifMap extends StatelessWidget {
           width: constraints.maxWidth,
           zoom: 12.0,
           assetMarkerRemoteId: markerId,
+          onTap: (tapPosition, latLong) async {
+            context.pushRoute<LatLng?>(
+              MapRoute(initialLocation: LatLng(exifInfo.latitude ?? 0, exifInfo.longitude ?? 0)),
+            );
+          },
           /*
           onTap: (tapPosition, latLong) async {
             Uri? uri = await createCoordinatesUri();
