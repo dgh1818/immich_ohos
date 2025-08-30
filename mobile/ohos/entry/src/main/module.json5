@@ -72,7 +72,7 @@
         },
       },
       {"name" :  "ohos.permission.GET_WIFI_INFO",
-        reason: "$string:backup_desc",
+        reason: "$string:WIFI_INFO_desc",
         usedScene: {
           when: "always",
         }
