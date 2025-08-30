@@ -134,6 +134,22 @@ export class Convert {
 
   }
 
+  public static toJson(position?:mapCommon.CameraPosition):Map<string, ESObject> {
+    console.error("enter to json")
+    let data:Map<string, ESObject> = new Map<string, ESObject>();
+    if (position == undefined) {
+      return data;
+    }
+
+    data.set("bearing", position.bearing);
+    data.set("target", [position.target.latitude,position.target.longitude]);
+    data.set("tilt", position.tilt);
+    data.set("zoom", position.zoom);
+    //console.error("bearing:"+position?.bearing + " target:" +position.target.longitude)
+
+    return data;
+  }
+
   static toLatLngBounds(o: number[][]): mapCommon.LatLngBounds {
     // if (o == null) {
     //   return null;
@@ -161,8 +177,8 @@ export class Convert {
   }
 
   static toPixels(o:number, density:number):number {
-  return Convert.toFractionalPixels(o, density);
-}
+    return Convert.toFractionalPixels(o, density);
+  }
 
   private static toPoint(o:number[],density:number):mapCommon.MapPoint {
 
@@ -171,10 +187,10 @@ export class Convert {
       positionY:Convert.toPixels(o[1], density)
     }
 
-  return point;
-}
+    return point;
+  }
 
-  static parseCameraUpdate(cameraUpdate:ArrayList<ESObject>,mapLibreMapController:MapLibreMapController,density:number): map.CameraUpdate|undefined{
+  static parseCameraUpdate(cameraUpdate:ArrayList<ESObject>,mapLibreMapController:MapLibreMapController,density:number): map.CameraUpdate|undefined {
     let input_type:string = cameraUpdate[0] as string;
     let CameraUpdateOutput:map.CameraUpdate;
     console.error('parseCameraUpdate=' + input_type);
@@ -261,14 +277,14 @@ export class Convert {
         }
         return map.scrollBy(Convert.toFractionalPixels(x, density), Convert.toFractionalPixels(y, density))
       case "zoomBy":
-      let zoomBy:number = cameraUpdate[1] as number;
+        let zoomBy:number = cameraUpdate[1] as number;
 
-      if (cameraUpdate.length == 2) {
-        return map.zoomBy(zoomBy);
-      } else {
-        let point:number[] = cameraUpdate[2] as number[];
-        return map.zoomBy(zoomBy, Convert.toPoint(point, density));
-      }
+        if (cameraUpdate.length == 2) {
+          return map.zoomBy(zoomBy);
+        } else {
+          let point:number[] = cameraUpdate[2] as number[];
+          return map.zoomBy(zoomBy, Convert.toPoint(point, density));
+        }
       case "zoomIn":
         return map.zoomIn();
       case "zoomOut":

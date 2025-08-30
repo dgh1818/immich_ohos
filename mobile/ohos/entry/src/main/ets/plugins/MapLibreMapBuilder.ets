@@ -30,7 +30,7 @@ export struct MapOhosMap {
   public mapLibreMapController_link: SubscribedAbstractProperty<MapLibreMapController> = AppStorage.link('mapLibreMapController');
   public mapLibreMapController:MapLibreMapController = this.params.platformView as MapLibreMapController
   methodChannel:MethodChannel = this.mapLibreMapController.methodChannel;
-    aboutToAppear(): void {
+  aboutToAppear(): void {
     //地图初始化参数，设置地图中心点坐标及层级
     this.mapOptions = {
       position: {
@@ -41,19 +41,16 @@ export struct MapOhosMap {
         zoom: 10
       }
     };
-
     //地图初始化的回调
     this.callback = async (err, mapController) => {
       if (!err) {
         // 获取地图的控制器类，用来操作地图
-
         this.mapController = mapController;
         //this.mapLibreMapController_link.get().mapController = mapController;
         this.mapController_link.set(mapController);
         this.mapLibreMapController_link.get().init();
-        this.mapLibreMapController_link.get().mapEventManager = this.mapController!.getEventManager();
         this.mapEventManager = this.mapController.getEventManager();
-        this.mapController?.moveCamera(this.mapLibreMapController.cameraUpdate);
+        //this.mapController?.moveCamera(this.mapLibreMapController.cameraUpdate);
         let callback = () => {
           console.info(this.TAG, `on-mapLoad`);
           this.methodChannel.invokeMethod("map#onStyleLoaded", "");
@@ -73,6 +70,5 @@ export struct MapOhosMap {
 
 @Builder
 export function MapOhosMapBuilder(params: Params) { // 需要通过@Builder的方式来导出原生组件
-  //params.platformView.
   MapOhosMap({ params: params })   // 注意这里的params参数必不可少
 }
