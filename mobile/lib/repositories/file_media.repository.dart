@@ -7,11 +7,14 @@ import 'package:immich_mobile/entities/asset.entity.dart' hide AssetType;
 import 'package:immich_mobile/repositories/asset_media.repository.dart';
 import 'package:photo_manager/photo_manager.dart' hide AssetType;
 
+import 'package:image_gallery_saver/image_gallery_saver.dart';
+
 final fileMediaRepositoryProvider = Provider((ref) => const FileMediaRepository());
 
 class FileMediaRepository {
   const FileMediaRepository();
   Future<Asset?> saveImage(Uint8List data, {required String title, String? relativePath}) async {
+    final result = await ImageGallerySaver.saveImage(data, name: title);
     final entity = await PhotoManager.editor.saveImage(data, filename: title, title: title, relativePath: relativePath);
     return AssetMediaRepository.toAsset(entity);
   }
@@ -29,6 +32,7 @@ class FileMediaRepository {
   }
 
   Future<Asset?> saveImageWithFile(String filePath, {String? title, String? relativePath}) async {
+    final result = await ImageGallerySaver.saveFile(filePath, name: title, isReturnPathOfIOS: true);
     final entity = await PhotoManager.editor.saveImageWithPath(filePath, title: title, relativePath: relativePath);
     return AssetMediaRepository.toAsset(entity);
   }
