@@ -94,6 +94,16 @@ dependencies:
   image_gallery_saver: ^2.0.3
 
 dependency_overrides:
+  local_auth: 
+    git:
+      url: 'https://gitcode.com/openharmony-sig/flutter_packages.git'
+      path: 'packages/local_auth/local_auth'
+      ref: br_local_auth-v2.3.0_ohos
+  pinput:
+    git:
+      url: 'https://github.com/dgh1818/Flutter_Pinput_ohos'
+      path: './'
+      #ref: br_local_auth-v2.3.0_ohos
   image_gallery_saver:
      git:
       url: 'https://gitcode.com/openharmony-sig/flutter_image_gallery_saver.git'
