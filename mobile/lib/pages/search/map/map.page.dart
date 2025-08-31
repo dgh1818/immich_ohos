@@ -35,6 +35,8 @@ import 'package:maplibre_gl/maplibre_gl.dart';
 import 'package:logging/logging.dart';
 import 'package:coordtransform_dart/coordtransform_dart.dart';
 import 'package:flutter/services.dart';
+import 'dart:ui' as ui;
+import 'package:immich_mobile/main.dart';
 
 @RoutePage()
 class MapPage extends HookConsumerWidget {
@@ -56,6 +58,21 @@ class MapPage extends HookConsumerWidget {
     final selectedAssets = useValueNotifier<Set<Asset>>({});
     const mapZoomToAssetLevel = 12.0;
     final Logger _log = Logger("map service");
+
+    final routeAware = useMemoized(() => _MyRouteAware());
+
+    useEffect(() {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final modalRoute = ModalRoute.of(context);
+        if (modalRoute is PageRoute) {
+          routeObserver.subscribe(routeAware, modalRoute);
+        }
+      });
+
+      return () {
+        routeObserver.unsubscribe(routeAware);
+      };
+    }, [context]);
 
     // updates the markersInBounds value with the map markers that are visible in the current
     // map camera bounds
@@ -395,4 +412,27 @@ class _MapWithMarker extends StatelessWidget {
       ),
     );
   }
+}
+
+class _MyRouteAware extends RouteAware {
+  //@override
+  // void didPopNext() {
+  //   super.didPopNext();
+  //   ui.SetHdr.setHdrMode(hdr: 0, is_image: true);
+  // }
+  // void didPush() { }
+
+  // @override
+  // void didPop() {
+  //   ui.SetHdr.setHdrMode(hdr: 0, is_image: true);
+  //   super.didPop();
+  // }
+
+  @override
+  didPush() {
+    ui.SetHdr.setHdrMode(hdr: 0, is_image: true);
+    super.didPushNext();
+  }
+
+  // void didPushNext() { }
 }
