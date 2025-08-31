@@ -626,7 +626,7 @@ abstract class IntlKeys {
   static const backup_options = 'backup_options';
   static const backup_options_page_title = 'backup_options_page_title';
   static const backup_setting_subtitle = 'backup_setting_subtitle';
-  static const backup_settings_subtitle = 'backup_settings_subtitle';
+  static const backup_settings_subtitle = 'backup_setting_subtitle';
   static const backward = 'backward';
   static const beta_sync = 'beta_sync';
   static const beta_sync_subtitle = 'beta_sync_subtitle';
