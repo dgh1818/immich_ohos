@@ -55,6 +55,7 @@
 //      }
     ],
     requestPermissions: [
+      { name: "ohos.permission.ACCESS_BIOMETRIC"},
       { name: "ohos.permission.INTERNET" },
       { name: "ohos.permission.VIBRATE" },
       {
