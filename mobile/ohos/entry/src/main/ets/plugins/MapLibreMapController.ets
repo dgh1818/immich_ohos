@@ -88,6 +88,7 @@ export class MapLibreMapController extends PlatformView implements MethodCallHan
   addedFeature?:ArrayList<Feature>
   styleImage?:Map<string,image.ImageSource>
   public heatmap?:map.Heatmap;
+  public markerAdded:map.Marker[] = [];
   // addedFeature?:ArrayList<map.BaseOverlay>
   // styleImage?:Map<string,image.ImageSource>
   // stylelayer?:Map<string,ArrayList<map.BaseOverlay>>;
@@ -634,7 +635,17 @@ export class MapLibreMapController extends PlatformView implements MethodCallHan
         };
 
         console.error("enter controller marker");
-        this.mapController?.addMarker(markerOptions);
+
+        if(this.markerAdded.length!=0) {
+          this.markerAdded[0].remove();
+          this.markerAdded.pop();
+        }
+
+        let markerExisted:map.Marker|undefined = await this.mapController?.addMarker(markerOptions);
+        if(markerExisted!=undefined) {
+          this.markerAdded.push(markerExisted);
+        }
+
         // .then((result: map.Marker) => {
         //   this.addedFeature?.add(result);
         // })

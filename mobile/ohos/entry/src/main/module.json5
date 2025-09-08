@@ -78,7 +78,17 @@
           when: "always",
         }
       },
-//      },
+      {
+        name: "ohos.permission.LOCATION",
+        reason: "$string:location_desc",
+        usedScene: {
+          when: "always",
+        },
+      },
+
+
+
+      //      },
       //      {
       //        name: "ohos.permission.SYSTEM_FLOAT_WINDOW",
       //        reason: "$string:video_play",

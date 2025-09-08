@@ -23,6 +23,10 @@
     {
       "name": "video_play",
       "value": "play video"
+    },
+    {
+      "name": "location_desc",
+      "value": "修改照片位置选取当前位置时需要定位权限"
     }
   ]
 }
