@@ -43,10 +43,12 @@ class MapLocationPickerPage extends HookConsumerWidget {
       if (marker.value != null) {
         if (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS) {
           await controller.value?.updateSymbol(marker.value!, SymbolOptions(geometry: centre));
-        } else {
-          ByteData mapMarkData = await rootBundle.load("assets/location-pin.png");
-          await controller.value?.addMarkerAtLatLng_Ohos(centre, mapMarkData, 0.15);
         }
+      }
+
+      if (defaultTargetPlatform == TargetPlatform.ohos) {
+        ByteData mapMarkData = await rootBundle.load("assets/location-pin.png");
+        await controller.value?.addMarkerAtLatLng_Ohos(centre, mapMarkData, 0.15);
       }
     }
 
