@@ -1115,10 +1115,10 @@ packages:
   local_auth:
     dependency: "direct main"
     description:
-      path: "packages/local_auth/local_auth"
-      ref: "br_local_auth-v2.3.0_ohos"
-      resolved-ref: b3be7e6267dd2a10f40e127f4133e510a3b69261
-      url: "https://gitcode.com/openharmony-sig/flutter_packages.git"
+      path: local_auth
+      ref: HEAD
+      resolved-ref: cf7289328eae38a3b21311ef1aae351bef684783
+      url: "https://github.com/dgh1818/local_auth_ohos.git"
     source: git
     version: "2.3.0"
   local_auth_android:

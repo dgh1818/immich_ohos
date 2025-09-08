@@ -36,6 +36,7 @@
     "network_info_plus_ohos": "file:./har/network_info_plus_ohos.har",
     "@ohos/flutter_module": "file:./entry",
     "@ohos/flutter_ohos": "file:./har/flutter.har",
-    "image_gallery_saver": "file:./har/image_gallery_saver.har"
+    "image_gallery_saver": "file:./har/image_gallery_saver.har",
+    "local_auth_ohos": "file:./har/local_auth_ohos.har"
   }
 }
