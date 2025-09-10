@@ -75,8 +75,8 @@ class MapBottomSheet extends HookConsumerWidget {
           valueListenable: bottomSheetOffset,
           builder: (context, value, child) {
             return Positioned(
-              right: 0,
-              bottom: context.height * (value + 0.02),
+              right: 3,
+              bottom: context.height * (value + 0.02) + 40,
               child: AnimatedOpacity(
                 opacity: value < 0.8 ? 1 : 0,
                 duration: const Duration(milliseconds: 150),

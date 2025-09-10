@@ -304,8 +304,10 @@ class MapPage extends HookConsumerWidget {
                           onMarkerTapped: onMarkerTapped,
                         ),
                         Positioned(
-                          right: 0,
-                          bottom: context.padding.bottom + 16,
+                          //right: 0,
+                          right: 3,
+                          bottom: 10,
+                          //bottom: context.padding.bottom + 16,
                           child: ElevatedButton(
                             onPressed: onZoomToLocation,
                             style: ElevatedButton.styleFrom(shape: const CircleBorder()),
@@ -394,7 +396,7 @@ class _MapWithMarker extends StatelessWidget {
                 myLocationEnabled: false,
                 attributionButtonPosition: AttributionButtonPosition.topRight,
                 rotateGesturesEnabled: false,
-                zoomGesturesEnabled: false,
+                zoomGesturesEnabled: true,
               ),
             ),
             ValueListenableBuilder(
