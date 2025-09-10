@@ -2,6 +2,8 @@ import 'package:immich_mobile/constants/colors.dart';
 import 'package:immich_mobile/domain/models/store.model.dart';
 import 'package:immich_mobile/entities/store.entity.dart';
 
+import 'package:flutter/material.dart';
+
 enum AppSettingsEnum<T> {
   loadPreview<bool>(StoreKey.loadPreview, "loadPreview", false),
   loadOriginal<bool>(StoreKey.loadOriginal, "loadOriginal", true),
@@ -9,7 +11,7 @@ enum AppSettingsEnum<T> {
   primaryColor<String>(StoreKey.primaryColor, "primaryColor", defaultColorPresetName),
   dynamicTheme<bool>(StoreKey.dynamicTheme, "dynamicTheme", false),
   colorfulInterface<bool>(StoreKey.colorfulInterface, "colorfulInterface", true),
-  tilesPerRow<int>(StoreKey.tilesPerRow, "tilesPerRow", 6),
+  tilesPerRow<int>(StoreKey.tilesPerRow, "tilesPerRow", 3),
   dynamicLayout<bool>(StoreKey.dynamicLayout, "dynamicLayout", false),
   groupAssetsBy<int>(StoreKey.groupAssetsBy, "groupBy", 0),
   uploadErrorNotificationGracePeriod<int>(
@@ -60,11 +62,37 @@ enum AppSettingsEnum<T> {
 
 class AppSettingsService {
   const AppSettingsService();
-  T getSetting<T>(AppSettingsEnum<T> setting) {
+  T getSetting<T>(AppSettingsEnum<T> setting, {BuildContext? context}) {
+    if (setting == AppSettingsEnum.tilesPerRow) {
+      final T runtimeDefault = _tilesPerRowDefault(context) as T;
+      return Store.get(setting.storeKey, runtimeDefault);
+    }
+
     return Store.get(setting.storeKey, setting.defaultValue);
   }
 
   Future<void> setSetting<T>(AppSettingsEnum<T> setting, T value) {
     return Store.put(setting.storeKey, value);
+  }
+
+  int _tilesPerRowDefault(BuildContext? context) {
+    // 如果没有传 context，就退回 enum 中的默认值（保持原有行为）
+    if (context == null) {
+      return AppSettingsEnum.tilesPerRow.defaultValue;
+    }
+
+    try {
+      final dynamic maybeIsMobile = (context as dynamic).isMobile;
+      if (maybeIsMobile is bool) {
+        return maybeIsMobile ? 3 : 6; // 手机 6，平板 8（可按需调整）
+      }
+    } catch (_) {
+      // 忽略异常，继续使用 MediaQuery 回退检测
+    }
+
+    // 常用的平板检测：最短边 >= 600 认为是平板/大屏
+    final shortestSide = MediaQuery.of(context).size.shortestSide;
+    final isMobile = shortestSide < 600;
+    return isMobile ? 3 : 6;
   }
 }
