@@ -2,7 +2,7 @@ import 'package:pigeon/pigeon.dart';
 
 @ConfigurePigeon(
   PigeonOptions(
-    dartOut: 'lib/platform/thumbnail_api.g.dart',
+    dartOut: 'lib/platform/thumbnail_api_ohos.g.dart',
     arkTSOut: 'ohos/entry/src/main/ets/plugins/Images/Messages_ohos.g.ets',
     arkTSOptions: ArkTSOptions(),
     dartOptions: DartOptions(),
