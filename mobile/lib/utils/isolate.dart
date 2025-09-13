@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:immich_mobile/domain/services/log.service.dart';
-import 'package:immich_mobile/infrastructure/repositories/logger_db.repository.dart';
 import 'package:immich_mobile/providers/db.provider.dart';
 import 'package:immich_mobile/providers/infrastructure/cancel.provider.dart';
 import 'package:immich_mobile/providers/infrastructure/db.provider.dart';
@@ -38,19 +37,15 @@ Cancelable<T?> runInIsolateGentle<T>({
     DartPluginRegistrant.ensureInitialized();
     //final drift_db = Drift();
 
-    final db = await Bootstrap.initIsar();
-    final logDb = DriftLogger();
-    await Bootstrap.initDomain(db, logDb, shouldBufferLogs: false);
-
-    final driftDb = Drift();
-
+    final (isar, drift, logDb) = await Bootstrap.initDB();
+    await Bootstrap.initDomain(isar, drift, logDb, shouldBufferLogs: false);
     final ref = ProviderContainer(
       overrides: [
         // TODO: Remove once isar is removed
-        dbProvider.overrideWithValue(db),
-        isarProvider.overrideWithValue(db),
+        dbProvider.overrideWithValue(isar),
+        isarProvider.overrideWithValue(isar),
         cancellationProvider.overrideWithValue(cancelledChecker),
-        driftProvider.overrideWithValue(driftDb),
+        driftProvider.overrideWith(driftOverride(drift)),
       ],
     );
 

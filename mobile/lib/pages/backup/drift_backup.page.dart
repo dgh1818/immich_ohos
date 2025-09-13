@@ -259,10 +259,11 @@ class _RemainderCard extends ConsumerWidget {
     return BackupInfoCard(
       title: "backup_controller_page_remainder".tr(),
       subtitle: "backup_controller_page_remainder_sub".tr(),
-
       info: '0',
-
-      //info: remainderCount.toString(),
+/*
+      info: remainderCount.toString(),
+      onTap: () => context.pushRoute(const DriftBackupAssetDetailRoute()),
+*/
     );
   }
 }

@@ -26,6 +26,7 @@ import 'package:immich_mobile/providers/asset_viewer/video_player_value_provider
 //import 'package:immich_mobile/providers/cast.provider.dart';
 import 'package:immich_mobile/providers/infrastructure/asset_viewer/current_asset.provider.dart';
 import 'package:immich_mobile/providers/infrastructure/timeline.provider.dart';
+import 'package:immich_mobile/widgets/common/immich_loading_indicator.dart';
 import 'package:immich_mobile/widgets/photo_view/photo_view.dart';
 import 'package:immich_mobile/widgets/photo_view/photo_view_gallery.dart';
 import 'package:platform/platform.dart';
@@ -66,6 +67,7 @@ const double _kBottomSheetMinimumExtent = 0.4;
 const double _kBottomSheetSnapExtent = 0.7;
 
 class _AssetViewerState extends ConsumerState<AssetViewer> {
+  static final _dummyListener = ImageStreamListener((image, _) => image.dispose());
   late PageController pageController;
   late DraggableScrollableController bottomSheetController;
   PersistentBottomSheetController? sheetCloseController;
@@ -99,6 +101,9 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
   // Delayed operations that should be cancelled on disposal
   final List<Timer> _delayedOperations = [];
 
+  ImageStream? _prevPreCacheStream;
+  ImageStream? _nextPreCacheStream;
+
   @override
   void initState() {
     super.initState();
@@ -128,6 +133,8 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
     bottomSheetController.dispose();
     _cancelTimers();
     reloadSubscription?.cancel();
+    _prevPreCacheStream?.removeListener(_dummyListener);
+    _nextPreCacheStream?.removeListener(_dummyListener);
     routeObserver.unsubscribe(routeAware);
     removeImageListener();
     super.dispose();
@@ -150,27 +157,9 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
   double _getVerticalOffsetForBottomSheet(double extent) =>
       (context.height * extent) - (context.height * _kBottomSheetMinimumExtent);
 
-  Future<void> _precacheImage(int index) async {
-    if (!mounted) {
-      return;
-    }
-
-    final timelineService = ref.read(timelineServiceProvider);
-    final asset = await timelineService.getAssetAsync(index);
-
-    if (asset == null || !mounted) {
-      return;
-    }
-
-    final screenSize = Size(context.width, context.height);
-
-    // Precache both thumbnail and full image for smooth transitions
-    unawaited(
-      Future.wait([
-        precacheImage(getThumbnailImageProvider(asset: asset), context, onError: (_, __) {}),
-        if (asset.isImage) precacheImage(getFullImageProvider(asset, size: screenSize), context, onError: (_, __) {}),
-      ]),
-    );
+  ImageStream _precacheImage(BaseAsset asset) {
+    final provider = getFullImageProvider(asset, size: context.sizeData);
+    return provider.resolve(ImageConfiguration.empty)..addListener(_dummyListener);
   }
 
   void removeImageListener() {
@@ -242,7 +231,7 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
     _cancelTimers();
     // This will trigger the pre-caching of adjacent assets ensuring
     // that they are ready when the user navigates to them.
-    final timer = Timer(Durations.medium4, () {
+    final timer = Timer(Durations.medium4, () async {
       // Check if widget is still mounted before proceeding
       if (!mounted) return;
 
@@ -250,9 +239,16 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
         ui.SetHdr.setHdrMode(hdr: -1, is_image: false);
       }
 
-      for (final offset in [-1, 1]) {
-        unawaited(_precacheImage(index + offset));
-      }
+    final (prevAsset, nextAsset) = await (
+        timelineService.getAssetAsync(index - 1),
+        timelineService.getAssetAsync(index + 1),
+      ).wait;
+      if (!mounted) return;
+      _prevPreCacheStream?.removeListener(_dummyListener);
+      _nextPreCacheStream?.removeListener(_dummyListener);
+      _prevPreCacheStream = prevAsset != null ? _precacheImage(prevAsset) : null;
+      _nextPreCacheStream = nextAsset != null ? _precacheImage(nextAsset) : null;
+    
     });
     _delayedOperations.add(timer);
 
@@ -550,30 +546,7 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
   }
 
   Widget _placeholderBuilder(BuildContext ctx, ImageChunkEvent? progress, int index) {
-    final timelineService = ref.read(timelineServiceProvider);
-    final asset = timelineService.getAssetSafe(index);
-
-    // If asset is not available in buffer, show a loading container
-    if (asset == null) {
-      return Container(
-        width: double.infinity,
-        height: double.infinity,
-        color: backgroundColor,
-        child: const Center(child: CircularProgressIndicator()),
-      );
-    }
-
-    BaseAsset displayAsset = asset;
-    final stackChildren = ref.read(stackChildrenNotifier(asset)).valueOrNull;
-    if (stackChildren != null && stackChildren.isNotEmpty) {
-      displayAsset = stackChildren.elementAt(ref.read(assetViewerProvider.select((s) => s.stackIndex)));
-    }
-    return Container(
-      width: double.infinity,
-      height: double.infinity,
-      color: backgroundColor,
-      child: Thumbnail(asset: displayAsset, fit: BoxFit.contain),
-    );
+    return const Center(child: ImmichLoadingIndicator());
   }
 
   void _onScaleStateChanged(PhotoViewScaleState scaleState) {
@@ -650,7 +623,7 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
         width: size.width,
         height: size.height,
         color: backgroundColor,
-        child: Thumbnail(asset: asset, fit: BoxFit.contain),
+        child: Thumbnail.fromAsset(asset: asset, fit: BoxFit.contain),
       ),
     );
   }
