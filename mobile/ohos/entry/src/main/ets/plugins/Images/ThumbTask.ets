@@ -10,7 +10,7 @@ import { photoAccessHelper } from "@kit.MediaLibraryKit";
 import { image } from "@kit.ImageKit";
 import { BusinessError } from '@kit.BasicServicesKit';
 
-import {MessagesImplBase} from './ThumbnailsImpl'
+import {MessagesImplBaseThumb} from './ThumbnailsImpl'
 
 @Concurrent
 export async function getThumbhashTask(thumbhash: string) {
@@ -44,7 +44,7 @@ export async function requestImageTask(assetId: string,
   isVideo: boolean) {
   await new Promise<Map<string,object>|undefined>((resolve, reject) => {
     try {
-      resolve (MessagesImplBase.getThumbnailBufferInternal(assetId, width, height, isVideo));
+      resolve (MessagesImplBaseThumb.getThumbnailBufferInternal(assetId, width, height, isVideo));
     } catch (e) {
       // is OperationCanceledException -> callback(CANCELLED)
       // is CancellationException -> callback(CANCELLED)

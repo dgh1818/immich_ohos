@@ -11,13 +11,13 @@ import { image } from "@kit.ImageKit";
 import { BusinessError } from '@kit.BasicServicesKit';
 import {getThumbhashTask,requestImageTask} from './ThumbTask'
 
-export class MessagesImplBase extends ThumbnailApi {
+export class MessagesImplBaseThumb extends ThumbnailApi {
   static ctx?: common.UIAbilityContext;
   private requestMap = new Map<number, taskpool.Task>();
 
   constructor(context: common.UIAbilityContext) {
     super();
-    MessagesImplBase.ctx = context;
+    MessagesImplBaseThumb.ctx = context;
   }
 
   override async getThumbhash(thumbhash: string, result: Result<Map<string, object>>) {
@@ -93,12 +93,12 @@ export class MessagesImplBase extends ThumbnailApi {
     //signal.throwIfCanceled()
     let bitmap = isVideo ?
       //decodeVideoThumbnail(id, targetWidth, targetHeight, signal) :
-      await MessagesImplBase.decodeVideoThumbnail(id, targetWidth, targetHeight) :
+      await MessagesImplBaseThumb.decodeVideoThumbnail(id, targetWidth, targetHeight) :
       //this.decodeImage(id, targetWidth, targetHeight, signal);
-      await MessagesImplBase.decodeImage(id, targetWidth, targetHeight);
+      await MessagesImplBaseThumb.decodeImage(id, targetWidth, targetHeight);
 
     //this.processBitmap(bitmap, callback, signal);
-    let finalResult = MessagesImplBase.processBitmap(bitmap);
+    let finalResult = MessagesImplBaseThumb.processBitmap(bitmap);
     return finalResult;
   }
 
@@ -140,7 +140,7 @@ export class MessagesImplBase extends ThumbnailApi {
   ): Promise<PixelMap> {
     //signal.throwIfCanceled()
     let uri = id;
-    const phAccessHelper = photoAccessHelper.getPhotoAccessHelper(MessagesImplBase.ctx);
+    const phAccessHelper = photoAccessHelper.getPhotoAccessHelper(MessagesImplBaseThumb.ctx);
     const imageSource: image.ImageSource = image.createImageSource(uri);
 
     const color: ArrayBuffer =
@@ -159,7 +159,7 @@ export class MessagesImplBase extends ThumbnailApi {
     //id: number, targetWidth: number, targetHeight: number, signal: CancellationSignal
     id: string, targetWidth: number, targetHeight: number
   ): Promise<PixelMap> {
-    const phAccessHelper = photoAccessHelper.getPhotoAccessHelper(MessagesImplBase.ctx);
+    const phAccessHelper = photoAccessHelper.getPhotoAccessHelper(MessagesImplBaseThumb.ctx);
     let uri = id;
     let predicates: dataSharePredicates.DataSharePredicates = new dataSharePredicates.DataSharePredicates();
     predicates.equalTo('uri', id);

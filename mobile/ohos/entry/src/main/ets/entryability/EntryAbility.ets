@@ -17,7 +17,9 @@ import { FlutterAbility, FlutterEngine } from '@ohos/flutter_ohos';
 import { GeneratedPluginRegistrant } from '../plugins/GeneratedPluginRegistrant';
 import { BackgroundServicePlugin } from '../../../main/ets/plugins/BackgroundServicePlugin';
 import { NativeSyncApiOhos } from '../../../main/ets/plugins/sync/Messages_ohos.g';
+import { ThumbnailApi } from '../../../main/ets/plugins/Images/Messages_ohos.g';
 import {MessagesImplBase} from '../plugins/sync/MessagesImplBase'
+import { MessagesImplBaseThumb } from '../plugins/Images/ThumbnailsImpl';
 
 export default class EntryAbility extends FlutterAbility {
   configureFlutterEngine(flutterEngine: FlutterEngine) {
@@ -25,8 +27,9 @@ export default class EntryAbility extends FlutterAbility {
     GeneratedPluginRegistrant.registerWith(flutterEngine)
     this.addPlugin(new BackgroundServicePlugin()); // 加载插件
     let nativeSyncApiImpl = new MessagesImplBase(super.getAbility().context);
-
-
+    let ThumbApiImpl = new MessagesImplBaseThumb(super.getAbility().context)
+    
     NativeSyncApiOhos.setup(flutterEngine.dartExecutor.getBinaryMessenger(), nativeSyncApiImpl)
+    ThumbnailApi.setup(flutterEngine.dartExecutor.getBinaryMessenger(),ThumbApiImpl);
   }
 }
