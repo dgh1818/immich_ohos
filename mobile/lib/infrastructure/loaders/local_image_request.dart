@@ -16,7 +16,7 @@ class LocalImageRequest extends ImageRequest {
       return null;
     }
 
-    final Map<String, int> info = await thumbnailApi.requestImage(
+    final Map<String, Object> info = await thumbnailApi.requestImage(
       localId,
       requestId: requestId,
       width: width,

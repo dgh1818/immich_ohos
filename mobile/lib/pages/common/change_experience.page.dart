@@ -65,7 +65,8 @@ class _ChangeExperiencePageState extends ConsumerState<ChangeExperiencePage> {
         await ref.read(backgroundSyncProvider).syncRemote();
 
         if (permission.isGranted) {
-          await ref.read(backgroundSyncProvider).syncLocal(full: true);
+          ref.read(backgroundSyncProvider).syncLocal(full: true);
+          //await ref.read(backgroundSyncProvider).syncLocal(full: true);
           await migrateDeviceAssetToSqlite(ref.read(isarProvider), ref.read(driftProvider));
           await migrateBackupAlbumsToSqlite(ref.read(isarProvider), ref.read(driftProvider));
           await migrateStoreToSqlite(ref.read(isarProvider), ref.read(driftProvider));

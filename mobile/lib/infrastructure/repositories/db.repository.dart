@@ -163,7 +163,7 @@ class Drift extends $Drift implements IDatabaseRepository {
   Drift() : super(_openConnection());
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 8;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -211,6 +211,9 @@ class Drift extends $Drift implements IDatabaseRepository {
           },
           from6To7: (m, v7) async {
             await m.createIndex(v7.idxLatLng);
+          },
+          from7To8: (m, v8) async {
+            await m.create(v8.storeEntity);
           },
         ),
       );
