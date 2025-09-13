@@ -89,7 +89,6 @@ export class MessagesImplBase extends NativeSyncApiOhos {
     throw new Error();
   }
 
-
   private ctx?: common.UIAbilityContext;
   private readonly TAG = "NativeSyncApiBase";
 

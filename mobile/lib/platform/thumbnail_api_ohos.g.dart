@@ -50,7 +50,7 @@ class ThumbnailApi {
 
   final String pigeonVar_messageChannelSuffix;
 
-  Future<Map<String, int>> requestImage(String assetId, {required int requestId, required int width, required int height, required bool isVideo, }) async {
+  Future<Map<String, Object>> requestImage(String assetId, {required int requestId, required int width, required int height, required bool isVideo, }) async {
     final String pigeonVar_channelName = 'dev.flutter.pigeon.immich_mobile.ThumbnailApi.requestImage$pigeonVar_messageChannelSuffix';
     final BasicMessageChannel<Object?> pigeonVar_channel = BasicMessageChannel<Object?>(
       pigeonVar_channelName,
@@ -74,7 +74,7 @@ class ThumbnailApi {
         message: 'Host platform returned null value for non-null return value.',
       );
     } else {
-      return (pigeonVar_replyList[0] as Map<Object?, Object?>?)!.cast<String, int>();
+      return (pigeonVar_replyList[0] as Map<Object?, Object?>?)!.cast<String, Object>();
     }
   }
 

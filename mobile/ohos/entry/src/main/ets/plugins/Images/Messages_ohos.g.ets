@@ -78,7 +78,7 @@ export interface Result<T> {
 /* Generated abstract class from Pigeon that represents a handler of messages from Flutter.*/
 export abstract class ThumbnailApi {
 
-  abstract requestImage(assetId: string , requestId: number , width: number , height: number , isVideo: boolean , result: Result<Map<string, number>>): void;
+  abstract requestImage(assetId: string , requestId: number , width: number , height: number , isVideo: boolean , result: Result<Map<string, Object>>): void;
 
   abstract cancelImageRequest(requestId: number ): void;
 
@@ -97,8 +97,8 @@ export abstract class ThumbnailApi {
         channel.setMessageHandler({
             onMessage(message: Object ,reply: Reply<Object> ) {
               let args: Array<Object> = message as Array<Object>;
-              class ResultImp implements Result<Map<string, number>>{
-                    success(result: Map<string, number>): void {
+              class ResultImp implements Result<Map<string, Object>>{
+                    success(result: Map<string, Object>): void {
                       let res: Array<Object> = [];
                       res.push(result);
                       reply.reply(res);
@@ -109,7 +109,7 @@ export abstract class ThumbnailApi {
                       reply.reply(wrappedError);
                     }
               }
-              let resultCallback: Result<Map<string, number>> = new ResultImp();
+              let resultCallback: Result<Map<string, Object>> = new ResultImp();
 
               api!.requestImage(args[0] as string, args[1] as number, args[2] as number, args[3] as number, args[4] as boolean, resultCallback);
             } });

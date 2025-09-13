@@ -12,7 +12,7 @@ import 'package:pigeon/pigeon.dart';
 @HostApi()
 abstract class ThumbnailApi {
   @async
-  Map<String, int> requestImage(
+  Map<String, Object> requestImage(
     String assetId, {
     required int requestId,
     required int width,

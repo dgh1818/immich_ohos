@@ -9,59 +9,82 @@ import { dataSharePredicates } from "@kit.ArkData";
 import { photoAccessHelper } from "@kit.MediaLibraryKit";
 import { image } from "@kit.ImageKit";
 import { BusinessError } from '@kit.BasicServicesKit';
-import call from "@ohos.telephony.call";
-
-@Concurrent
-function getThumbhashTask(thumbhash: string): ThumbHashResult | undefined {
-  try {
-    let inputBuffer = buffer.from(thumbhash, 'base64');
-    let bytes = new Uint8Array(inputBuffer.buffer, inputBuffer.byteOffset, inputBuffer.length);
-    let image = thumbHashToRGBA(bytes)
-    return new ThumbHashResult(image.width, image.height, image.pointer);
-
-  } catch (e) {
-
-    //callback(Result.failure(e))
-    return undefined;
-  }
-}
+import {getThumbhashTask,requestImageTask} from './ThumbTask'
 
 export class MessagesImplBase extends ThumbnailApi {
-  private ctx?: common.UIAbilityContext;
-
-  //let phAccessHelper = photoAccessHelper.getPhotoAccessHelper(this.uiContext);
+  static ctx?: common.UIAbilityContext;
+  private requestMap = new Map<number, taskpool.Task>();
 
   constructor(context: common.UIAbilityContext) {
     super();
-    this.ctx = context;
+    MessagesImplBase.ctx = context;
   }
 
   override async getThumbhash(thumbhash: string, result: Result<Map<string, object>>) {
     const task: taskpool.Task = new taskpool.Task(getThumbhashTask, thumbhash);
     try {
-      const outcome = await taskpool.execute(task) as ThumbHashResult|undefined;
+      taskpool.execute(task).then((d: object) => {
+        let res = d as ThumbHashResult|undefined;
+        if(res!=undefined) {
+          return result.success(new Map<string, Object>([
+            ["width", res.width],
+            ["height", res.height],
+            ["pointer", res.pointer]
+          ]));
+        }
 
-      if(outcome!=undefined) {
-        return result.success(new Map<string, Object>([
-          ["width", outcome.width],
-          ["height", outcome.height],
-          ["pointer", outcome.pointer]
-        ]));
-      }
-      
+      }).catch((e: BusinessError) => {
+        return result.error(e);
+      }).finally(() => {
+        ;
+      })
     } catch (e) {
       return result.error(e);
     }
   }
 
-  private async getThumbnailBufferInternal(
+  override async requestImage(
+  assetId: string,
+  requestId: number,
+  width: number,
+  height: number,
+  isVideo: boolean,
+  callback: (Result<Map<string, object>>)) {
+  //let signal = CancellationSignal()
+    let task: taskpool.Task = new taskpool.Task(requestImageTask, assetId, requestId, width, height, isVideo);
+
+    taskpool.execute(task).then((d: object) => {
+      let res = d as Map<string, object>;
+      callback.success(res);
+      console.info(`task1 res is: ${d}`);
+    }).catch((e: object) => {
+      callback.error(e as BusinessError);
+      console.error(`task1 catch e: ${e}`); // task1 catch e: Error: testPromise error
+    }).finally(() => {
+      this.requestMap.delete(requestId);
+    })
+
+    this.requestMap.set(requestId,task);
+}
+
+  override cancelImageRequest(requestId: number) {
+    if(!this.requestMap.has(requestId)) {
+      return;
+
+    }
+    let request = this.requestMap.get(requestId);
+    taskpool.cancel(request);
+    return;
+  }
+
+  public static async getThumbnailBufferInternal(
     assetId: string,
     width: number,
     height: number,
     isVideo: boolean,
-    callback: Result<Map<string, object>>,
+    //callback: Result<Map<string, number>>,
     //signal: CancellationSignal
-  ) {
+  ) :Promise<Map<string,object>|undefined>{
     //signal.throwIfCanceled()
     let targetWidth = width
     let targetHeight = height
@@ -70,16 +93,20 @@ export class MessagesImplBase extends ThumbnailApi {
     //signal.throwIfCanceled()
     let bitmap = isVideo ?
       //decodeVideoThumbnail(id, targetWidth, targetHeight, signal) :
-      await this.decodeVideoThumbnail(id, targetWidth, targetHeight) :
+      await MessagesImplBase.decodeVideoThumbnail(id, targetWidth, targetHeight) :
       //this.decodeImage(id, targetWidth, targetHeight, signal);
-      await this.decodeImage(id, targetWidth, targetHeight);
+      await MessagesImplBase.decodeImage(id, targetWidth, targetHeight);
 
     //this.processBitmap(bitmap, callback, signal);
-    this.processBitmap(bitmap, callback);
+    let finalResult = MessagesImplBase.processBitmap(bitmap);
+    return finalResult;
   }
 
-  private processBitmap(
-    bitmap: PixelMap, callback: (Result<Map<String, object>>)) {
+  public static processBitmap(
+    bitmap: PixelMap
+    //, callback: (Result<Map<String, object>>)
+  ):Map<string,object>|undefined
+  {
     //signal.throwIfCanceled()
     let imageInfo = bitmap.getImageInfoSync();
     let actualWidth = imageInfo.size.width;
@@ -94,30 +121,26 @@ export class MessagesImplBase extends ThumbnailApi {
       bitmap.readPixelsToBufferSync(buffer);
       bitmap.release();
 
-      // Result.success
-      // val res = mapOf(
-      //   "pointer" to pointer,
-      // "width" to actualWidth.toLong(),
-      // "height" to actualHeight.toLong()
-      // )
-      return callback.success(new Map<string, Object>([
+      let finalResult = new Map<string, Object>([
         ["width", actualWidth],
         ["height", actualHeight],
         ["pointer", buffer]
-      ]));
+      ]);
+      return finalResult;
 
     } catch (e) {
-      callback.error(e);
+      //callback.error(e);
+      return undefined;
     }
   }
 
-  private async decodeImage(
+  public static async decodeImage(
     id: string, targetWidth: number, targetHeight: number
     //, signal: CancellationSignal
   ): Promise<PixelMap> {
     //signal.throwIfCanceled()
     let uri = id;
-    const phAccessHelper = photoAccessHelper.getPhotoAccessHelper(this.ctx);
+    const phAccessHelper = photoAccessHelper.getPhotoAccessHelper(MessagesImplBase.ctx);
     const imageSource: image.ImageSource = image.createImageSource(uri);
 
     const color: ArrayBuffer =
@@ -132,11 +155,11 @@ export class MessagesImplBase extends ThumbnailApi {
     return imageOut;
   }
 
-  private async decodeVideoThumbnail(
+  public static async decodeVideoThumbnail(
     //id: number, targetWidth: number, targetHeight: number, signal: CancellationSignal
     id: string, targetWidth: number, targetHeight: number
   ): Promise<PixelMap> {
-    const phAccessHelper = photoAccessHelper.getPhotoAccessHelper(this.ctx);
+    const phAccessHelper = photoAccessHelper.getPhotoAccessHelper(MessagesImplBase.ctx);
     let uri = id;
     let predicates: dataSharePredicates.DataSharePredicates = new dataSharePredicates.DataSharePredicates();
     predicates.equalTo('uri', id);
@@ -148,11 +171,8 @@ export class MessagesImplBase extends ThumbnailApi {
     let photoAsset: photoAccessHelper.PhotoAsset = await videoFetchResult.getFirstObject();
 
     let thumbnailSize: Size = { width: 0, height: 0 };
-
-
     thumbnailSize.width = targetWidth;
     thumbnailSize.height = targetHeight;
-
 
     let videoThumb = await photoAsset.getThumbnail(thumbnailSize);
     return videoThumb;
