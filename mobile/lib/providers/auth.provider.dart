@@ -139,7 +139,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
         // Due to the flow of the code, this will always happen on first login
         user = serverUser;
         await Store.put(StoreKey.deviceId, deviceId);
-        await Store.put(StoreKey.deviceIdHash, fastHash(deviceId));
+        //await Store.put(StoreKey.deviceIdHash, fastHash(deviceId));
         await Store.put(StoreKey.accessToken, accessToken);
       }
     } on ApiException catch (error, stackTrace) {
