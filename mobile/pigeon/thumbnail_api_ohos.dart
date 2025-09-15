@@ -11,6 +11,7 @@ import 'package:pigeon/pigeon.dart';
 )
 @HostApi()
 abstract class ThumbnailApi {
+  @TaskQueue(type: TaskQueueType.serialBackgroundThread)
   @async
   Map<String, Object> requestImage(
     String assetId, {
