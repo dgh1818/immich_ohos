@@ -28,7 +28,7 @@ export default class EntryAbility extends FlutterAbility {
     this.addPlugin(new BackgroundServicePlugin()); // 加载插件
     let nativeSyncApiImpl = new MessagesImplBase(super.getAbility().context);
     let ThumbApiImpl = new MessagesImplBaseThumb(super.getAbility().context)
-    
+
     NativeSyncApiOhos.setup(flutterEngine.dartExecutor.getBinaryMessenger(), nativeSyncApiImpl)
     ThumbnailApi.setup(flutterEngine.dartExecutor.getBinaryMessenger(),ThumbApiImpl);
   }
