@@ -16,6 +16,7 @@ class HashService {
   final DriftLocalAssetRepository _localAssetRepository;
   final StorageRepository _storageRepository;
   final NativeSyncApiOhos _nativeSyncApi;
+  final bool Function()? _cancelChecker;
   final _log = Logger('HashService');
 
   HashService({
@@ -23,12 +24,16 @@ class HashService {
     required DriftLocalAssetRepository localAssetRepository,
     required StorageRepository storageRepository,
     required NativeSyncApiOhos nativeSyncApi,
+    bool Function()? cancelChecker,
     this.batchSizeLimit = kBatchHashSizeLimit,
     this.batchFileLimit = kBatchHashFileLimit,
   }) : _localAlbumRepository = localAlbumRepository,
        _localAssetRepository = localAssetRepository,
        _storageRepository = storageRepository,
+       _cancelChecker = cancelChecker,
        _nativeSyncApi = nativeSyncApi;
+
+  bool get isCancelled => _cancelChecker?.call() ?? false;
 
   Future<void> hashAssets() async {
     final Stopwatch stopwatch = Stopwatch()..start();
@@ -38,6 +43,11 @@ class HashService {
     );
 
     for (final album in localAlbums) {
+      if (isCancelled) {
+        _log.warning("Hashing cancelled. Stopped processing albums.");
+        break;
+      }
+
       final assetsToHash = await _localAlbumRepository.getAssetsToHash(album.id);
       if (assetsToHash.isNotEmpty) {
         await _hashAssets(assetsToHash);
@@ -57,7 +67,12 @@ class HashService {
     File? file;
 
     for (final asset in assetsToHash) {
-      // file = await _storageRepository.getFileForAsset(asset.id);
+      if (isCancelled) {
+        _log.warning("Hashing cancelled. Stopped processing assets.");
+        return;
+      }
+
+      // final file = await _storageRepository.getFileForAsset(asset.id);
       // if (file == null) {
       //   continue;
       // }
@@ -92,6 +107,11 @@ class HashService {
     );
 
     for (int i = 0; i < hashes.length; i++) {
+      if (isCancelled) {
+        _log.warning("Hashing cancelled. Stopped processing batch.");
+        return;
+      }
+
       final hash = hashes[i];
       final asset = toHash[i].asset;
       if (hash?.length == 20) {

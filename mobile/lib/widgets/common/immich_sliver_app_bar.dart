@@ -10,6 +10,7 @@ import 'package:immich_mobile/models/server_info/server_info.model.dart';
 import 'package:immich_mobile/providers/backup/drift_backup.provider.dart';
 import 'package:immich_mobile/providers/cast.provider.dart';
 import 'package:immich_mobile/providers/infrastructure/setting.provider.dart';
+import 'package:immich_mobile/providers/infrastructure/readonly_mode.provider.dart';
 import 'package:immich_mobile/providers/server_info.provider.dart';
 import 'package:immich_mobile/providers/sync_status.provider.dart';
 import 'package:immich_mobile/providers/timeline/multiselect.provider.dart';
@@ -42,7 +43,7 @@ class ImmichSliverAppBar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     //final isCasting = ref.watch(castProvider.select((c) => c.isCasting));
-
+    final isReadonlyModeEnabled = ref.watch(readonlyModeProvider);
     final isMultiSelectEnabled = ref.watch(multiSelectProvider.select((s) => s.isEnabled));
 
     final isScreenLandscape = context.orientation == Orientation.landscape;
@@ -61,29 +62,29 @@ class ImmichSliverAppBar extends ConsumerWidget {
         title: title ?? const _ImmichLogoWithText(),
         backgroundColor: Colors.transparent,
         actions: [
-          /*
-                if (isCasting)
-                  Padding(
-                    padding: const EdgeInsets.only(right: 12),
-                    child: IconButton(
-                      onPressed: () {
-                        showDialog(context: context, builder: (context) => const CastDialog());
-                      },
-                      icon: Icon(isCasting ? Icons.cast_connected_rounded : Icons.cast_rounded),
-                    ),
-                  ),
-      */
-          //const SyncStatusIndicator(),
+/*
+          if (isCasting && !isReadonlyModeEnabled)
+            Padding(
+              padding: const EdgeInsets.only(right: 12),
+              child: IconButton(
+                onPressed: () {
+                  showDialog(context: context, builder: (context) => const CastDialog());
+                },
+                icon: Icon(isCasting ? Icons.cast_connected_rounded : Icons.cast_rounded),
+              ),
+            ),
+*/
+          //const _SyncStatusIndicator(),
           if (actions != null)
             ...actions!.map((action) => Padding(padding: const EdgeInsets.only(right: 16), child: action)),
-          if (kDebugMode || kProfileMode)
+          if ((kDebugMode || kProfileMode) && !isReadonlyModeEnabled)
             IconButton(
               icon: const Icon(Icons.science_rounded),
               onPressed: () => context.pushRoute(const FeatInDevRoute()),
             ),
-          if (!isScreenLandscape && showUploadButton)
+          if (showUploadButton && !isReadonlyModeEnabled)
             const Padding(padding: EdgeInsets.only(right: 20), child: BackupIndicator()),
-          if (!isScreenLandscape) const Padding(padding: EdgeInsets.only(right: 20), child: ProfileIndicator()),
+          const Padding(padding: EdgeInsets.only(right: 20), child: ProfileIndicator()),
         ],
       ),
     );
@@ -136,7 +137,7 @@ class _ImmichLogoWithText extends StatelessWidget {
   }
 }
 
-class ProfileIndicator extends ConsumerWidget {
+class ProfileIndicator extends ConsumerWidget {  //ui变更 需要变为public 函数
   const ProfileIndicator();
 
   @override
@@ -145,8 +146,24 @@ class ProfileIndicator extends ConsumerWidget {
     final user = ref.watch(currentUserProvider);
     const widgetSize = 30.0;
 
+    void toggleReadonlyMode() {
+      final isReadonlyModeEnabled = ref.watch(readonlyModeProvider);
+      ref.read(readonlyModeProvider.notifier).toggleReadonlyMode();
+
+      context.scaffoldMessenger.showSnackBar(
+        SnackBar(
+          duration: const Duration(seconds: 2),
+          content: Text(
+            (isReadonlyModeEnabled ? "readonly_mode_disabled" : "readonly_mode_enabled").tr(),
+            style: context.textTheme.bodyLarge?.copyWith(color: context.primaryColor),
+          ),
+        ),
+      );
+    }
+
     return InkWell(
       onTap: () => showDialog(context: context, useRootNavigator: false, builder: (ctx) => const ImmichAppBarDialog()),
+      onDoubleTap: () => toggleReadonlyMode(),
       borderRadius: const BorderRadius.all(Radius.circular(12)),
       child: Badge(
         label: Container(
@@ -169,7 +186,7 @@ class ProfileIndicator extends ConsumerWidget {
   }
 }
 
-class BackupIndicator extends ConsumerWidget {
+class BackupIndicator extends ConsumerWidget {      //ui变更 需要变为public 函数
   const BackupIndicator();
 
   @override

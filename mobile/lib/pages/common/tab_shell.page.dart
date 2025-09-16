@@ -13,6 +13,7 @@ import 'package:immich_mobile/providers/app_settings.provider.dart';
 
 import 'package:immich_mobile/providers/haptic_feedback.provider.dart';
 import 'package:immich_mobile/providers/infrastructure/album.provider.dart';
+import 'package:immich_mobile/providers/infrastructure/readonly_mode.provider.dart';
 import 'package:immich_mobile/providers/search/search_input_focus.provider.dart';
 import 'package:immich_mobile/providers/tab.provider.dart';
 import 'package:immich_mobile/providers/timeline/multiselect.provider.dart';
@@ -83,6 +84,7 @@ class _TabShellPageState extends ConsumerState<TabShellPage> with SingleTickerPr
   @override
   Widget build(BuildContext context) {
     final isScreenLandscape = context.orientation == Orientation.landscape;
+    final isReadonlyModeEnabled = ref.watch(readonlyModeProvider);
 
     const railWidth = 72.0;
 
@@ -96,16 +98,19 @@ class _TabShellPageState extends ConsumerState<TabShellPage> with SingleTickerPr
         label: 'search'.tr(),
         icon: const Icon(Icons.search_rounded),
         selectedIcon: Icon(Icons.search, color: context.primaryColor),
+        enabled: !isReadonlyModeEnabled,
       ),
       NavigationDestination(
         label: 'albums'.tr(),
         icon: const Icon(Icons.photo_album_outlined),
         selectedIcon: Icon(Icons.photo_album_rounded, color: context.primaryColor),
+        enabled: !isReadonlyModeEnabled,
       ),
       NavigationDestination(
         label: 'library'.tr(),
         icon: const Icon(Icons.space_dashboard_outlined),
         selectedIcon: Icon(Icons.space_dashboard_rounded, color: context.primaryColor),
+        enabled: !isReadonlyModeEnabled,
       ),
     ];
 
