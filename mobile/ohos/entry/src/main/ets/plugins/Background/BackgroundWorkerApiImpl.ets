@@ -27,7 +27,11 @@ export class BackgroundWorkerApiImpl extends BackgroundWorkerFgHostApi {
 
   override disableUploadWorker() {
     BackgroundWorkerApiImpl.updateUploadEnabled(this.ctx!, false);
-    workScheduler.stopWork(BackgroundWorkerApiImpl.BACKGROUND_WORKER_INFO);
+    try {
+      workScheduler.stopWork(BackgroundWorkerApiImpl.BACKGROUND_WORKER_INFO);
+    } catch (e) {
+      console.error(e);
+    }
 
     console.info(BackgroundWorkerApiImpl.TAG+"Cancelled background upload tasks");
 }
@@ -41,8 +45,23 @@ export class BackgroundWorkerApiImpl extends BackgroundWorkerFgHostApi {
   public static readonly SHARED_PREF_NAME = "Immich::Background"
   public static readonly SHARED_PREF_BACKUP_ENABLED = "Background::backup::enabled"
   public static readonly SHARED_PREF_CALLBACK_HANDLE = "Background::backup::callbackHandle"
-  static BACKGROUND_WORKER_INFO?:workScheduler.WorkInfo;
-  static MEDIAOBSERVER_WORKER_INFO?:workScheduler.WorkInfo;
+  static BACKGROUND_WORKER_INFO:workScheduler.WorkInfo =
+   {
+    workId: BackgroundWorkerApiImpl.BACKGROUND_WORKER_ID,
+    bundleName: 'com.dgh18.immich',
+    abilityName: 'BackgroundWorker',
+    batteryStatus: workScheduler.BatteryStatus.BATTERY_STATUS_OKAY,
+    //.setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 1, TimeUnit.MINUTES)
+  }
+
+  static MEDIAOBSERVER_WORKER_INFO:workScheduler.WorkInfo = {
+    workId: BackgroundWorkerApiImpl.MediaObserver_WORKER_ID,
+    bundleName: 'com.dgh18.immich',
+    abilityName: 'MediaObserver',
+    batteryStatus: workScheduler.BatteryStatus.BATTERY_STATUS_OKAY,
+    isCharging:true,
+    isDeepIdle:true,
+  };
 
   static updateUploadEnabled(context: common.ApplicationContext, enabled: Boolean) {
     let options: preferences.Options = { name: BackgroundWorkerApiImpl.SHARED_PREF_NAME };
