@@ -53,6 +53,16 @@
 //        "srcEntry": "./ets/workers/ContentObserverWorkScheduler.ets",
 //        "type": "workScheduler"
 //      }
+      {
+        "name": "MediaObserver",
+        "srcEntry": "./ets/plugins/Background/MediaObserver.ets",
+        "type": "workScheduler"
+      },
+      {
+        "name": "BackgroundWorker",
+        "srcEntry": "./ets/plugins/Background/BackgroundWorker.ets",
+        "type": "workScheduler"
+      }
     ],
     requestPermissions: [
       { name: "ohos.permission.ACCESS_BIOMETRIC"},

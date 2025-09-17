@@ -1,0 +1,106 @@
+import { common } from '@kit.AbilityKit'
+import { BackgroundWorkerFgHostApi } from './BackgroundWorker.g'
+import dataPreferences from '@ohos.data.preferences'
+import preferences from '@ohos.data.preferences';
+import { BackgroundTaskType } from './BackgroundWorker';
+import { workScheduler } from '@kit.BackgroundTasksKit';
+
+export class BackgroundWorkerApiImpl extends BackgroundWorkerFgHostApi {
+  private ctx?: common.ApplicationContext;
+  static readonly TAG: string = "BackgroundUploadImpl"
+
+  constructor(context: common.ApplicationContext) {
+    super();
+    this.ctx = context;
+  }
+
+  override enableSyncWorker() {
+    BackgroundWorkerApiImpl.enqueueMediaObserver(this.ctx!);
+    console.info(BackgroundWorkerApiImpl.TAG, "Scheduled media observer")
+  }
+
+  override enableUploadWorker(callbackHandle: number) {
+    BackgroundWorkerApiImpl.updateUploadEnabled(this.ctx!, true)
+    BackgroundWorkerApiImpl.updateCallbackHandle(this.ctx!, callbackHandle)
+    console.info(BackgroundWorkerApiImpl.TAG+"Scheduled background upload tasks");
+  }
+
+  override disableUploadWorker() {
+    BackgroundWorkerApiImpl.updateUploadEnabled(this.ctx!, false);
+    workScheduler.stopWork(BackgroundWorkerApiImpl.BACKGROUND_WORKER_INFO);
+
+    console.info(BackgroundWorkerApiImpl.TAG+"Cancelled background upload tasks");
+}
+
+
+  static readonly BACKGROUND_WORKER_NAME = "immich/BackgroundWorkerV1"
+  static readonly BACKGROUND_WORKER_ID = 1;
+  static readonly MediaObserver_WORKER_ID = 2;
+  static readonly OBSERVER_WORKER_NAME = "immich/MediaObserverV1"
+  static readonly WORKER_DATA_TASK_TYPE = "taskType"
+  public static readonly SHARED_PREF_NAME = "Immich::Background"
+  public static readonly SHARED_PREF_BACKUP_ENABLED = "Background::backup::enabled"
+  public static readonly SHARED_PREF_CALLBACK_HANDLE = "Background::backup::callbackHandle"
+  static BACKGROUND_WORKER_INFO?:workScheduler.WorkInfo;
+  static MEDIAOBSERVER_WORKER_INFO?:workScheduler.WorkInfo;
+
+  static updateUploadEnabled(context: common.ApplicationContext, enabled: Boolean) {
+    let options: preferences.Options = { name: BackgroundWorkerApiImpl.SHARED_PREF_NAME };
+    dataPreferences.getPreferencesSync(context, options)
+      .putSync(BackgroundWorkerApiImpl.SHARED_PREF_BACKUP_ENABLED, enabled);
+    dataPreferences.getPreferencesSync(context, options).flush;
+
+  }
+
+  static updateCallbackHandle(context: common.ApplicationContext, callbackHandle: number) {
+    let options: preferences.Options = { name: BackgroundWorkerApiImpl.SHARED_PREF_NAME };
+    dataPreferences.getPreferencesSync(context, options)
+      .putSync(BackgroundWorkerApiImpl.SHARED_PREF_CALLBACK_HANDLE, callbackHandle);
+  }
+
+  public static enqueueMediaObserver(ctx: common.ApplicationContext) {
+    // val constraints = Constraints.Builder()
+    //   .addContentUriTrigger(MediaStore.Images.Media.INTERNAL_CONTENT_URI, true)
+    //   .addContentUriTrigger(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, true)
+    //   .addContentUriTrigger(MediaStore.Video.Media.INTERNAL_CONTENT_URI, true)
+    //   .addContentUriTrigger(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, true)
+    //   .setTriggerContentUpdateDelay(5, TimeUnit.SECONDS)
+    //   .setTriggerContentMaxDelay(1, TimeUnit.MINUTES)
+    //   .build()
+    let constraints: workScheduler.WorkInfo = {
+      workId: BackgroundWorkerApiImpl.MediaObserver_WORKER_ID,
+      bundleName: 'com.dgh18.immich',
+      abilityName: 'MediaObserver',
+      batteryStatus: workScheduler.BatteryStatus.BATTERY_STATUS_OKAY,
+      isCharging:true,
+      isDeepIdle:true,
+    }
+
+    BackgroundWorkerApiImpl.MEDIAOBSERVER_WORKER_INFO = constraints;
+    workScheduler.startWork(constraints);
+    console.info(BackgroundWorkerApiImpl.TAG, "Enqueued media observer worker with name" + BackgroundWorkerApiImpl.OBSERVER_WORKER_NAME +
+    BackgroundWorkerApiImpl.MediaObserver_WORKER_ID);
+  }
+
+  public static enqueueBackgroundWorker(ctx: common.ApplicationContext, taskType: BackgroundTaskType) {
+    let constraints: workScheduler.WorkInfo = {
+      workId: BackgroundWorkerApiImpl.BACKGROUND_WORKER_ID,
+      bundleName: 'com.dgh18.immich',
+      abilityName: 'BackgroundWorker',
+      batteryStatus: workScheduler.BatteryStatus.BATTERY_STATUS_OKAY,
+      //.setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 1, TimeUnit.MINUTES)
+      parameters: { "taskType": taskType.valueOf() }
+    }
+
+    BackgroundWorkerApiImpl.BACKGROUND_WORKER_INFO = constraints;
+
+    workScheduler.startWork(constraints);
+    console.info(BackgroundWorkerApiImpl.TAG, "Enqueued background worker with name" + BackgroundWorkerApiImpl.BACKGROUND_WORKER_NAME +
+    BackgroundWorkerApiImpl.BACKGROUND_WORKER_ID);
+  }
+}
+
+
+
+
+

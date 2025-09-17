@@ -206,7 +206,7 @@ export class BackgroundWorkerFlutterApi {
     return PigeonCodec.INSTANCE;
   }
 
-  onLocalSync(maxSecondsArg: number, callback: Reply<string>) {
+  onLocalSync(maxSecondsArg: number, callback: Reply<void>) {
     const channelName: string = 'dev.flutter.pigeon.immich_mobile.BackgroundWorkerFlutterApi.onLocalSync';
     let channel: BasicMessageChannel<Object> =
         new BasicMessageChannel<Object>(
@@ -221,17 +221,18 @@ export class BackgroundWorkerFlutterApi {
               let arrSecond:string = listReply[1] as string;
               let arrThird:string = listReply[2] as string;
               let replyArr:string = 'FlutterError:{"code":'+arrFirst+',"name":'+arrSecond+',"message":'+arrThird+'}';
-              callback.reply(replyArr);
+              throw new Error(replyArr);
+
             } else {
-              callback.reply('success');
+              callback.reply();
             }
           }  else {
             let connErr:string = 'FlutterError:{"code":channel-error,"name":Unable to establish connection on channel:channelName,"message":.}'
-            callback.reply(connErr);
+            throw new Error(connErr);
           }
         });
   }
-  onIosUpload(isRefreshArg: boolean,maxSecondsArg: number, callback: Reply<Object>) {
+  onIosUpload(isRefreshArg: boolean,maxSecondsArg: number, callback: Reply<void>) {
     const channelName: string = 'dev.flutter.pigeon.immich_mobile.BackgroundWorkerFlutterApi.onIosUpload';
     let channel: BasicMessageChannel<Object> =
         new BasicMessageChannel<Object>(
@@ -246,18 +247,19 @@ export class BackgroundWorkerFlutterApi {
               let arrSecond:string = listReply[1] as string;
               let arrThird:string = listReply[2] as string;
               let replyArr:string = 'FlutterError:{"code":'+arrFirst+',"name":'+arrSecond+',"message":'+arrThird+'}';
-
-              callback.reply(replyArr);
+              throw new Error(replyArr);
+              //callback.reply(replyArr);
             } else {
-              callback.reply({});
+              callback.reply();
             }
           }  else {
             let connErr:string = 'FlutterError:{"code":channel-error,"name":Unable to establish connection on channel:channelName,"message":.}'
-            callback.reply(connErr);
+            throw new Error(connErr);
+            //callback.reply(connErr);
           }
         });
   }
-  onAndroidUpload(callback: Reply<string>):void {
+  onAndroidUpload(callback: Reply<void>):void {
     const channelName: string = 'dev.flutter.pigeon.immich_mobile.BackgroundWorkerFlutterApi.onAndroidUpload';
     let channel: BasicMessageChannel<Object> =
         new BasicMessageChannel<Object>(
@@ -272,17 +274,19 @@ export class BackgroundWorkerFlutterApi {
               let arrSecond:string = listReply[1] as string;
               let arrThird:string = listReply[2] as string;
               let replyArr:string = 'FlutterError:{"code":'+arrFirst+',"name":'+arrSecond+',"message":'+arrThird+'}';
-              callback.reply(replyArr);
+              throw new Error(replyArr);
+              //callback.reply(replyArr);
             } else {
-              callback.reply('success');
+              callback.reply();
             }
           }  else {
             let connErr:string = 'FlutterError:{"code":channel-error,"name":Unable to establish connection on channel:channelName,"message":.}'
-            callback.reply(connErr);
+            throw new Error(connErr);
+            //callback.reply(connErr);
           }
         });
   }
-  cancel(callback: Reply<string>):void {
+  cancel(callback: Reply<void>):void {
     const channelName: string = 'dev.flutter.pigeon.immich_mobile.BackgroundWorkerFlutterApi.cancel';
     let channel: BasicMessageChannel<Object> =
         new BasicMessageChannel<Object>(
@@ -297,13 +301,15 @@ export class BackgroundWorkerFlutterApi {
               let arrSecond:string = listReply[1] as string;
               let arrThird:string = listReply[2] as string;
               let replyArr:string = 'FlutterError:{"code":'+arrFirst+',"name":'+arrSecond+',"message":'+arrThird+'}';
-              callback.reply(replyArr);
+              throw new Error(replyArr);
+              //callback.reply(replyArr);
             } else {
-              callback.reply('success');
+              callback.reply();
             }
           }  else {
             let connErr:string = 'FlutterError:{"code":channel-error,"name":Unable to establish connection on channel:channelName,"message":.}'
-            callback.reply(connErr);
+            throw new Error(connErr);
+            //callback.reply(connErr);
           }
         });
   }

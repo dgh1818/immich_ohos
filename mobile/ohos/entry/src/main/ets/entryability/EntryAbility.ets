@@ -20,6 +20,8 @@ import { NativeSyncApiOhos } from '../../../main/ets/plugins/sync/Messages_ohos.
 import { ThumbnailApi } from '../../../main/ets/plugins/Images/Messages_ohos.g';
 import {MessagesImplBase} from '../plugins/sync/MessagesImplBase'
 import { MessagesImplBaseThumb } from '../plugins/Images/ThumbnailsImpl';
+import { BackgroundWorkerApiImpl } from '../plugins/Background/BackgroundWorkerApiImpl';
+import { BackgroundWorkerFgHostApi } from '../plugins/Background/BackgroundWorker.g';
 
 export default class EntryAbility extends FlutterAbility {
   configureFlutterEngine(flutterEngine: FlutterEngine) {
@@ -28,8 +30,10 @@ export default class EntryAbility extends FlutterAbility {
     this.addPlugin(new BackgroundServicePlugin()); // 加载插件
     let nativeSyncApiImpl = new MessagesImplBase(super.getAbility().context);
     let ThumbApiImpl = new MessagesImplBaseThumb(super.getAbility().context)
+    let backgroundWorkerApiImpl = new BackgroundWorkerApiImpl(super.context.getApplicationContext());
 
     NativeSyncApiOhos.setup(flutterEngine.dartExecutor.getBinaryMessenger(), nativeSyncApiImpl)
     ThumbnailApi.setup(flutterEngine.dartExecutor.getBinaryMessenger(),ThumbApiImpl);
+    BackgroundWorkerFgHostApi.setup(flutterEngine.dartExecutor.getBinaryMessenger(),backgroundWorkerApiImpl);
   }
 }
