@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:background_downloader/background_downloader.dart';
+//import 'package:background_downloader/background_downloader.dart';
 import 'package:flutter/foundation.dart';
 import 'package:immich_mobile/constants/constants.dart';
 import 'package:immich_mobile/domain/models/store.model.dart';
