@@ -442,6 +442,7 @@ class MultiselectGrid extends HookConsumerWidget {
               onUpload: onUpload,
               enabled: !processing.value,
               selectionAssetState: selectionAssetState.value,
+              selectedAssets: selection.value.toList(),
               onStack: stackEnabled ? onStack : null,
               onEditTime: editEnabled ? onEditTime : null,
               onEditLocation: editEnabled ? onEditLocation : null,

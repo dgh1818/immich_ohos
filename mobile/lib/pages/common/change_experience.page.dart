@@ -80,7 +80,7 @@ class _ChangeExperiencePageState extends ConsumerState<ChangeExperiencePage> {
         ref.read(readonlyModeProvider.notifier).setReadonlyMode(false);
         await migrateStoreToIsar(ref.read(isarProvider), ref.read(driftProvider));
         await ref.read(backgroundServiceProvider).resumeServiceIfEnabled();
-        await ref.read(driftBackgroundUploadFgService).disableUploadService();
+        await ref.read(driftBackgroundUploadFgService).disable();
       }
 
       await IsarStoreRepository(ref.read(isarProvider)).upsert(StoreKey.betaTimeline, widget.switchingToBeta);

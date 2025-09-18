@@ -4,6 +4,7 @@ import 'dart:ui' as ui;
 import 'package:auto_route/auto_route.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:immich_mobile/domain/models/asset/base_asset.model.dart';
 import 'package:immich_mobile/domain/models/timeline.model.dart';
@@ -62,6 +63,18 @@ class AssetViewer extends ConsumerStatefulWidget {
 
   @override
   ConsumerState createState() => _AssetViewerState();
+
+  static void setAsset(WidgetRef ref, BaseAsset asset) {
+    // Always holds the current asset from the timeline
+    ref.read(assetViewerProvider.notifier).setAsset(asset);
+    // The currentAssetNotifier actually holds the current asset that is displayed
+    // which could be stack children as well
+    ref.read(currentAssetNotifier.notifier).setAsset(asset);
+    if (asset.isVideo || asset.isMotionPhoto) {
+      ref.read(videoPlaybackValueProvider.notifier).reset();
+      ref.read(videoPlayerControlsProvider.notifier).pause();
+    }
+  }
 }
 
 const double _kBottomSheetMinimumExtent = 0.4;
@@ -108,6 +121,7 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
   @override
   void initState() {
     super.initState();
+    assert(ref.read(currentAssetNotifier) != null, "Current asset should not be null when opening the AssetViewer");
     pageController = PageController(initialPage: widget.initialIndex);
     platform = widget.platform ?? const LocalPlatform();
     totalAssets = ref.read(timelineServiceProvider).totalAssets;
@@ -116,7 +130,7 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
     routeAware = _MyRouteAware();
     ui.SetHdr.enableHdr(enable_hdr: true);
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_onAssetInit) {
       _onAssetChanged(widget.initialIndex);
 
       final modalRoute = ModalRoute.of(context);
@@ -136,6 +150,7 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
     reloadSubscription?.cancel();
     _prevPreCacheStream?.removeListener(_dummyListener);
     _nextPreCacheStream?.removeListener(_dummyListener);
+
     routeObserver.unsubscribe(routeAware);
     removeImageListener();
     super.dispose();
@@ -201,10 +216,34 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
     getImageColorSpace(provider, context);
   }
 
-  void _onAssetChanged(int index) async {
-    // Validate index bounds and try to get asset, loading buffer if needed
+  void _precacheAssets(int index) async {
     final timelineService = ref.read(timelineServiceProvider);
+    unawaited(timelineService.preCacheAssets(index));
+    _cancelTimers();
     final asset = await timelineService.getAssetAsync(index);
+    // This will trigger the pre-caching of adjacent assets ensuring
+    // that they are ready when the user navigates to them.
+        // This will trigger the pre-caching of adjacent assets ensuring
+    // that they are ready when the user navigates to them.
+    final timer = Timer(Durations.medium4, () async {
+      // Check if widget is still mounted before proceeding
+      if (!mounted) return;
+
+
+
+    final (prevAsset, nextAsset) = await (
+        timelineService.getAssetAsync(index - 1),
+        timelineService.getAssetAsync(index + 1),
+      ).wait;
+      if (!mounted) return;
+      _prevPreCacheStream?.removeListener(_dummyListener);
+      _nextPreCacheStream?.removeListener(_dummyListener);
+      _prevPreCacheStream = prevAsset != null ? _precacheImage(prevAsset) : null;
+      _nextPreCacheStream = nextAsset != null ? _precacheImage(nextAsset) : null;
+    
+    });
+
+    
     imageHdrState = -1;
 
     if (asset == null) {
@@ -221,6 +260,10 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
       ref.read(videoPlayerControlsProvider.notifier).pause();
     }
 
+      if (!asset.isImage) {
+        ui.SetHdr.setHdrMode(hdr: -1, is_image: false);
+      }
+
     if (asset.isImage) {
       final provider = getFullImageProvider(asset);
       setDisplayMode(provider, context);
@@ -228,37 +271,33 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
       ui.SetHdr.setHdrMode(hdr: 0, is_image: true);
     }
 
-    unawaited(ref.read(timelineServiceProvider).preCacheAssets(index));
-    _cancelTimers();
-    // This will trigger the pre-caching of adjacent assets ensuring
-    // that they are ready when the user navigates to them.
-    final timer = Timer(Durations.medium4, () async {
-      // Check if widget is still mounted before proceeding
-      if (!mounted) return;
+   
 
-      if (!asset.isImage) {
-        ui.SetHdr.setHdrMode(hdr: -1, is_image: false);
-      }
-
-    final (prevAsset, nextAsset) = await (
-        timelineService.getAssetAsync(index - 1),
-        timelineService.getAssetAsync(index + 1),
-      ).wait;
-      if (!mounted) return;
-      _prevPreCacheStream?.removeListener(_dummyListener);
-      _nextPreCacheStream?.removeListener(_dummyListener);
-      _prevPreCacheStream = prevAsset != null ? _precacheImage(prevAsset) : null;
-      _nextPreCacheStream = nextAsset != null ? _precacheImage(nextAsset) : null;
-    
-    });
     _delayedOperations.add(timer);
-
-    //_handleCasting(asset);
   }
 
-  /*
-  void _handleCasting(BaseAsset asset) {
+  void _onAssetInit(Duration _) {
+    _precacheAssets(widget.initialIndex);
+    //_handleCasting();
+  }
+
+  void _onAssetChanged(int index) async {
+    final timelineService = ref.read(timelineServiceProvider);
+    final asset = await timelineService.getAssetAsync(index);
+    if (asset == null) {
+      return;
+    }
+
+    AssetViewer.setAsset(ref, asset);
+    _precacheAssets(index);
+    //_handleCasting();
+  }
+
+/*
+  void _handleCasting() {
     if (!ref.read(castProvider).isCasting) return;
+    final asset = ref.read(currentAssetNotifier);
+    if (asset == null) return;
 
     // hide any casting snackbars if they exist
     context.scaffoldMessenger.hideCurrentSnackBar();
@@ -672,11 +711,12 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
     // Rebuild the widget when the asset viewer state changes
     // Using multiple selectors to avoid unnecessary rebuilds for other state changes
     ref.watch(assetViewerProvider.select((s) => s.showingBottomSheet));
+    ref.watch(assetViewerProvider.select((s) => s.showingControls));
     ref.watch(assetViewerProvider.select((s) => s.backgroundOpacity));
     ref.watch(assetViewerProvider.select((s) => s.stackIndex));
     ref.watch(isPlayingMotionVideoProvider);
 
-    /*
+/*
     Listen for casting changes and send initial asset to the cast provider
     ref.listen(castProvider.select((value) => value.isCasting), (_, isCasting) async {
       if (!isCasting) return;
@@ -685,10 +725,19 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
       if (asset == null) return;
 
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        _handleCasting(asset);
+        _handleCasting();
       });
     });
-    */
+
+    // Listen for control visibility changes and change system UI mode accordingly
+    ref.listen(assetViewerProvider.select((value) => value.showingControls), (_, showingControls) async {
+      if (showingControls) {
+        SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+      } else {
+        SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+      }
+    });
+*/
 
     // Currently it is not possible to scroll the asset when the bottom sheet is open all the way.
     // Issue: https://github.com/flutter/flutter/issues/109037

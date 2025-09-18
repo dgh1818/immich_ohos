@@ -307,7 +307,7 @@ class _SyncStatusIndicatorState extends ConsumerState<SyncStatusIndicator> with 
   @override
   Widget build(BuildContext context) {
     final syncStatus = ref.watch(syncStatusProvider);
-    final isSyncing = syncStatus.isRemoteSyncing;
+    final isSyncing = syncStatus.isRemoteSyncing || syncStatus.isLocalSyncing;
 
     // Control animations based on sync status
     if (isSyncing) {
