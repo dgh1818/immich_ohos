@@ -260,9 +260,6 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
       ref.read(videoPlayerControlsProvider.notifier).pause();
     }
 
-      if (!asset.isImage) {
-        ui.SetHdr.setHdrMode(hdr: -1, is_image: false);
-      }
 
     if (asset.isImage) {
       final provider = getFullImageProvider(asset);
@@ -271,7 +268,9 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
       ui.SetHdr.setHdrMode(hdr: 0, is_image: true);
     }
 
-   
+    if (!asset.isImage) {
+      ui.SetHdr.setHdrMode(hdr: -1, is_image: false);
+    }
 
     _delayedOperations.add(timer);
   }

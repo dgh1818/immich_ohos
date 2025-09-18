@@ -10,11 +10,16 @@ import { photoAccessHelper } from "@kit.MediaLibraryKit";
 import { image } from "@kit.ImageKit";
 import { BusinessError } from '@kit.BasicServicesKit';
 import {getThumbhashTask,requestImageTask} from './ThumbTask'
-
 import { fileIo as fs, fileUri } from '@kit.CoreFileKit';
-import call from "@ohos.telephony.call";
 
-let runner:taskpool.AsyncRunner = new taskpool.AsyncRunner("runner1", 5);
+
+let runner: taskpool.AsyncRunner | undefined = undefined;
+
+if (canIUse('api.version >= 18')) {
+  runner = new taskpool.AsyncRunner("runner1", 4);
+}
+
+//let runner:taskpool.AsyncRunner = new taskpool.AsyncRunner("runner1", 5);
 
 export class MessagesImplBaseThumb extends ThumbnailApi {
   static ctx?: common.UIAbilityContext;
@@ -28,7 +33,8 @@ export class MessagesImplBaseThumb extends ThumbnailApi {
   override async getThumbhash(thumbhash: string, result: Result<Map<string, object>>) {
     const task: taskpool.Task = new taskpool.Task(getThumbhashTask, thumbhash);
     try {
-      runner.execute(task).then((d: object) => {
+      taskpool.execute(task).then((d: object) => {
+      //runner.execute(task).then((d: object) => {
         let res = d as ThumbHashResult|undefined;
 
         if(res!=undefined) {
@@ -62,34 +68,65 @@ export class MessagesImplBaseThumb extends ThumbnailApi {
     let task: taskpool.Task = new taskpool.Task(requestImageTask, assetId, requestId, width, height, isVideo,sendableContext);
     this.requestMap.set(requestId,task);
 
-    runner.execute(task).then((d: object) => {
-      let res = d as ThumbHashResult|undefined;
+    if (canIUse('api.version >= 18')) {
+      runner!.execute(task).then((d: object) => {
+        let res = d as ThumbHashResult|undefined;
 
-      if(res!=undefined) {
-        let resOut = new Map<string, Object>();
-        resOut.set("width",res.width);
-        resOut.set("height",res.height);
-        resOut.set("pointer",Uint8Array.from(res.pointer));
-
-
-        return callback.success(resOut);
+        if(res!=undefined) {
+          let resOut = new Map<string, Object>();
+          resOut.set("width",res.width);
+          resOut.set("height",res.height);
+          resOut.set("pointer",Uint8Array.from(res.pointer));
 
 
-      } else {
-        callback.error(new Error("res==undefined"));
+          return callback.success(resOut);
+
+
+        } else {
+          callback.error(new Error("res==undefined"));
+          return;
+        }
+
+
+        console.info(`task1 res is: ${d}`);
+      }).catch((e: object) => {
+        callback.error(e as BusinessError);
         return;
-      }
+        console.error(`task1 catch e: ${e}`); // task1 catch e: Error: testPromise error
+      }).finally(() => {
+        this.requestMap.delete(requestId);
+        taskpool.terminateTask(task);
+      })
+    } else {
+      taskpool.execute(task).then((d: object) => {
+        let res = d as ThumbHashResult|undefined;
+
+        if(res!=undefined) {
+          let resOut = new Map<string, Object>();
+          resOut.set("width",res.width);
+          resOut.set("height",res.height);
+          resOut.set("pointer",Uint8Array.from(res.pointer));
 
 
-      console.info(`task1 res is: ${d}`);
-    }).catch((e: object) => {
-      callback.error(e as BusinessError);
-      return;
-      console.error(`task1 catch e: ${e}`); // task1 catch e: Error: testPromise error
-    }).finally(() => {
-      this.requestMap.delete(requestId);
-      taskpool.terminateTask(task);
-    })
+          return callback.success(resOut);
+
+
+        } else {
+          callback.error(new Error("res==undefined"));
+          return;
+        }
+
+
+        console.info(`task1 res is: ${d}`);
+      }).catch((e: object) => {
+        callback.error(e as BusinessError);
+        return;
+        console.error(`task1 catch e: ${e}`); // task1 catch e: Error: testPromise error
+      }).finally(() => {
+        this.requestMap.delete(requestId);
+        taskpool.terminateTask(task);
+      })
+    }
 }
 
   override cancelImageRequest(requestId: number) {
@@ -165,7 +202,7 @@ export class MessagesImplBaseThumb extends ThumbnailApi {
       //console.error("enter processBitmap6" + collectionsUint8Array.byteLength);
 
       let finalResult = new ThumbHashResult(actualWidth,actualHeight,collectionsUint8Array);
-      
+
       return finalResult;
 
     } catch (e) {
