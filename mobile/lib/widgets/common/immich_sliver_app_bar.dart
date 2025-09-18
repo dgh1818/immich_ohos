@@ -82,9 +82,11 @@ class ImmichSliverAppBar extends ConsumerWidget {
               icon: const Icon(Icons.science_rounded),
               onPressed: () => context.pushRoute(const FeatInDevRoute()),
             ),
+          /*
           if (showUploadButton && !isReadonlyModeEnabled)
             const Padding(padding: EdgeInsets.only(right: 20), child: BackupIndicator()),
           const Padding(padding: EdgeInsets.only(right: 20), child: ProfileIndicator()),
+          */
         ],
       ),
     );
