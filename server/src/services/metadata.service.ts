@@ -200,8 +200,8 @@ export class MetadataService extends BaseService {
   ): Promise<void> {
     const otherType = asset.type === AssetType.Video ? AssetType.Image : AssetType.Video;
     const match = await this.assetRepository.findOhosLivePhotoMatch({
-      path: otherType === AssetType.Video?`${path.parse(asset.originalPath).dir}/${path.parse(asset.originalFileName).name}.mp4`:`${path.parse(asset.originalPath).dir}/${path.parse(asset.originalFileName).name}.jpg`,
-      name: otherType === AssetType.Video?`${path.parse(asset.originalFileName).name}.mp4`:`${path.parse(asset.originalFileName).name}.jpg`,
+      path: otherType === AssetType.Video?`${parse(asset.originalPath).dir}/${parse(asset.originalFileName).name}.mp4`:`${parse(asset.originalPath).dir}/${parse(asset.originalFileName).name}.jpg`,
+      name: otherType === AssetType.Video?`${parse(asset.originalFileName).name}.mp4`:`${parse(asset.originalFileName).name}.jpg`,
       ownerId: asset.ownerId,
       libraryId: asset.libraryId,
       otherAssetId: asset.id,
