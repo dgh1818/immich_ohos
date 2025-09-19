@@ -27,11 +27,18 @@ export default class EntryAbility extends FlutterAbility {
   configureFlutterEngine(flutterEngine: FlutterEngine) {
     super.configureFlutterEngine(flutterEngine)
     GeneratedPluginRegistrant.registerWith(flutterEngine)
+
+    this.registerPlugins(super.getAbility().context,flutterEngine);
+  }
+
+  public registerPlugins(ctx: Context, flutterEngine: FlutterEngine){
     this.addPlugin(new BackgroundServicePlugin()); // 加载插件
+    //this.addPlugin(new HttpSSLOptionsPlugin());
+
+    let messenger = flutterEngine.dartExecutor.getBinaryMessenger();
     let nativeSyncApiImpl = new MessagesImplBase(super.getAbility().context);
     let ThumbApiImpl = new MessagesImplBaseThumb(super.getAbility().context)
-    let backgroundWorkerApiImpl = new BackgroundWorkerApiImpl(super.getAbility().context.getApplicationContext());
-
+    let backgroundWorkerApiImpl = new BackgroundWorkerApiImpl(ctx.getApplicationContext());
     NativeSyncApiOhos.setup(flutterEngine.dartExecutor.getBinaryMessenger(), nativeSyncApiImpl)
     ThumbnailApi.setup(flutterEngine.dartExecutor.getBinaryMessenger(),ThumbApiImpl);
     BackgroundWorkerFgHostApi.setup(flutterEngine.dartExecutor.getBinaryMessenger(),backgroundWorkerApiImpl);

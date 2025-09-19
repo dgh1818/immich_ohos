@@ -2,7 +2,6 @@ import { common } from '@kit.AbilityKit'
 import { BackgroundWorkerFgHostApi } from './BackgroundWorker.g'
 import dataPreferences from '@ohos.data.preferences'
 import preferences from '@ohos.data.preferences';
-import { BackgroundTaskType } from './BackgroundWorker';
 import { workScheduler } from '@kit.BackgroundTasksKit';
 
 export class BackgroundWorkerApiImpl extends BackgroundWorkerFgHostApi {
@@ -14,28 +13,19 @@ export class BackgroundWorkerApiImpl extends BackgroundWorkerFgHostApi {
     this.ctx = context;
   }
 
-  override enableSyncWorker() {
-    BackgroundWorkerApiImpl.enqueueMediaObserver(this.ctx!);
-    console.info(BackgroundWorkerApiImpl.TAG, "Scheduled media observer")
+  override enable() {
+    BackgroundWorkerApiImpl.enqueueMediaObserver(this.ctx!)
   }
 
-  override enableUploadWorker(callbackHandle: number) {
-    BackgroundWorkerApiImpl.updateUploadEnabled(this.ctx!, true)
-    BackgroundWorkerApiImpl.updateCallbackHandle(this.ctx!, callbackHandle)
-    console.info(BackgroundWorkerApiImpl.TAG+"Scheduled background upload tasks");
-  }
-
-  override disableUploadWorker() {
-    BackgroundWorkerApiImpl.updateUploadEnabled(this.ctx!, false);
+  override disable() {
     try {
-      workScheduler.stopWork(BackgroundWorkerApiImpl.BACKGROUND_WORKER_INFO);
-    } catch (e) {
-      console.error(e);
+      workScheduler.stopWork(BackgroundWorkerApiImpl.MEDIAOBSERVER_WORKER_INFO)
+      workScheduler.stopWork(BackgroundWorkerApiImpl.BACKGROUND_WORKER_INFO, true);
+      console.info(BackgroundWorkerApiImpl.TAG, "Cancelled background upload tasks success")
+    }catch (e) {
+      console.info(BackgroundWorkerApiImpl.TAG, "Cancelled background upload tasks failed")
     }
-
-    console.info(BackgroundWorkerApiImpl.TAG+"Cancelled background upload tasks");
-}
-
+  }
 
   static readonly BACKGROUND_WORKER_NAME = "immich/BackgroundWorkerV1"
   static readonly BACKGROUND_WORKER_ID = 1;
@@ -71,12 +61,6 @@ export class BackgroundWorkerApiImpl extends BackgroundWorkerFgHostApi {
 
   }
 
-  static updateCallbackHandle(context: common.ApplicationContext, callbackHandle: number) {
-    let options: preferences.Options = { name: BackgroundWorkerApiImpl.SHARED_PREF_NAME };
-    dataPreferences.getPreferencesSync(context, options)
-      .putSync(BackgroundWorkerApiImpl.SHARED_PREF_CALLBACK_HANDLE, callbackHandle);
-  }
-
   public static enqueueMediaObserver(ctx: common.ApplicationContext) {
     // val constraints = Constraints.Builder()
     //   .addContentUriTrigger(MediaStore.Images.Media.INTERNAL_CONTENT_URI, true)
@@ -101,14 +85,13 @@ export class BackgroundWorkerApiImpl extends BackgroundWorkerFgHostApi {
     BackgroundWorkerApiImpl.MediaObserver_WORKER_ID);
   }
 
-  public static enqueueBackgroundWorker(ctx: common.ApplicationContext, taskType: BackgroundTaskType) {
+  public static enqueueBackgroundWorker(ctx: common.ApplicationContext) {
     let constraints: workScheduler.WorkInfo = {
       workId: BackgroundWorkerApiImpl.BACKGROUND_WORKER_ID,
       bundleName: 'com.dgh18.immich',
       abilityName: 'BackgroundWorker',
       batteryStatus: workScheduler.BatteryStatus.BATTERY_STATUS_OKAY,
       //.setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 1, TimeUnit.MINUTES)
-      parameters: { "taskType": taskType.valueOf() }
     }
 
     BackgroundWorkerApiImpl.BACKGROUND_WORKER_INFO = constraints;

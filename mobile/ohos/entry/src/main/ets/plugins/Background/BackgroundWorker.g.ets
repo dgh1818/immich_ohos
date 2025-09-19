@@ -79,11 +79,9 @@ export interface Result<T> {
 /* Generated abstract class from Pigeon that represents a handler of messages from Flutter.*/
 export abstract class BackgroundWorkerFgHostApi {
 
-  abstract enableSyncWorker(): void;
+  abstract enable(): void;
 
-  abstract enableUploadWorker(callbackHandle: number ): void;
-
-  abstract disableUploadWorker(): void;
+  abstract disable(): void;
   /** The codec used by BackgroundWorkerFgHostApi. */
   static getCodec(): MessageCodec<Object>{
     return PigeonCodec.INSTANCE;
@@ -93,13 +91,13 @@ export abstract class BackgroundWorkerFgHostApi {
     {
       let channel: BasicMessageChannel<Object> =
           new BasicMessageChannel(
-              binaryMessenger, "dev.flutter.pigeon.immich_mobile.BackgroundWorkerFgHostApi.enableSyncWorker", BackgroundWorkerFgHostApi.getCodec());
+              binaryMessenger, "dev.flutter.pigeon.immich_mobile.BackgroundWorkerFgHostApi.enable", BackgroundWorkerFgHostApi.getCodec());
       if (api != null) {
         channel.setMessageHandler({
             onMessage(message: Object ,reply: Reply<Object> ) {
               let res: Array<Object> = [];
               try {
-                api!.enableSyncWorker();
+                api!.enable();
                 res.push(null);
               }
  catch (error) {
@@ -115,36 +113,13 @@ export abstract class BackgroundWorkerFgHostApi {
     {
       let channel: BasicMessageChannel<Object> =
           new BasicMessageChannel(
-              binaryMessenger, "dev.flutter.pigeon.immich_mobile.BackgroundWorkerFgHostApi.enableUploadWorker", BackgroundWorkerFgHostApi.getCodec());
-      if (api != null) {
-        channel.setMessageHandler({
-            onMessage(message: Object ,reply: Reply<Object> ) {
-              let args: Array<Object> = message as Array<Object>;
-              let res: Array<Object> = [];
-              try {
-                api!.enableUploadWorker(args[0] as number);
-                res.push(null);
-              }
- catch (error) {
-                let wrappedError: Array<Object> = wrapError(error);
-                res = wrappedError;
-              }
-              reply.reply(res);
-            } });
-      } else {
-        channel.setMessageHandler(null);
-      }
-    }
-    {
-      let channel: BasicMessageChannel<Object> =
-          new BasicMessageChannel(
-              binaryMessenger, "dev.flutter.pigeon.immich_mobile.BackgroundWorkerFgHostApi.disableUploadWorker", BackgroundWorkerFgHostApi.getCodec());
+              binaryMessenger, "dev.flutter.pigeon.immich_mobile.BackgroundWorkerFgHostApi.disable", BackgroundWorkerFgHostApi.getCodec());
       if (api != null) {
         channel.setMessageHandler({
             onMessage(message: Object ,reply: Reply<Object> ) {
               let res: Array<Object> = [];
               try {
-                api!.disableUploadWorker();
+                api!.disable();
                 res.push(null);
               }
  catch (error) {
@@ -163,6 +138,8 @@ export abstract class BackgroundWorkerFgHostApi {
 export abstract class BackgroundWorkerBgHostApi {
 
   abstract onInitialized(): void;
+
+  abstract close(): void;
   /** The codec used by BackgroundWorkerBgHostApi. */
   static getCodec(): MessageCodec<Object>{
     return PigeonCodec.INSTANCE;
@@ -191,6 +168,28 @@ export abstract class BackgroundWorkerBgHostApi {
         channel.setMessageHandler(null);
       }
     }
+    {
+      let channel: BasicMessageChannel<Object> =
+          new BasicMessageChannel(
+              binaryMessenger, "dev.flutter.pigeon.immich_mobile.BackgroundWorkerBgHostApi.close", BackgroundWorkerBgHostApi.getCodec());
+      if (api != null) {
+        channel.setMessageHandler({
+            onMessage(message: Object ,reply: Reply<Object> ) {
+              let res: Array<Object> = [];
+              try {
+                api!.close();
+                res.push(null);
+              }
+ catch (error) {
+                let wrappedError: Array<Object> = wrapError(error);
+                res = wrappedError;
+              }
+              reply.reply(res);
+            } });
+      } else {
+        channel.setMessageHandler(null);
+      }
+    }
   }
 }
 /* Generated class from Pigeon that represents Flutter messages that can be called from ArkTS.*/
@@ -206,32 +205,6 @@ export class BackgroundWorkerFlutterApi {
     return PigeonCodec.INSTANCE;
   }
 
-  onLocalSync(maxSecondsArg: number, callback: Reply<void>) {
-    const channelName: string = 'dev.flutter.pigeon.immich_mobile.BackgroundWorkerFlutterApi.onLocalSync';
-    let channel: BasicMessageChannel<Object> =
-        new BasicMessageChannel<Object>(
-            this.binaryMessenger, channelName, BackgroundWorkerFlutterApi.getCodec());
-    channel.send(
-        [maxSecondsArg],
-        channelReply => {
-          if (Array.isArray(channelReply)) {
-            let listReply: Object[] = channelReply as Object[] ;
-            if (listReply.length > 1) {
-              let arrFirst:string = listReply[0] as string;
-              let arrSecond:string = listReply[1] as string;
-              let arrThird:string = listReply[2] as string;
-              let replyArr:string = 'FlutterError:{"code":'+arrFirst+',"name":'+arrSecond+',"message":'+arrThird+'}';
-              throw new Error(replyArr);
-
-            } else {
-              callback.reply();
-            }
-          }  else {
-            let connErr:string = 'FlutterError:{"code":channel-error,"name":Unable to establish connection on channel:channelName,"message":.}'
-            throw new Error(connErr);
-          }
-        });
-  }
   onIosUpload(isRefreshArg: boolean,maxSecondsArg: number, callback: Reply<void>) {
     const channelName: string = 'dev.flutter.pigeon.immich_mobile.BackgroundWorkerFlutterApi.onIosUpload';
     let channel: BasicMessageChannel<Object> =
@@ -248,14 +221,12 @@ export class BackgroundWorkerFlutterApi {
               let arrThird:string = listReply[2] as string;
               let replyArr:string = 'FlutterError:{"code":'+arrFirst+',"name":'+arrSecond+',"message":'+arrThird+'}';
               throw new Error(replyArr);
-              //callback.reply(replyArr);
             } else {
               callback.reply();
             }
           }  else {
             let connErr:string = 'FlutterError:{"code":channel-error,"name":Unable to establish connection on channel:channelName,"message":.}'
-            throw new Error(connErr);
-            //callback.reply(connErr);
+            throw new Error("connErr");
           }
         });
   }
@@ -275,14 +246,12 @@ export class BackgroundWorkerFlutterApi {
               let arrThird:string = listReply[2] as string;
               let replyArr:string = 'FlutterError:{"code":'+arrFirst+',"name":'+arrSecond+',"message":'+arrThird+'}';
               throw new Error(replyArr);
-              //callback.reply(replyArr);
             } else {
               callback.reply();
             }
           }  else {
             let connErr:string = 'FlutterError:{"code":channel-error,"name":Unable to establish connection on channel:channelName,"message":.}'
-            throw new Error(connErr);
-            //callback.reply(connErr);
+            throw new Error("connErr");
           }
         });
   }
@@ -302,14 +271,12 @@ export class BackgroundWorkerFlutterApi {
               let arrThird:string = listReply[2] as string;
               let replyArr:string = 'FlutterError:{"code":'+arrFirst+',"name":'+arrSecond+',"message":'+arrThird+'}';
               throw new Error(replyArr);
-              //callback.reply(replyArr);
             } else {
               callback.reply();
             }
           }  else {
             let connErr:string = 'FlutterError:{"code":channel-error,"name":Unable to establish connection on channel:channelName,"message":.}'
-            throw new Error(connErr);
-            //callback.reply(connErr);
+            throw new Error("connErr");
           }
         });
   }

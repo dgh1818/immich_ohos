@@ -1,5 +1,6 @@
 import { workScheduler, WorkSchedulerExtensionAbility } from "@kit.BackgroundTasksKit";
 import {
+  DartExecutor,
   FlutterCallbackInformation,
   FlutterEngine,
   FlutterInjector,
@@ -10,11 +11,7 @@ import { BackgroundWorkerBgHostApi, BackgroundWorkerFlutterApi } from "./Backgro
 import dataPreferences from '@ohos.data.preferences'
 import preferences from "@ohos.data.preferences";
 import { BackgroundWorkerApiImpl } from "./BackgroundWorkerApiImpl";
-
-export enum BackgroundTaskType {
-  LOCAL_SYNC,
-  UPLOAD,
-}
+import EntryAbility from "../../entryability/EntryAbility";
 
 export class Deferred<T> {
   public promise: Promise<T>;
@@ -48,8 +45,10 @@ class BackgroundWorker extends WorkSchedulerExtensionAbility {
   public static isComplete = false
   private TAG = "BackgroundWorker";
   public static workerInfo?: workScheduler.WorkInfo;
+  public static mainAbility?:EntryAbility;
 
-  public backgroundWorkerBgHostApiImpl?:BackgroundWorkerBgHostApiImpl;
+  public static backgroundWorkerBgHostApiImpl?:BackgroundWorkerBgHostApiImpl;
+
 
   constructor() {
     super();
@@ -59,52 +58,28 @@ class BackgroundWorker extends WorkSchedulerExtensionAbility {
   }
 
   onWorkStart(workInfo: workScheduler.WorkInfo) {
-    this.backgroundWorkerBgHostApiImpl = new BackgroundWorkerBgHostApiImpl();
+    BackgroundWorker.backgroundWorkerBgHostApiImpl = new BackgroundWorkerBgHostApiImpl();
     this.context.getApplicationContext();
     BackgroundWorker.workerInfo = workInfo;
     console.info(`onWorkStart, workInfo = ${JSON.stringify(workInfo)}`);
-
     console.info(this.TAG, "Starting background upload worker")
+    BackgroundWorker.mainAbility = new EntryAbility();
 
-    this.loader.ensureInitializationComplete
+    this.loader.ensureInitializationComplete;
     BackgroundWorker.engine = new FlutterEngine(this.ctx, null, null, null);
-
-    // Retrieve the callback handle stored by the main Flutter app
-    // This handle points to the Flutter function that should be executed in the background
-    let options: preferences.Options = { name: BackgroundWorkerApiImpl.SHARED_PREF_NAME };
-    let callbackHandle =
-      dataPreferences.getPreferencesSync(this.context, options)
-        .getSync(BackgroundWorkerApiImpl.SHARED_PREF_CALLBACK_HANDLE, 0) as number;
-
-    if (callbackHandle == 0) {
-      return false;
-      // Without a valid callback handle, we cannot start the Flutter background execution
-
-    }
-
-    let callback = FlutterCallbackInformation.lookupCallbackInformation(callbackHandle)
-    if (callback == null) {
-      return false;
-    }
-
-
-    //this.engine.
-    //this.engine.getPlugins()?.add()
+    BackgroundWorker.mainAbility.registerPlugins(BackgroundWorker.mainAbility.getAbility().context,BackgroundWorker.engine)
 
     BackgroundWorker.flutterApi =
       new BackgroundWorkerFlutterApi(BackgroundWorker.engine.dartExecutor.getBinaryMessenger())
 
     BackgroundWorkerBgHostApi.setup(
       BackgroundWorker.engine.dartExecutor.getBinaryMessenger(),
-      this.backgroundWorkerBgHostApiImpl,
+      BackgroundWorker.backgroundWorkerBgHostApiImpl,
     )
 
-
-    // this.engine.dartExecutor.executeDartCallback(
-    //   new DartCallback(this.ctx.resourceManager, this.loader.findAppBundlePath(), callback)  //官方适配版DartCallback未导出
-    // )
-
     return BackgroundWorker.completionHandler;
+
+    //BackgroundWorker.engine.dartExecutor.executeDartEntrypoint(new DartEntrypoint(this.loader.findAppBundlePath(),"package:immich_mobile/domain/services/background_worker.service.dart","backgroundSyncNativeEntrypoint"));
   }
 
   onWorkStop(workInfo: workScheduler.WorkInfo) {
@@ -119,59 +94,69 @@ class BackgroundWorker extends WorkSchedulerExtensionAbility {
         BackgroundWorker.flutterApi.cancel({
           reply: () => {
             // FlutterApi 回调完成，标记失败
-            this.backgroundWorkerBgHostApiImpl!.complete(false);
+            BackgroundWorker.backgroundWorkerBgHostApiImpl!.complete(false);
           }
         });
       } catch (e) {
         console.error("flutterApi.cancel error:", e);
         // 出错也保证失败
-        this.backgroundWorkerBgHostApiImpl!.complete(false);
+        BackgroundWorker.backgroundWorkerBgHostApiImpl!.complete(false);
       }
     }
 
     // 5 秒后 fallback，保证任务完成
     setTimeout(() => {
-      this.backgroundWorkerBgHostApiImpl!.complete(false);
+      BackgroundWorker.backgroundWorkerBgHostApiImpl!.complete(false);
     }, 5000);
   }
 }
 
 class BackgroundWorkerBgHostApiImpl extends BackgroundWorkerBgHostApi {
+  private TAG = "BackgroundWorker";
   /**
    * Called by the Flutter side when it has finished initialization and is ready to receive commands.
    * Routes the appropriate task type (refresh or processing) to the corresponding Flutter method.
    * This method acts as a bridge between the native Android background task system and Flutter.
    */
   override onInitialized() {
-    let taskTypeIndex =
-      BackgroundWorker.workerInfo?.parameters![BackgroundWorkerApiImpl.WORKER_DATA_TASK_TYPE] as number
-    let taskType = taskTypeIndex as BackgroundTaskType;
-
-    switch (taskType) {
-      case BackgroundTaskType.LOCAL_SYNC:
-        //let getRelpy:Reply<string> = undefined;
-        try {
-          BackgroundWorker.flutterApi!.onLocalSync(60, {
-            reply: () => this.handleHostResult(true)
-          });
-        } catch (e) {
-          this.handleHostResult(false);
-        }
-
-
-        break;
-
-      case BackgroundTaskType.UPLOAD:
-        try {
-          BackgroundWorker.flutterApi!.onAndroidUpload({
-            reply: () => this.handleHostResult(true)
-          });
-        } catch (e) {
-          this.handleHostResult(false);
-        }
-
-
+    try {
+      BackgroundWorker.flutterApi!.onAndroidUpload({
+        reply: () => this.handleHostResult(true)
+      });
+    } catch (e) {
+      this.handleHostResult(false);
     }
+  }
+
+  override close() {
+    if(BackgroundWorker.isComplete) {
+      return;
+    }
+
+
+
+    // 尝试调用 FlutterApi cancel
+    if (BackgroundWorker.flutterApi != null) {
+      try {
+        BackgroundWorker.flutterApi.cancel({
+          reply: () => {
+
+            // FlutterApi 回调完成，标记失败
+            BackgroundWorker.backgroundWorkerBgHostApiImpl!.complete(false);
+          }
+        });
+      } catch (e) {
+        console.error("flutterApi.cancel error:", e);
+        // 出错也保证失败
+        BackgroundWorker.backgroundWorkerBgHostApiImpl!.complete(false);
+      }
+    }
+
+    // 5 秒后 fallback，保证任务完成
+    setTimeout(() => {
+      BackgroundWorker.backgroundWorkerBgHostApiImpl!.complete(false);
+    }, 5000);
+
   }
 
   /**
@@ -202,8 +187,10 @@ class BackgroundWorkerBgHostApiImpl extends BackgroundWorkerBgHostApi {
    * - Parameter success: Indicates whether the background task completed successfully
    */
   public complete(success: boolean) {
+    console.info(this.TAG, "About to complete BackupWorker with result:" +success)
     BackgroundWorker.isComplete = true;
     BackgroundWorker.engine?.destroy();
+    BackgroundWorker.engine=undefined;
     BackgroundWorker.flutterApi = undefined;
 
     // 通知完成
