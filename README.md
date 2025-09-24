@@ -39,6 +39,7 @@
 </p>
 
 # Harmonyos Next 鸿蒙端的 Immich
+https://appgallery.huawei.com/link/invite-test-wap?taskId=b686bfebf57bb115ed3c33d03c480f19
 
 **IMMICH 搭配对应版本 本项目下服务器 使用**
 <h1>签名有关注意事项：</h1>
