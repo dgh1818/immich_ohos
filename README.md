@@ -39,7 +39,7 @@
 </p>
 
 # Harmonyos Next 鸿蒙端的 Immich
-https://appgallery.huawei.com/link/invite-test-wap?taskId=db93f41e437f49a3e4ad6eee6e14ede1&invitationCode=9QROhzFBXon
+https://appgallery.huawei.com/link/invite-test-wap?taskId=c0af1d2d9e354649a0c7a9a8d680f8b4&invitationCode=9QROhzFBXon
 **IMMICH 搭配对应版本 本项目下服务器 使用**
 <h1>签名有关注意事项：</h1>
 1. 本目录下服务器可实现华为jpeg动态照片解析<br/>
