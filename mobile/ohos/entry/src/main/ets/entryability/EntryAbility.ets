@@ -22,6 +22,8 @@ import {MessagesImplBase} from '../plugins/sync/MessagesImplBase'
 import { MessagesImplBaseThumb } from '../plugins/Images/ThumbnailsImpl';
 import { BackgroundWorkerApiImpl } from '../plugins/Background/BackgroundWorkerApiImpl';
 import { BackgroundWorkerFgHostApi } from '../plugins/Background/BackgroundWorker.g';
+import { ConnectivityApi } from '../plugins/connectivity/Connectivity.g';
+import { ConnectivityApiImpl } from '../plugins/connectivity/ConnectivityApiImpl';
 
 export default class EntryAbility extends FlutterAbility {
   configureFlutterEngine(flutterEngine: FlutterEngine) {
@@ -39,8 +41,10 @@ export default class EntryAbility extends FlutterAbility {
     let nativeSyncApiImpl = new MessagesImplBase(super.getAbility().context);
     let ThumbApiImpl = new MessagesImplBaseThumb(super.getAbility().context)
     let backgroundWorkerApiImpl = new BackgroundWorkerApiImpl(ctx.getApplicationContext());
-    NativeSyncApiOhos.setup(flutterEngine.dartExecutor.getBinaryMessenger(), nativeSyncApiImpl)
-    ThumbnailApi.setup(flutterEngine.dartExecutor.getBinaryMessenger(),ThumbApiImpl);
-    BackgroundWorkerFgHostApi.setup(flutterEngine.dartExecutor.getBinaryMessenger(),backgroundWorkerApiImpl);
+    let connectivityApiImpl = new ConnectivityApiImpl(ctx.getApplicationContext());
+    NativeSyncApiOhos.setup(messenger, nativeSyncApiImpl)
+    ThumbnailApi.setup(messenger,ThumbApiImpl);
+    BackgroundWorkerFgHostApi.setup(messenger,backgroundWorkerApiImpl);
+    ConnectivityApi.setup(messenger,connectivityApiImpl)
   }
 }
