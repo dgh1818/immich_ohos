@@ -73,10 +73,7 @@ GEOCODE_WITH_AMAP: 'true' // 启用高德 逆地理编码 个人开发者国内�
 4. 每行显示数量更改不即时生效（原版app也存在） <br/>
 
 <h1>未完成的功能：</h1>
-
 1.  照片同步功能以及后台上传下载功能：background_downloader未适配 <br/>
-2. 大地图：[maplibre/flutter-maplibre-gl](https://github.com/maplibre/flutter-maplibre-gl) Huawei mapkit缺少热力图功能 <br/>
-   ：官方回复九月增加此功能 <br/>
 3.  投屏功能：gcast谷歌投屏 <br/>
 4. 桌面小组件 <br/>
 5.  链接分享和接收功能：share_plus <br/>
@@ -89,11 +86,10 @@ GEOCODE_WITH_AMAP: 'true' // 启用高德 逆地理编码 个人开发者国内�
 To Do：
 
 1. 华为动态照片的播放显示（修改 Server 端？）初步完成！需使用本项目服务器，重新分析元数据
-2. 替换地图：ExifInfo 小地图初步完成！大地图 Mapkit 尚未有热力图功能，待官方功能完善 （需App Gallery Connect开通地图权限并签名才能显示地图）
+2. 替换地图：ExifInfo 小地图替换完成！ （需App Gallery Connect开通地图权限并签名才能显示地图）
 https://ost.51cto.com/answer/23898 mapkit开通教程
 3. AI HDR（待完成）
-4. 地理反向编码中文化：完成！（需使用本项目服务器，重新分析元数据）（需App Gallery Connect开通地图权限并签名）
-5. 当前 flutter 版本受限（3.27），无法使用最新 flutter 版本（3.32），后续更新<br/>
+4. 地理反向编码中文化：完成！（需使用本项目服务器，重新分析元数据）（需App Gallery Connect开通地图权限并签名
 
 <h2>备忘：</h2>
 1. photopicker最大媒体数量从9修改为了500
