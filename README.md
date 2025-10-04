@@ -67,7 +67,8 @@ GEOCODE_WITH_AMAP: 'true' // 启用高德 逆地理编码 个人开发者国内�
 4. 增加了photopicker，无需ACL可手动上传媒体。beta时间线暂未实现，需background_downloader <br/>
 
 <h1>已知问题：</h1>
-1. beta时间线数据库迁移同步时，云端文件会同步失败，需要手动再次同步远程文件，并重启APP <br/>
+由于sqlite_ohos并未官方适配，因此只能用sqflite代替，适配存在较大困难，因此存在较多bug，因此推荐使用旧时间线。
+1. beta时间线数据库迁移同步时，云端文件会同步失败，需要手动再次同步远程文件，并重启APP. <br/>
 2. Beta时间线sqflite的错误以及被意外关闭：暂时不关闭 <br/>
 3. 语言切换显示功能 <br/>
 4. 每行显示数量更改不即时生效（原版app也存在） <br/>
