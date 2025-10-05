@@ -40,7 +40,7 @@
 
 # Harmonyos Next 鸿蒙端的 Immich
 链接已实测可用，解决了发布地区在海外导致不能安装的问题，推荐先卸载自签名版本再重新安装，如仍不可用可以提issue <br/>
-https://appgallery.huawei.com/link/invite-test-wap?taskId=c0af1d2d9e354649a0c7a9a8d680f8b4&invitationCode=9QROhzFBXon <br/>
+ https://appgallery.huawei.com/link/invite-test-wap?taskId=883853b2340e276983cbaca3ec58dc6b&invitationCode=9QROhzFBXon  <>br/>
 **IMMICH 搭配对应版本 本项目下服务器 使用**
 <h1>签名有关注意事项：</h1>
 1. 本目录下服务器可实现华为动态照片解析<br/>
