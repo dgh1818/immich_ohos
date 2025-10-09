@@ -12,6 +12,9 @@ const workerPort: ThreadWorkerGlobalScope = worker.workerPort;
 
 workerPort.onmessage = (event: MessageEvents) => {
   let input: SendableObject = event.data;
+  if(input.command == undefined) {
+    return;
+  }
   let command: string = input.command;
   ContentObserverWorkerClass.context_input = input.sendableContext;
   ContentObserverWorkerClass.ui_context = sendableContextManager.convertToUIAbilityContext(ContentObserverWorkerClass.context_input);
