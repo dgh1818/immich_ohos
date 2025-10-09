@@ -109,6 +109,7 @@ class QuickAccessButtons extends ConsumerWidget {
       child: ListView(
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
+        padding: EdgeInsets.only(bottom: 50), // <-- 关键行
         children: [
           ListTile(
             shape: RoundedRectangleBorder(
