@@ -37,6 +37,7 @@ import 'package:coordtransform_dart/coordtransform_dart.dart';
 import 'package:flutter/services.dart';
 import 'dart:ui' as ui;
 import 'package:immich_mobile/main.dart';
+import 'package:flutter/foundation.dart';
 
 @RoutePage()
 class MapPage extends HookConsumerWidget {
@@ -100,7 +101,11 @@ class MapPage extends HookConsumerWidget {
         if (initialLocation != null) {
           final outLngLat = CoordinateTransformUtil.wgs84ToGcj02(initialLocation!.longitude, initialLocation!.latitude);
           final LatLng centreProcessed = LatLng(outLngLat[1], outLngLat[0]);
-          await mapController.value?.addMarkerAtLatLng_Ohos(centreProcessed, mapMarkData, 0.15);
+
+          if (defaultTargetPlatform == TargetPlatform.ohos) {
+            await mapController.value?.addMarkerAtLatLng_Ohos(centreProcessed, mapMarkData, 0.15);
+            await mapController.value?.addHeatmapDataOhos(markers.value);
+          }
         }
 
         layerDebouncer.run(() => mapController.value!.reloadAllLayersForMarkers(markers.value));

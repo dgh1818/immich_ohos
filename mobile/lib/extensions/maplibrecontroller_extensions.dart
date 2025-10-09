@@ -19,6 +19,20 @@ extension MapMarkers on MapLibreMapController {
     );
   }
 
+  Future<void> addHeatmapDataOhos(List<MapMarker> markers) async {
+    final List<LatLng> totalData = [];
+
+    for (final marker in markers) {
+      totalData.add(marker.latLng);
+      // 使用 marker 的属性或方法
+    }
+
+    if (defaultTargetPlatform == TargetPlatform.ohos) {
+      //print("enter addHeatmapData_Ohos");
+      await addHeatmapData_Ohos(totalData);
+    }
+  }
+
   Future<void> reloadAllLayersForMarkers(List<MapMarker> markers) async {
     // Wait for previous reload to complete
     if (!_completer.isCompleted) {
