@@ -20,7 +20,7 @@ import 'package:immich_mobile/widgets/settings/preference_settings/preference_se
 import 'package:immich_mobile/widgets/settings/settings_card.dart';
 
 enum SettingSection {
-  beta('beta_sync', Icons.sync_outlined, "beta_sync_subtitle"),
+  //beta('beta_sync', Icons.sync_outlined, "beta_sync_subtitle"),
   advanced('advanced', Icons.build_outlined, "advanced_settings_tile_subtitle"),
   assetViewer('asset_viewer_settings_title', Icons.image_outlined, "asset_viewer_settings_subtitle"),
   backup('backup', Icons.cloud_upload_outlined, "backup_settings_subtitle"),
@@ -35,7 +35,7 @@ enum SettingSection {
   final IconData icon;
 
   Widget get widget => switch (this) {
-    SettingSection.beta => const _BetaLandscapeToggle(),
+    //SettingSection.beta => const _BetaLandscapeToggle(),
     SettingSection.advanced => const AdvancedSettings(),
     SettingSection.assetViewer => const AssetViewerSettings(),
     SettingSection.backup =>
@@ -68,8 +68,33 @@ class _MobileLayout extends StatelessWidget {
   const _MobileLayout();
   @override
   Widget build(BuildContext context) {
+    // final List<Widget> settings = SettingSection.values
+    //     .expand(
+    //       (setting) => setting == SettingSection.beta
+    //           ? [
+    //               const BetaTimelineListTile(),
+    //               if (Store.isBetaTimelineEnabled)
+    //                 SettingsCard(
+    //                   icon: Icons.sync_outlined,
+    //                   title: 'beta_sync'.tr(),
+    //                   subtitle: 'beta_sync_subtitle'.tr(),
+    //                   settingRoute: const BetaSyncSettingsRoute(),
+    //                 ),
+    //             ]
+    //           : [
+    //               SettingsCard(
+    //                 title: setting.title.tr(),
+    //                 subtitle: setting.subtitle.tr(),
+    //                 icon: setting.icon,
+    //                 settingRoute: SettingsSubRoute(section: setting),
+    //               ),
+    //             ],
+    //     )
+    //     .toList();
+
     final List<Widget> settings = SettingSection.values
-        .expand(
+        /*
+    .expand(
           (setting) => setting == SettingSection.beta
               ? [
                   const BetaTimelineListTile(),
@@ -89,6 +114,14 @@ class _MobileLayout extends StatelessWidget {
                     settingRoute: SettingsSubRoute(section: setting),
                   ),
                 ],
+        */
+        .map<Widget>(
+          (setting) => SettingsCard(
+            title: setting.title.tr(),
+            subtitle: setting.subtitle.tr(),
+            icon: setting.icon,
+            settingRoute: SettingsSubRoute(section: setting),
+          ),
         )
         .toList();
     return ListView(
