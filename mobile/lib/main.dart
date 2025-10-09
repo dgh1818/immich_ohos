@@ -169,6 +169,12 @@ class ImmichAppState extends ConsumerState<ImmichApp> with WidgetsBindingObserve
         overlayStyle = context.isDarkTheme ? SystemUiOverlayStyle.dark : SystemUiOverlayStyle.light;
       }
     }
+
+    if (defaultTargetPlatform == TargetPlatform.ohos) {
+      // Android 8 does not support transparent app bars
+      overlayStyle = context.isDarkTheme ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark;
+    }
+
     SystemChrome.setSystemUIOverlayStyle(overlayStyle);
     await ref.read(localNotificationService).setup();
   }

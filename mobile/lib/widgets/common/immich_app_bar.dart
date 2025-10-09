@@ -28,6 +28,7 @@ import 'package:immich_mobile/repositories/asset_media.repository.dart';
 
 import 'dart:io';
 import 'package:path/path.dart' as p;
+import 'package:flutter/services.dart';
 
 final backupServiceProvider = Provider(
   (ref) => BackupService(
@@ -222,6 +223,7 @@ class ImmichAppBar extends ConsumerWidget implements PreferredSizeWidget {
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(5))),
       automaticallyImplyLeading: false,
       centerTitle: false,
+      systemOverlayStyle: isDarkTheme ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
       title: Builder(
         builder: (BuildContext context) {
           return Row(
