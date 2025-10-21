@@ -1118,7 +1118,7 @@ export class MetadataService extends BaseService {
     //-------------------HM0S NEXT 5.1-------------------------
 
 
-    const tailLen = 200;
+    const tailLen = 300;
     const startPos4 = Math.max(0, ohosFileSize - tailLen);
 
     const buffer4 = Buffer.alloc(tailLen);
