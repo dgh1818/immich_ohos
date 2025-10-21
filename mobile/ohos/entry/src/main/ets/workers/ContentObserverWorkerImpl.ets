@@ -99,9 +99,11 @@ export class ContentObserverWorker{
         //console.info('getAssets photoAsset.uri : ' + photoAsset.uri);
         this.triggeredContentUris = changeData.extraUris;
         this.phAccessHelper!.unRegisterChange(photoAccessHelper.DefaultChangeUri.DEFAULT_PHOTO_URI);
-        this.ContentObserverWorker = new worker.ThreadWorker('../workers/ContentObserverWorker');
-        let object: SendableObject = new SendableObject("doWork", this.context_input!);
-        this.ContentObserverWorker.postMessageWithSharedSendable(object);
+        /* 上架屏蔽
+        // this.ContentObserverWorker = new worker.ThreadWorker('../workers/ContentObserverWorker');
+        // let object: SendableObject = new SendableObject("doWork", this.context_input!);
+        // this.ContentObserverWorker.postMessageWithSharedSendable(object);
+        */
         //待完善
         // PersistentStorage.persistProp('UIsendablecontext', this.context_input);
         //

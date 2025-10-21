@@ -39,7 +39,7 @@ class BackupSettings extends HookConsumerWidget {
 
     final backupSettings = [
       const ForegroundBackupSettings(),
-      const BackgroundBackupSettings(),
+      //const BackgroundBackupSettings(), 上架屏蔽
       if (Platform.isIOS)
         SettingsSwitchListTile(
           valueNotifier: ignoreIcloudAssets,

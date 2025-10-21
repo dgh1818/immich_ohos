@@ -9,7 +9,7 @@
     },
     "sourceOption": {
       "workers": [
-        "./src/main/ets/workers/ContentObserverWorker.ets",
+        //"./src/main/ets/workers/ContentObserverWorker.ets", //上架屏蔽
         "./src/main/ets/workers/BackupWorker.ets"
       ]
     },

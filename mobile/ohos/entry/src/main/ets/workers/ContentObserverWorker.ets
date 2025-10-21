@@ -11,6 +11,7 @@ let ContentObserverWorkerClass:ContentObserverWorker;
 const workerPort: ThreadWorkerGlobalScope = worker.workerPort;
 
 workerPort.onmessage = (event: MessageEvents) => {
+  /* //上架屏蔽
   let input: SendableObject = event.data;
   if(input.command == undefined) {
     return;
@@ -105,15 +106,17 @@ workerPort.onmessage = (event: MessageEvents) => {
         return;
       }
 
-      ContentObserverWorkerClass.ContentObserverWorker = new worker.ThreadWorker('../workers/ContentObserverWorker');
-      let object: SendableObject = new SendableObject("doWork", ContentObserverWorkerClass.context_input!);
-      ContentObserverWorkerClass.ContentObserverWorker.postMessageWithSharedSendable(object);
+      // ContentObserverWorkerClass.ContentObserverWorker = new worker.ThreadWorker('../workers/ContentObserverWorker');
+      // let object: SendableObject = new SendableObject("doWork", ContentObserverWorkerClass.context_input!);
+      // ContentObserverWorkerClass.ContentObserverWorker.postMessageWithSharedSendable(object);
 
       //backgroundTaskManager.startBackgroundRunning(ContentObserverWorkerClass.ui_context,)
       break;
     case "startBackupWorker":
       ContentObserverWorkerClass.startBackupWorker(ContentObserverWorkerClass.ui_context!, 5000);
       break;
+
   }
+  * */
 
 };

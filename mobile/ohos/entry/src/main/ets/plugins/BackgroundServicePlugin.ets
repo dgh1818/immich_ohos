@@ -90,14 +90,16 @@ export class BackgroundServicePlugin implements FlutterPlugin, MethodCallHandler
           preferences.flushSync();
           console.log('获取Preferences实例成功')
 
-          if(this.sendableCtx != undefined) {
-            let object1: SendableObject = new SendableObject("doWork", this.sendableCtx,args0[2] as boolean)
-            this.ContentObserverWorker = new worker.ThreadWorker('../workers/ContentObserverWorker');
-            this.ContentObserverWorker.postMessageWithSharedSendable(object1);
-            let object2: SendableObject = new SendableObject("enable", this.sendableCtx,args0[2] as boolean)
-            this.ContentObserverWorker.postMessageWithSharedSendable(object2);
-            result.success(true)
-          }
+          result.success(true);
+
+          // if(this.sendableCtx != undefined) {
+          //   let object1: SendableObject = new SendableObject("doWork", this.sendableCtx,args0[2] as boolean)
+          //   this.ContentObserverWorker = new worker.ThreadWorker('../workers/ContentObserverWorker');
+          //   this.ContentObserverWorker.postMessageWithSharedSendable(object1);
+          //   let object2: SendableObject = new SendableObject("enable", this.sendableCtx,args0[2] as boolean)
+          //   this.ContentObserverWorker.postMessageWithSharedSendable(object2);
+          //   result.success(true)
+          // }    //上架屏蔽
         })
         break;
 
