@@ -1090,7 +1090,7 @@ export class MetadataService extends BaseService {
     let startPos:number = 0;
 
     if(!hasOhosLivePhoto) {
-      startPos = ohosFileSize - 8320;
+      startPos = Math.max(0, ohosFileSize - 15000);;
     }
 
     if (startPos < 0) {
@@ -1101,19 +1101,41 @@ export class MetadataService extends BaseService {
 
     const buffer = Buffer.alloc(15);
     const fd_2 = await fs.open(filePath, 'r');
-    try {
-      const { bytesRead } = await fd_2.read(buffer, 0, 15, startPos);
+    const tailLen_2 = 15000;
+    
+
+     try {
+      const { bytesRead } = await fd_2.read(buffer, 0, tailLen_2, startPos);
+      const hay = buffer.slice(0, bytesRead); // 只取有效字节
+      const needle = Buffer.from('MovingPhotoMeta', 'utf8');
+      const foundIndex = hay.indexOf(needle);
+      const isMatch = foundIndex !== -1;
+      hasOhosLivePhoto = isMatch ? 2 : 0;
+      if(isMatch) {
+        hasOhosLivePhoto = 2;
+        return { hasOhosLivePhoto, ohosFileSize, ohosVideoOffset };
+      }
     } finally {
       await fd_2.close();
     }
 
-    const foundString = buffer.toString('utf8');
-    //this.logger.log(`foundString is ${foundString}`);
-    const isMatch = foundString === 'MovingPhotoMeta';
-    if(isMatch) {
-      hasOhosLivePhoto = 2;
-      return { hasOhosLivePhoto, ohosFileSize, ohosVideoOffset };
-    }
+
+
+
+
+    // try {
+    //   const { bytesRead } = await fd_2.read(buffer, 0, 15, startPos);
+    // } finally {
+    //   await fd_2.close();
+    // }
+
+    // const foundString = buffer.toString('utf8');
+    // //this.logger.log(`foundString is ${foundString}`);
+    // const isMatch = foundString === 'MovingPhotoMeta';
+    // if(isMatch) {
+    //   hasOhosLivePhoto = 2;
+    //   return { hasOhosLivePhoto, ohosFileSize, ohosVideoOffset };
+    // }
 
     //-------------------HM0S NEXT 5.1-------------------------
 
