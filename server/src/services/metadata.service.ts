@@ -1099,7 +1099,7 @@ export class MetadataService extends BaseService {
       return { hasOhosLivePhoto, ohosFileSize, ohosVideoOffset };
     }
 
-    const buffer = Buffer.alloc(15);
+    const buffer = Buffer.alloc(15000);
     const fd_2 = await fs.open(filePath, 'r');
     const tailLen_2 = 15000;
     
