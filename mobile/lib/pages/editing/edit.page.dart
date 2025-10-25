@@ -56,7 +56,7 @@ class EditImagePage extends ConsumerWidget {
       final Uint8List imageData = await _imageToUint8List(image);
 
       if (defaultTargetPlatform == TargetPlatform.ohos) {
-        await ImageGallerySaver.saveImage(imageData, name: "${p.withoutExtension(asset.fileName)}_edited.jpg");
+        await ImageGallerySaver.saveImage(imageData, name: "${p.withoutExtension(asset.fileName)}_edited");
       } else {
         await ref
             .read(fileMediaRepositoryProvider)
