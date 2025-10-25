@@ -187,8 +187,8 @@ dependency_overrides:
     git:
       url: https://gitcode.com/openharmony-sig/flutter_packages.git
       path: 'packages/video_player/video_player'
-      #ref: br_video_player-v2.10.0_ohos
-      ref: br_video_player-v2.9.2_ohos
+      ref: br_video_player-v2.10.0_ohos
+      #ref: br_video_player-v2.9.2_ohos
   video_player_android: 
     git:
       url: https://gitcode.com/openharmony-sig/flutter_packages.git
@@ -252,10 +252,12 @@ dependency_overrides:
       path: ./
   chewie:
     git:
-      url: https://github.com/dgh1818/chewie_ohos.git
+      url: https://gitcode.com/openharmony-sig/fluttertpc_chewie.git
+      #url: https://github.com/dgh1818/chewie_ohos.git
       path: './'
       #ref: update_one
-      ref: ohos_dev
+      #ref: ohos_dev
+      ref: br_v1.11.3_ohos
   photo_manager:
     path: ./flutter_photo_manager
   coordtransform_dart:

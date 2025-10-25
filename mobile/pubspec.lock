@@ -213,9 +213,9 @@ packages:
     dependency: "direct main"
     description:
       path: "."
-      ref: ohos_dev
-      resolved-ref: ecb01b34e3c75ca05577a0504ff815f926cae915
-      url: "https://github.com/dgh1818/chewie_ohos.git"
+      ref: "br_v1.11.3_ohos"
+      resolved-ref: f8e99769f829efe99aae71ab98005a102c6f05ae
+      url: "https://gitcode.com/openharmony-sig/fluttertpc_chewie.git"
     source: git
     version: "1.11.3"
   ci:
@@ -2154,11 +2154,11 @@ packages:
     dependency: "direct main"
     description:
       path: "packages/video_player/video_player"
-      ref: "br_video_player-v2.9.2_ohos"
-      resolved-ref: b8cd99e7937de783e88ef0e6a7f8034d95328ce8
+      ref: "br_video_player-v2.10.0_ohos"
+      resolved-ref: b0506b5b3a7c7b1fdbf73447fec29f8f28e9080e
       url: "https://gitcode.com/openharmony-sig/flutter_packages.git"
     source: git
-    version: "2.9.2"
+    version: "2.10.0"
   video_player_android:
     dependency: "direct main"
     description:
@@ -2180,11 +2180,11 @@ packages:
     dependency: transitive
     description:
       path: "packages/video_player/video_player_ohos"
-      ref: "br_video_player-v2.9.2_ohos"
-      resolved-ref: b8cd99e7937de783e88ef0e6a7f8034d95328ce8
-      url: "https://gitcode.com/openharmony-sig/flutter_packages.git"
+      ref: "br_video_player-v2.10.0_ohos"
+      resolved-ref: b0506b5b3a7c7b1fdbf73447fec29f8f28e9080e
+      url: "https://gitcode.com/openharmony-tpc/flutter_packages.git"
     source: git
-    version: "1.0.0+1"
+    version: "1.0.0+2"
   video_player_platform_interface:
     dependency: transitive
     description:
