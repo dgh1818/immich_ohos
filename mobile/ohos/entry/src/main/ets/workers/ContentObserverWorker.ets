@@ -11,7 +11,7 @@ let ContentObserverWorkerClass:ContentObserverWorker;
 const workerPort: ThreadWorkerGlobalScope = worker.workerPort;
 
 workerPort.onmessage = (event: MessageEvents) => {
-  /* //上架屏蔽
+   //上架屏蔽
   let input: SendableObject = event.data;
   if(input.command == undefined) {
     return;
@@ -117,6 +117,4 @@ workerPort.onmessage = (event: MessageEvents) => {
       break;
 
   }
-  * */
-
 };

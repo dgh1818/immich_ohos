@@ -83,7 +83,7 @@ export class BackupWorker implements MethodCallHandler {
     });
   }
 
-  public  async ensureInitializationCompleteAsync(ctx:common.UIAbilityContext,appBundlePath?:string) {
+  public async ensureInitializationCompleteAsync(ctx:common.UIAbilityContext,appBundlePath?:string) {
     const flutterShellArgs = new FlutterShellArgs();
     this.flutterLoader?.ensureInitializationComplete(flutterShellArgs.toArray() ?? []);
 
