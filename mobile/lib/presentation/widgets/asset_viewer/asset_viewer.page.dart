@@ -223,15 +223,13 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
     final asset = await timelineService.getAssetAsync(index);
     // This will trigger the pre-caching of adjacent assets ensuring
     // that they are ready when the user navigates to them.
-        // This will trigger the pre-caching of adjacent assets ensuring
+    // This will trigger the pre-caching of adjacent assets ensuring
     // that they are ready when the user navigates to them.
     final timer = Timer(Durations.medium4, () async {
       // Check if widget is still mounted before proceeding
       if (!mounted) return;
 
-
-
-    final (prevAsset, nextAsset) = await (
+      final (prevAsset, nextAsset) = await (
         timelineService.getAssetAsync(index - 1),
         timelineService.getAssetAsync(index + 1),
       ).wait;
@@ -240,10 +238,8 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
       _nextPreCacheStream?.removeListener(_dummyListener);
       _prevPreCacheStream = prevAsset != null ? _precacheImage(prevAsset) : null;
       _nextPreCacheStream = nextAsset != null ? _precacheImage(nextAsset) : null;
-    
     });
 
-    
     imageHdrState = -1;
 
     if (asset == null) {
@@ -259,7 +255,6 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
       ref.read(videoPlaybackValueProvider.notifier).reset();
       ref.read(videoPlayerControlsProvider.notifier).pause();
     }
-
 
     if (asset.isImage) {
       final provider = getFullImageProvider(asset);
@@ -292,7 +287,7 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
     //_handleCasting();
   }
 
-/*
+  /*
   void _handleCasting() {
     if (!ref.read(castProvider).isCasting) return;
     final asset = ref.read(currentAssetNotifier);
@@ -715,7 +710,7 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
     ref.watch(assetViewerProvider.select((s) => s.stackIndex));
     ref.watch(isPlayingMotionVideoProvider);
 
-/*
+    /*
     Listen for casting changes and send initial asset to the cast provider
     ref.listen(castProvider.select((value) => value.isCasting), (_, isCasting) async {
       if (!isCasting) return;
