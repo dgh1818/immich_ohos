@@ -29,6 +29,8 @@ import 'package:flutter_svg/svg.dart';
 import 'package:immich_mobile/widgets/common/immich_sliver_app_bar.dart';
 import 'package:image_picker/image_picker.dart';
 
+import 'dart:ui';
+
 @RoutePage()
 class TabShellPage extends ConsumerStatefulWidget {
   const TabShellPage({super.key});
@@ -365,10 +367,42 @@ class _BottomNavigationBarState extends ConsumerState<_BottomNavigationBar> {
       return const SizedBox.shrink();
     }
 
-    return NavigationBar(
-      selectedIndex: widget.tabsRouter.activeIndex,
-      onDestinationSelected: (index) => _onNavigationSelected(widget.tabsRouter, index, ref),
-      destinations: widget.destinations,
+    return Stack(
+      children: [
+        Positioned(
+          left: 0,
+          right: 0,
+          bottom: 0,
+          height: 1.25 * kBottomNavigationBarHeight,
+          child: IgnorePointer(
+            child: ClipRect(
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
+                child: Container(decoration: BoxDecoration(color: Colors.white.withOpacity(0.2))),
+              ),
+            ),
+          ),
+        ),
+
+        Positioned(
+          left: 0,
+          right: 0,
+          //bottom: 0.5 * bottomPadding, // 考虑安全区
+          bottom: 0, // 考虑安全区
+          child: SafeArea(
+            bottom: false,
+            child: Container(
+              height: kBottomNavigationBarHeight,
+              child: NavigationBar(
+                selectedIndex: widget.tabsRouter.activeIndex,
+                onDestinationSelected: (index) => _onNavigationSelected(widget.tabsRouter, index, ref),
+                destinations: widget.destinations,
+                backgroundColor: Colors.transparent,
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
