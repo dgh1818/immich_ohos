@@ -5,6 +5,8 @@ import 'package:immich_mobile/presentation/widgets/memory/memory_lane.widget.dar
 import 'package:immich_mobile/presentation/widgets/timeline/timeline.widget.dart';
 import 'package:immich_mobile/providers/infrastructure/memory.provider.dart';
 
+import 'package:immich_mobile/widgets/common/immich_sliver_app_bar.dart';
+
 @RoutePage()
 class MainTimelinePage extends ConsumerWidget {
   const MainTimelinePage({super.key});
@@ -12,9 +14,18 @@ class MainTimelinePage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final hasMemories = ref.watch(driftMemoryFutureProvider.select((state) => state.value?.isNotEmpty ?? false));
-    return Timeline(
-      topSliverWidget: const SliverToBoxAdapter(child: DriftMemoryLane()),
-      topSliverWidgetHeight: hasMemories ? 200 : 0,
+    return Stack(
+      children: [
+        Positioned.fill(
+          child: Timeline(
+            topSliverWidget: const SliverToBoxAdapter(child: DriftMemoryLane()),
+            topSliverWidgetHeight: hasMemories ? 200 : 0,
+          ),
+        ),
+        const Positioned(top: 30, right: 20, child: ProfileIndicator()),
+        const Positioned(top: 30, right: 70, child: BackupIndicator()),
+        const Positioned(top: 30, right: 90, child: SyncStatusIndicator()),
+      ],
     );
   }
 }

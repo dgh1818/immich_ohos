@@ -283,9 +283,6 @@ class _TabShellPageState extends ConsumerState<TabShellPage> with SingleTickerPr
                           ),
                         ),
                       ),
-                      const Positioned(top: 30, right: 20, child: ProfileIndicator()),
-                      const Positioned(top: 30, right: 70, child: BackupIndicator()),
-                      const Positioned(top: 30, right: 90, child: SyncStatusIndicator()),
                     ],
                   )
                 : child,
