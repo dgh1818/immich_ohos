@@ -147,7 +147,7 @@ export class MapRepository {
     const url = `https://siteapi.cloud.huawei.com/mapApi/v1/siteService/reverseGeocode`;
 
     const headers = {
-      'Content-Type': 'application/json',
+      'Content-Type': 'application/json;charset=utf-8',
       Authorization: `Bearer ${key}`, // 如果 API 要求 token 放在 Authorization
       // 你可以按实际情况加入更多 header，比如 cookie 或自定义头
     };
