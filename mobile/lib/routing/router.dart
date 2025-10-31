@@ -76,18 +76,25 @@ import 'package:immich_mobile/pages/search/map/map_location_picker.page.dart';
 import 'package:immich_mobile/pages/search/person_result.page.dart';
 import 'package:immich_mobile/pages/search/recently_taken.page.dart';
 import 'package:immich_mobile/pages/search/search.page.dart';
+<<<<<<< HEAD
 import 'package:immich_mobile/pages/settings/beta_sync_settings.page.dart';
 
 //import 'package:immich_mobile/pages/share_intent/share_intent.page.dart';
 
+=======
+import 'package:immich_mobile/pages/settings/sync_status.page.dart';
+import 'package:immich_mobile/pages/share_intent/share_intent.page.dart';
+>>>>>>> v2.2.0
 import 'package:immich_mobile/presentation/pages/dev/feat_in_development.page.dart';
 import 'package:immich_mobile/presentation/pages/dev/main_timeline.page.dart';
 import 'package:immich_mobile/presentation/pages/dev/media_stat.page.dart';
+import 'package:immich_mobile/presentation/pages/download_info.page.dart';
 import 'package:immich_mobile/presentation/pages/drift_activities.page.dart';
 import 'package:immich_mobile/presentation/pages/drift_album.page.dart';
 import 'package:immich_mobile/presentation/pages/drift_album_options.page.dart';
 import 'package:immich_mobile/presentation/pages/drift_archive.page.dart';
 import 'package:immich_mobile/presentation/pages/drift_asset_selection_timeline.page.dart';
+import 'package:immich_mobile/presentation/pages/drift_asset_troubleshoot.page.dart';
 import 'package:immich_mobile/presentation/pages/drift_create_album.page.dart';
 import 'package:immich_mobile/presentation/pages/drift_favorite.page.dart';
 import 'package:immich_mobile/presentation/pages/drift_library.page.dart';
@@ -305,7 +312,7 @@ class AppRouter extends RootStackRouter {
     AutoRoute(page: DriftBackupAlbumSelectionRoute.page, guards: [_authGuard, _duplicateGuard]),
     AutoRoute(page: LocalTimelineRoute.page, guards: [_authGuard, _duplicateGuard]),
     AutoRoute(page: MainTimelineRoute.page, guards: [_authGuard, _duplicateGuard]),
-    AutoRoute(page: RemoteAlbumRoute.page, guards: [_authGuard, _duplicateGuard]),
+    AutoRoute(page: RemoteAlbumRoute.page, guards: [_authGuard]),
     AutoRoute(
       page: AssetViewerRoute.page,
       guards: [_authGuard, _duplicateGuard],
@@ -335,9 +342,14 @@ class AppRouter extends RootStackRouter {
     AutoRoute(page: DriftUserSelectionRoute.page, guards: [_authGuard, _duplicateGuard]),
     AutoRoute(page: ChangeExperienceRoute.page, guards: [_authGuard, _duplicateGuard]),
     AutoRoute(page: DriftPartnerRoute.page, guards: [_authGuard, _duplicateGuard]),
+<<<<<<< HEAD
 
     //AutoRoute(page: DriftUploadDetailRoute.page, guards: [_authGuard, _duplicateGuard]),
     AutoRoute(page: BetaSyncSettingsRoute.page, guards: [_authGuard, _duplicateGuard]),
+=======
+    AutoRoute(page: DriftUploadDetailRoute.page, guards: [_authGuard, _duplicateGuard]),
+    AutoRoute(page: SyncStatusRoute.page, guards: [_duplicateGuard]),
+>>>>>>> v2.2.0
     AutoRoute(page: DriftPeopleCollectionRoute.page, guards: [_authGuard, _duplicateGuard]),
     AutoRoute(page: DriftPersonRoute.page, guards: [_authGuard]),
     AutoRoute(page: DriftBackupOptionsRoute.page, guards: [_authGuard, _duplicateGuard]),
@@ -348,6 +360,8 @@ class AppRouter extends RootStackRouter {
     AutoRoute(page: DriftFilterImageRoute.page),
     AutoRoute(page: DriftActivitiesRoute.page, guards: [_authGuard, _duplicateGuard]),
     AutoRoute(page: DriftBackupAssetDetailRoute.page, guards: [_authGuard, _duplicateGuard]),
+    AutoRoute(page: AssetTroubleshootRoute.page, guards: [_authGuard, _duplicateGuard]),
+    AutoRoute(page: DownloadInfoRoute.page, guards: [_authGuard, _duplicateGuard]),
     // required to handle all deeplinks in deep_link.service.dart
     // auto_route_library#1722
     RedirectRoute(path: '*', redirectTo: '/'),

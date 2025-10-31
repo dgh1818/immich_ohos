@@ -6,25 +6,21 @@
   import { shortcuts } from '$lib/actions/shortcut';
   import MemoryPhotoViewer from '$lib/components/memory-page/memory-photo-viewer.svelte';
   import MemoryVideoViewer from '$lib/components/memory-page/memory-video-viewer.svelte';
-  import AddToAlbum from '$lib/components/photos-page/actions/add-to-album.svelte';
-  import ArchiveAction from '$lib/components/photos-page/actions/archive-action.svelte';
-  import ChangeDate from '$lib/components/photos-page/actions/change-date-action.svelte';
-  import ChangeDescription from '$lib/components/photos-page/actions/change-description-action.svelte';
-  import ChangeLocation from '$lib/components/photos-page/actions/change-location-action.svelte';
-  import CreateSharedLink from '$lib/components/photos-page/actions/create-shared-link.svelte';
-  import DeleteAssets from '$lib/components/photos-page/actions/delete-assets.svelte';
-  import DownloadAction from '$lib/components/photos-page/actions/download-action.svelte';
-  import FavoriteAction from '$lib/components/photos-page/actions/favorite-action.svelte';
-  import TagAction from '$lib/components/photos-page/actions/tag-action.svelte';
-  import AssetSelectControlBar from '$lib/components/photos-page/asset-select-control-bar.svelte';
   import ButtonContextMenu from '$lib/components/shared-components/context-menu/button-context-menu.svelte';
   import MenuOption from '$lib/components/shared-components/context-menu/menu-option.svelte';
   import ControlAppBar from '$lib/components/shared-components/control-app-bar.svelte';
   import GalleryViewer from '$lib/components/shared-components/gallery-viewer/gallery-viewer.svelte';
-  import {
-    notificationController,
-    NotificationType,
-  } from '$lib/components/shared-components/notification/notification';
+  import AddToAlbum from '$lib/components/timeline/actions/AddToAlbumAction.svelte';
+  import ArchiveAction from '$lib/components/timeline/actions/ArchiveAction.svelte';
+  import ChangeDate from '$lib/components/timeline/actions/ChangeDateAction.svelte';
+  import ChangeDescription from '$lib/components/timeline/actions/ChangeDescriptionAction.svelte';
+  import ChangeLocation from '$lib/components/timeline/actions/ChangeLocationAction.svelte';
+  import CreateSharedLink from '$lib/components/timeline/actions/CreateSharedLinkAction.svelte';
+  import DeleteAssets from '$lib/components/timeline/actions/DeleteAssetsAction.svelte';
+  import DownloadAction from '$lib/components/timeline/actions/DownloadAction.svelte';
+  import FavoriteAction from '$lib/components/timeline/actions/FavoriteAction.svelte';
+  import TagAction from '$lib/components/timeline/actions/TagAction.svelte';
+  import AssetSelectControlBar from '$lib/components/timeline/AssetSelectControlBar.svelte';
   import { AppRoute, QueryParameter } from '$lib/constants';
   import { authManager } from '$lib/managers/auth-manager.svelte';
   import type { TimelineAsset, Viewport } from '$lib/managers/timeline-manager/types';
@@ -37,7 +33,7 @@
   import { cancelMultiselect } from '$lib/utils/asset-utils';
   import { fromISODateTimeUTC, toTimelineAsset } from '$lib/utils/timeline-util';
   import { AssetMediaSize, getAssetInfo } from '@immich/sdk';
-  import { IconButton } from '@immich/ui';
+  import { IconButton, toastManager } from '@immich/ui';
   import {
     mdiCardsOutline,
     mdiChevronDown,
@@ -205,7 +201,7 @@
     }
 
     await memoryStore.deleteMemory(current.memory.id);
-    notificationController.show({ message: $t('removed_memory'), type: NotificationType.Info });
+    toastManager.success($t('removed_memory'));
     init(page);
   };
 
@@ -216,10 +212,7 @@
 
     const newSavedState = !current.memory.isSaved;
     await memoryStore.updateMemorySaved(current.memory.id, newSavedState);
-    notificationController.show({
-      message: newSavedState ? $t('added_to_favorites') : $t('removed_from_favorites'),
-      type: NotificationType.Info,
-    });
+    toastManager.success(newSavedState ? $t('added_to_favorites') : $t('removed_from_favorites'));
     init(page);
   };
 
@@ -403,16 +396,18 @@
           </p>
         </div>
 
-        <div class="w-[50px] dark">
-          <IconButton
-            shape="round"
-            variant="ghost"
-            color="secondary"
-            aria-label={$videoViewerMuted ? $t('unmute_memories') : $t('mute_memories')}
-            icon={$videoViewerMuted ? mdiVolumeOff : mdiVolumeHigh}
-            onclick={() => ($videoViewerMuted = !$videoViewerMuted)}
-          />
-        </div>
+        {#if currentTimelineAssets.some(({ isVideo }) => isVideo)}
+          <div class="w-[50px] dark">
+            <IconButton
+              shape="round"
+              variant="ghost"
+              color="secondary"
+              aria-label={$videoViewerMuted ? $t('unmute_memories') : $t('mute_memories')}
+              icon={$videoViewerMuted ? mdiVolumeOff : mdiVolumeHigh}
+              onclick={() => ($videoViewerMuted = !$videoViewerMuted)}
+            />
+          </div>
+        {/if}
       </div>
     </ControlAppBar>
 
@@ -469,7 +464,7 @@
 
             {#if current.previousMemory}
               <div class="absolute bottom-4 end-4 text-start text-white">
-                <p class="text-xs font-semibold text-gray-200">{$t('previous').toUpperCase()}</p>
+                <p class="uppercase text-xs font-semibold text-gray-200">{$t('previous')}</p>
                 <p class="text-xl">{$memoryLaneTitle(current.previousMemory)}</p>
               </div>
             {/if}
@@ -618,7 +613,7 @@
 
             {#if current.nextMemory}
               <div class="absolute bottom-4 start-4 text-start text-white">
-                <p class="text-xs font-semibold text-gray-200">{$t('up_next').toUpperCase()}</p>
+                <p class="uppercase text-xs font-semibold text-gray-200">{$t('up_next')}</p>
                 <p class="text-xl">{$memoryLaneTitle(current.nextMemory)}</p>
               </div>
             {/if}
@@ -662,6 +657,7 @@
         viewport={galleryViewport}
         {assetInteraction}
         slidingWindowOffset={viewerHeight}
+        arrowNavigation={false}
       />
     </div>
   </section>

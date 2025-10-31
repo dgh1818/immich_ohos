@@ -1,14 +1,12 @@
 <script lang="ts">
-  import Icon from '$lib/components/elements/icon.svelte';
   import LibraryImportPathModal from '$lib/modals/LibraryImportPathModal.svelte';
+  import { handleError } from '$lib/utils/handle-error';
   import type { ValidateLibraryImportPathResponseDto } from '@immich/sdk';
   import { validate, type LibraryResponseDto } from '@immich/sdk';
-  import { Button, IconButton, modalManager } from '@immich/ui';
+  import { Button, Icon, IconButton, modalManager, toastManager } from '@immich/ui';
   import { mdiAlertOutline, mdiCheckCircleOutline, mdiPencilOutline, mdiRefresh } from '@mdi/js';
   import { onMount } from 'svelte';
   import { t } from 'svelte-i18n';
-  import { handleError } from '../../utils/handle-error';
-  import { NotificationType, notificationController } from '../shared-components/notification/notification';
 
   interface Props {
     library: LibraryResponseDto;
@@ -51,16 +49,10 @@
     }
     if (failedPaths === 0) {
       if (notifyIfSuccessful) {
-        notificationController.show({
-          message: $t('admin.paths_validated_successfully'),
-          type: NotificationType.Info,
-        });
+        toastManager.success($t('admin.paths_validated_successfully'));
       }
     } else {
-      notificationController.show({
-        message: $t('errors.paths_validation_failed', { values: { paths: failedPaths } }),
-        type: NotificationType.Warning,
-      });
+      toastManager.warning($t('errors.paths_validation_failed', { values: { paths: failedPaths } }));
     }
   };
 
@@ -168,9 +160,9 @@
         >
           <td class="w-1/8 text-ellipsis ps-8 text-sm">
             {#if validatedPath.isValid}
-              <Icon path={mdiCheckCircleOutline} size="24" title={validatedPath.message} class="text-success" />
+              <Icon icon={mdiCheckCircleOutline} size="24" title={validatedPath.message} class="text-success" />
             {:else}
-              <Icon path={mdiAlertOutline} size="24" title={validatedPath.message} class="text-warning" />
+              <Icon icon={mdiAlertOutline} size="24" title={validatedPath.message} class="text-warning" />
             {/if}
           </td>
 

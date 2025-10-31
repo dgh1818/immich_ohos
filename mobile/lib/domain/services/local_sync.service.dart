@@ -1,20 +1,21 @@
 import 'dart:async';
 
 import 'package:collection/collection.dart';
-import 'package:flutter/widgets.dart';
+import 'package:flutter/foundation.dart';
 import 'package:immich_mobile/domain/models/album/local_album.model.dart';
 import 'package:immich_mobile/domain/models/asset/base_asset.model.dart';
+import 'package:immich_mobile/extensions/platform_extensions.dart';
 import 'package:immich_mobile/infrastructure/repositories/local_album.repository.dart';
 import 'package:immich_mobile/platform/native_sync_api_ohos.g.dart';
 import 'package:immich_mobile/utils/datetime_helpers.dart';
 import 'package:immich_mobile/utils/diff.dart';
 import 'package:logging/logging.dart';
-import 'package:platform/platform.dart';
 
 import 'package:flutter/foundation.dart';
 
 class LocalSyncService {
   final DriftLocalAlbumRepository _localAlbumRepository;
+<<<<<<< HEAD
   final NativeSyncApiOhos _nativeSyncApi;
   final Platform _platform;
   final Logger _log = Logger("DeviceSyncService");
@@ -26,6 +27,14 @@ class LocalSyncService {
   }) : _localAlbumRepository = localAlbumRepository,
        _nativeSyncApi = nativeSyncApi,
        _platform = platform ?? const LocalPlatform();
+=======
+  final NativeSyncApi _nativeSyncApi;
+  final Logger _log = Logger("DeviceSyncService");
+
+  LocalSyncService({required DriftLocalAlbumRepository localAlbumRepository, required NativeSyncApi nativeSyncApi})
+    : _localAlbumRepository = localAlbumRepository,
+      _nativeSyncApi = nativeSyncApi;
+>>>>>>> v2.2.0
 
   Future<void> sync({bool full = false}) async {
     final Stopwatch stopwatch = Stopwatch()..start();
@@ -55,13 +64,14 @@ class LocalSyncService {
       final dbAlbums = await _localAlbumRepository.getAll();
       // On Android, we need to sync all albums since it is not possible to
       // detect album deletions from the native side
-      if (_platform.isAndroid) {
+      if (CurrentPlatform.isAndroid) {
         for (final album in dbAlbums) {
           final deviceIds = await _nativeSyncApi.getAssetIdsForAlbum(album.id);
           await _localAlbumRepository.syncDeletes(album.id, deviceIds);
         }
       }
 
+<<<<<<< HEAD
       if (defaultTargetPlatform == TargetPlatform.ohos) {
         for (final album in dbAlbums) {
           final deviceIds = await _nativeSyncApi.getAssetIdsForAlbum(album.id);
@@ -70,6 +80,9 @@ class LocalSyncService {
       }
 
       if (_platform.isIOS) {
+=======
+      if (CurrentPlatform.isIOS) {
+>>>>>>> v2.2.0
         // On iOS, we need to full sync albums that are marked as cloud as the delta sync
         // does not include changes for cloud albums. If ignoreIcloudAssets is enabled,
         // remove the albums from the local database from the previous sync
@@ -263,7 +276,7 @@ class LocalSyncService {
 
       if (assetsToUpsert.isEmpty && assetsToDelete.isEmpty) {
         _log.fine("No asset changes detected in album ${deviceAlbum.name}. Updating metadata.");
-        _localAlbumRepository.upsert(updatedDeviceAlbum);
+        await _localAlbumRepository.upsert(updatedDeviceAlbum);
         return true;
       }
 
@@ -295,7 +308,7 @@ extension on Iterable<PlatformAlbum> {
       (e) => LocalAlbum(
         id: e.id,
         name: e.name,
-        updatedAt: tryFromSecondsSinceEpoch(e.updatedAt) ?? DateTime.now(),
+        updatedAt: tryFromSecondsSinceEpoch(e.updatedAt, isUtc: true) ?? DateTime.timestamp(),
         assetCount: e.assetCount,
       ),
     ).toList();
@@ -310,8 +323,8 @@ extension on Iterable<PlatformAsset> {
         name: e.name,
         checksum: null,
         type: AssetType.values.elementAtOrNull(e.type) ?? AssetType.other,
-        createdAt: tryFromSecondsSinceEpoch(e.createdAt) ?? DateTime.now(),
-        updatedAt: tryFromSecondsSinceEpoch(e.updatedAt) ?? DateTime.now(),
+        createdAt: tryFromSecondsSinceEpoch(e.createdAt, isUtc: true) ?? DateTime.timestamp(),
+        updatedAt: tryFromSecondsSinceEpoch(e.updatedAt, isUtc: true) ?? DateTime.timestamp(),
         width: e.width,
         height: e.height,
         durationInSeconds: e.durationInSeconds,

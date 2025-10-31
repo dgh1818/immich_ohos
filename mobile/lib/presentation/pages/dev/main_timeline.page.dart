@@ -14,6 +14,7 @@ class MainTimelinePage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final hasMemories = ref.watch(driftMemoryFutureProvider.select((state) => state.value?.isNotEmpty ?? false));
+<<<<<<< HEAD
     return Stack(
       children: [
         Positioned.fill(
@@ -26,6 +27,12 @@ class MainTimelinePage extends ConsumerWidget {
         const Positioned(top: 30, right: 70, child: BackupIndicator()),
         const Positioned(top: 30, right: 90, child: SyncStatusIndicator()),
       ],
+=======
+    return Timeline(
+      topSliverWidget: const SliverToBoxAdapter(child: DriftMemoryLane()),
+      topSliverWidgetHeight: hasMemories ? 200 : 0,
+      showStorageIndicator: true,
+>>>>>>> v2.2.0
     );
   }
 }

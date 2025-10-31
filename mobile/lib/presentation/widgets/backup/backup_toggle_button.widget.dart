@@ -66,8 +66,14 @@ class BackupToggleButtonState extends ConsumerState<BackupToggleButton> with Sin
 
     final uploadTasks = ref.watch(driftBackupProvider.select((state) => state.uploadItems));
 
+<<<<<<< HEAD
     final isUploading = uploadTasks.isNotEmpty;
 */
+=======
+    final isSyncing = ref.watch(driftBackupProvider.select((state) => state.isSyncing));
+
+    final isProcessing = uploadTasks.isNotEmpty || isSyncing;
+>>>>>>> v2.2.0
 
     return AnimatedBuilder(
       animation: _animationController,
@@ -134,12 +140,18 @@ class BackupToggleButtonState extends ConsumerState<BackupToggleButton> with Sin
                             ],
                           ),
                         ),
+<<<<<<< HEAD
                         /*
                         child: isUploading
                         ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2))
                         : Icon(Icons.cloud_upload_outlined, color: context.primaryColor, size: 24),
 */
                         child: Icon(Icons.cloud_upload_outlined, color: context.primaryColor, size: 24),
+=======
+                        child: isProcessing
+                            ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2))
+                            : Icon(Icons.cloud_upload_outlined, color: context.primaryColor, size: 24),
+>>>>>>> v2.2.0
                       ),
                       const SizedBox(width: 16),
                       Expanded(

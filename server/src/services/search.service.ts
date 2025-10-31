@@ -118,7 +118,7 @@ export class SearchService extends BaseService {
       const key = machineLearning.clip.modelName + dto.query + dto.language;
       embedding = this.embeddingCache.get(key);
       if (!embedding) {
-        embedding = await this.machineLearningRepository.encodeText(machineLearning.urls, dto.query, {
+        embedding = await this.machineLearningRepository.encodeText(dto.query, {
           modelName: machineLearning.clip.modelName,
           language: dto.language,
         });
@@ -176,6 +176,9 @@ export class SearchService extends BaseService {
       }
       case SearchSuggestionType.CAMERA_MODEL: {
         return this.searchRepository.getCameraModels(userIds, dto);
+      }
+      case SearchSuggestionType.CAMERA_LENS_MODEL: {
+        return this.searchRepository.getCameraLensModels(userIds, dto);
       }
       default: {
         return Promise.resolve([]);

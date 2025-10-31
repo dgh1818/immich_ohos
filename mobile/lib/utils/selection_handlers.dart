@@ -105,7 +105,7 @@ Future<void> handleEditDateTime(WidgetRef ref, BuildContext context, List<Asset>
     return;
   }
 
-  ref.read(assetServiceProvider).changeDateTime(selection.toList(), dateTime);
+  await ref.read(assetServiceProvider).changeDateTime(selection.toList(), dateTime);
 }
 
 Future<void> handleEditLocation(WidgetRef ref, BuildContext context, List<Asset> selection) async {
@@ -124,7 +124,7 @@ Future<void> handleEditLocation(WidgetRef ref, BuildContext context, List<Asset>
     return;
   }
 
-  ref.read(assetServiceProvider).changeLocation(selection.toList(), location);
+  await ref.read(assetServiceProvider).changeLocation(selection.toList(), location);
 }
 
 Future<void> handleSetAssetsVisibility(

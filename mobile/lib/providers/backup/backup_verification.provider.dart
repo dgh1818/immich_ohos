@@ -2,10 +2,10 @@ import 'dart:async';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
-import 'package:immich_mobile/providers/backup/backup.provider.dart';
-import 'package:immich_mobile/services/backup_verification.service.dart';
 import 'package:immich_mobile/entities/asset.entity.dart';
 import 'package:immich_mobile/providers/asset.provider.dart';
+import 'package:immich_mobile/providers/backup/backup.provider.dart';
+import 'package:immich_mobile/services/backup_verification.service.dart';
 import 'package:immich_mobile/widgets/common/confirm_dialog.dart';
 import 'package:immich_mobile/widgets/common/immich_toast.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -46,7 +46,11 @@ class BackupVerification extends _$BackupVerification {
         }
         return;
       }
+<<<<<<< HEAD
       //WakelockPlus.enable();
+=======
+      unawaited(WakelockPlus.enable());
+>>>>>>> v2.2.0
 
       const limit = 100;
       final toDelete = await ref.read(backupVerificationServiceProvider).findWronglyBackedUpAssets(limit: limit);
@@ -75,7 +79,11 @@ class BackupVerification extends _$BackupVerification {
         }
       }
     } finally {
+<<<<<<< HEAD
       //WakelockPlus.disable();
+=======
+      unawaited(WakelockPlus.disable());
+>>>>>>> v2.2.0
       state = false;
     }
   }

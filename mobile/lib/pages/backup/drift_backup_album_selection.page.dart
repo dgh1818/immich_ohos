@@ -1,19 +1,28 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:auto_route/auto_route.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:immich_mobile/domain/models/album/local_album.model.dart';
+import 'package:immich_mobile/domain/services/sync_linked_album.service.dart';
 import 'package:immich_mobile/extensions/build_context_extensions.dart';
 import 'package:immich_mobile/extensions/translate_extensions.dart';
 import 'package:immich_mobile/providers/app_settings.provider.dart';
-import 'package:immich_mobile/domain/services/sync_linked_album.service.dart';
+import 'package:immich_mobile/providers/background_sync.provider.dart';
 import 'package:immich_mobile/providers/backup/backup_album.provider.dart';
+<<<<<<< HEAD
 //import 'package:immich_mobile/providers/backup/drift_backup.provider.dart';
+=======
+import 'package:immich_mobile/providers/backup/drift_backup.provider.dart';
+import 'package:immich_mobile/providers/infrastructure/platform.provider.dart';
+>>>>>>> v2.2.0
 import 'package:immich_mobile/providers/user.provider.dart';
 import 'package:immich_mobile/services/app_settings.service.dart';
 import 'package:immich_mobile/widgets/backup/drift_album_info_list_tile.dart';
 import 'package:immich_mobile/widgets/common/search_field.dart';
+import 'package:logging/logging.dart';
 
 @RoutePage()
 class DriftBackupAlbumSelectionPage extends ConsumerStatefulWidget {
@@ -63,6 +72,7 @@ class _DriftBackupAlbumSelectionPageState extends ConsumerState<DriftBackupAlbum
       });
       await _handleLinkedAlbumFuture;
     }
+<<<<<<< HEAD
 
     // Restart backup if total count changed and backup is enabled
     final currentTotalAssetCount = ref.read(driftBackupProvider.select((p) => p.totalCount));
@@ -74,6 +84,8 @@ class _DriftBackupAlbumSelectionPageState extends ConsumerState<DriftBackupAlbum
       await ref.read(driftBackupProvider.notifier).startBackup(user.id);
     }
 */
+=======
+>>>>>>> v2.2.0
   }
 
   @override
@@ -102,6 +114,37 @@ class _DriftBackupAlbumSelectionPageState extends ConsumerState<DriftBackupAlbum
       onPopInvokedWithResult: (didPop, _) async {
         if (!didPop) {
           await _handlePagePopped();
+
+          final user = ref.read(currentUserProvider);
+          if (user == null) {
+            return;
+          }
+
+          final isBackupEnabled = ref.read(appSettingsServiceProvider).getSetting(AppSettingsEnum.enableBackup);
+          await ref.read(driftBackupProvider.notifier).getBackupStatus(user.id);
+          final currentTotalAssetCount = ref.read(driftBackupProvider.select((p) => p.totalCount));
+          final totalChanged = currentTotalAssetCount != _initialTotalAssetCount;
+          final backupNotifier = ref.read(driftBackupProvider.notifier);
+          final backgroundSync = ref.read(backgroundSyncProvider);
+          final nativeSync = ref.read(nativeSyncApiProvider);
+          if (totalChanged) {
+            // Waits for hashing to be cancelled before starting a new one
+            unawaited(nativeSync.cancelHashing().whenComplete(() => backgroundSync.hashAssets()));
+            if (isBackupEnabled) {
+              unawaited(
+                backupNotifier.cancel().whenComplete(
+                  () => backgroundSync.syncRemote().then((success) {
+                    if (success) {
+                      return backupNotifier.startBackup(user.id);
+                    } else {
+                      Logger('DriftBackupAlbumSelectionPage').warning('Background sync failed, not starting backup');
+                    }
+                  }),
+                ),
+              );
+            }
+          }
+
           Navigator.of(context).pop();
         }
       },
@@ -250,7 +293,7 @@ class _DriftBackupAlbumSelectionPageState extends ConsumerState<DriftBackupAlbum
                           mainAxisSize: MainAxisSize.max,
                           children: [
                             const CircularProgressIndicator(strokeWidth: 4),
-                            Text("Creating linked albums...", style: context.textTheme.labelLarge),
+                            Text('creating_linked_albums'.tr(), style: context.textTheme.labelLarge),
                           ],
                         ),
                       ),

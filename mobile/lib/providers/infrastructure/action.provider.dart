@@ -1,15 +1,31 @@
+<<<<<<< HEAD
 //import 'package:background_downloader/background_downloader.dart';
+=======
+import 'dart:async';
+
+import 'package:auto_route/auto_route.dart';
+import 'package:background_downloader/background_downloader.dart';
+>>>>>>> v2.2.0
 import 'package:flutter/material.dart';
 import 'package:immich_mobile/constants/enums.dart';
 import 'package:immich_mobile/domain/models/asset/base_asset.model.dart';
+import 'package:immich_mobile/domain/services/asset.service.dart';
 import 'package:immich_mobile/models/download/livephotos_medatada.model.dart';
+import 'package:immich_mobile/presentation/widgets/asset_viewer/asset_viewer.state.dart';
+import 'package:immich_mobile/providers/infrastructure/asset.provider.dart';
 import 'package:immich_mobile/providers/infrastructure/asset_viewer/current_asset.provider.dart';
 import 'package:immich_mobile/providers/timeline/multiselect.provider.dart';
 import 'package:immich_mobile/providers/user.provider.dart';
+import 'package:immich_mobile/routing/router.dart';
 import 'package:immich_mobile/services/action.service.dart';
 //import 'package:immich_mobile/services/download.service.dart';
 import 'package:immich_mobile/services/timeline.service.dart';
+<<<<<<< HEAD
 //import 'package:immich_mobile/services/upload.service.dart';
+=======
+import 'package:immich_mobile/services/upload.service.dart';
+import 'package:immich_mobile/widgets/asset_grid/delete_dialog.dart';
+>>>>>>> v2.2.0
 import 'package:logging/logging.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -32,8 +48,14 @@ class ActionResult {
 class ActionNotifier extends Notifier<void> {
   final Logger _logger = Logger('ActionNotifier');
   late ActionService _service;
+<<<<<<< HEAD
   // late UploadService _uploadService;
   // late DownloadService _downloadService;
+=======
+  late UploadService _uploadService;
+  late DownloadService _downloadService;
+  late AssetService _assetService;
+>>>>>>> v2.2.0
 
   ActionNotifier() : super();
 
@@ -41,7 +63,11 @@ class ActionNotifier extends Notifier<void> {
   void build() {
     //_uploadService = ref.watch(uploadServiceProvider);
     _service = ref.watch(actionServiceProvider);
+<<<<<<< HEAD
     /*
+=======
+    _assetService = ref.watch(assetServiceProvider);
+>>>>>>> v2.2.0
     _downloadService = ref.watch(downloadServiceProvider);
     _downloadService.onImageDownloadStatus = _downloadImageCallback;
     _downloadService.onVideoDownloadStatus = _downloadVideoCallback;
@@ -65,7 +91,7 @@ class ActionNotifier extends Notifier<void> {
   void _downloadLivePhotoCallback(TaskStatusUpdate update) async {
     if (update.status == TaskStatus.complete) {
       final livePhotosId = LivePhotosMetadata.fromJson(update.task.metaData).id;
-      _downloadService.saveLivePhotos(update.task, livePhotosId);
+      unawaited(_downloadService.saveLivePhotos(update.task, livePhotosId));
     }
   }
 */
@@ -74,11 +100,14 @@ class ActionNotifier extends Notifier<void> {
     return _getAssets(source).whereType<RemoteAsset>().toIds().toList(growable: false);
   }
 
-  List<String> _getLocalIdsForSource(ActionSource source) {
+  List<String> _getLocalIdsForSource(ActionSource source, {bool ignoreLocalOnly = false}) {
     final Set<BaseAsset> assets = _getAssets(source);
     final List<String> localIds = [];
 
     for (final asset in assets) {
+      if (ignoreLocalOnly && asset.storage != AssetState.merged) {
+        continue;
+      }
       if (asset is LocalAsset) {
         localIds.add(asset.id);
       } else if (asset is RemoteAsset && asset.localId != null) {
@@ -117,6 +146,16 @@ class ActionNotifier extends Notifier<void> {
         null => const {},
       },
     };
+  }
+
+  Future<ActionResult> troubleshoot(ActionSource source, BuildContext context) async {
+    final assets = _getAssets(source);
+    if (assets.length > 1) {
+      return ActionResult(count: assets.length, success: false, error: 'Cannot troubleshoot multiple assets');
+    }
+    unawaited(context.pushRoute(AssetTroubleshootRoute(asset: assets.first)));
+
+    return ActionResult(count: assets.length, success: true);
   }
 
   Future<ActionResult> shareLink(ActionSource source, BuildContext context) async {
@@ -176,7 +215,7 @@ class ActionNotifier extends Notifier<void> {
 
   Future<ActionResult> moveToLockFolder(ActionSource source) async {
     final ids = _getOwnedRemoteIdsForSource(source);
-    final localIds = _getLocalIdsForSource(source);
+    final localIds = _getLocalIdsForSource(source, ignoreLocalOnly: true);
     try {
       await _service.moveToLockFolder(ids, localIds);
       return ActionResult(count: ids.length, success: true);
@@ -244,8 +283,28 @@ class ActionNotifier extends Notifier<void> {
     }
   }
 
-  Future<ActionResult> deleteLocal(ActionSource source) async {
-    final ids = _getLocalIdsForSource(source);
+  Future<ActionResult?> deleteLocal(ActionSource source, BuildContext context) async {
+    // Always perform the operation if there is only one merged asset
+    final assets = _getAssets(source);
+    bool? backedUpOnly = assets.length == 1 && assets.first.storage == AssetState.merged
+        ? true
+        : await showDialog<bool>(
+            context: context,
+            builder: (BuildContext context) => DeleteLocalOnlyDialog(onDeleteLocal: (_) {}),
+          );
+
+    if (backedUpOnly == null) {
+      // User cancelled the dialog
+      return null;
+    }
+
+    final List<String> ids;
+    if (backedUpOnly) {
+      ids = assets.where((asset) => asset.storage == AssetState.merged).map((asset) => asset.localId!).toList();
+    } else {
+      ids = _getLocalIdsForSource(source);
+    }
+
     try {
       final deletedCount = await _service.deleteLocal(ids);
       return ActionResult(count: deletedCount, success: true);
@@ -327,6 +386,14 @@ class ActionNotifier extends Notifier<void> {
     final assets = _getOwnedRemoteAssetsForSource(source);
     try {
       await _service.unStack(assets.map((e) => e.stackId).nonNulls.toList());
+      if (source == ActionSource.viewer) {
+        final updatedParent = await _assetService.getRemoteAsset(assets.first.id);
+        if (updatedParent != null) {
+          ref.read(currentAssetNotifier.notifier).setAsset(updatedParent);
+          ref.read(assetViewerProvider.notifier).setAsset(updatedParent);
+        }
+      }
+
       return ActionResult(count: assets.length, success: true);
     } catch (error, stack) {
       _logger.severe('Failed to unstack assets', error, stack);
@@ -334,11 +401,11 @@ class ActionNotifier extends Notifier<void> {
     }
   }
 
-  Future<ActionResult> shareAssets(ActionSource source) async {
+  Future<ActionResult> shareAssets(ActionSource source, BuildContext context) async {
     final ids = _getAssets(source).toList(growable: false);
 
     try {
-      await _service.shareAssets(ids);
+      await _service.shareAssets(ids, context);
       return ActionResult(count: ids.length, success: true);
     } catch (error, stack) {
       _logger.severe('Failed to share assets', error, stack);
@@ -349,7 +416,6 @@ class ActionNotifier extends Notifier<void> {
   /*
   Future<ActionResult> downloadAll(ActionSource source) async {
     final assets = _getAssets(source).whereType<RemoteAsset>().toList(growable: false);
-
     try {
       final didEnqueue = await _service.downloadAll(assets);
       final enqueueCount = didEnqueue.where((e) => e).length;

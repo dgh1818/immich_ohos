@@ -7,10 +7,14 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:immich_mobile/domain/models/timeline.model.dart';
 import 'package:immich_mobile/domain/utils/event_stream.dart';
 import 'package:immich_mobile/extensions/build_context_extensions.dart';
+<<<<<<< HEAD
 import 'package:immich_mobile/providers/app_settings.provider.dart';
 
 //import 'package:immich_mobile/providers/backup/drift_backup.provider.dart';
 
+=======
+import 'package:immich_mobile/presentation/pages/search/paginated_search.provider.dart';
+>>>>>>> v2.2.0
 import 'package:immich_mobile/providers/haptic_feedback.provider.dart';
 import 'package:immich_mobile/providers/infrastructure/album.provider.dart';
 import 'package:immich_mobile/providers/infrastructure/memory.provider.dart';
@@ -19,11 +23,7 @@ import 'package:immich_mobile/providers/infrastructure/readonly_mode.provider.da
 import 'package:immich_mobile/providers/search/search_input_focus.provider.dart';
 import 'package:immich_mobile/providers/tab.provider.dart';
 import 'package:immich_mobile/providers/timeline/multiselect.provider.dart';
-import 'package:immich_mobile/providers/user.provider.dart';
-import 'package:immich_mobile/providers/websocket.provider.dart';
 import 'package:immich_mobile/routing/router.dart';
-import 'package:immich_mobile/services/app_settings.service.dart';
-import 'package:immich_mobile/utils/migration.dart';
 
 import 'package:flutter_svg/svg.dart';
 import 'package:immich_mobile/widgets/common/immich_sliver_app_bar.dart';
@@ -44,6 +44,7 @@ class _TabShellPageState extends ConsumerState<TabShellPage> with SingleTickerPr
   late final AnimationController animationController;
 
   @override
+<<<<<<< HEAD
   void initState() {
     super.initState();
 
@@ -86,6 +87,8 @@ class _TabShellPageState extends ConsumerState<TabShellPage> with SingleTickerPr
   }
 
   @override
+=======
+>>>>>>> v2.2.0
   Widget build(BuildContext context) {
     final isScreenLandscape = context.orientation == Orientation.landscape;
     final isReadonlyModeEnabled = ref.watch(readonlyModeProvider);
@@ -211,7 +214,7 @@ class _TabShellPageState extends ConsumerState<TabShellPage> with SingleTickerPr
     final targetScale = collapsedAvailable / baseWidth; // >1, 比例放大值
 
     return AutoTabsRouter(
-      routes: [const MainTimelineRoute(), DriftSearchRoute(), const DriftAlbumsRoute(), const DriftLibraryRoute()],
+      routes: const [MainTimelineRoute(), DriftSearchRoute(), DriftAlbumsRoute(), DriftLibraryRoute()],
       duration: const Duration(milliseconds: 600),
       transitionBuilder: (context, child, animation) => FadeTransition(opacity: animation, child: child),
       builder: (context, child) {
@@ -304,6 +307,10 @@ void _onNavigationSelected(TabsRouter router, int index, WidgetRef ref) {
 
   if (index == 0) {
     ref.invalidate(driftMemoryFutureProvider);
+  }
+
+  if (router.activeIndex != 1 && index == 1) {
+    ref.read(searchPreFilterProvider.notifier).clear();
   }
 
   // On Search page tapped

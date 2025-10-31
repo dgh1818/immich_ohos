@@ -9,8 +9,8 @@ import 'package:immich_mobile/extensions/build_context_extensions.dart';
 import 'package:immich_mobile/models/server_info/server_info.model.dart';
 import 'package:immich_mobile/providers/backup/drift_backup.provider.dart';
 import 'package:immich_mobile/providers/cast.provider.dart';
-import 'package:immich_mobile/providers/infrastructure/setting.provider.dart';
 import 'package:immich_mobile/providers/infrastructure/readonly_mode.provider.dart';
+import 'package:immich_mobile/providers/infrastructure/setting.provider.dart';
 import 'package:immich_mobile/providers/server_info.provider.dart';
 import 'package:immich_mobile/providers/sync_status.provider.dart';
 import 'package:immich_mobile/providers/timeline/multiselect.provider.dart';
@@ -104,6 +104,7 @@ class _ImmichLogoWithText extends StatelessWidget {
           children: [
             Builder(
               builder: (context) {
+<<<<<<< HEAD
                 return const SizedBox.shrink();
                 return Badge(
                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
@@ -128,6 +129,13 @@ class _ImmichLogoWithText extends StatelessWidget {
                           : 'assets/immich-logo-inline-light.svg',
                       height: 40,
                     ),
+=======
+                return Padding(
+                  padding: const EdgeInsets.only(top: 3.0),
+                  child: SvgPicture.asset(
+                    context.isDarkTheme ? 'assets/immich-logo-inline-dark.svg' : 'assets/immich-logo-inline-light.svg',
+                    height: 40,
+>>>>>>> v2.2.0
                   ),
                 );
               },
@@ -144,8 +152,10 @@ class ProfileIndicator extends ConsumerWidget {  //ui变更 需要变为public �
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final ServerInfo serverInfoState = ref.watch(serverInfoProvider);
     final user = ref.watch(currentUserProvider);
+    final bool versionWarningPresent = ref.watch(versionWarningPresentProvider(user));
+    final serverInfoState = ref.watch(serverInfoProvider);
+
     const widgetSize = 30.0;
 
     void toggleReadonlyMode() {
@@ -165,29 +175,38 @@ class ProfileIndicator extends ConsumerWidget {  //ui变更 需要变为public �
 
     return InkWell(
       onTap: () => showDialog(context: context, useRootNavigator: false, builder: (ctx) => const ImmichAppBarDialog()),
-      onDoubleTap: () => toggleReadonlyMode(),
+      onLongPress: () => toggleReadonlyMode(),
       borderRadius: const BorderRadius.all(Radius.circular(12)),
       child: Badge(
         label: Container(
-          decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(widgetSize / 2)),
-          child: const Icon(Icons.info, color: Color.fromARGB(255, 243, 188, 106), size: widgetSize / 2),
+          decoration: BoxDecoration(
+            color: context.isDarkTheme ? Colors.black : Colors.white,
+            borderRadius: BorderRadius.circular(widgetSize / 2),
+          ),
+          child: Icon(
+            Icons.info,
+            color: serverInfoState.versionStatus == VersionStatus.error
+                ? context.colorScheme.error
+                : context.primaryColor,
+            size: widgetSize / 2,
+          ),
         ),
         backgroundColor: Colors.transparent,
         alignment: Alignment.bottomRight,
-        isLabelVisible:
-            serverInfoState.isVersionMismatch || ((user?.isAdmin ?? false) && serverInfoState.isNewReleaseAvailable),
+        isLabelVisible: versionWarningPresent,
         offset: const Offset(-2, -12),
         child: user == null
             ? const Icon(Icons.face_outlined, size: widgetSize)
             : Semantics(
                 label: "logged_in_as".tr(namedArgs: {"user": user.name}),
-                child: UserCircleAvatar(radius: 17, size: 31, user: user),
+                child: AbsorbPointer(child: UserCircleAvatar(radius: 17, size: 31, user: user)),
               ),
       ),
     );
   }
 }
 
+<<<<<<< HEAD
 class BackupIndicator extends ConsumerWidget {      //ui变更 需要变为public 函数
   const BackupIndicator();
 
@@ -196,32 +215,34 @@ class BackupIndicator extends ConsumerWidget {      //ui变更 需要变为publi
     const widgetSize = 30.0;
     final indicatorIcon = getBackupBadgeIcon(context, ref);
     final badgeBackground = context.colorScheme.surfaceContainer;
+=======
+const double _kBadgeWidgetSize = 30.0;
+
+class _BackupIndicator extends ConsumerWidget {
+  const _BackupIndicator();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final indicatorIcon = _getBackupBadgeIcon(context, ref);
+>>>>>>> v2.2.0
 
     return InkWell(
       onTap: () => context.pushRoute(const DriftBackupRoute()),
       borderRadius: const BorderRadius.all(Radius.circular(12)),
       child: Badge(
-        label: Container(
-          width: widgetSize / 2,
-          height: widgetSize / 2,
-          decoration: BoxDecoration(
-            color: badgeBackground,
-            border: Border.all(color: context.colorScheme.outline.withValues(alpha: .3)),
-            borderRadius: BorderRadius.circular(widgetSize / 2),
-          ),
-          child: indicatorIcon,
-        ),
+        label: indicatorIcon,
         backgroundColor: Colors.transparent,
         alignment: Alignment.bottomRight,
         isLabelVisible: indicatorIcon != null,
         offset: const Offset(-2, -12),
-        child: Icon(Icons.backup_rounded, size: widgetSize, color: context.primaryColor),
+        child: Icon(Icons.backup_rounded, size: _kBadgeWidgetSize, color: context.primaryColor),
       ),
     );
   }
 
   Widget? getBackupBadgeIcon(BuildContext context, WidgetRef ref) {
     final backupStateStream = ref.watch(settingsProvider).watch(Setting.enableBackup);
+    final hasError = ref.watch(driftBackupProvider.select((state) => state.error != BackupError.none));
     final isDarkTheme = context.isDarkTheme;
     final iconColor = isDarkTheme ? Colors.white : Colors.black;
     // final isUploading = ref.watch(
@@ -234,15 +255,30 @@ class BackupIndicator extends ConsumerWidget {      //ui变更 需要变为publi
         final backupEnabled = snapshot.data ?? false;
 
         if (!backupEnabled) {
-          return Icon(
-            Icons.cloud_off_rounded,
-            size: 9,
-            color: iconColor,
-            semanticLabel: 'backup_controller_page_backup'.tr(),
+          return _BadgeLabel(
+            Icon(
+              Icons.cloud_off_rounded,
+              size: 9,
+              color: iconColor,
+              semanticLabel: 'backup_controller_page_backup'.tr(),
+            ),
+          );
+        }
+
+        if (hasError) {
+          return _BadgeLabel(
+            Icon(
+              Icons.warning_rounded,
+              size: 12,
+              color: context.colorScheme.error,
+              semanticLabel: 'backup_controller_page_backup'.tr(),
+            ),
+            backgroundColor: context.colorScheme.errorContainer,
           );
         }
         /*
         if (isUploading) {
+<<<<<<< HEAD
           return Container(
             padding: const EdgeInsets.all(3.5),
             child: Theme(
@@ -255,25 +291,63 @@ class BackupIndicator extends ConsumerWidget {      //ui变更 需要变为publi
                 strokeCap: StrokeCap.round,
                 valueColor: AlwaysStoppedAnimation<Color>(iconColor),
                 semanticsLabel: 'backup_controller_page_backup'.tr(),
+=======
+          return _BadgeLabel(
+            Container(
+              padding: const EdgeInsets.all(3.5),
+              child: Theme(
+                data: context.themeData.copyWith(
+                  progressIndicatorTheme: context.themeData.progressIndicatorTheme.copyWith(year2023: true),
+                ),
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  strokeCap: StrokeCap.round,
+                  valueColor: AlwaysStoppedAnimation<Color>(iconColor),
+                  semanticsLabel: 'backup_controller_page_backup'.tr(),
+                ),
+>>>>>>> v2.2.0
               ),
             ),
           );
         }
 */
 
-        return Icon(
-          Icons.check_outlined,
-          size: 9,
-          color: iconColor,
-          semanticLabel: 'backup_controller_page_backup'.tr(),
+        return _BadgeLabel(
+          Icon(Icons.check_outlined, size: 9, color: iconColor, semanticLabel: 'backup_controller_page_backup'.tr()),
         );
       },
     );
   }
 }
 
+<<<<<<< HEAD
 class SyncStatusIndicator extends ConsumerStatefulWidget {
   const SyncStatusIndicator();
+=======
+class _BadgeLabel extends StatelessWidget {
+  final Widget indicator;
+  final Color? backgroundColor;
+
+  const _BadgeLabel(this.indicator, {this.backgroundColor});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: _kBadgeWidgetSize / 2,
+      height: _kBadgeWidgetSize / 2,
+      decoration: BoxDecoration(
+        color: backgroundColor ?? context.colorScheme.surfaceContainer,
+        border: Border.all(color: context.colorScheme.outline.withValues(alpha: .3)),
+        borderRadius: BorderRadius.circular(_kBadgeWidgetSize / 2),
+      ),
+      child: indicator,
+    );
+  }
+}
+
+class _SyncStatusIndicator extends ConsumerStatefulWidget {
+  const _SyncStatusIndicator();
+>>>>>>> v2.2.0
 
   @override
   ConsumerState<SyncStatusIndicator> createState() => _SyncStatusIndicatorState();

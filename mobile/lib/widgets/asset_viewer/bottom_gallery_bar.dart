@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:auto_route/auto_route.dart';
@@ -85,7 +86,7 @@ class BottomGalleryBar extends ConsumerWidget {
           // to not throw the error when the next preCache index is called
           if (totalAssets.value == 1 || assetIndex.value == totalAssets.value - 1) {
             // Handle only one asset
-            context.maybePop();
+            await context.maybePop();
           }
 
           totalAssets.value -= 1;
@@ -102,7 +103,12 @@ class BottomGalleryBar extends ConsumerWidget {
         if (isDeleted) {
           // Can only trash assets stored in server. Local assets are always permanently removed for now
           if (context.mounted && asset.isRemote && isStackPrimaryAsset) {
-            ImmichToast.show(durationInSecond: 1, context: context, msg: 'Asset trashed', gravity: ToastGravity.BOTTOM);
+            ImmichToast.show(
+              durationInSecond: 1,
+              context: context,
+              msg: 'asset_trashed'.tr(),
+              gravity: ToastGravity.BOTTOM,
+            );
           }
           removeAssetFromStack();
         }
@@ -110,18 +116,20 @@ class BottomGalleryBar extends ConsumerWidget {
       }
 
       // Asset is permanently removed
-      showDialog(
-        context: context,
-        builder: (BuildContext _) {
-          return DeleteDialog(
-            onDelete: () async {
-              final isDeleted = await onDelete(true);
-              if (isDeleted) {
-                removeAssetFromStack();
-              }
-            },
-          );
-        },
+      unawaited(
+        showDialog(
+          context: context,
+          builder: (BuildContext _) {
+            return DeleteDialog(
+              onDelete: () async {
+                final isDeleted = await onDelete(true);
+                if (isDeleted) {
+                  removeAssetFromStack();
+                }
+              },
+            );
+          },
+        ),
       );
     }
 
@@ -149,7 +157,7 @@ class BottomGalleryBar extends ConsumerWidget {
                     onTap: () async {
                       await unStack();
                       ctx.pop();
-                      context.maybePop();
+                      await context.maybePop();
                     },
                     title: const Text("viewer_unstack", style: TextStyle(fontWeight: FontWeight.bold)).tr(),
                   ),
@@ -182,9 +190,11 @@ class BottomGalleryBar extends ConsumerWidget {
     void handleEdit() async {
       final image = Image(image: ImmichImage.imageProvider(asset: asset));
 
-      context.navigator.push(
-        MaterialPageRoute(
-          builder: (context) => EditImagePage(asset: asset, image: image, isEdited: false),
+      unawaited(
+        context.navigator.push(
+          MaterialPageRoute(
+            builder: (context) => EditImagePage(asset: asset, image: image, isEdited: false),
+          ),
         ),
       );
     }

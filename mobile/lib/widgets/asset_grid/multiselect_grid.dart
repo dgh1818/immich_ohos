@@ -316,10 +316,10 @@ class MultiselectGrid extends HookConsumerWidget {
         final result = await ref.read(albumServiceProvider).createAlbumWithGeneratedName(assets);
 
         if (result != null) {
-          ref.watch(albumProvider.notifier).refreshRemoteAlbums();
+          unawaited(ref.watch(albumProvider.notifier).refreshRemoteAlbums());
           selectionEnabledHook.value = false;
 
-          context.pushRoute(AlbumViewerRoute(albumId: result.id));
+          unawaited(context.pushRoute(AlbumViewerRoute(albumId: result.id)));
         }
       } finally {
         processing.value = false;
@@ -348,7 +348,7 @@ class MultiselectGrid extends HookConsumerWidget {
         );
 
         if (remoteAssets.isNotEmpty) {
-          handleEditDateTime(ref, context, remoteAssets.toList());
+          unawaited(handleEditDateTime(ref, context, remoteAssets.toList()));
         }
       } finally {
         selectionEnabledHook.value = false;
@@ -362,7 +362,7 @@ class MultiselectGrid extends HookConsumerWidget {
           ownerErrorMessage: 'home_page_favorite_err_partner'.tr(),
         );
         if (remoteAssets.isNotEmpty) {
-          handleEditLocation(ref, context, remoteAssets.toList());
+          unawaited(handleEditLocation(ref, context, remoteAssets.toList()));
         }
       } finally {
         selectionEnabledHook.value = false;

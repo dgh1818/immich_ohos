@@ -89,7 +89,7 @@ class RemoteFullImageProvider extends CancellableImageProvider<RemoteFullImagePr
     yield* initialImageStream();
 
     if (isCancelled) {
-      evict();
+      unawaited(evict());
       return;
     }
 
@@ -108,7 +108,7 @@ class RemoteFullImageProvider extends CancellableImageProvider<RemoteFullImagePr
     yield* loadRequest(request, decode);
 
     if (isCancelled) {
-      evict();
+      unawaited(evict());
       return;
     }
 

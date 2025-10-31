@@ -4,7 +4,8 @@ import 'package:immich_mobile/providers/asset_viewer/video_player_controls_provi
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 class ViewerOpenBottomSheetEvent extends Event {
-  const ViewerOpenBottomSheetEvent();
+  final bool activitiesMode;
+  const ViewerOpenBottomSheetEvent({this.activitiesMode = false});
 }
 
 class ViewerReloadAssetEvent extends Event {
@@ -68,10 +69,14 @@ class AssetViewerState {
       stackIndex.hashCode;
 }
 
-class AssetViewerStateNotifier extends AutoDisposeNotifier<AssetViewerState> {
+class AssetViewerStateNotifier extends Notifier<AssetViewerState> {
   @override
   AssetViewerState build() {
     return const AssetViewerState();
+  }
+
+  void reset() {
+    state = const AssetViewerState();
   }
 
   void setAsset(BaseAsset? asset) {
@@ -117,6 +122,4 @@ class AssetViewerStateNotifier extends AutoDisposeNotifier<AssetViewerState> {
   }
 }
 
-final assetViewerProvider = AutoDisposeNotifierProvider<AssetViewerStateNotifier, AssetViewerState>(
-  AssetViewerStateNotifier.new,
-);
+final assetViewerProvider = NotifierProvider<AssetViewerStateNotifier, AssetViewerState>(AssetViewerStateNotifier.new);
