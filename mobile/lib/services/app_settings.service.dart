@@ -35,12 +35,7 @@ enum AppSettingsEnum<T> {
   logLevel<int>(StoreKey.logLevel, null, 5), // Level.INFO = 5
   preferRemoteImage<bool>(StoreKey.preferRemoteImage, null, true),
   loopVideo<bool>(StoreKey.loopVideo, "loopVideo", true),
-<<<<<<< HEAD
   loadOriginalVideo<bool>(StoreKey.loadOriginalVideo, "loadOriginalVideo", true),
-=======
-  loadOriginalVideo<bool>(StoreKey.loadOriginalVideo, "loadOriginalVideo", false),
-  autoPlayVideo<bool>(StoreKey.autoPlayVideo, "autoPlayVideo", true),
->>>>>>> v2.2.0
   mapThemeMode<int>(StoreKey.mapThemeMode, null, 0),
   mapShowFavoriteOnly<bool>(StoreKey.mapShowFavoriteOnly, null, false),
   mapIncludeArchived<bool>(StoreKey.mapIncludeArchived, null, false),

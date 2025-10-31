@@ -65,16 +65,12 @@ class MapLocationPickerPage extends HookConsumerWidget {
 
       var currentLatLng = LatLng(currentLocation.latitude, currentLocation.longitude);
       selectedLatLng.value = currentLatLng;
-<<<<<<< HEAD
       controller.value?.animateCamera(CameraUpdate.newLatLng(currentLatLng));
 
       if (defaultTargetPlatform == TargetPlatform.ohos) {
         ByteData mapMarkData = await rootBundle.load("assets/location-pin.png");
         await controller.value?.addMarkerAtLatLng_Ohos(currentLatLng, mapMarkData, 0.15);
       }
-=======
-      await controller.value?.animateCamera(CameraUpdate.newLatLng(currentLatLng));
->>>>>>> v2.2.0
     }
 
     return MapThemeOverride(

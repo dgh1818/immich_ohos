@@ -108,7 +108,6 @@ class _GeneralBottomSheetState extends ConsumerState<GeneralBottomSheet> {
         const ShareActionButton(source: ActionSource.timeline),
         if (multiselect.hasRemote) ...[
           const ShareLinkActionButton(source: ActionSource.timeline),
-<<<<<<< HEAD
           const ArchiveActionButton(source: ActionSource.timeline),
           const FavoriteActionButton(source: ActionSource.timeline),
           //const DownloadActionButton(source: ActionSource.timeline),
@@ -116,9 +115,6 @@ class _GeneralBottomSheetState extends ConsumerState<GeneralBottomSheet> {
           const EditLocationActionButton(source: ActionSource.timeline),
           const MoveToLockFolderActionButton(source: ActionSource.timeline),
           const StackActionButton(source: ActionSource.timeline),
-=======
-          const DownloadActionButton(source: ActionSource.timeline),
->>>>>>> v2.2.0
           isTrashEnable
               ? const TrashActionButton(source: ActionSource.timeline)
               : const DeletePermanentActionButton(source: ActionSource.timeline),

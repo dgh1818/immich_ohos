@@ -15,7 +15,6 @@ import 'package:flutter/foundation.dart';
 
 class LocalSyncService {
   final DriftLocalAlbumRepository _localAlbumRepository;
-<<<<<<< HEAD
   final NativeSyncApiOhos _nativeSyncApi;
   final Platform _platform;
   final Logger _log = Logger("DeviceSyncService");
@@ -27,14 +26,6 @@ class LocalSyncService {
   }) : _localAlbumRepository = localAlbumRepository,
        _nativeSyncApi = nativeSyncApi,
        _platform = platform ?? const LocalPlatform();
-=======
-  final NativeSyncApi _nativeSyncApi;
-  final Logger _log = Logger("DeviceSyncService");
-
-  LocalSyncService({required DriftLocalAlbumRepository localAlbumRepository, required NativeSyncApi nativeSyncApi})
-    : _localAlbumRepository = localAlbumRepository,
-      _nativeSyncApi = nativeSyncApi;
->>>>>>> v2.2.0
 
   Future<void> sync({bool full = false}) async {
     final Stopwatch stopwatch = Stopwatch()..start();
@@ -71,7 +62,6 @@ class LocalSyncService {
         }
       }
 
-<<<<<<< HEAD
       if (defaultTargetPlatform == TargetPlatform.ohos) {
         for (final album in dbAlbums) {
           final deviceIds = await _nativeSyncApi.getAssetIdsForAlbum(album.id);
@@ -80,9 +70,6 @@ class LocalSyncService {
       }
 
       if (_platform.isIOS) {
-=======
-      if (CurrentPlatform.isIOS) {
->>>>>>> v2.2.0
         // On iOS, we need to full sync albums that are marked as cloud as the delta sync
         // does not include changes for cloud albums. If ignoreIcloudAssets is enabled,
         // remove the albums from the local database from the previous sync

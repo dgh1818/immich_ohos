@@ -164,7 +164,6 @@ class AppLifeCycleNotifier extends StateNotifier<AppLifeCycleEnum> {
         await _safeRun(backgroundManager.hashAssets(), "hashAssets");
       }
 
-<<<<<<< HEAD
       // Check if app is still active before hashing
       if (_shouldContinueOperation()) {
         try {
@@ -206,10 +205,6 @@ class AppLifeCycleNotifier extends StateNotifier<AppLifeCycleEnum> {
             }
           }
         }
-=======
-      if (isAlbumLinkedSyncEnable) {
-        await _safeRun(backgroundManager.syncLinkedAlbum(), "syncLinkedAlbum");
->>>>>>> v2.2.0
       }
     } catch (e, stackTrace) {
       _log.severe("Error during background sync", e, stackTrace);

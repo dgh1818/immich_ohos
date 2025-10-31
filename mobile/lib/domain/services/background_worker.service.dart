@@ -2,12 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:ui';
 
-<<<<<<< HEAD
 //import 'package:background_downloader/background_downloader.dart';
-=======
-import 'package:background_downloader/background_downloader.dart';
-import 'package:cancellation_token_http/http.dart';
->>>>>>> v2.2.0
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:immich_mobile/constants/constants.dart';
@@ -95,9 +90,8 @@ class BackgroundWorkerBgService extends BackgroundWorkerFlutterApi {
     try {
       HttpSSLOptions.apply(applyNative: false);
 
-<<<<<<< HEAD
       // Initialize the file downloader
-/*
+      /*
       await FileDownloader().configure(
         globalConfig: [
           // maxConcurrent: 6, maxConcurrentByHost(server):6, maxConcurrentByGroup: 3
@@ -105,34 +99,11 @@ class BackgroundWorkerBgService extends BackgroundWorkerFlutterApi {
           // On Android, if files are larger than 256MB, run in foreground service
           (Config.runInForegroundIfFileLargerThan, 256),
         ],
-=======
-      await Future.wait(
-        [
-          loadTranslations(),
-          workerManagerPatch.init(dynamicSpawning: true),
-          _ref?.read(authServiceProvider).setOpenApiServiceEndpoint(),
-          // Initialize the file downloader
-          FileDownloader().configure(
-            globalConfig: [
-              // maxConcurrent: 6, maxConcurrentByHost(server):6, maxConcurrentByGroup: 3
-              (Config.holdingQueue, (6, 6, 3)),
-              // On Android, if files are larger than 256MB, run in foreground service
-              (Config.runInForegroundIfFileLargerThan, 256),
-            ],
-          ),
-          FileDownloader().trackTasksInGroup(kDownloadGroupLivePhoto, markDownloadedComplete: false),
-          FileDownloader().trackTasks(),
-          _ref?.read(fileMediaRepositoryProvider).enableBackgroundAccess(),
-        ].nonNulls,
->>>>>>> v2.2.0
       );
 
       configureFileDownloaderNotifications();
-<<<<<<< HEAD
 */
       await _ref.read(fileMediaRepositoryProvider).enableBackgroundAccess();
-=======
->>>>>>> v2.2.0
 
       // Notify the host that the background worker service has been initialized and is ready to use
       unawaited(_backgroundHostApi.onInitialized());
@@ -279,21 +250,9 @@ class BackgroundWorkerBgService extends BackgroundWorkerFlutterApi {
       return isSuccess;
     }
 
-<<<<<<< HEAD
-    
-/*
+    /*
     if (processBulk) {
       return _ref.read(driftBackupProvider.notifier).handleBackupResume(currentUser.id);
-=======
-    var hashFuture = _ref?.read(backgroundSyncProvider).hashAssets();
-    if (hashTimeout != null && hashFuture != null) {
-      hashFuture = hashFuture.timeout(
-        hashTimeout,
-        onTimeout: () {
-          // Consume cancellation errors as we want to continue processing
-        },
-      );
->>>>>>> v2.2.0
     }
 
     await hashFuture;

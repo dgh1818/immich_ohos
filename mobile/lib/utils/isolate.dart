@@ -34,19 +34,10 @@ Cancelable<T?> runInIsolateGentle<T>({
     throw const InvalidIsolateUsageException();
   }
 
-<<<<<<< HEAD
   return workerManager.executeGentle((cancelledChecker) async {
     BackgroundIsolateBinaryMessenger.ensureInitialized(token);
     DartPluginRegistrant.ensureInitialized();
     //final drift_db = Drift();
-=======
-  return workerManagerPatch.executeGentle((cancelledChecker) async {
-    T? result;
-    await runZonedGuarded(
-      () async {
-        BackgroundIsolateBinaryMessenger.ensureInitialized(token);
-        DartPluginRegistrant.ensureInitialized();
->>>>>>> v2.2.0
 
         final (isar, drift, logDb) = await Bootstrap.initDB();
         await Bootstrap.initDomain(isar, drift, logDb, shouldBufferLogs: false, listenStoreUpdates: false);
@@ -62,7 +53,6 @@ Cancelable<T?> runInIsolateGentle<T>({
 
         Logger log = Logger("IsolateLogger");
 
-<<<<<<< HEAD
     try {
       HttpSSLOptions.apply(applyNative: false);
       return await computation(ref);
@@ -77,8 +67,6 @@ Cancelable<T?> runInIsolateGentle<T>({
         //await ref.read(driftProvider).close();
 
         // Close Isar safely
-=======
->>>>>>> v2.2.0
         try {
           HttpSSLOptions.apply(applyNative: false);
           result = await computation(ref);
@@ -90,7 +78,6 @@ Cancelable<T?> runInIsolateGentle<T>({
           try {
             ref.dispose();
 
-<<<<<<< HEAD
         //ref.dispose();
       } catch (error, stack) {
         debugPrint("Error closing resources in isolate: $error, $stack");
@@ -101,34 +88,5 @@ Cancelable<T?> runInIsolateGentle<T>({
       }
     }
     return null;
-=======
-            await Store.dispose();
-            await LogService.I.dispose();
-            await logDb.close();
-            await drift.close();
-
-            // Close Isar safely
-            try {
-              if (isar.isOpen) {
-                await isar.close();
-              }
-            } catch (e) {
-              dPrint(() => "Error closing Isar: $e");
-            }
-          } catch (error, stack) {
-            dPrint(() => "Error closing resources in isolate: $error, $stack");
-          } finally {
-            ref.dispose();
-            // Delay to ensure all resources are released
-            await Future.delayed(const Duration(seconds: 2));
-          }
-        }
-      },
-      (error, stack) {
-        dPrint(() => "Error in isolate $debugLabel zone: $error, $stack");
-      },
-    );
-    return result;
->>>>>>> v2.2.0
   });
 }

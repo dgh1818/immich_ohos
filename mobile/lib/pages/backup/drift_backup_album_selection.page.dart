@@ -12,12 +12,7 @@ import 'package:immich_mobile/extensions/translate_extensions.dart';
 import 'package:immich_mobile/providers/app_settings.provider.dart';
 import 'package:immich_mobile/providers/background_sync.provider.dart';
 import 'package:immich_mobile/providers/backup/backup_album.provider.dart';
-<<<<<<< HEAD
 //import 'package:immich_mobile/providers/backup/drift_backup.provider.dart';
-=======
-import 'package:immich_mobile/providers/backup/drift_backup.provider.dart';
-import 'package:immich_mobile/providers/infrastructure/platform.provider.dart';
->>>>>>> v2.2.0
 import 'package:immich_mobile/providers/user.provider.dart';
 import 'package:immich_mobile/services/app_settings.service.dart';
 import 'package:immich_mobile/widgets/backup/drift_album_info_list_tile.dart';
@@ -65,14 +60,13 @@ class _DriftBackupAlbumSelectionPageState extends ConsumerState<DriftBackupAlbum
         .read(backupAlbumProvider)
         .where((a) => a.backupSelection == BackupSelection.selected)
         .toList();
-/*
+    /*
     if (enableSyncUploadAlbum && selectedAlbums.isNotEmpty) {
       setState(() {
         _handleLinkedAlbumFuture = ref.read(syncLinkedAlbumServiceProvider).manageLinkedAlbums(selectedAlbums, user.id);
       });
       await _handleLinkedAlbumFuture;
     }
-<<<<<<< HEAD
 
     // Restart backup if total count changed and backup is enabled
     final currentTotalAssetCount = ref.read(driftBackupProvider.select((p) => p.totalCount));
@@ -84,8 +78,6 @@ class _DriftBackupAlbumSelectionPageState extends ConsumerState<DriftBackupAlbum
       await ref.read(driftBackupProvider.notifier).startBackup(user.id);
     }
 */
-=======
->>>>>>> v2.2.0
   }
 
   @override

@@ -76,15 +76,10 @@ import 'package:immich_mobile/pages/search/map/map_location_picker.page.dart';
 import 'package:immich_mobile/pages/search/person_result.page.dart';
 import 'package:immich_mobile/pages/search/recently_taken.page.dart';
 import 'package:immich_mobile/pages/search/search.page.dart';
-<<<<<<< HEAD
 import 'package:immich_mobile/pages/settings/beta_sync_settings.page.dart';
 
 //import 'package:immich_mobile/pages/share_intent/share_intent.page.dart';
 
-=======
-import 'package:immich_mobile/pages/settings/sync_status.page.dart';
-import 'package:immich_mobile/pages/share_intent/share_intent.page.dart';
->>>>>>> v2.2.0
 import 'package:immich_mobile/presentation/pages/dev/feat_in_development.page.dart';
 import 'package:immich_mobile/presentation/pages/dev/main_timeline.page.dart';
 import 'package:immich_mobile/presentation/pages/dev/media_stat.page.dart';
@@ -342,14 +337,9 @@ class AppRouter extends RootStackRouter {
     AutoRoute(page: DriftUserSelectionRoute.page, guards: [_authGuard, _duplicateGuard]),
     AutoRoute(page: ChangeExperienceRoute.page, guards: [_authGuard, _duplicateGuard]),
     AutoRoute(page: DriftPartnerRoute.page, guards: [_authGuard, _duplicateGuard]),
-<<<<<<< HEAD
 
     //AutoRoute(page: DriftUploadDetailRoute.page, guards: [_authGuard, _duplicateGuard]),
     AutoRoute(page: BetaSyncSettingsRoute.page, guards: [_authGuard, _duplicateGuard]),
-=======
-    AutoRoute(page: DriftUploadDetailRoute.page, guards: [_authGuard, _duplicateGuard]),
-    AutoRoute(page: SyncStatusRoute.page, guards: [_duplicateGuard]),
->>>>>>> v2.2.0
     AutoRoute(page: DriftPeopleCollectionRoute.page, guards: [_authGuard, _duplicateGuard]),
     AutoRoute(page: DriftPersonRoute.page, guards: [_authGuard]),
     AutoRoute(page: DriftBackupOptionsRoute.page, guards: [_authGuard, _duplicateGuard]),

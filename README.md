@@ -39,7 +39,6 @@
   <a href="readme_i18n/README_th_TH.md">ภาษาไทย</a>
 </p>
 
-<<<<<<< HEAD
 # Harmonyos Next 鸿蒙端的 Immich
 链接已实测可用，解决了发布地区在海外导致不能安装的问题，推荐先卸载自签名版本再重新安装，如仍不可用可以提issue <br/>
 https://appgallery.huawei.com/link/invite-test-wap?taskId=f0970f207f3fe28e5b5d9f60a677becc&invitationCode=7MwNBkjBNn0 失效邀请码已更新 <br/>
@@ -152,8 +151,6 @@ https://github.com/dgh1818/immich_ohos/blob/v1.137.3-merge/%E5%BE%AE%E4%BF%A1%E5
 
 
 ## Disclaimer
-=======
->>>>>>> v2.2.0
 
 > [!WARNING]
 > ⚠️ Always follow [3-2-1](https://www.backblaze.com/blog/the-3-2-1-backup-strategy/) backup plan for your precious photos and videos!

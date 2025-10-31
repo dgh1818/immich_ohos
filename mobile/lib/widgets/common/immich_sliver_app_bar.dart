@@ -62,7 +62,7 @@ class ImmichSliverAppBar extends ConsumerWidget {
         title: title ?? const _ImmichLogoWithText(),
         backgroundColor: Colors.transparent,
         actions: [
-/*
+          /*
           if (isCasting && !isReadonlyModeEnabled)
             Padding(
               padding: const EdgeInsets.only(right: 12),
@@ -104,7 +104,6 @@ class _ImmichLogoWithText extends StatelessWidget {
           children: [
             Builder(
               builder: (context) {
-<<<<<<< HEAD
                 return const SizedBox.shrink();
                 return Badge(
                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
@@ -129,13 +128,6 @@ class _ImmichLogoWithText extends StatelessWidget {
                           : 'assets/immich-logo-inline-light.svg',
                       height: 40,
                     ),
-=======
-                return Padding(
-                  padding: const EdgeInsets.only(top: 3.0),
-                  child: SvgPicture.asset(
-                    context.isDarkTheme ? 'assets/immich-logo-inline-dark.svg' : 'assets/immich-logo-inline-light.svg',
-                    height: 40,
->>>>>>> v2.2.0
                   ),
                 );
               },
@@ -147,7 +139,8 @@ class _ImmichLogoWithText extends StatelessWidget {
   }
 }
 
-class ProfileIndicator extends ConsumerWidget {  //ui变更 需要变为public 函数
+class ProfileIndicator extends ConsumerWidget {
+  //ui变更 需要变为public 函数
   const ProfileIndicator();
 
   @override
@@ -206,8 +199,8 @@ class ProfileIndicator extends ConsumerWidget {  //ui变更 需要变为public �
   }
 }
 
-<<<<<<< HEAD
-class BackupIndicator extends ConsumerWidget {      //ui变更 需要变为public 函数
+class BackupIndicator extends ConsumerWidget {
+  //ui变更 需要变为public 函数
   const BackupIndicator();
 
   @override
@@ -215,16 +208,6 @@ class BackupIndicator extends ConsumerWidget {      //ui变更 需要变为publi
     const widgetSize = 30.0;
     final indicatorIcon = getBackupBadgeIcon(context, ref);
     final badgeBackground = context.colorScheme.surfaceContainer;
-=======
-const double _kBadgeWidgetSize = 30.0;
-
-class _BackupIndicator extends ConsumerWidget {
-  const _BackupIndicator();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final indicatorIcon = _getBackupBadgeIcon(context, ref);
->>>>>>> v2.2.0
 
     return InkWell(
       onTap: () => context.pushRoute(const DriftBackupRoute()),
@@ -278,7 +261,6 @@ class _BackupIndicator extends ConsumerWidget {
         }
         /*
         if (isUploading) {
-<<<<<<< HEAD
           return Container(
             padding: const EdgeInsets.all(3.5),
             child: Theme(
@@ -291,21 +273,6 @@ class _BackupIndicator extends ConsumerWidget {
                 strokeCap: StrokeCap.round,
                 valueColor: AlwaysStoppedAnimation<Color>(iconColor),
                 semanticsLabel: 'backup_controller_page_backup'.tr(),
-=======
-          return _BadgeLabel(
-            Container(
-              padding: const EdgeInsets.all(3.5),
-              child: Theme(
-                data: context.themeData.copyWith(
-                  progressIndicatorTheme: context.themeData.progressIndicatorTheme.copyWith(year2023: true),
-                ),
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  strokeCap: StrokeCap.round,
-                  valueColor: AlwaysStoppedAnimation<Color>(iconColor),
-                  semanticsLabel: 'backup_controller_page_backup'.tr(),
-                ),
->>>>>>> v2.2.0
               ),
             ),
           );
@@ -320,34 +287,8 @@ class _BackupIndicator extends ConsumerWidget {
   }
 }
 
-<<<<<<< HEAD
 class SyncStatusIndicator extends ConsumerStatefulWidget {
   const SyncStatusIndicator();
-=======
-class _BadgeLabel extends StatelessWidget {
-  final Widget indicator;
-  final Color? backgroundColor;
-
-  const _BadgeLabel(this.indicator, {this.backgroundColor});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: _kBadgeWidgetSize / 2,
-      height: _kBadgeWidgetSize / 2,
-      decoration: BoxDecoration(
-        color: backgroundColor ?? context.colorScheme.surfaceContainer,
-        border: Border.all(color: context.colorScheme.outline.withValues(alpha: .3)),
-        borderRadius: BorderRadius.circular(_kBadgeWidgetSize / 2),
-      ),
-      child: indicator,
-    );
-  }
-}
-
-class _SyncStatusIndicator extends ConsumerStatefulWidget {
-  const _SyncStatusIndicator();
->>>>>>> v2.2.0
 
   @override
   ConsumerState<SyncStatusIndicator> createState() => _SyncStatusIndicatorState();

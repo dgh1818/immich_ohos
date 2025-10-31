@@ -26,9 +26,4 @@ mobile/ios/fastlane/report.xml
 
 vite.config.js.timestamp-*
 .pnpm-store
-<<<<<<< HEAD
 mobile/ohos/build-profile.json5
-=======
-.devcontainer/library
-.devcontainer/.env*
->>>>>>> v2.2.0

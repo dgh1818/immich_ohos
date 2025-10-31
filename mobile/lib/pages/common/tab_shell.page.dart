@@ -7,14 +7,10 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:immich_mobile/domain/models/timeline.model.dart';
 import 'package:immich_mobile/domain/utils/event_stream.dart';
 import 'package:immich_mobile/extensions/build_context_extensions.dart';
-<<<<<<< HEAD
 import 'package:immich_mobile/providers/app_settings.provider.dart';
 
 //import 'package:immich_mobile/providers/backup/drift_backup.provider.dart';
 
-=======
-import 'package:immich_mobile/presentation/pages/search/paginated_search.provider.dart';
->>>>>>> v2.2.0
 import 'package:immich_mobile/providers/haptic_feedback.provider.dart';
 import 'package:immich_mobile/providers/infrastructure/album.provider.dart';
 import 'package:immich_mobile/providers/infrastructure/memory.provider.dart';
@@ -44,7 +40,6 @@ class _TabShellPageState extends ConsumerState<TabShellPage> with SingleTickerPr
   late final AnimationController animationController;
 
   @override
-<<<<<<< HEAD
   void initState() {
     super.initState();
 
@@ -87,8 +82,6 @@ class _TabShellPageState extends ConsumerState<TabShellPage> with SingleTickerPr
   }
 
   @override
-=======
->>>>>>> v2.2.0
   Widget build(BuildContext context) {
     final isScreenLandscape = context.orientation == Orientation.landscape;
     final isReadonlyModeEnabled = ref.watch(readonlyModeProvider);

@@ -1,10 +1,4 @@
-<<<<<<< HEAD
 /*
-=======
-import 'dart:convert';
-import 'dart:io';
-
->>>>>>> v2.2.0
 import 'package:background_downloader/background_downloader.dart';
 import 'package:cancellation_token_http/http.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';

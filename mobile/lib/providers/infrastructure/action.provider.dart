@@ -1,11 +1,4 @@
-<<<<<<< HEAD
 //import 'package:background_downloader/background_downloader.dart';
-=======
-import 'dart:async';
-
-import 'package:auto_route/auto_route.dart';
-import 'package:background_downloader/background_downloader.dart';
->>>>>>> v2.2.0
 import 'package:flutter/material.dart';
 import 'package:immich_mobile/constants/enums.dart';
 import 'package:immich_mobile/domain/models/asset/base_asset.model.dart';
@@ -20,12 +13,7 @@ import 'package:immich_mobile/routing/router.dart';
 import 'package:immich_mobile/services/action.service.dart';
 //import 'package:immich_mobile/services/download.service.dart';
 import 'package:immich_mobile/services/timeline.service.dart';
-<<<<<<< HEAD
 //import 'package:immich_mobile/services/upload.service.dart';
-=======
-import 'package:immich_mobile/services/upload.service.dart';
-import 'package:immich_mobile/widgets/asset_grid/delete_dialog.dart';
->>>>>>> v2.2.0
 import 'package:logging/logging.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -48,14 +36,8 @@ class ActionResult {
 class ActionNotifier extends Notifier<void> {
   final Logger _logger = Logger('ActionNotifier');
   late ActionService _service;
-<<<<<<< HEAD
   // late UploadService _uploadService;
   // late DownloadService _downloadService;
-=======
-  late UploadService _uploadService;
-  late DownloadService _downloadService;
-  late AssetService _assetService;
->>>>>>> v2.2.0
 
   ActionNotifier() : super();
 
@@ -63,11 +45,7 @@ class ActionNotifier extends Notifier<void> {
   void build() {
     //_uploadService = ref.watch(uploadServiceProvider);
     _service = ref.watch(actionServiceProvider);
-<<<<<<< HEAD
     /*
-=======
-    _assetService = ref.watch(assetServiceProvider);
->>>>>>> v2.2.0
     _downloadService = ref.watch(downloadServiceProvider);
     _downloadService.onImageDownloadStatus = _downloadImageCallback;
     _downloadService.onVideoDownloadStatus = _downloadVideoCallback;

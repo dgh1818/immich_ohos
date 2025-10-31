@@ -320,7 +320,6 @@ class _DeviceAsset {
 
   const _DeviceAsset({required this.assetId, this.hash, this.dateTime});
 }
-<<<<<<< HEAD
 
 Future<List<void>> runNewSync(WidgetRef ref, {bool full = false}) {
   ref.read(backupProvider.notifier).cancelBackup();
@@ -341,5 +340,3 @@ Future<List<void>> runNewSync(WidgetRef ref, {bool full = false}) {
     }),
   ]);
 }
-=======
->>>>>>> v2.2.0

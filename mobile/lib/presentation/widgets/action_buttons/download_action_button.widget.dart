@@ -1,8 +1,5 @@
-<<<<<<< HEAD
 /*
 import 'package:fluttertoast/fluttertoast.dart';
-=======
->>>>>>> v2.2.0
 import 'package:immich_mobile/constants/enums.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';

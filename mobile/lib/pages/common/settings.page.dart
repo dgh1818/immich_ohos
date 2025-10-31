@@ -19,10 +19,7 @@ import 'package:immich_mobile/widgets/settings/preference_settings/preference_se
 import 'package:immich_mobile/widgets/settings/settings_card.dart';
 
 enum SettingSection {
-<<<<<<< HEAD
   //beta('beta_sync', Icons.sync_outlined, "beta_sync_subtitle"),
-=======
->>>>>>> v2.2.0
   advanced('advanced', Icons.build_outlined, "advanced_settings_tile_subtitle"),
   assetViewer('asset_viewer_settings_title', Icons.image_outlined, "asset_viewer_settings_subtitle"),
   backup('backup', Icons.cloud_upload_outlined, "backup_settings_subtitle"),
@@ -38,10 +35,7 @@ enum SettingSection {
   final IconData icon;
 
   Widget get widget => switch (this) {
-<<<<<<< HEAD
     //SettingSection.beta => const _BetaLandscapeToggle(),
-=======
->>>>>>> v2.2.0
     SettingSection.advanced => const AdvancedSettings(),
     SettingSection.assetViewer => const AssetViewerSettings(),
     SettingSection.backup =>

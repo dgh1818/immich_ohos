@@ -111,14 +111,11 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
   PhotoViewControllerBase? viewController;
   StreamSubscription? reloadSubscription;
 
-<<<<<<< HEAD
   ImageProvider? currentImageProvider; // 替代 useRef
   late final _MyRouteAware routeAware; // 替代 useMemoized
   ImageStreamListener? imageListener;
 
   late Platform platform;
-=======
->>>>>>> v2.2.0
   late final int heroOffset;
   late PhotoViewControllerValue initialPhotoViewState;
   bool? hasDraggedDown;
@@ -180,14 +177,9 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
     reloadSubscription?.cancel();
     _prevPreCacheStream?.removeListener(_dummyListener);
     _nextPreCacheStream?.removeListener(_dummyListener);
-<<<<<<< HEAD
 
     routeObserver.unsubscribe(routeAware);
     removeImageListener();
-=======
-    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
-    _stackChildrenKeepAlive?.close();
->>>>>>> v2.2.0
     super.dispose();
   }
 
@@ -319,13 +311,7 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
 
     widget.changeAsset(ref, asset);
     _precacheAssets(index);
-<<<<<<< HEAD
     //_handleCasting();
-=======
-    _handleCasting();
-    _stackChildrenKeepAlive?.close();
-    _stackChildrenKeepAlive = ref.read(stackChildrenNotifier(asset).notifier).ref.keepAlive();
->>>>>>> v2.2.0
   }
 
   /*

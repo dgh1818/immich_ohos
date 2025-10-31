@@ -227,7 +227,6 @@ class ImmichAppBar extends ConsumerWidget implements PreferredSizeWidget {
           return Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-<<<<<<< HEAD
               Builder(
                 builder: (context) {
                   return Padding(
@@ -242,24 +241,6 @@ class ImmichAppBar extends ConsumerWidget implements PreferredSizeWidget {
                     */
                   );
                 },
-=======
-              Padding(
-                padding: const EdgeInsets.only(top: 3.0),
-                child: SvgPicture.asset(
-                  context.isDarkTheme ? 'assets/immich-logo-inline-dark.svg' : 'assets/immich-logo-inline-light.svg',
-                  height: 40,
-                ),
-              ),
-              const Tooltip(
-                triggerMode: TooltipTriggerMode.tap,
-                showDuration: Duration(seconds: 4),
-                message:
-                    "The old timeline is deprecated and will be removed in a future release. Kindly switch to the new timeline under Advanced Settings.",
-                child: Padding(
-                  padding: EdgeInsets.only(top: 3.0),
-                  child: Icon(Icons.error_rounded, fill: 1, color: Colors.amber, size: 20),
-                ),
->>>>>>> v2.2.0
               ),
             ],
           );

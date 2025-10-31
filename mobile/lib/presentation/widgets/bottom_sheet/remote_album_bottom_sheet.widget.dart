@@ -95,7 +95,6 @@ class _RemoteAlbumBottomSheetState extends ConsumerState<RemoteAlbumBottomSheet>
         const ShareActionButton(source: ActionSource.timeline),
         if (multiselect.hasRemote) ...[
           const ShareLinkActionButton(source: ActionSource.timeline),
-<<<<<<< HEAD
           const ArchiveActionButton(source: ActionSource.timeline),
           const FavoriteActionButton(source: ActionSource.timeline),
           //const DownloadActionButton(source: ActionSource.timeline),
@@ -106,24 +105,6 @@ class _RemoteAlbumBottomSheetState extends ConsumerState<RemoteAlbumBottomSheet>
           const EditLocationActionButton(source: ActionSource.timeline),
           const MoveToLockFolderActionButton(source: ActionSource.timeline),
           const StackActionButton(source: ActionSource.timeline),
-=======
-
-          if (ownsAlbum) ...[
-            const ArchiveActionButton(source: ActionSource.timeline),
-            const FavoriteActionButton(source: ActionSource.timeline),
-          ],
-          const DownloadActionButton(source: ActionSource.timeline),
-          if (ownsAlbum) ...[
-            isTrashEnable
-                ? const TrashActionButton(source: ActionSource.timeline)
-                : const DeletePermanentActionButton(source: ActionSource.timeline),
-            const EditDateTimeActionButton(source: ActionSource.timeline),
-            const EditLocationActionButton(source: ActionSource.timeline),
-            const MoveToLockFolderActionButton(source: ActionSource.timeline),
-            if (multiselect.selectedAssets.length > 1) const StackActionButton(source: ActionSource.timeline),
-            if (multiselect.hasStacked) const UnStackActionButton(source: ActionSource.timeline),
-          ],
->>>>>>> v2.2.0
         ],
         if (multiselect.hasLocal) ...[
           const DeleteLocalActionButton(source: ActionSource.timeline),

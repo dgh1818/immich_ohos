@@ -110,12 +110,8 @@ enum ActionButtonType {
             context.asset.hasRemote,
       ActionButtonType.deleteLocal =>
         !context.isInLockedView && //
-<<<<<<< HEAD
             context.asset.storage == AssetState.local,
       /*
-=======
-            context.asset.hasLocal,
->>>>>>> v2.2.0
       ActionButtonType.upload =>
         !context.isInLockedView && //
             context.asset.storage == AssetState.local,
@@ -166,7 +162,6 @@ enum ActionButtonType {
 }
 
 class ActionButtonBuilder {
-<<<<<<< HEAD
   static const List<ActionButtonType> _actionTypes = [
     ActionButtonType.share,
     ActionButtonType.shareLink,
@@ -183,9 +178,6 @@ class ActionButtonBuilder {
     //ActionButtonType.upload,
     ActionButtonType.removeFromAlbum,
   ];
-=======
-  static const List<ActionButtonType> _actionTypes = ActionButtonType.values;
->>>>>>> v2.2.0
 
   static List<Widget> build(ActionButtonContext context) {
     return _actionTypes.where((type) => type.shouldShow(context)).map((type) => type.buildButton(context)).toList();

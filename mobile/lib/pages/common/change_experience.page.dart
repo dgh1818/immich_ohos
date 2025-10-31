@@ -45,7 +45,6 @@ class _ChangeExperiencePageState extends ConsumerState<ChangeExperiencePage> {
 
   Future<void> _handleMigration() async {
     try {
-<<<<<<< HEAD
       if (widget.switchingToBeta) {
         final assetNotifier = ref.read(assetProvider.notifier);
         if (assetNotifier.mounted) {
@@ -90,15 +89,6 @@ class _ChangeExperiencePageState extends ConsumerState<ChangeExperiencePage> {
 
       await IsarStoreRepository(ref.read(isarProvider)).upsert(StoreKey.betaTimeline, widget.switchingToBeta);
       await DriftStoreRepository(ref.read(driftProvider)).upsert(StoreKey.betaTimeline, widget.switchingToBeta);
-=======
-      await _performMigrationLogic().timeout(
-        const Duration(minutes: 3),
-        onTimeout: () async {
-          await IsarStoreRepository(ref.read(isarProvider)).upsert(StoreKey.betaTimeline, widget.switchingToBeta);
-          await DriftStoreRepository(ref.read(driftProvider)).upsert(StoreKey.betaTimeline, widget.switchingToBeta);
-        },
-      );
->>>>>>> v2.2.0
 
       if (mounted) {
         setState(() {

@@ -35,13 +35,8 @@ class Timeline extends StatelessWidget {
     this.topSliverWidgetHeight,
     this.showStorageIndicator = false,
     this.withStack = false,
-<<<<<<< HEAD
     this.appBar = const ImmichSliverAppBar(floating: true, pinned: true, snap: false),
     this.bottomSheet = const GeneralBottomSheet(),
-=======
-    this.appBar = const ImmichSliverAppBar(floating: true, pinned: false, snap: false),
-    this.bottomSheet = const GeneralBottomSheet(minChildSize: 0.23),
->>>>>>> v2.2.0
     this.groupBy,
     this.withScrubber = true,
     this.snapToMonth = true,

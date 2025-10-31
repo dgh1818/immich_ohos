@@ -23,12 +23,8 @@ import 'package:immich_mobile/generated/codegen_loader.g.dart';
 import 'package:immich_mobile/generated/intl_keys.g.dart';
 import 'package:immich_mobile/platform/background_worker_lock_api.g.dart';
 import 'package:immich_mobile/providers/app_life_cycle.provider.dart';
-<<<<<<< HEAD
 //import 'package:immich_mobile/providers/asset_viewer/share_intent_upload.provider.dart';
 import 'package:immich_mobile/providers/backup/backup.provider.dart';
-=======
-import 'package:immich_mobile/providers/asset_viewer/share_intent_upload.provider.dart';
->>>>>>> v2.2.0
 import 'package:immich_mobile/providers/db.provider.dart';
 import 'package:immich_mobile/providers/infrastructure/db.provider.dart';
 import 'package:immich_mobile/providers/infrastructure/platform.provider.dart';
@@ -229,23 +225,9 @@ class ImmichAppState extends ConsumerState<ImmichApp> with WidgetsBindingObserve
       // needs to be delayed so that EasyLocalization is working
       if (Store.isBetaTimelineEnabled) {
         ref.read(backgroundServiceProvider).disableService();
-<<<<<<< HEAD
         //ref.read(driftBackgroundUploadFgService).enable();
       } else {
         //ref.read(driftBackgroundUploadFgService).disable();
-=======
-        ref.read(backgroundWorkerFgServiceProvider).enable();
-        if (Platform.isAndroid) {
-          ref
-              .read(backgroundWorkerFgServiceProvider)
-              .saveNotificationMessage(
-                IntlKeys.uploading_media.t(),
-                IntlKeys.backup_background_service_default_notification.t(),
-              );
-        }
-      } else {
-        ref.read(backgroundWorkerFgServiceProvider).disable();
->>>>>>> v2.2.0
         ref.read(backgroundServiceProvider).resumeServiceIfEnabled();
         //ref.read(driftBackgroundUploadFgService).disableUploadService();
       }
@@ -278,11 +260,7 @@ class ImmichAppState extends ConsumerState<ImmichApp> with WidgetsBindingObserve
         theme: getThemeData(colorScheme: immichTheme.light, locale: context.locale),
         routerConfig: router.config(
           deepLinkBuilder: _deepLinkBuilder,
-<<<<<<< HEAD
           navigatorObservers: () => [AppNavigationObserver(ref: ref), HeroController(), routeObserver],
-=======
-          navigatorObservers: () => [AppNavigationObserver(ref: ref)],
->>>>>>> v2.2.0
         ),
       ),
     );

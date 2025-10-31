@@ -58,25 +58,10 @@ class DriftBackupOptionsPage extends ConsumerWidget {
           );
           /*
           final backupNotifier = ref.read(driftBackupProvider.notifier);
-<<<<<<< HEAD
           backupNotifier.cancel().then((_) {
             backupNotifier.startBackup(currentUser.id);
           });
 */
-=======
-          final backgroundSync = ref.read(backgroundSyncProvider);
-          unawaited(
-            backupNotifier.cancel().whenComplete(
-              () => backgroundSync.syncRemote().then((success) {
-                if (success) {
-                  return backupNotifier.startBackup(currentUser.id);
-                } else {
-                  Logger('DriftBackupOptionsPage').warning('Background sync failed, not starting backup');
-                }
-              }),
-            ),
-          );
->>>>>>> v2.2.0
         }
       },
       child: Scaffold(
