@@ -17,12 +17,12 @@ class SearchMapThumbnail extends StatelessWidget {
     return ThumbnailWithInfoContainer(
       label: 'search_page_your_map'.tr(),
       onTap: () {
-        context.pushRoute(MapRoute());
+        context.pushRoute(MapRoute(initialLocation: const LatLng(31.171944, 121.549722)));
       },
       child: IgnorePointer(
         child: MapThumbnail(
           zoom: 2,
-          centre: const LatLng(47, 5),
+          centre: const LatLng(31.171944, 121.549722),
           height: size,
           width: size,
           showAttribution: false,
