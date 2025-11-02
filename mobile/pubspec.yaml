@@ -2,7 +2,7 @@ name: immich_mobile
 description: Immich - selfhosted backup media file on mobile phone
 
 publish_to: 'none'
-version: 1.141.1+3500
+version: 1.141.1+3700
 
 environment:
   sdk: '>=3.8.0 <4.0.0'
@@ -93,6 +93,7 @@ dependencies:
   drift_sqflite: ^2.0.1
   pigeon: ^25.3.1
   image_gallery_saver: ^2.0.3
+  huawei_cast: ^1.0.0
 
 dependency_overrides:
   local_auth: 
@@ -109,6 +110,10 @@ dependency_overrides:
       url: 'https://github.com/dgh1818/Flutter_Pinput_ohos'
       path: './'
       #ref: br_local_auth-v2.3.0_ohos
+  huawei_cast:
+    #url: 'https://github.com/dgh1818/huawei_cast_flutter'
+    path: ../../package_flutter/huawei_cast
+    #ref: br_local_auth-v2.3.0_ohos
   image_gallery_saver:
      git:
       url: 'https://gitcode.com/openharmony-sig/flutter_image_gallery_saver.git'
@@ -187,8 +192,8 @@ dependency_overrides:
     git:
       url: https://gitcode.com/openharmony-sig/flutter_packages.git
       path: 'packages/video_player/video_player'
-      ref: br_video_player-v2.10.0_ohos
-      #ref: br_video_player-v2.9.2_ohos
+      #ref: br_video_player-v2.10.0_ohos
+      ref: br_video_player-v2.9.2_ohos
   video_player_android: 
     git:
       url: https://gitcode.com/openharmony-sig/flutter_packages.git

@@ -920,6 +920,13 @@ packages:
       url: "https://pub.flutter-io.cn"
     source: hosted
     version: "4.1.2"
+  huawei_cast:
+    dependency: "direct main"
+    description:
+      path: "../../package_flutter/huawei_cast"
+      relative: true
+    source: path
+    version: "1.0.0"
   image:
     dependency: transitive
     description:
@@ -2154,11 +2161,11 @@ packages:
     dependency: "direct main"
     description:
       path: "packages/video_player/video_player"
-      ref: "br_video_player-v2.10.0_ohos"
-      resolved-ref: b0506b5b3a7c7b1fdbf73447fec29f8f28e9080e
+      ref: "br_video_player-v2.9.2_ohos"
+      resolved-ref: f260f22c4b4667f3f96e82c0715a3ec671439c08
       url: "https://gitcode.com/openharmony-sig/flutter_packages.git"
     source: git
-    version: "2.10.0"
+    version: "2.9.2"
   video_player_android:
     dependency: "direct main"
     description:
@@ -2180,11 +2187,11 @@ packages:
     dependency: transitive
     description:
       path: "packages/video_player/video_player_ohos"
-      ref: "br_video_player-v2.10.0_ohos"
-      resolved-ref: b0506b5b3a7c7b1fdbf73447fec29f8f28e9080e
-      url: "https://gitcode.com/openharmony-tpc/flutter_packages.git"
+      ref: "br_video_player-v2.9.2_ohos"
+      resolved-ref: f260f22c4b4667f3f96e82c0715a3ec671439c08
+      url: "https://gitcode.com/openharmony-sig/flutter_packages.git"
     source: git
-    version: "1.0.0+2"
+    version: "1.0.0+1"
   video_player_platform_interface:
     dependency: transitive
     description:

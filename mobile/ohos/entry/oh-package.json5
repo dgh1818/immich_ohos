@@ -29,6 +29,7 @@
     "shared_preferences_ohos": "file:../har/shared_preferences_ohos.har",
     "network_info_plus_ohos": "file:../har/network_info_plus_ohos.har",
     "image_gallery_saver": "file:../har/image_gallery_saver.har",
-    "local_auth_ohos": "file:../har/local_auth_ohos.har"
+    "local_auth_ohos": "file:../har/local_auth_ohos.har",
+    "huawei_cast": "file:../har/huawei_cast.har"
   }
 }
