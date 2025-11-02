@@ -65,13 +65,13 @@ class EditImagePage extends ConsumerWidget {
       }
 
       context.navigator.popUntil((route) => route.isFirst);
-      ImmichToast.show(durationInSecond: 3, context: context, msg: 'Image Saved!', gravity: ToastGravity.CENTER);
+      ImmichToast.show(durationInSecond: 3, context: context, msg: 'Image Saved!', gravity: ToastGravity.BOTTOM);
     } catch (e) {
       ImmichToast.show(
         durationInSecond: 6,
         context: context,
         msg: "error_saving_image".tr(namedArgs: {'error': e.toString()}),
-        gravity: ToastGravity.CENTER,
+        gravity: ToastGravity.BOTTOM,
       );
     }
   }
