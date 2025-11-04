@@ -19,11 +19,7 @@ Future<VideoPlayerController> videoPlayerController(VideoPlayerControllerRef ref
   if (asset.isLocal && asset.livePhotoVideoId == null) {
     // Use a local file for the video player controller
     //final file = await asset.local!.file;
-    final file = File(asset.local!.id);
-    if (file == null) {
-      throw Exception('No file found for the video');
-    }
-    controller = VideoPlayerController.file(file);
+    controller = VideoPlayerController.contentUri(Uri.parse(asset.local!.id));
   } else {
     // Use a network URL for the video player controller
     final serverEndpoint = Store.get(StoreKey.serverEndpoint);
