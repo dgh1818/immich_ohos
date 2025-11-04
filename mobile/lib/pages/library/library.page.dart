@@ -30,7 +30,7 @@ class LibraryPage extends ConsumerWidget {
     return Scaffold(
       appBar: const ImmichAppBar(),
       body: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
+        padding: const EdgeInsets.only(left: 16, right: 16, bottom: 50),
         child: ListView(
           shrinkWrap: true,
           children: [
@@ -109,7 +109,6 @@ class QuickAccessButtons extends ConsumerWidget {
       child: ListView(
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
-        padding: EdgeInsets.only(bottom: 50), // <-- 关键行
         children: [
           ListTile(
             shape: RoundedRectangleBorder(
