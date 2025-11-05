@@ -40,7 +40,7 @@
 
 # Harmonyos Next 鸿蒙端的 Immich
 链接已实测可用，解决了发布地区在海外导致不能安装的问题，推荐先卸载自签名版本再重新安装，如仍不可用可以提issue <br/>
-https://appgallery.huawei.com/link/invite-test-wap?taskId=f86656659b593eb829ccd89ad27c8316&invitationCode=7MwNBkjBNn0 失效邀请码已更新 <br/>
+https://appgallery.huawei.com/link/invite-test-wap?taskId=5f70902fce0f9442ab9d76336012049e&invitationCode=36TwEBlKNGe <br/>
 https://appgallery.huawei.com/app/detail?id=com.dgh18.immich&channelId=SHARE&source=appshare  正式上架版 无beta时间线 <br/>
 **IMMICH 搭配对应版本 本项目下服务器 使用**
 <h1>签名有关注意事项：</h1>
