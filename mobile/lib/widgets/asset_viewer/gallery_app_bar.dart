@@ -24,6 +24,8 @@ import 'package:immich_mobile/widgets/common/immich_toast.dart';
 
 import 'package:immich_mobile/utils/selection_handlers.dart';
 
+import 'package:immich_mobile/pages/common/video_viewer.page.dart';
+
 class GalleryAppBar extends ConsumerWidget {
   final void Function() showInfo;
 
@@ -81,6 +83,12 @@ class GalleryAppBar extends ConsumerWidget {
       );
     }
 
+    handleCastAsset(Asset asset) {
+      if (castController != null) {
+        castController!.startCast(asset.remoteId!);
+      }
+    }
+
     handleDownloadAsset(Asset asset) {
       // if(asset.isMotionPhoto){
       // TO DO
@@ -117,6 +125,7 @@ class GalleryAppBar extends ConsumerWidget {
             onDownloadPressed: asset.isLocal ? null : () => handleDownloadAsset(asset),
             onAddToAlbumPressed: () => addToAlbum(asset),
             onActivitiesPressed: handleActivities,
+            onCastPressed: asset.isImage ? null : () => handleCastAsset(asset),
           ),
         ),
       ),
