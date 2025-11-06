@@ -12,6 +12,7 @@ import 'package:immich_mobile/domain/services/timeline.service.dart';
 import 'package:immich_mobile/domain/utils/event_stream.dart';
 import 'package:immich_mobile/extensions/build_context_extensions.dart';
 import 'package:immich_mobile/extensions/scroll_extensions.dart';
+import 'package:immich_mobile/infrastructure/loaders/image_request.dart';
 import 'package:immich_mobile/presentation/widgets/asset_viewer/asset_stack.provider.dart';
 import 'package:immich_mobile/presentation/widgets/asset_viewer/asset_stack.widget.dart';
 import 'package:immich_mobile/presentation/widgets/asset_viewer/asset_viewer.state.dart';
@@ -34,6 +35,8 @@ import 'package:immich_mobile/widgets/photo_view/photo_view_gallery.dart';
 import 'package:platform/platform.dart';
 
 import 'package:immich_mobile/main.dart';
+import 'package:immich_mobile/domain/models/setting.model.dart';
+import 'package:immich_mobile/domain/services/setting.service.dart';
 
 @RoutePage()
 class AssetViewerPage extends StatelessWidget {
@@ -174,7 +177,7 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
       (context.height * extent) - (context.height * _kBottomSheetMinimumExtent);
 
   ImageStream _precacheImage(BaseAsset asset) {
-    final provider = getFullImageProvider(asset, size: context.sizeData);
+    final provider = getFullImageProvider(asset, size: const Size(-1, -1)); //-1,-1表示原图
     return provider.resolve(ImageConfiguration.empty)..addListener(_dummyListener);
   }
 
@@ -257,8 +260,11 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
     }
 
     if (asset.isImage) {
-      final provider = getFullImageProvider(asset);
-      setDisplayMode(provider, context);
+      //判断是否使用本地位置媒体
+      if (!(asset.hasLocal && (!asset.hasRemote || !AppSetting.get(Setting.preferRemoteImage)))) {
+        final provider = getFullImageProvider(asset);
+        setDisplayMode(provider, context);
+      }
     } else {
       ui.SetHdr.setHdrMode(hdr: 0, is_image: true);
     }
@@ -283,6 +289,25 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
     }
 
     AssetViewer.setAsset(ref, asset);
+
+    if (asset.isImage) {
+      if (asset.hasLocal && (!asset.hasRemote || !AppSetting.get(Setting.preferRemoteImage))) {
+        final localImageRequest = LocalImageRequest(
+          localId: (asset as LocalAsset).id,
+          size: const Size(-1, -1),
+          assetType: AssetType.image,
+        );
+        final isHdr = await localImageRequest.getHdr(); //本地媒体通过Native侧获取HDR信息
+        print("get hdr is $isHdr");
+
+        if (isHdr) {
+          ui.SetHdr.setHdrMode(hdr: 1, is_image: true);
+        } else {
+          ui.SetHdr.setHdrMode(hdr: 0, is_image: true);
+        }
+      }
+    }
+
     _precacheAssets(index);
     //_handleCasting();
   }
@@ -643,7 +668,7 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
     final size = ctx.sizeData;
     return PhotoViewGalleryPageOptions(
       key: ValueKey(asset.heroTag),
-      imageProvider: getFullImageProvider(asset, size: size),
+      imageProvider: getFullImageProvider(asset, size: const Size(-1, -1)),
       heroAttributes: PhotoViewHeroAttributes(tag: '${asset.heroTag}_$heroOffset'),
       filterQuality: FilterQuality.high,
       tightMode: true,

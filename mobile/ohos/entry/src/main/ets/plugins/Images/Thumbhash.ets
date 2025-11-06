@@ -5,13 +5,13 @@ import { collections, lang } from "@kit.ArkTS";
 
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-@Sendable
+
 export class ThumbHashResult {
   width: number;
   height: number;
-  pointer: collections.Uint8Array;
+  pointer: ArrayBuffer;
 
-  constructor(width: number,height: number,pointer: collections.Uint8Array) {
+  constructor(width: number,height: number,pointer: ArrayBuffer) {
     this.width = width;
     this.height = height;
     this.pointer = pointer;
@@ -102,7 +102,7 @@ export function thumbHashToRGBA(hash: Uint8Array): ThumbHashResult {
   const w = fw | 0;
   const h = fh | 0;
 
-  const out = new collections.Uint8Array(w * h * 4);
+
 
   const cx_stop = Math.max(lx, hasAlpha ? 5 : 3);
   const cy_stop = Math.max(ly, hasAlpha ? 5 : 3);
@@ -110,6 +110,9 @@ export function thumbHashToRGBA(hash: Uint8Array): ThumbHashResult {
   // pre-allocate coefficient arrays
   const fx = new Float32Array(cx_stop);
   const fy = new Float32Array(cy_stop);
+  const buffer = new ArrayBuffer(w * h * 4);
+  const out = new Uint8Array(buffer);;
+
 
   let outIndex = 0;
   for (let y = 0; y < h; y++) {
@@ -193,7 +196,7 @@ export function thumbHashToRGBA(hash: Uint8Array): ThumbHashResult {
   //   pointer: out
   // });
 
-  return new ThumbHashResult(w, h, out);
+  return new ThumbHashResult(w, h, buffer);
 }
 
 export function thumbHashToApproximateAspectRatio(hash: Uint8Array): number {

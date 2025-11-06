@@ -16,7 +16,7 @@ import { fileIo as fs, fileUri } from '@kit.CoreFileKit';
 let runner: taskpool.AsyncRunner | undefined = undefined;
 
 if (canIUse('api.version >= 18')) {
-  runner = new taskpool.AsyncRunner("runner1", 4);
+  runner = new taskpool.AsyncRunner("runner1", 5);
 }
 
 //let runner:taskpool.AsyncRunner = new taskpool.AsyncRunner("runner1", 5);
@@ -41,7 +41,7 @@ export class MessagesImplBaseThumb extends ThumbnailApi {
           let finalResult = new Map<string, Object>();
           finalResult.set("width",res.width);
           finalResult.set("height",res.height);
-          finalResult.set("pointer",Uint8Array.from(res.pointer));
+          finalResult.set("pointer",new Uint8Array(res.pointer));
 
           return result.success(finalResult);
         }
@@ -76,8 +76,7 @@ export class MessagesImplBaseThumb extends ThumbnailApi {
           let resOut = new Map<string, Object>();
           resOut.set("width",res.width);
           resOut.set("height",res.height);
-          resOut.set("pointer",Uint8Array.from(res.pointer));
-
+          resOut.set("pointer",new Uint8Array(res.pointer));
 
           return callback.success(resOut);
 
@@ -105,7 +104,7 @@ export class MessagesImplBaseThumb extends ThumbnailApi {
           let resOut = new Map<string, Object>();
           resOut.set("width",res.width);
           resOut.set("height",res.height);
-          resOut.set("pointer",Uint8Array.from(res.pointer));
+          resOut.set("pointer",new Uint8Array(res.pointer));
 
 
           return callback.success(resOut);
@@ -185,15 +184,15 @@ export class MessagesImplBaseThumb extends ThumbnailApi {
     try {
       const bufferSize = bitmap.getPixelBytesNumber();
       //console.error("enter processBitmap2" + bufferSize);
-      let buffer: ArrayBuffer|undefined = new ArrayBuffer(bufferSize);
+      let buffer: ArrayBuffer = new ArrayBuffer(bufferSize);
       //console.error("enter processBitmap3");
 
       bitmap.readPixelsToBufferSync(buffer);
 
       //console.error("enter processBitmap4");
 
-      let uint8Array: Uint8Array|undefined = new Uint8Array(buffer);
-      buffer = undefined;
+      let uint8Array: Uint8Array = new Uint8Array(buffer);
+
       //console.error("enter processBitmap5");
       let collectionsUint8Array: collections.Uint8Array = new collections.Uint8Array(uint8Array);
       //uint8Array = undefined;
@@ -201,7 +200,7 @@ export class MessagesImplBaseThumb extends ThumbnailApi {
 
       //console.error("enter processBitmap6" + collectionsUint8Array.byteLength);
 
-      let finalResult = new ThumbHashResult(actualWidth,actualHeight,collectionsUint8Array);
+      let finalResult = new ThumbHashResult(actualWidth,actualHeight,buffer);
 
       return finalResult;
 
@@ -220,15 +219,23 @@ export class MessagesImplBaseThumb extends ThumbnailApi {
   ): Promise<PixelMap> {
     //signal.throwIfCanceled()
     let filePath = id;
+    let opts:image.DecodingOptions;
 
     const imageSource: image.ImageSource = image.createImageSource(id);
 
+    const imageInfo = await imageSource.getImageInfo();
 
-    // const color: ArrayBuffer =
-    //   new ArrayBuffer(4 * targetWidth * targetHeight); // 96为需要创建的像素buffer大小，取值为：height * width *4。
-    let opts: image.DecodingOptions = { editable: false, desiredPixelFormat: image.PixelMapFormat.RGBA_8888, desiredSize: { height: 256, width: 256 } }
+    if(targetHeight == -1 && targetWidth == -1) {
+      if(imageInfo.isHdr) {
+        opts = { editable: true, desiredPixelFormat: image.PixelMapFormat.RGBA_1010102};
+      } else {
+        opts = { editable: true, desiredPixelFormat: image.PixelMapFormat.RGBA_8888};
+      }
+    } else {
+      opts = { editable: true, desiredPixelFormat: image.PixelMapFormat.RGBA_8888,desiredSize: { height: targetHeight, width: imageInfo.size.width * targetHeight / imageInfo.size.height } };
+    }
+
     let imageOut = await imageSource.createPixelMapUsingAllocator(opts, image.AllocatorType.AUTO);
-
     return imageOut;
   }
 
@@ -247,12 +254,22 @@ export class MessagesImplBaseThumb extends ThumbnailApi {
         predicates: predicates
       });
     let photoAsset: photoAccessHelper.PhotoAsset = await videoFetchResult.getFirstObject();
+    let widthKey: photoAccessHelper.PhotoKeys = photoAccessHelper.PhotoKeys.WIDTH
+    let heightKey: photoAccessHelper.PhotoKeys = photoAccessHelper.PhotoKeys.HEIGHT
+    let photoAssetwidth:number = photoAsset.get(widthKey.toString()) as number;
+    let photoAssetheight:number = photoAsset.get(heightKey.toString()) as number;
 
-    let thumbnailSize: Size = { width: 0, height: 0 };
-    thumbnailSize.width = targetWidth;
-    thumbnailSize.height = targetHeight;
-
+    let thumbnailSize: Size = { height: targetHeight, width: photoAssetwidth * targetHeight / photoAssetheight }
     let videoThumb = await photoAsset.getThumbnail(thumbnailSize);
     return videoThumb;
+  }
+
+  override async getHdr(assetId: string , result: Result<Map<string, boolean>>) {
+    const imageSource: image.ImageSource = image.createImageSource(assetId);
+    const imageInfo = await imageSource.getImageInfo();
+    const isHdr = imageInfo.isHdr;
+    let resOut = new Map<string, boolean>();
+    resOut.set("isHdr",isHdr);
+    result.success(resOut);
   }
 }

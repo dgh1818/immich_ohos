@@ -32,4 +32,15 @@ class LocalImageRequest extends ImageRequest {
   Future<void> _onCancelled() {
     return thumbnailApi.cancelImageRequest(requestId);
   }
+
+  Future<bool> getHdr() async {
+    final Map<String, bool> info = await thumbnailApi.getHdr(localId);
+
+    if (info['isHdr'] != null) {
+      final isHdr = info['isHdr'];
+      return isHdr!;
+    } else {
+      return false;
+    }
+  }
 }

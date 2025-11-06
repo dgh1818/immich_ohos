@@ -83,6 +83,8 @@ export abstract class ThumbnailApi {
   abstract cancelImageRequest(requestId: number ): void;
 
   abstract getThumbhash(thumbhash: string , result: Result<Map<string, Object>>): void;
+
+  abstract getHdr(assetId: string , result: Result<Map<string, boolean>>): void;
   /** The codec used by ThumbnailApi. */
   static getCodec(): MessageCodec<Object>{
     return PigeonCodec.INSTANCE;
@@ -163,6 +165,34 @@ export abstract class ThumbnailApi {
               let resultCallback: Result<Map<string, Object>> = new ResultImp();
 
               api!.getThumbhash(args[0] as string, resultCallback);
+            } });
+      } else {
+        channel.setMessageHandler(null);
+      }
+    }
+    {
+      let channel: BasicMessageChannel<Object> =
+          new BasicMessageChannel(
+              binaryMessenger, "dev.flutter.pigeon.immich_mobile.ThumbnailApi.getHdr", ThumbnailApi.getCodec());
+      if (api != null) {
+        channel.setMessageHandler({
+            onMessage(message: Object ,reply: Reply<Object> ) {
+              let args: Array<Object> = message as Array<Object>;
+              class ResultImp implements Result<Map<string, boolean>>{
+                    success(result: Map<string, boolean>): void {
+                      let res: Array<Object> = [];
+                      res.push(result);
+                      reply.reply(res);
+                    }
+
+                    error(error: Error): void {
+                      let wrappedError: Array<Object> = wrapError(error);
+                      reply.reply(wrappedError);
+                    }
+              }
+              let resultCallback: Result<Map<string, boolean>> = new ResultImp();
+
+              api!.getHdr(args[0] as string, resultCallback);
             } });
       } else {
         channel.setMessageHandler(null);

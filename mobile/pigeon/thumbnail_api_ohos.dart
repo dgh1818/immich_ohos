@@ -27,4 +27,7 @@ abstract class ThumbnailApi {
   @async
   Map<String, Object> getThumbhash(String thumbhash);
 
+  @TaskQueue(type: TaskQueueType.serialBackgroundThread)
+  @async
+  Map<String, bool> getHdr(String assetId);
 }
