@@ -556,11 +556,15 @@ class VideoViewer extends HookConsumerWidget {
       if (state == VideoPlaybackState.playing) {
         // Sync with the controls playing
         //WakelockPlus.enable();
-        castController!.setCurrentPosition(videoPlayback.position.inMilliseconds, true);
+        if (castController != null) {
+          castController!.setCurrentPosition(videoPlayback.position.inMilliseconds, true);
+        }
       } else {
         // Sync with the controls pause
         //WakelockPlus.disable();
-        castController!.setCurrentPosition(videoPlayback.position.inMilliseconds, false);
+        if (castController != null) {
+          castController!.setCurrentPosition(videoPlayback.position.inMilliseconds, false);
+        }
       }
     }
 

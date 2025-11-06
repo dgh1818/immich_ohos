@@ -20,6 +20,9 @@ import 'package:immich_mobile/providers/routes.provider.dart';
 import 'package:immich_mobile/providers/user.provider.dart';
 import 'package:immich_mobile/routing/router.dart';
 
+import 'package:immich_mobile/domain/models/setting.model.dart';
+import 'package:immich_mobile/domain/services/setting.service.dart';
+
 class ViewerTopAppBar extends ConsumerWidget implements PreferredSizeWidget {
   const ViewerTopAppBar({super.key});
 
@@ -54,7 +57,8 @@ class ViewerTopAppBar extends ConsumerWidget implements PreferredSizeWidget {
     //final isCasting = ref.watch(castProvider.select((c) => c.isCasting));
 
     final actions = <Widget>[
-      if (asset.hasRemote) CastActionButton(id: (asset as RemoteAsset).id, menuItem: true),
+      if (!(asset.hasLocal && (!asset.hasRemote || !AppSetting.get(Setting.preferRemoteImage))))
+        CastActionButton(id: (asset as RemoteAsset).id, menuItem: true),
       //if (isCasting || (asset.hasRemote)) const CastActionButton(menuItem: true),
       if (album != null && album.isActivityEnabled && album.isShared)
         IconButton(
@@ -82,7 +86,8 @@ class ViewerTopAppBar extends ConsumerWidget implements PreferredSizeWidget {
     ];
 
     final lockedViewActions = <Widget>[
-      if (asset.hasRemote) CastActionButton(id: (asset as RemoteAsset).id, menuItem: true),
+      if (!(asset.hasLocal && (!asset.hasRemote || !AppSetting.get(Setting.preferRemoteImage))))
+        CastActionButton(id: (asset as RemoteAsset).id, menuItem: true),
       //if (isCasting || (asset.hasRemote)) const CastActionButton(menuItem: true),
       const _KebabMenu(),
     ];
