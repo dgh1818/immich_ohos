@@ -31,6 +31,7 @@ class DriftLibraryPage extends ConsumerWidget {
           _ActionButtonGrid(),
           _CollectionCards(),
           _QuickAccessButtonList(),
+          SliverToBoxAdapter(child: SizedBox(height: 80)),
         ],
       ),
     );

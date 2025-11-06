@@ -88,7 +88,7 @@ class AlbumsPage extends HookConsumerWidget {
         },
         child: ListView(
           shrinkWrap: true,
-          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12),
+          padding: const EdgeInsets.only(right: 16.0, left: 16, top: 12, bottom: 80),
           children: [
             Container(
               decoration: BoxDecoration(
