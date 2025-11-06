@@ -83,9 +83,9 @@ class GalleryAppBar extends ConsumerWidget {
       );
     }
 
-    handleCastAsset(Asset asset) {
+    handleCastAsset(String id) {
       if (castController != null) {
-        castController!.startCast(asset.remoteId!);
+        castController!.startCast(id);
       }
     }
 
@@ -125,7 +125,7 @@ class GalleryAppBar extends ConsumerWidget {
             onDownloadPressed: asset.isLocal ? null : () => handleDownloadAsset(asset),
             onAddToAlbumPressed: () => addToAlbum(asset),
             onActivitiesPressed: handleActivities,
-            onCastPressed: asset.isImage ? null : () => handleCastAsset(asset),
+            onCastPressed: asset.isVideo && asset.isRemote ? () => handleCastAsset(asset.remoteId!) : null,
           ),
         ),
       ),

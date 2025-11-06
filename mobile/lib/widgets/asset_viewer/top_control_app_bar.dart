@@ -28,6 +28,7 @@ class TopControlAppBar extends HookConsumerWidget {
     required this.isOwner,
     required this.onActivitiesPressed,
     required this.isPartner,
+    required this.onCastPressed,
   });
 
   final Asset asset;
@@ -38,6 +39,7 @@ class TopControlAppBar extends HookConsumerWidget {
   final VoidCallback onAddToAlbumPressed;
   final VoidCallback onRestorePressed;
   final VoidCallback onActivitiesPressed;
+  final VoidCallback? onCastPressed;
   final Function(Asset) onFavorite;
   final bool isOwner;
   final bool isPartner;
@@ -143,20 +145,21 @@ class TopControlAppBar extends HookConsumerWidget {
       );
     }
 
-    /*
     Widget buildCastButton() {
       return IconButton(
         onPressed: () {
-          showDialog(context: context, builder: (context) => const CastDialog());
+          if (onCastPressed != null) {
+            onCastPressed!();
+          }
         },
-        icon: Icon(
-          isCasting ? Icons.cast_connected_rounded : Icons.cast_rounded,
-          size: 20.0,
-          color: isCasting ? context.primaryColor : Colors.grey[200],
-        ),
+        // icon: Icon(
+        //   isCasting ? Icons.cast_connected_rounded : Icons.cast_rounded,
+        //   size: 20.0,
+        //   color: isCasting ? context.primaryColor : Colors.grey[200],
+        // ),
+        icon: Icon(Icons.cast_rounded, size: 20.0, color: Colors.grey[200]),
       );
     }
-*/
 
     bool isInHomePage = ref.read(tabProvider.notifier).state == TabEnum.home;
     bool? isInTrash = ref.read(currentAssetProvider)?.isTrashed;
@@ -174,6 +177,7 @@ class TopControlAppBar extends HookConsumerWidget {
         if (asset.isLocal && !asset.isRemote) buildUploadButton(),
         if (asset.isRemote && !asset.isLocal && isOwner) buildDownloadButton(),
         if (asset.isRemote && (isOwner || isPartner) && !asset.isTrashed && !isInLockedView) buildAddToAlbumButton(),
+        if (asset.isRemote && asset.isVideo) buildCastButton(),
 
         //if (isCasting || (asset.isRemote && websocketConnected)) buildCastButton(),
         if (asset.isTrashed) buildRestoreButton(),

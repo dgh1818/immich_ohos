@@ -23,11 +23,19 @@
  * SOFTWARE.
  */
 
-import { FlutterPlugin, FlutterPluginBinding, MethodCall,
+import {
+  FlutterPlugin,
+  FlutterPluginBinding,
+  MethodCall,
   MethodCallHandler,
-  MethodChannel, MethodResult,
-  StandardMethodCodec,AbilityAware,AbilityPluginBinding,FlutterLoader,
-  PluginRegistry } from "@ohos/flutter_ohos";
+  MethodChannel,
+  MethodResult,
+  StandardMethodCodec,
+  AbilityAware,
+  AbilityPluginBinding,
+  FlutterLoader,
+  PluginRegistry
+} from "@ohos/flutter_ohos";
 
 import { avSession } from '@kit.AVSessionKit';
 import { BusinessError } from '@kit.BasicServicesKit';
@@ -47,14 +55,11 @@ export default class HuaweiCastPlugin implements FlutterPlugin, MethodCallHandle
   //private fileMimeType: FileMimeTypeUtil = new FileMimeTypeUtil();
   private binding: AbilityPluginBinding | null = null;
   private metadata?: avSession.AVMetadata;
-
   private contentUrl?: string;
   private mediaImage?: string;
   private title?: string;
-  private duration?:number;
-
+  private duration?: number;
   private assetId?: string;
-
   private position: number = 0;
   private isPlaying: boolean = true
 
@@ -93,7 +98,7 @@ export default class HuaweiCastPlugin implements FlutterPlugin, MethodCallHandle
         this.mediaImage = call.args.get("mediaImage");
         this.title = call.args.get("title");
         this.duration = call.args.get("duration");
-        await this.createSession(this.contentUrl!, this.mediaImage!, this.title!, this.duration!,result);
+        await this.createSession(this.contentUrl!, this.mediaImage!, this.title!, this.duration!, result);
         break;
       case "startCast":
         this.assetId = call.args.get("assetId");
@@ -104,7 +109,7 @@ export default class HuaweiCastPlugin implements FlutterPlugin, MethodCallHandle
       case "setCurrentPosition":
         this.position = call.args.get("position");
         this.isPlaying = call.args.get("isPlaying") as boolean;
-        this.setCurrentPosition(this.position,this.isPlaying);
+        this.setCurrentPosition(this.position, this.isPlaying);
         result.success({});
         break;
       case "clearSession":
@@ -119,7 +124,7 @@ export default class HuaweiCastPlugin implements FlutterPlugin, MethodCallHandle
   /**
    * 设置输出设备变化监听器
    */
-private async setOutputDeviceChangeListener(assetId: string, title: string, mediaUri: string): Promise<void> {
+  private async setOutputDeviceChangeListener(assetId: string, title: string, mediaUri: string): Promise<void> {
     this.avSession?.on('outputDeviceChange', async (connectState: avSession.ConnectionState,
       device: avSession.OutputDeviceInfo) => {
       const castCategory = device?.devices?.[0].castCategory;
@@ -127,14 +132,21 @@ private async setOutputDeviceChangeListener(assetId: string, title: string, medi
       if (castCategory === avSession.AVCastCategory.CATEGORY_REMOTE &&
         connectState === avSession.ConnectionState.STATE_CONNECTED) {
         this.avCastController = await this.avSession!.getAVCastController();
-        // 获取cast控制器
+        await this.avCastController.prepare(this.playItem);
+        await this.avCastController.start(this.playItem);
 
-        this.avCastController?.prepare(this.playItem);
-        this.avCastController!.start(this.playItem);
+      }
 
+      if (device.devices[0].castCategory === avSession.AVCastCategory.CATEGORY_REMOTE &&
+        connectState === avSession.ConnectionState.STATE_DISCONNECTED) {
+        if (this.avCastController) {
+          await this.avCastController.release();
+          await this.avSession?.stopCasting();
+          this.avCastController = undefined;
         }
-      })
-    };
+      }
+    })
+  };
 
 
   /**
@@ -189,14 +201,18 @@ private async setOutputDeviceChangeListener(assetId: string, title: string, medi
   private async startCast(assetId: string, title: string, mediaUri: string): Promise<void> {
 
 
-
     if (this.applicationContext) {
       this.playItem = {
         itemId: 1,
         description: {
           assetId: `${assetId}`,
           title: title,
+          artist: 'immich',
           mediaUri: mediaUri,
+          mediaType: 'VIDEO',
+          mediaImage: this.mediaImage,
+          duration: this.duration,
+
         }
       };
       let avCastPicker = new avSession.AVCastPickerHelper(this.applicationContext);
@@ -210,12 +226,10 @@ private async setOutputDeviceChangeListener(assetId: string, title: string, medi
       this.setOutputDeviceChangeListener(assetId, title, mediaUri);
 
 
-      avCastPicker.select(avCastPickerOptions).then( () => {
+      avCastPicker.select(avCastPickerOptions).then(async () => {
         console.info('select successfully');
         try {
-          // this.avCastController = this.avSession!.getAVCastController();
-          // this.avCastController?.prepare(this.playItem);
-          // this.avCastController!.start(this.playItem);
+
         } catch (err) {
           console.error(err);
           //this.handlerCastError(err, 'avSessionError', 'prepare');
@@ -230,7 +244,7 @@ private async setOutputDeviceChangeListener(assetId: string, title: string, medi
 
   private async setCurrentPosition(position: number, isplaying: boolean): Promise<void> {
     let playbackState: avSession.AVPlaybackState = {
-      state: isplaying?avSession.PlaybackState.PLAYBACK_STATE_PLAY :avSession.PlaybackState.PLAYBACK_STATE_PAUSE,
+      state: isplaying ? avSession.PlaybackState.PLAYBACK_STATE_PLAY : avSession.PlaybackState.PLAYBACK_STATE_PAUSE,
       position: {
         elapsedTime: position, // 已经播放的位置，以ms为单位。
         updateTime: new Date().getTime(), // 应用更新当前位置时的时间戳，以ms为单位。
@@ -255,7 +269,7 @@ private async setOutputDeviceChangeListener(assetId: string, title: string, medi
     this.avSession.off('playNext');
     this.avSession.off('playPrevious');
     this.avSession.on('seek', (time: number) => {
-      this.channel?.invokeMethod('seekTo',{'position':time});
+      this.channel?.invokeMethod('seekTo', { 'position': time });
     });
   }
 
@@ -269,21 +283,21 @@ private async setOutputDeviceChangeListener(assetId: string, title: string, medi
     this.avSession.off('playPrevious');
   }
 
-  private playCall: () =>void = () => {
+  private playCall: () => void = () => {
     //his.m
-    this.channel?.invokeMethod('play',{});
+    this.channel?.invokeMethod('play', {});
 
 
   };
-  private pauseCall: () =>void = () => {
-    this.channel?.invokeMethod('pause',{});
+  private pauseCall: () => void = () => {
+    this.channel?.invokeMethod('pause', {});
     //this.pause();
   };
-  private playNextCall: () =>void = () => {
+  private playNextCall: () => void = () => {
 
     return;
   };
-  private playPreviousCall: () =>void = () => {
+  private playPreviousCall: () => void = () => {
     return
   };
 }

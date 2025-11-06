@@ -182,7 +182,10 @@ class VideoViewerPage extends HookConsumerWidget {
 
     // Adds and removes the listener to the video player
     useEffect(() {
-      setMetadata(asset);
+      if (asset.isRemote) {
+        setMetadata(asset);
+      }
+
       Future.microtask(() => ref.read(videoPlayerControlsProvider.notifier).reset());
       // Guard no controller
       if (controller == null) {

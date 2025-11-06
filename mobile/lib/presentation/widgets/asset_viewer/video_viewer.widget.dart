@@ -432,6 +432,13 @@ import 'package:immich_mobile/presentation/widgets/asset_viewer/video_viewer_con
 
 import 'package:immich_mobile/domain/models/asset/base_asset.model.dart';
 
+import 'package:immich_mobile/utils/image_url_builder.dart';
+import 'package:immich_mobile/models/sessions/session_create_response.model.dart';
+import 'package:immich_mobile/repositories/sessions_api.repository.dart';
+import 'package:huawei_cast/huawei_cast.dart';
+
+HuaweiCast? castController;
+
 bool _isCurrentAsset(BaseAsset asset, BaseAsset? currentAsset) {
   if (asset is RemoteAsset) {
     return switch (currentAsset) {
@@ -474,6 +481,9 @@ class VideoViewer extends HookConsumerWidget {
     final controller = ref.watch(videoViewerControllerProvider(asset: asset)).value;
     // The last volume of the video used when mute is toggled
     final lastVolume = useState(0.5);
+
+    SessionCreateResponse? sessionKey;
+    final _sessionsApiService = ref.watch(sessionsAPIRepositoryProvider);
 
     //final isCasting = ref.watch(castProvider.select((c) => c.isCasting));
 
@@ -546,14 +556,65 @@ class VideoViewer extends HookConsumerWidget {
       if (state == VideoPlaybackState.playing) {
         // Sync with the controls playing
         //WakelockPlus.enable();
+        castController!.setCurrentPosition(videoPlayback.position.inMilliseconds, true);
       } else {
         // Sync with the controls pause
         //WakelockPlus.disable();
+        castController!.setCurrentPosition(videoPlayback.position.inMilliseconds, false);
       }
     }
 
+    bool isSessionValid() {
+      // check if we already have a session token
+      // we should always have a expiration date
+      if (sessionKey == null || sessionKey?.expiresAt == null) {
+        return false;
+      }
+
+      final tokenExpiration = DateTime.parse(sessionKey!.expiresAt!);
+
+      // we want to make sure we have at least 10 seconds remaining in the session
+      // this is to account for network latency and other delays when sending the request
+      final bufferedExpiration = tokenExpiration.subtract(const Duration(seconds: 10));
+
+      return bufferedExpiration.isAfter(DateTime.now());
+    }
+
+    setMetadata(RemoteAsset asset) async {
+      // if(asset.isMotionPhoto){
+      // TO DO
+
+      if (!isSessionValid()) {
+        sessionKey = await _sessionsApiService.createSession(
+          "Cast",
+          "Google Cast",
+          duration: const Duration(minutes: 15).inSeconds,
+        );
+      }
+
+      final unauthenticatedUrlThumb = getThumbnailUrlForRemoteId(asset.id);
+      final authenticatedURLThumb = "$unauthenticatedUrlThumb&sessionKey=${sessionKey?.token}";
+
+      final String unauthenticatedUrlVideo = getPlaybackUrlForRemoteId(asset.id);
+      final authenticatedURLVideo = "$unauthenticatedUrlVideo&sessionKey=${sessionKey?.token}";
+
+      if (controller != null) {
+        castController = HuaweiCast(controller);
+        castController!.setMetadata(
+          authenticatedURLVideo,
+          authenticatedURLThumb,
+          asset.name,
+          asset.duration.inMilliseconds,
+        );
+      }
+    } //
+
     // Adds and removes the listener to the video player
     useEffect(() {
+      if (asset.hasRemote) {
+        setMetadata(asset as RemoteAsset);
+      }
+
       Future.microtask(() => ref.read(videoPlayerControlsProvider.notifier).reset());
       // Guard no controller
       if (controller == null) {

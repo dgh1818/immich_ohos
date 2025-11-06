@@ -54,6 +54,7 @@ class ViewerTopAppBar extends ConsumerWidget implements PreferredSizeWidget {
     //final isCasting = ref.watch(castProvider.select((c) => c.isCasting));
 
     final actions = <Widget>[
+      if (asset.hasRemote) CastActionButton(id: (asset as RemoteAsset).id, menuItem: true),
       //if (isCasting || (asset.hasRemote)) const CastActionButton(menuItem: true),
       if (album != null && album.isActivityEnabled && album.isShared)
         IconButton(
@@ -81,6 +82,7 @@ class ViewerTopAppBar extends ConsumerWidget implements PreferredSizeWidget {
     ];
 
     final lockedViewActions = <Widget>[
+      if (asset.hasRemote) CastActionButton(id: (asset as RemoteAsset).id, menuItem: true),
       //if (isCasting || (asset.hasRemote)) const CastActionButton(menuItem: true),
       const _KebabMenu(),
     ];
