@@ -641,6 +641,7 @@ class VideoViewer extends HookConsumerWidget {
         // Removes listener when we dispose
         controller.removeListener(updateVideoPlayback);
         controller.pause();
+        castController?.clearSession();
       };
     }, [controller]);
 
