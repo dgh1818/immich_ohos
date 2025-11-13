@@ -271,7 +271,9 @@ class BackupService {
         final isAvailableLocally = await asset.local!.isLocallyAvailable(isOrigin: true);
 
         // Handle getting files from iCloud
-        if (!isAvailableLocally && Platform.isIOS) {
+        if (!isAvailableLocally && (Platform.isIOS || Platform.isOhos)) {
+          //if (!isAvailableLocally && (Platform.isIOS || Platform.isOhos)) {
+          //云端逻辑 仅ios
           // Skip iCloud assets if the user has disabled this feature
           if (isIgnoreIcloudAssets) {
             continue;
