@@ -19,12 +19,11 @@ export async function getThumbhashTask(thumbhash: string) {
       let inputBuffer = buffer.from(thumbhash, 'base64');
       let bytes = new Uint8Array(inputBuffer.buffer);
       let image = thumbHashToRGBA(bytes)
-      resolve (new ThumbHashResult(image.width, image.height, image.pointer));
+      resolve (new ThumbHashResult(image.width, image.height, image.pointer,false));
     } catch (e) {
       // is OperationCanceledException -> callback(CANCELLED)
       // is CancellationException -> callback(CANCELLED)
       // else -> callback(Result.failure(e))
-
       throw new Error('getThumbhashTask error');
       reject("getThumbhashTask error");
 

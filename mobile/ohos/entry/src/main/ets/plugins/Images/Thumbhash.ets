@@ -10,11 +10,13 @@ export class ThumbHashResult {
   width: number;
   height: number;
   pointer: ArrayBuffer;
+  isHdr: boolean;
 
-  constructor(width: number,height: number,pointer: ArrayBuffer) {
+  constructor(width: number,height: number,pointer: ArrayBuffer,isHdr:boolean) {
     this.width = width;
     this.height = height;
     this.pointer = pointer;
+    this.isHdr = isHdr;
   }
 }
 
@@ -196,7 +198,7 @@ export function thumbHashToRGBA(hash: Uint8Array): ThumbHashResult {
   //   pointer: out
   // });
 
-  return new ThumbHashResult(w, h, buffer);
+  return new ThumbHashResult(w, h, buffer,false);
 }
 
 export function thumbHashToApproximateAspectRatio(hash: Uint8Array): number {

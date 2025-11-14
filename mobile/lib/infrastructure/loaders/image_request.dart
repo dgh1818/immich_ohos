@@ -54,11 +54,13 @@ abstract class ImageRequest {
     final int actualHeight;
     final int actualSize;
     final ui.ImmutableBuffer buffer;
+    final isHdr;
     try {
       actualWidth = info['width']! as int;
       actualHeight = info['height']! as int;
       actualSize = actualWidth * actualHeight * 4;
       buffer = await ImmutableBuffer.fromUint8List(address);
+      isHdr = info['isHdr']! as bool;
     } finally {
       //malloc.free(pointer);
     }
@@ -72,8 +74,9 @@ abstract class ImageRequest {
       buffer,
       width: actualWidth,
       height: actualHeight,
-      pixelFormat: ui.PixelFormat.rgba8888,
+      pixelFormat: isHdr ? ui.PixelFormat.rgba1010102 : ui.PixelFormat.rgba8888,
     );
+
     final codec = await descriptor.instantiateCodec();
     if (_isCancelled) {
       buffer.dispose();
