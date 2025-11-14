@@ -301,7 +301,7 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
         print("get hdr is $isHdr");
 
         if (isHdr) {
-          ui.SetHdr.setHdrMode(hdr: 1, is_image: true);
+          ui.SetHdr.setHdrMode(hdr: 0, is_image: true);
         } else {
           ui.SetHdr.setHdrMode(hdr: 0, is_image: true);
         }
