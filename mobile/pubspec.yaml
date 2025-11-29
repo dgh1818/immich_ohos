@@ -19,7 +19,7 @@ dependencies:
   video_player: ^2.9.2
   video_player_android: 2.6.0
   chewie: ^1.7.4
-  #background_downloader: ^9.2.0  #ohos待适配
+  background_downloader: ^9.2.0  #ohos待适配
   cached_network_image: ^3.4.1
   cancellation_token_http: ^2.1.0
   #cast: ^2.1.0
@@ -110,6 +110,8 @@ dependency_overrides:
       url: 'https://github.com/dgh1818/Flutter_Pinput_ohos'
       path: './'
       #ref: br_local_auth-v2.3.0_ohos
+  background_downloader:
+    path: ../../package_flutter/background_downloader_ohos
   huawei_cast:
     #url: 'https://github.com/dgh1818/huawei_cast_flutter'
     path: ../../package_flutter/huawei_cast
