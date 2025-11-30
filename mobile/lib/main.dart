@@ -3,7 +3,7 @@ import 'dart:io';
 
 import 'package:auto_route/auto_route.dart';
 
-//import 'package:background_downloader/background_downloader.dart';
+import 'package:background_downloader/background_downloader.dart';
 
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:easy_localization/easy_localization.dart';
@@ -41,6 +41,7 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:logging/logging.dart';
 import 'package:timezone/data/latest.dart';
 import 'package:worker_manager/worker_manager.dart';
+import 'package:path_provider/path_provider.dart';
 
 final RouteObserver<ModalRoute> routeObserver = RouteObserver<ModalRoute>();
 
@@ -49,6 +50,7 @@ void main() async {
   final (isar, drift, logDb) = await Bootstrap.initDB();
   await Bootstrap.initDomain(isar, drift, logDb);
   await initApp();
+  await _cleanupTempCache();
   // Warm-up isolate pool for worker manager
   await workerManager.init(dynamicSpawning: true);
   await migrateDatabaseIfNeeded(isar, drift);
@@ -99,7 +101,6 @@ Future<void> initApp() async {
 
   initializeTimeZones();
 
-  /*
   // Initialize the file downloader
   await FileDownloader().configure(
     // maxConcurrent: 6, maxConcurrentByHost(server):6, maxConcurrentByGroup: 3
@@ -111,13 +112,35 @@ Future<void> initApp() async {
   await FileDownloader().trackTasksInGroup(kDownloadGroupLivePhoto, markDownloadedComplete: false);
 
   await FileDownloader().trackTasks();
-  */
 
   LicenseRegistry.addLicense(() async* {
     for (final license in nonPubLicenses.entries) {
       yield LicenseEntryWithLineBreaks([license.key], license.value);
     }
   });
+}
+
+Future<void> _cleanupTempCache() async {
+  if (!(Platform.isIOS || defaultTargetPlatform == TargetPlatform.ohos)) {
+    return;
+  }
+
+  try {
+    final tempDir = await getTemporaryDirectory();
+    final targets = [Directory('${tempDir.path}/originalPhoto'), Directory('${tempDir.path}/movingPhoto')];
+
+    for (final dir in targets) {
+      if (await dir.exists()) {
+        try {
+          await dir.delete(recursive: true);
+        } catch (e) {
+          debugPrint("Failed to delete temp dir ${dir.path}: $e");
+        }
+      }
+    }
+  } catch (e) {
+    debugPrint("Failed to cleanup temp cache: $e");
+  }
 }
 
 class ImmichApp extends ConsumerStatefulWidget {
