@@ -26,7 +26,7 @@ final actionServiceProvider = Provider<ActionService>(
     ref.watch(driftAlbumApiRepositoryProvider),
     ref.watch(remoteAlbumRepository),
     ref.watch(assetMediaRepositoryProvider),
-    //ref.watch(downloadRepositoryProvider),
+    ref.watch(downloadRepositoryProvider),
   ),
 );
 
@@ -37,7 +37,7 @@ class ActionService {
   final DriftAlbumApiRepository _albumApiRepository;
   final DriftRemoteAlbumRepository _remoteAlbumRepository;
   final AssetMediaRepository _assetMediaRepository;
-  //final DownloadRepository _downloadRepository;
+  final DownloadRepository _downloadRepository;
 
   const ActionService(
     this._assetApiRepository,
@@ -46,7 +46,7 @@ class ActionService {
     this._albumApiRepository,
     this._remoteAlbumRepository,
     this._assetMediaRepository,
-    //this._downloadRepository,
+    this._downloadRepository,
   );
 
   Future<void> shareLink(List<String> remoteIds, BuildContext context) async {
@@ -231,9 +231,7 @@ class ActionService {
     return _assetMediaRepository.shareAssets(assets);
   }
 
-  /*
   Future<List<bool>> downloadAll(List<RemoteAsset> assets) {
     return _downloadRepository.downloadAllAssets(assets);
   }
-*/
 }
