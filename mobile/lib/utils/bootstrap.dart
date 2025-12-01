@@ -1,6 +1,6 @@
 import 'dart:io';
 
-//import 'package:background_downloader/background_downloader.dart';
+import 'package:background_downloader/background_downloader.dart';
 import 'package:flutter/foundation.dart';
 import 'package:immich_mobile/constants/constants.dart';
 import 'package:immich_mobile/domain/models/store.model.dart';
@@ -26,7 +26,6 @@ import 'package:isar/isar.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:isar_flutter_libs/isar_flutter_libs.dart';
 
-/*
 void configureFileDownloaderNotifications() {
   FileDownloader().configureNotificationForGroup(
     kDownloadGroupImage,
@@ -56,7 +55,6 @@ void configureFileDownloaderNotifications() {
     groupNotificationId: kBackupGroup,
   );
 }
-*/
 
 abstract final class Bootstrap {
   static Future<(Isar isar, Drift drift, DriftLogger logDb)> initDB() async {

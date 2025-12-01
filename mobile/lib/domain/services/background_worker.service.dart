@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:ui';
 
-//import 'package:background_downloader/background_downloader.dart';
+import 'package:background_downloader/background_downloader.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:immich_mobile/constants/constants.dart';
@@ -72,7 +72,7 @@ class BackgroundWorkerBgService extends BackgroundWorkerFlutterApi {
       await _ref.read(authServiceProvider).setOpenApiServiceEndpoint();
 
       // Initialize the file downloader
-/*
+
       await FileDownloader().configure(
         globalConfig: [
           // maxConcurrent: 6, maxConcurrentByHost(server):6, maxConcurrentByGroup: 3
@@ -84,7 +84,7 @@ class BackgroundWorkerBgService extends BackgroundWorkerFlutterApi {
       await FileDownloader().trackTasksInGroup(kDownloadGroupLivePhoto, markDownloadedComplete: false);
       await FileDownloader().trackTasks();
       configureFileDownloaderNotifications();
-*/
+
       await _ref.read(fileMediaRepositoryProvider).enableBackgroundAccess();
 
       // Notify the host that the background upload service has been initialized and is ready to use
@@ -196,8 +196,7 @@ class BackgroundWorkerBgService extends BackgroundWorkerFlutterApi {
       return;
     }
 
-    
-/*
+    /*
     if (processBulk) {
       return _ref.read(driftBackupProvider.notifier).handleBackupResume(currentUser.id);
     }
