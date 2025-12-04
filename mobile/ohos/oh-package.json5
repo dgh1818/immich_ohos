@@ -39,6 +39,7 @@
     "shared_preferences_ohos": "file:./har/shared_preferences_ohos.har",
     "network_info_plus_ohos": "file:./har/network_info_plus_ohos.har",
     "@ohos/flutter_module": "file:./entry",
-    "@ohos/flutter_ohos": "file:./har/flutter.har"
+    "@ohos/flutter_ohos": "file:./har/flutter.har",
+    "wakelock_plus": "file:./har/wakelock_plus.har"
   }
 }

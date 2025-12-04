@@ -19,6 +19,7 @@ import FlutterLocalNotificationsPlugin from 'flutter_local_notifications';
 import FlutterSecureStorageOhosPlugin from 'flutter_secure_storage_ohos';
 import FlutterUdidPlugin from 'flutter_udid';
 import GeolocatorOhosPlugin from 'flutter_geolocator_ohos';
+import WakelockPlugin from 'wakelock_plus';
 import ImagePickerPlugin from 'image_picker_ohos';
 import IsarFlutterLibsPlugin from 'isar_flutter_libs';
 import SharedPreferencesPlugin from 'shared_preferences_ohos';
@@ -56,6 +57,7 @@ export class GeneratedPluginRegistrant {
       flutterEngine.getPlugins()?.add(new FlutterSecureStorageOhosPlugin());
       flutterEngine.getPlugins()?.add(new FlutterUdidPlugin());
       flutterEngine.getPlugins()?.add(new GeolocatorOhosPlugin());
+      flutterEngine.getPlugins()?.add(new WakelockPlugin());
       flutterEngine.getPlugins()?.add(new ImagePickerPlugin());
       flutterEngine.getPlugins()?.add(new IsarFlutterLibsPlugin());
       flutterEngine.getPlugins()?.add(new SharedPreferencesPlugin());
