@@ -272,7 +272,6 @@ class BackupService {
 
         // Handle getting files from iCloud
         if (!isAvailableLocally && (Platform.isIOS || Platform.isOhos)) {
-          //if (!isAvailableLocally && (Platform.isIOS || Platform.isOhos)) {
           //云端逻辑 仅ios
           // Skip iCloud assets if the user has disabled this feature
           if (isIgnoreIcloudAssets) {
@@ -412,7 +411,7 @@ class BackupService {
         anyErrors = true;
         continue;
       } finally {
-        if (Platform.isIOS || defaultTargetPlatform == TargetPlatform.ohos) {
+        if (Platform.isIOS || Platform.isOhos) {
           try {
             await file?.delete();
             await livePhotoFile?.delete();

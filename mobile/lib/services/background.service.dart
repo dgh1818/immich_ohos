@@ -123,7 +123,7 @@ class BackgroundService {
   /// Returns `true` if battery optimizations are disabled
   Future<bool> isIgnoringBatteryOptimizations() async {
     // iOS does not need battery optimizations enabled
-    if (Platform.isIOS) {
+    if (Platform.isIOS || Platform.isOhos) {
       return true;
     }
     try {
@@ -296,9 +296,11 @@ class BackgroundService {
           // iOS should time out after some threshold so it doesn't wait
           // indefinitely and can run later
           // Android is fine to wait here until the lock releases
-          final waitForLock = Platform.isIOS
-              ? acquireLock().timeout(const Duration(seconds: 5), onTimeout: () => false)
-              : acquireLock();
+          // final waitForLock = Platform.isIOS
+          //     ? acquireLock().timeout(const Duration(seconds: 5), onTimeout: () => false)
+          //     : acquireLock();  //Todo: Ohos
+
+          final waitForLock = acquireLock().timeout(const Duration(seconds: 5), onTimeout: () => false);
 
           final bool hasAccess = await waitForLock;
           if (!hasAccess) {
@@ -440,7 +442,7 @@ class BackgroundService {
     );
 
     _cancellationToken = CancellationToken();
-    final pmProgressHandler = Platform.isIOS ? PMProgressHandler() : null;
+    final pmProgressHandler = (Platform.isIOS || Platform.isOhos) ? PMProgressHandler() : null;
 
     final bool ok = await backupService.backupAsset(
       toUpload,
