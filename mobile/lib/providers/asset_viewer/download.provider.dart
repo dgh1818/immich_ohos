@@ -54,6 +54,10 @@ class DownloadStateNotifier extends StateNotifier<DownloadState> {
   void _downloadLivePhotoCallback(TaskStatusUpdate update) {
     _updateDownloadStatus(update.task.taskId, update.status);
 
+    if (LivePhotosMetadata.fromJson(update.task.metaData).part == LivePhotosPart.image) {
+      return;
+    }
+
     switch (update.status) {
       case TaskStatus.complete:
         if (update.task.metaData.isEmpty) {

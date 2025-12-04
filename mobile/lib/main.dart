@@ -43,6 +43,8 @@ import 'package:timezone/data/latest.dart';
 import 'package:worker_manager/worker_manager.dart';
 import 'package:path_provider/path_provider.dart';
 
+import 'package:permission_handler/permission_handler.dart';
+
 final RouteObserver<ModalRoute> routeObserver = RouteObserver<ModalRoute>();
 
 void main() async {
@@ -54,6 +56,8 @@ void main() async {
   // Warm-up isolate pool for worker manager
   await workerManager.init(dynamicSpawning: true);
   await migrateDatabaseIfNeeded(isar, drift);
+  await Permission.notification.request();
+
   HttpSSLOptions.apply();
 
   runApp(
@@ -228,7 +232,7 @@ class ImmichAppState extends ConsumerState<ImmichApp> with WidgetsBindingObserve
     super.didChangeDependencies();
     Intl.defaultLocale = context.locale.toLanguageTag();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      //_configureFileDownloaderNotifications();
+      configureFileDownloaderNotifications();
     });
   }
 

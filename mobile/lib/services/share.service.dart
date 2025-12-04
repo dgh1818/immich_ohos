@@ -70,7 +70,7 @@ class ShareService {
     return false;
   }
 
-  Future<bool> saveAssets(List<Asset> assets, BuildContext context) async {
+  Future<bool> saveAssets(List<Asset> assets) async {
     try {
       final downloadedXFiles = <XFile>[];
 

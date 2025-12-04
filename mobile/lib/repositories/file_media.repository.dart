@@ -32,14 +32,20 @@ class FileMediaRepository {
   }
 
   Future<Asset?> saveImageWithFile(String filePath, {String? title, String? relativePath}) async {
-    final result = await ImageGallerySaver.saveFile(filePath, name: title, isReturnPathOfIOS: true);
     final entity = await PhotoManager.editor.saveImageWithPath(filePath, title: title, relativePath: relativePath);
     return AssetMediaRepository.toAsset(entity);
   }
 
   Future<Asset?> saveLivePhoto({required File image, required File video, required String title}) async {
-    final entity = await PhotoManager.editor.darwin.saveLivePhoto(imageFile: image, videoFile: video, title: title);
-    return AssetMediaRepository.toAsset(entity);
+    if (Platform.isIOS) {
+      final entity = await PhotoManager.editor.darwin.saveLivePhoto(imageFile: image, videoFile: video, title: title);
+      return AssetMediaRepository.toAsset(entity);
+    } else if (Platform.isOhos) {
+      final entity = await PhotoManager.editor.ohos.saveLivePhoto(imageFile: image, videoFile: video, title: title);
+      return AssetMediaRepository.toAsset(entity);
+    } else {
+      return null;
+    }
   }
 
   Future<Asset?> saveVideo(File file, {required String title, String? relativePath}) async {

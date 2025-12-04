@@ -39,7 +39,7 @@ void handleShareAssets(WidgetRef ref, BuildContext context, Iterable<Asset> sele
 }
 
 void handleSaveAssets(WidgetRef ref, BuildContext context, Iterable<Asset> selection) {
-  ref.watch(shareServiceProvider).saveAssets(selection.toList(), context);
+  ref.watch(shareServiceProvider).saveAssets(selection.toList());
 }
 
 Future<void> handleArchiveAssets(
