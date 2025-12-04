@@ -9,7 +9,7 @@ import 'package:immich_mobile/providers/asset_viewer/video_player_controls_provi
 import 'package:immich_mobile/providers/asset_viewer/video_player_value_provider.dart';
 import 'package:immich_mobile/widgets/asset_viewer/video_player.dart';
 import 'package:immich_mobile/widgets/common/delayed_loading_indicator.dart';
-//import 'package:wakelock_plus/wakelock_plus.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 
 import 'package:immich_mobile/providers/asset_viewer/is_motion_video_playing.provider.dart';
 import 'package:logging/logging.dart';
@@ -126,11 +126,11 @@ class VideoViewerPage extends HookConsumerWidget {
         if (state == VideoPlaybackState.playing) {
           castController!.setCurrentPosition(videoPlayback.position.inMilliseconds, true);
           // Sync with the controls playing
-          //WakelockPlus.enable();
+          WakelockPlus.enable();
         } else {
           castController!.setCurrentPosition(videoPlayback.position.inMilliseconds, false);
           // Sync with the controls pause
-          //WakelockPlus.disable();
+          WakelockPlus.disable();
         }
       }
     }

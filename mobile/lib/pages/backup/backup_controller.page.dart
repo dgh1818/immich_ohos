@@ -48,7 +48,7 @@ class BackupControllerPage extends HookConsumerWidget {
       ref.watch(websocketProvider.notifier).stopListenToEvent('on_upload_success');
 
       return () {
-        //WakelockPlus.disable();         //鸿蒙待适配
+        WakelockPlus.disable(); //鸿蒙待适配
       };
     }, []);
 
@@ -62,9 +62,9 @@ class BackupControllerPage extends HookConsumerWidget {
 
     useEffect(() {
       if (backupState.backupProgress == BackUpProgressEnum.inProgress) {
-        //WakelockPlus.enable();
+        WakelockPlus.enable();
       } else {
-        //WakelockPlus.disable();
+        WakelockPlus.disable();
       }
 
       return null;
