@@ -8,9 +8,7 @@ import 'package:video_player/video_player.dart';
 /// Otherwise, use a video player with a URL
 ChewieController useChewieController({
   required VideoPlayerController controller,
-  EdgeInsets controlsSafeAreaMinimum = const EdgeInsets.only(
-    bottom: 100,
-  ),
+  EdgeInsets controlsSafeAreaMinimum = const EdgeInsets.only(bottom: 100),
   bool showOptions = true,
   bool showControlsOnInitialize = false,
   bool autoPlay = true,
@@ -65,9 +63,7 @@ class _ChewieControllerHook extends Hook<ChewieController> {
 
   const _ChewieControllerHook({
     required this.controller,
-    this.controlsSafeAreaMinimum = const EdgeInsets.only(
-      bottom: 100,
-    ),
+    this.controlsSafeAreaMinimum = const EdgeInsets.only(bottom: 100),
     this.showOptions = true,
     this.showControlsOnInitialize = false,
     this.autoPlay = true,
@@ -87,8 +83,7 @@ class _ChewieControllerHook extends Hook<ChewieController> {
   createState() => _ChewieControllerHookState();
 }
 
-class _ChewieControllerHookState
-    extends HookState<ChewieController, _ChewieControllerHook> {
+class _ChewieControllerHookState extends HookState<ChewieController, _ChewieControllerHook> {
   late ChewieController chewieController = ChewieController(
     videoPlayerController: hook.controller,
     controlsSafeAreaMinimum: hook.controlsSafeAreaMinimum,

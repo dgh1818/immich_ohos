@@ -29,20 +29,14 @@ class VideoPlayerViewer extends HookConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final chewie = useChewieController(
       controller: controller,
-      controlsSafeAreaMinimum: const EdgeInsets.only(
-        bottom: 100,
-      ),
+      controlsSafeAreaMinimum: const EdgeInsets.only(bottom: 100),
       placeholder: SizedBox.expand(child: placeholder),
-      customControls: CustomVideoPlayerControls(
-        hideTimerDuration: hideControlsTimer,
-      ),
+      customControls: CustomVideoPlayerControls(hideTimerDuration: hideControlsTimer),
       showControls: showControls && !isMotionVideo,
       hideControlsTimer: hideControlsTimer,
       loopVideo: loopVideo,
     );
 
-    return Chewie(
-      controller: chewie,
-    );
+    return Chewie(controller: chewie);
   }
 }

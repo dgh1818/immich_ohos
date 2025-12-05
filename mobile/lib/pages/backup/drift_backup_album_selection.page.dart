@@ -56,7 +56,7 @@ class _DriftBackupAlbumSelectionPageState extends ConsumerState<DriftBackupAlbum
         .read(backupAlbumProvider)
         .where((a) => a.backupSelection == BackupSelection.selected)
         .toList();
-/*
+    /*
     if (enableSyncUploadAlbum && selectedAlbums.isNotEmpty) {
       setState(() {
         _handleLinkedAlbumFuture = ref.read(syncLinkedAlbumServiceProvider).manageLinkedAlbums(selectedAlbums, user.id);

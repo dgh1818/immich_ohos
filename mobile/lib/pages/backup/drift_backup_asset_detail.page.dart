@@ -21,7 +21,7 @@ class DriftBackupAssetDetailPage extends ConsumerWidget {
     //AsyncValue<List<LocalAsset>> result = ref.watch(driftBackupCandidateProvider);
     return Scaffold(
       appBar: AppBar(title: Text('backup_controller_page_remainder'.t(context: context))),
-      body: null
+      body: null,
       // result.when(
       //   data: (List<LocalAsset> candidates) {
       //     return ListView.separated(

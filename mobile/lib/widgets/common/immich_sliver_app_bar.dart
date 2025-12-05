@@ -62,7 +62,7 @@ class ImmichSliverAppBar extends ConsumerWidget {
         title: title ?? const _ImmichLogoWithText(),
         backgroundColor: Colors.transparent,
         actions: [
-/*
+          /*
           if (isCasting && !isReadonlyModeEnabled)
             Padding(
               padding: const EdgeInsets.only(right: 12),
@@ -139,7 +139,8 @@ class _ImmichLogoWithText extends StatelessWidget {
   }
 }
 
-class ProfileIndicator extends ConsumerWidget {  //ui变更 需要变为public 函数
+class ProfileIndicator extends ConsumerWidget {
+  //ui变更 需要变为public 函数
   const ProfileIndicator();
 
   @override
@@ -188,7 +189,8 @@ class ProfileIndicator extends ConsumerWidget {  //ui变更 需要变为public �
   }
 }
 
-class BackupIndicator extends ConsumerWidget {      //ui变更 需要变为public 函数
+class BackupIndicator extends ConsumerWidget {
+  //ui变更 需要变为public 函数
   const BackupIndicator();
 
   @override
