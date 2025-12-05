@@ -25,6 +25,7 @@ class LocalImageRequest extends ImageRequest {
     );
 
     final frame = await _fromPlatformImage(info);
+    // Todo Ohos
     return frame == null ? null : ImageInfo(image: frame.image, scale: scale);
   }
 
