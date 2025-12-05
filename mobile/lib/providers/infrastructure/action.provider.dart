@@ -9,7 +9,7 @@ import 'package:immich_mobile/providers/user.provider.dart';
 import 'package:immich_mobile/services/action.service.dart';
 import 'package:immich_mobile/services/download.service.dart';
 import 'package:immich_mobile/services/timeline.service.dart';
-//import 'package:immich_mobile/services/upload.service.dart';
+import 'package:immich_mobile/services/upload.service.dart';
 import 'package:logging/logging.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -32,14 +32,14 @@ class ActionResult {
 class ActionNotifier extends Notifier<void> {
   final Logger _logger = Logger('ActionNotifier');
   late ActionService _service;
-  // late UploadService _uploadService;
+  late UploadService _uploadService;
   late DownloadService _downloadService;
 
   ActionNotifier() : super();
 
   @override
   void build() {
-    //_uploadService = ref.watch(uploadServiceProvider);
+    _uploadService = ref.watch(uploadServiceProvider);
     _service = ref.watch(actionServiceProvider);
     _downloadService = ref.watch(downloadServiceProvider);
     _downloadService.onImageDownloadStatus = _downloadImageCallback;
@@ -344,7 +344,6 @@ class ActionNotifier extends Notifier<void> {
     }
   }
 
-  /*
   Future<ActionResult> downloadAll(ActionSource source) async {
     final assets = _getAssets(source).whereType<RemoteAsset>().toList(growable: false);
 
@@ -368,7 +367,6 @@ class ActionNotifier extends Notifier<void> {
       return ActionResult(count: assets.length, success: false, error: error.toString());
     }
   }
-*/
 }
 
 extension on Iterable<RemoteAsset> {

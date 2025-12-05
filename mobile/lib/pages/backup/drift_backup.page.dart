@@ -9,7 +9,7 @@ import 'package:immich_mobile/extensions/translate_extensions.dart';
 import 'package:immich_mobile/presentation/widgets/backup/backup_toggle_button.widget.dart';
 import 'package:immich_mobile/providers/background_sync.provider.dart';
 import 'package:immich_mobile/providers/backup/backup_album.provider.dart';
-//import 'package:immich_mobile/providers/backup/drift_backup.provider.dart';
+import 'package:immich_mobile/providers/backup/drift_backup.provider.dart';
 import 'package:immich_mobile/providers/user.provider.dart';
 import 'package:immich_mobile/routing/router.dart';
 import 'package:immich_mobile/widgets/backup/backup_info_card.dart';
@@ -31,7 +31,7 @@ class _DriftBackupPageState extends ConsumerState<DriftBackupPage> {
       return;
     }
 
-    //ref.read(driftBackupProvider.notifier).getBackupStatus(currentUser.id);
+    ref.read(driftBackupProvider.notifier).getBackupStatus(currentUser.id);
   }
 
   Future<void> startBackup() async {
@@ -39,18 +39,14 @@ class _DriftBackupPageState extends ConsumerState<DriftBackupPage> {
     if (currentUser == null) {
       return;
     }
-    /*
     await ref.read(backgroundSyncProvider).syncRemote();
     await ref.read(driftBackupProvider.notifier).getBackupStatus(currentUser.id);
     await ref.read(driftBackupProvider.notifier).startBackup(currentUser.id);
-*/
   }
 
-  /*
   Future<void> stopBackup() async {
     await ref.read(driftBackupProvider.notifier).cancel();
   }
-*/
 
   @override
   Widget build(BuildContext context) {
@@ -93,14 +89,12 @@ class _DriftBackupPageState extends ConsumerState<DriftBackupPage> {
                   const _BackupCard(),
                   const _RemainderCard(),
                   const Divider(),
-                  /*
                   BackupToggleButton(onStart: () async => await startBackup(), onStop: () async => await stopBackup()),
                   TextButton.icon(
                     icon: const Icon(Icons.info_outline_rounded),
                     onPressed: () => context.pushRoute(const DriftUploadDetailRoute()),
                     label: Text("view_details".t(context: context)),
                   ),
-*/
                 ],
               ],
             ),
@@ -198,7 +192,6 @@ class _BackupAlbumSelectionCard extends ConsumerWidget {
             ],
           ),
         ),
-        /*
         trailing: ElevatedButton(
           onPressed: () async {
             await context.pushRoute(const DriftBackupAlbumSelectionRoute());
@@ -210,7 +203,6 @@ class _BackupAlbumSelectionCard extends ConsumerWidget {
           },
           child: const Text("select", style: TextStyle(fontWeight: FontWeight.bold)).tr(),
         ),
-        */
       ),
     );
   }

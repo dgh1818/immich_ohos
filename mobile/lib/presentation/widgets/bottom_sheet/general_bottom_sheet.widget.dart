@@ -93,7 +93,7 @@ class _GeneralBottomSheetState extends ConsumerState<GeneralBottomSheet> {
           const ShareLinkActionButton(source: ActionSource.timeline),
           const ArchiveActionButton(source: ActionSource.timeline),
           const FavoriteActionButton(source: ActionSource.timeline),
-          //const DownloadActionButton(source: ActionSource.timeline),
+          const DownloadActionButton(source: ActionSource.timeline),
           const EditDateTimeActionButton(source: ActionSource.timeline),
           const EditLocationActionButton(source: ActionSource.timeline),
           const MoveToLockFolderActionButton(source: ActionSource.timeline),
@@ -104,7 +104,7 @@ class _GeneralBottomSheetState extends ConsumerState<GeneralBottomSheet> {
           const DeleteActionButton(source: ActionSource.timeline),
         ],
         if (multiselect.hasLocal || multiselect.hasMerged) const DeleteLocalActionButton(source: ActionSource.timeline),
-        //if (multiselect.hasLocal) const UploadActionButton(source: ActionSource.timeline),
+        if (multiselect.hasLocal) const UploadActionButton(source: ActionSource.timeline),
       ],
       slivers: [
         const AddToAlbumHeader(),

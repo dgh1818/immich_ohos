@@ -57,7 +57,6 @@ class BackupToggleButtonState extends ConsumerState<BackupToggleButton> with Sin
 
   @override
   Widget build(BuildContext context) {
-    /*
     final enqueueCount = ref.watch(driftBackupProvider.select((state) => state.enqueueCount));
 
     final enqueueTotalCount = ref.watch(driftBackupProvider.select((state) => state.enqueueTotalCount));
@@ -67,7 +66,6 @@ class BackupToggleButtonState extends ConsumerState<BackupToggleButton> with Sin
     final uploadTasks = ref.watch(driftBackupProvider.select((state) => state.uploadItems));
 
     final isUploading = uploadTasks.isNotEmpty;
-*/
 
     return AnimatedBuilder(
       animation: _animationController,
@@ -116,9 +114,9 @@ class BackupToggleButtonState extends ConsumerState<BackupToggleButton> with Sin
               child: InkWell(
                 borderRadius: const BorderRadius.all(Radius.circular(20.5)),
 
-                //onTap: () => isCanceling ? null : _onToggle(!_isEnabled),
-                onTap: () => null,
+                onTap: () => isCanceling ? null : _onToggle(!_isEnabled),
 
+                //onTap: () => null,
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                   child: Row(
@@ -134,12 +132,9 @@ class BackupToggleButtonState extends ConsumerState<BackupToggleButton> with Sin
                             ],
                           ),
                         ),
-                        /*
                         child: isUploading
-                        ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2))
-                        : Icon(Icons.cloud_upload_outlined, color: context.primaryColor, size: 24),
-*/
-                        child: Icon(Icons.cloud_upload_outlined, color: context.primaryColor, size: 24),
+                            ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2))
+                            : Icon(Icons.cloud_upload_outlined, color: context.primaryColor, size: 24),
                       ),
                       const SizedBox(width: 16),
                       Expanded(
@@ -158,7 +153,6 @@ class BackupToggleButtonState extends ConsumerState<BackupToggleButton> with Sin
                                 ),
                               ],
                             ),
-                            /*
                             if (enqueueCount != enqueueTotalCount)
                               Text(
                                 "queue_status".t(
@@ -184,13 +178,10 @@ class BackupToggleButtonState extends ConsumerState<BackupToggleButton> with Sin
                                   ),
                                 ],
                               ),
-*/
                           ],
                         ),
                       ),
-
-                      //Switch.adaptive(value: _isEnabled, onChanged: (value) => isCanceling ? null : _onToggle(value)),
-                      Switch.adaptive(value: _isEnabled, onChanged: (value) => null),
+                      Switch.adaptive(value: _isEnabled, onChanged: (value) => isCanceling ? null : _onToggle(value)),
                     ],
                   ),
                 ),

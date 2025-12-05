@@ -226,8 +226,7 @@ class BackupIndicator extends ConsumerWidget {
     final backupStateStream = ref.watch(settingsProvider).watch(Setting.enableBackup);
     final isDarkTheme = context.isDarkTheme;
     final iconColor = isDarkTheme ? Colors.white : Colors.black;
-    // final isUploading = ref.watch(
-    //     driftBackupProvider.select((state) => state.uploadItems.isNotEmpty));
+    final isUploading = ref.watch(driftBackupProvider.select((state) => state.uploadItems.isNotEmpty));
 
     return StreamBuilder(
       stream: backupStateStream,
@@ -243,14 +242,12 @@ class BackupIndicator extends ConsumerWidget {
             semanticLabel: 'backup_controller_page_backup'.tr(),
           );
         }
-        /*
         if (isUploading) {
           return Container(
             padding: const EdgeInsets.all(3.5),
             child: Theme(
               data: context.themeData.copyWith(
-                progressIndicatorTheme: context.themeData.progressIndicatorTheme
-                    .copyWith(year2023: true),
+                progressIndicatorTheme: context.themeData.progressIndicatorTheme.copyWith(year2023: true),
               ),
               child: CircularProgressIndicator(
                 strokeWidth: 2,
@@ -261,7 +258,6 @@ class BackupIndicator extends ConsumerWidget {
             ),
           );
         }
-*/
 
         return Icon(
           Icons.check_outlined,

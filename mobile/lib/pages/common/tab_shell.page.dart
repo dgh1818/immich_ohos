@@ -52,7 +52,7 @@ class _TabShellPageState extends ConsumerState<TabShellPage> with SingleTickerPr
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       ref.read(websocketProvider.notifier).connect();
 
-      /*
+      /*   Todo OHOS
       final isEnableBackup = ref.read(appSettingsServiceProvider).getSetting(AppSettingsEnum.enableBackup);
 
       await runNewSync(ref, full: true).then((_) async {
