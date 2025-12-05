@@ -343,11 +343,11 @@ export class MessagesImplBase extends NativeSyncApiOhos {
       let current_asset = await photoFetchResult!.getNextObject();
       console.error('7:5 success' + current_asset.uri);
 
-      let position = current_asset.get(photoAccessHelper.PhotoKeys.POSITION) as photoAccessHelper.PositionType;
-      if (!(position == photoAccessHelper.PositionType.LOCAL) &&
-        !(position == photoAccessHelper.PositionType.LOCAL_AND_CLOUD)) {
-        continue;
-      }
+      // let position = current_asset.get(photoAccessHelper.PhotoKeys.POSITION) as photoAccessHelper.PositionType;
+      // if (!(position == photoAccessHelper.PositionType.LOCAL) &&
+      //   !(position == photoAccessHelper.PositionType.LOCAL_AND_CLOUD)) {
+      //   continue;
+      // }
 
       let fileUriObject = new fileUri.FileUri(current_asset.uri);
       console.error('get path success:' + fileUriObject.path);
@@ -421,10 +421,10 @@ export class MessagesImplBase extends NativeSyncApiOhos {
       let current_asset = await fetchResult!.getNextObject();
       console.error('7:5 success' + current_asset.uri);
 
-      let position = current_asset.get(photoAccessHelper.PhotoKeys.POSITION) as photoAccessHelper.PositionType;
-      if(!(position==photoAccessHelper.PositionType.LOCAL) && !(position==photoAccessHelper.PositionType.LOCAL_AND_CLOUD)) {
-        continue;
-      }
+      // let position = current_asset.get(photoAccessHelper.PhotoKeys.POSITION) as photoAccessHelper.PositionType;
+      // if(!(position==photoAccessHelper.PositionType.LOCAL) && !(position==photoAccessHelper.PositionType.LOCAL_AND_CLOUD)) {
+      //   continue;
+      // }
 
       if(timestamp != undefined) {
         let time_modified = current_asset.get(photoAccessHelper.PhotoKeys.DATE_MODIFIED).valueOf() as number;
@@ -507,11 +507,11 @@ export class MessagesImplBase extends NativeSyncApiOhos {
     while (!photoFetchResult.isAfterLast()) {
       let current_asset = await photoFetchResult.getNextObject();
       let uri_input: string[] = [current_asset.uri];
-      let position = current_asset.get(photoAccessHelper.PhotoKeys.POSITION) as photoAccessHelper.PositionType;
-      if(!(position==photoAccessHelper.PositionType.LOCAL) && !(position==photoAccessHelper.PositionType.LOCAL_AND_CLOUD)) {
-        console.error(current_asset.uri + ": is cloud" );
-        continue;
-      }
+      // let position = current_asset.get(photoAccessHelper.PhotoKeys.POSITION) as photoAccessHelper.PositionType;
+      // if(!(position==photoAccessHelper.PositionType.LOCAL) && !(position==photoAccessHelper.PositionType.LOCAL_AND_CLOUD)) {
+      //   console.error(current_asset.uri + ": is cloud" );
+      //   continue;
+      // }
 
       if(updatedTimeCond!=undefined) {
         let time_modified = current_asset.get(photoAccessHelper.PhotoKeys.DATE_MODIFIED).valueOf() as number;
