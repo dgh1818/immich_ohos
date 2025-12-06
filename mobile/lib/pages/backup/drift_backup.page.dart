@@ -213,14 +213,12 @@ class _TotalCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    //final totalCount = ref.watch(driftBackupProvider.select((p) => p.totalCount));
+    final totalCount = ref.watch(driftBackupProvider.select((p) => p.totalCount));
 
     return BackupInfoCard(
       title: "total".tr(),
       subtitle: "backup_controller_page_total_sub".tr(),
-
-      //info: totalCount.toString(),
-      info: '0',
+      info: totalCount.toString(),
     );
   }
 }
@@ -230,14 +228,12 @@ class _BackupCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    //final backupCount = ref.watch(driftBackupProvider.select((p) => p.backupCount));
+    final backupCount = ref.watch(driftBackupProvider.select((p) => p.backupCount));
 
     return BackupInfoCard(
       title: "backup_controller_page_backup".tr(),
       subtitle: "backup_controller_page_backup_sub".tr(),
-      info: '0',
-
-      //info: backupCount.toString(),
+      info: backupCount.toString(),
     );
   }
 }
@@ -247,15 +243,12 @@ class _RemainderCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    //final remainderCount = ref.watch(driftBackupProvider.select((p) => p.remainderCount));
+    final remainderCount = ref.watch(driftBackupProvider.select((p) => p.remainderCount));
     return BackupInfoCard(
       title: "backup_controller_page_remainder".tr(),
       subtitle: "backup_controller_page_remainder_sub".tr(),
-      info: '0',
-      /*
       info: remainderCount.toString(),
       onTap: () => context.pushRoute(const DriftBackupAssetDetailRoute()),
-*/
     );
   }
 }
