@@ -403,14 +403,6 @@ packages:
       url: "https://pub.flutter-io.cn"
     source: hosted
     version: "0.2.3"
-  dev_build:
-    dependency: transitive
-    description:
-      name: dev_build
-      sha256: fda8a54458b2a873a84e0cd1513f4323a1fb0599ed5455245359bc0398bad9ee
-      url: "https://pub.flutter-io.cn"
-    source: hosted
-    version: "1.1.2+11"
   device_info_plus:
     dependency: "direct main"
     description:
@@ -432,10 +424,10 @@ packages:
     dependency: "direct main"
     description:
       name: drift
-      sha256: "540cf382a3bfa99b76e51514db5b0ebcd81ce3679b7c1c9cb9478ff3735e47a1"
+      sha256: dce2723fb0dd03563af21f305f8f96514c27f870efba934b4fe84d4fedb4eff7
       url: "https://pub.flutter-io.cn"
     source: hosted
-    version: "2.28.2"
+    version: "2.28.0"
   drift_dev:
     dependency: "direct dev"
     description:
@@ -444,14 +436,14 @@ packages:
       url: "https://pub.flutter-io.cn"
     source: hosted
     version: "2.28.0"
-  drift_sqflite:
+  drift_flutter:
     dependency: "direct main"
     description:
-      name: drift_sqflite
-      sha256: dd1afbd72555b7a72ebf053926078d8c302059af4f1eb22040fc27a056429acb
+      name: drift_flutter
+      sha256: "0cadbf3b8733409a6cf61d18ba2e94e149df81df7de26f48ae0695b48fd71922"
       url: "https://pub.flutter-io.cn"
     source: hosted
-    version: "2.0.1"
+    version: "0.2.4"
   dynamic_color:
     dependency: "direct main"
     description:
@@ -654,6 +646,14 @@ packages:
       url: "https://pub.flutter-io.cn"
     source: hosted
     version: "2.4.7"
+  flutter_platform_utils:
+    dependency: transitive
+    description:
+      name: flutter_platform_utils
+      sha256: cb06a696d0b027edb7a4e95527dde847f5c4b7bd4f90e894336f58fefe5561ce
+      url: "https://pub.flutter-io.cn"
+    source: hosted
+    version: "1.0.0"
   flutter_plugin_android_lifecycle:
     dependency: transitive
     description:
@@ -1540,14 +1540,6 @@ packages:
       url: "https://pub.flutter-io.cn"
     source: hosted
     version: "5.0.3"
-  process_run:
-    dependency: transitive
-    description:
-      name: process_run
-      sha256: "6ec839cdd3e6de4685318e7686cd4abb523c3d3a55af0e8d32a12ae19bc66622"
-      url: "https://pub.flutter-io.cn"
-    source: hosted
-    version: "1.2.4"
   provider:
     dependency: transitive
     description:
@@ -1830,14 +1822,13 @@ packages:
     source: hosted
     version: "1.10.1"
   sqflite:
-    dependency: "direct overridden"
+    dependency: transitive
     description:
-      path: sqflite
-      ref: "br_v2.4.1_ohos"
-      resolved-ref: bc15cab9f52e02b1f90d9aebd7b5b320c2d648c6
-      url: "https://gitcode.com/dgh18/flutter_sqflite.git"
-    source: git
-    version: "2.4.1"
+      name: sqflite
+      sha256: e2297b1da52f127bc7a3da11439985d9b536f75070f3325e62ada69a5c585d03
+      url: "https://pub.flutter-io.cn"
+    source: hosted
+    version: "2.4.2"
   sqflite_android:
     dependency: transitive
     description:
@@ -1847,32 +1838,13 @@ packages:
     source: hosted
     version: "2.4.1"
   sqflite_common:
-    dependency: "direct overridden"
+    dependency: transitive
     description:
-      path: sqflite_common
-      ref: "br_v2.4.1_ohos"
-      resolved-ref: bc15cab9f52e02b1f90d9aebd7b5b320c2d648c6
-      url: "https://gitcode.com/dgh18/flutter_sqflite.git"
-    source: git
-    version: "2.5.4+5"
-  sqflite_common_ffi:
-    dependency: "direct overridden"
-    description:
-      path: sqflite_common_ffi
-      ref: "br_v2.4.1_ohos"
-      resolved-ref: bc15cab9f52e02b1f90d9aebd7b5b320c2d648c6
-      url: "https://gitcode.com/dgh18/flutter_sqflite.git"
-    source: git
-    version: "2.3.4"
-  sqflite_common_ffi_web:
-    dependency: "direct overridden"
-    description:
-      path: "packages_web/sqflite_common_ffi_web"
-      ref: "br_v2.4.1_ohos"
-      resolved-ref: bc15cab9f52e02b1f90d9aebd7b5b320c2d648c6
-      url: "https://gitcode.com/dgh18/flutter_sqflite.git"
-    source: git
-    version: "0.4.5+3"
+      name: sqflite_common
+      sha256: "6ef422a4525ecc601db6c0a2233ff448c731307906e92cabc9ba292afaae16a6"
+      url: "https://pub.flutter-io.cn"
+    source: hosted
+    version: "2.5.6"
   sqflite_darwin:
     dependency: transitive
     description:
@@ -1881,15 +1853,6 @@ packages:
       url: "https://pub.flutter-io.cn"
     source: hosted
     version: "2.4.2"
-  sqflite_ohos:
-    dependency: transitive
-    description:
-      path: sqflite_ohos
-      ref: "br_v2.4.1_ohos"
-      resolved-ref: bc15cab9f52e02b1f90d9aebd7b5b320c2d648c6
-      url: "https://gitcode.com/dgh18/flutter_sqflite.git"
-    source: git
-    version: "2.4.1"
   sqflite_platform_interface:
     dependency: transitive
     description:
@@ -1899,13 +1862,19 @@ packages:
     source: hosted
     version: "2.4.0"
   sqlite3:
-    dependency: transitive
+    dependency: "direct overridden"
     description:
-      name: sqlite3
-      sha256: "3145bd74dcdb4fd6f5c6dda4d4e4490a8087d7f286a14dee5d37087290f0f8a2"
-      url: "https://pub.flutter-io.cn"
-    source: hosted
-    version: "2.9.4"
+      path: "../../package_flutter/sqlite3-ohos/sqlite3"
+      relative: true
+    source: path
+    version: "2.4.7"
+  sqlite3_flutter_libs:
+    dependency: "direct overridden"
+    description:
+      path: "../../package_flutter/sqlite3-ohos/sqlite3_flutter_libs"
+      relative: true
+    source: path
+    version: "0.5.25"
   sqlparser:
     dependency: transitive
     description:
