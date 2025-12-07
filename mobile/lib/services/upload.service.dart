@@ -128,6 +128,7 @@ class UploadService {
 
     final candidates = await _backupRepository.getCandidates(userId);
     if (candidates.isEmpty) {
+      debugPrint("No candidates found for backup");
       return;
     }
 
