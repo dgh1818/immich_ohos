@@ -86,10 +86,11 @@ class HashService {
       toHash.add(_AssetToPath(asset: asset, path: asset.id));
 
       //if (toHash.length >= batchFileLimit || bytesProcessed >= batchSizeLimit) {
-      await _processBatch(album, toHash);
-      toHash.clear();
-      bytesProcessed = 0;
-      //}
+      if (toHash.length >= batchFileLimit || asset.isVideo) {
+        await _processBatch(album, toHash);
+        toHash.clear();
+        bytesProcessed = 0;
+      }
     }
 
     await _processBatch(album, toHash);
