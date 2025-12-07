@@ -22,6 +22,7 @@ import 'package:immich_mobile/services/app_settings.service.dart';
 import 'package:path/path.dart' as p;
 
 final uploadServiceProvider = Provider((ref) {
+  //Todo Ohos
   final service = UploadService(
     ref.watch(uploadRepositoryProvider),
     ref.watch(backupRepositoryProvider),
@@ -127,6 +128,7 @@ class UploadService {
 
     final candidates = await _backupRepository.getCandidates(userId);
     if (candidates.isEmpty) {
+      debugPrint("No candidates found for backup");
       return;
     }
 
