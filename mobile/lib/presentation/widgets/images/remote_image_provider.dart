@@ -63,7 +63,8 @@ class RemoteFullImageProvider extends CancellableImageProvider<RemoteFullImagePr
   static final cacheManager = RemoteThumbnailCacheManager();
   final String assetId;
 
-  RemoteFullImageProvider({required this.assetId});
+  final bool? is_image;
+  RemoteFullImageProvider({required this.assetId, this.is_image});
 
   @override
   Future<RemoteFullImageProvider> obtainKey(ImageConfiguration configuration) {
@@ -89,6 +90,12 @@ class RemoteFullImageProvider extends CancellableImageProvider<RemoteFullImagePr
     if (isCancelled) {
       evict();
       return;
+    }
+
+    if (is_image != null) {
+      if (!is_image!) {
+        return;
+      }
     }
 
     final headers = ApiService.getRequestHeaders();

@@ -18,11 +18,17 @@ import 'package:immich_mobile/utils/image_url_builder.dart';
 class ImmichRemoteImageProvider extends ImageProvider<ImmichRemoteImageProvider> {
   /// The [Asset.remoteId] of the asset to fetch
   final String assetId;
+  final bool? is_image;
 
   /// The image cache manager
-  final CacheManager? cacheManager;
+  //final CacheManager? cacheManager;
+  static final cacheImage = RemoteImageCacheManager();
 
-  const ImmichRemoteImageProvider({required this.assetId, this.cacheManager});
+  const ImmichRemoteImageProvider({
+    required this.assetId,
+    //this.cacheManager,
+    this.is_image,
+  });
 
   /// Converts an [ImageProvider]'s settings plus an [ImageConfiguration] to a key
   /// that describes the precise image to load.
@@ -33,10 +39,10 @@ class ImmichRemoteImageProvider extends ImageProvider<ImmichRemoteImageProvider>
 
   @override
   ImageStreamCompleter loadImage(ImmichRemoteImageProvider key, ImageDecoderCallback decode) {
-    final cache = cacheManager ?? RemoteImageCacheManager();
+    //final cache = cacheManager ?? RemoteImageCacheManager();
     final chunkEvents = StreamController<ImageChunkEvent>();
     return MultiImageStreamCompleter(
-      codec: _codec(key, cache, decode, chunkEvents),
+      codec: _codec(key, cacheImage, decode, chunkEvents),
       scale: 1.0,
       chunkEvents: chunkEvents.stream,
     );
@@ -60,7 +66,7 @@ class ImmichRemoteImageProvider extends ImageProvider<ImmichRemoteImageProvider>
     // Load the final remote image
     if (_useOriginal) {
       // Load the original image
-      final url = getOriginalUrlForRemoteId(key.assetId);
+      final url = getOriginalUrlForRemoteId(key.assetId, is_image: is_image);
       final codec = await ImageLoader.loadImageFromCache(url, cache: cache, decode: decode, chunkEvents: chunkEvents);
       yield codec;
     }

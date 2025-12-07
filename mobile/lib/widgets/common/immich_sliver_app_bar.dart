@@ -42,9 +42,11 @@ class ImmichSliverAppBar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isCasting = ref.watch(castProvider.select((c) => c.isCasting));
+    //final isCasting = ref.watch(castProvider.select((c) => c.isCasting));
     final isReadonlyModeEnabled = ref.watch(readonlyModeProvider);
     final isMultiSelectEnabled = ref.watch(multiSelectProvider.select((s) => s.isEnabled));
+
+    final isScreenLandscape = context.orientation == Orientation.landscape;
 
     return SliverAnimatedOpacity(
       duration: Durations.medium1,
@@ -58,7 +60,9 @@ class ImmichSliverAppBar extends ConsumerWidget {
         automaticallyImplyLeading: false,
         centerTitle: false,
         title: title ?? const _ImmichLogoWithText(),
+        backgroundColor: Colors.transparent,
         actions: [
+          /*
           if (isCasting && !isReadonlyModeEnabled)
             Padding(
               padding: const EdgeInsets.only(right: 12),
@@ -69,7 +73,8 @@ class ImmichSliverAppBar extends ConsumerWidget {
                 icon: Icon(isCasting ? Icons.cast_connected_rounded : Icons.cast_rounded),
               ),
             ),
-          const _SyncStatusIndicator(),
+*/
+          //const _SyncStatusIndicator(),
           if (actions != null)
             ...actions!.map((action) => Padding(padding: const EdgeInsets.only(right: 16), child: action)),
           if ((kDebugMode || kProfileMode) && !isReadonlyModeEnabled)
@@ -77,9 +82,11 @@ class ImmichSliverAppBar extends ConsumerWidget {
               icon: const Icon(Icons.science_rounded),
               onPressed: () => context.pushRoute(const FeatInDevRoute()),
             ),
+          /*
           if (showUploadButton && !isReadonlyModeEnabled)
-            const Padding(padding: EdgeInsets.only(right: 20), child: _BackupIndicator()),
-          const Padding(padding: EdgeInsets.only(right: 20), child: _ProfileIndicator()),
+            const Padding(padding: EdgeInsets.only(right: 20), child: BackupIndicator()),
+          const Padding(padding: EdgeInsets.only(right: 20), child: ProfileIndicator()),
+          */
         ],
       ),
     );
@@ -97,6 +104,7 @@ class _ImmichLogoWithText extends StatelessWidget {
           children: [
             Builder(
               builder: (context) {
+                return const SizedBox.shrink();
                 return Badge(
                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
                   backgroundColor: context.primaryColor,
@@ -131,8 +139,9 @@ class _ImmichLogoWithText extends StatelessWidget {
   }
 }
 
-class _ProfileIndicator extends ConsumerWidget {
-  const _ProfileIndicator();
+class ProfileIndicator extends ConsumerWidget {
+  //ui变更 需要变为public 函数
+  const ProfileIndicator();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -180,13 +189,14 @@ class _ProfileIndicator extends ConsumerWidget {
   }
 }
 
-class _BackupIndicator extends ConsumerWidget {
-  const _BackupIndicator();
+class BackupIndicator extends ConsumerWidget {
+  //ui变更 需要变为public 函数
+  const BackupIndicator();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     const widgetSize = 30.0;
-    final indicatorIcon = _getBackupBadgeIcon(context, ref);
+    final indicatorIcon = getBackupBadgeIcon(context, ref);
     final badgeBackground = context.colorScheme.surfaceContainer;
 
     return InkWell(
@@ -212,7 +222,7 @@ class _BackupIndicator extends ConsumerWidget {
     );
   }
 
-  Widget? _getBackupBadgeIcon(BuildContext context, WidgetRef ref) {
+  Widget? getBackupBadgeIcon(BuildContext context, WidgetRef ref) {
     final backupStateStream = ref.watch(settingsProvider).watch(Setting.enableBackup);
     final isDarkTheme = context.isDarkTheme;
     final iconColor = isDarkTheme ? Colors.white : Colors.black;
@@ -232,7 +242,6 @@ class _BackupIndicator extends ConsumerWidget {
             semanticLabel: 'backup_controller_page_backup'.tr(),
           );
         }
-
         if (isUploading) {
           return Container(
             padding: const EdgeInsets.all(3.5),
@@ -261,14 +270,14 @@ class _BackupIndicator extends ConsumerWidget {
   }
 }
 
-class _SyncStatusIndicator extends ConsumerStatefulWidget {
-  const _SyncStatusIndicator();
+class SyncStatusIndicator extends ConsumerStatefulWidget {
+  const SyncStatusIndicator();
 
   @override
-  ConsumerState<_SyncStatusIndicator> createState() => _SyncStatusIndicatorState();
+  ConsumerState<SyncStatusIndicator> createState() => _SyncStatusIndicatorState();
 }
 
-class _SyncStatusIndicatorState extends ConsumerState<_SyncStatusIndicator> with TickerProviderStateMixin {
+class _SyncStatusIndicatorState extends ConsumerState<SyncStatusIndicator> with TickerProviderStateMixin {
   late AnimationController _rotationController;
   late AnimationController _dismissalController;
   late Animation<double> _rotationAnimation;

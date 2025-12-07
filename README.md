@@ -38,6 +38,111 @@
   <a href="readme_i18n/README_th_TH.md">ภาษาไทย</a>
 </p>
 
+# Harmonyos Next 鸿蒙端的 Immich
+链接已实测可用，解决了发布地区在海外导致不能安装的问题，推荐先卸载自签名版本再重新安装，如仍不可用可以提issue <br/>
+https://appgallery.huawei.com/link/invite-test-wap?taskId=deb1d8328ba23e71862727bc86ef8c9f&invitationCode=61Oeh6V932r <br/>
+https://appgallery.huawei.com/app/detail?id=com.dgh18.immich&channelId=SHARE&source=appshare  正式上架版 无beta时间线 <br/>
+**IMMICH 搭配对应版本 本项目下服务器 使用**
+<h1>签名有关注意事项：</h1>
+1. 本目录下服务器可实现华为动态照片解析<br/>
+2. 本目录下服务器搭配PETAL MAP的API KEY可实现中文逆地理编码（中文地名）<br/>
+.env 文件设置：<br/>
+PETALMAP_GEOCODE_KEYS: //华为 App Gallery Connect API KEY.<br/>
+GEOCODE_WITH_PETALMAP: 'true' // 启用 Petal Map 逆地理编码. 80000次/月免费 包括国内和国际<br/>
+
+AMAP_GEOCODE_KEYS: //高德地图 key.<br/>
+GEOCODE_WITH_AMAP: 'true' // 启用高德 逆地理编码 个人开发者国内免费 5000 次每天，国际收费.<br/>
+也可以搭配官方对应版本服务器版本使用，但无上述功能。过高的服务器版本可能导致无法登陆<br/>
+
+1. 要实现应用内地图显示，需在APPGALLERY CONNECT中申请签名的同时开通地图权限 <br/>
+控制台地址：https://developer.huawei.com/consumer/cn/service/josp/agc/index.html <br/>
+教程地址：https://ost.51cto.com/answer/23898 mapkit <br/>
+2. 要实现照片的备份，要申请开通ACL权限(测试还是很容易开通的，上架可能比较难申请）： <br/>
+   "ohos.permission.READ_IMAGEVIDEO" <br/>
+   "ohos.permission.WRITE_IMAGEVIDEO" <br/>
+   
+<h1>Additional Features：</h1>
+1. 实现了 HDR 图片和视频的显示  <br/>
+2. 优化了ui布局 点击左上角logo可收起侧栏  <br/>
+3. 小地图替换成了petalmap  <br/>
+4. 增加了photopicker，无需ACL可手动上传媒体。beta时间线暂未实现，需background_downloader <br/>
+5. 接入华为投屏和华为分享 <br/>
+
+<h1>已知问题：</h1>
+1. 由于sqlite_ohos并未官方适配，因此只能用sqflite代替，适配存在较大困难，因此存在较多bug，因此推荐使用旧时间线。<br/>
+2. 每行显示数量更改不即时生效（原版app也存在） <br/>
+3. Beta时间线“在此设备”HDR显示异常 <br/>
+
+<h1>未完成的功能：</h1>
+1.  照片同步功能以及后台上传下载功能：background_downloader未适配 <br/>
+4. 桌面小组件 <br/>
+5.  链接分享和接收功能：share_plus <br/>
+6. dynamic_color <br/>
+
+<h1>适配计划：</h1>
+   1.143.0开始需要flutter 3.35.4 华为官方尚未适配 <br/>
+1. 关于sqlite的官方适配，以及该库的匿名函数执行问题，官方回复： <br/>
+开发者您好，后续对这个情况会有相关的改动优化，可以关注一下版本更新，之后拉取进行验证 <br/>
+因此在近期将停留在1.141.1进行优化，1.142合入后数据库方面会存在问题。待官方适配后从sqflite改回sqlite<br/> 
+2. 关于新时间线上传下载功能，待第三方开发者进行适配（在此特别感谢gitcode的坚果 [@jianguo888](https://github.com/jianguo888/)  [@nutpi](https://gitcode.com/nutpi/)) <br/> 
+4. 动态照片播放改为使用Native侧组件，因为arkts组件有放大照片的防抖算法，停止长按也可立即停止播放动态照片 <br/>
+5. 旧时间线的后台同步功能修复，上架时审核反馈content observer出现js崩溃 <br/>
+6. 新时间线的手动上传功能 <br/>
+7. 桌面小组件 <br/>
+
+新增的：<br/>
+8. 多设备协同？或许可以平板上点击docker栏图片直接跳进手机上的图片页面 <br/>
+9. 一碰传？ <br/>
+
+</h1>
+
+<h2>History：</h2>
+
+To Do：
+
+1. 华为动态照片的播放显示（修改 Server 端？）初步完成！需使用本项目服务器，重新分析元数据
+2. 替换地图：ExifInfo 小地图替换完成！ （需App Gallery Connect开通地图权限并签名才能显示地图）
+https://ost.51cto.com/answer/23898 mapkit开通教程
+3. AI HDR（待完成）
+4. 地理反向编码中文化：完成！（需使用本项目服务器，重新分析元数据）（需App Gallery Connect开通地图权限并签名
+
+<h2>备忘：</h2>
+1. photopicker最大媒体数量从9修改为了500
+
+https://github.com/dgh1818/immich_ohos/blob/v1.137.3-merge/%E5%BE%AE%E4%BF%A1%E5%9B%BE%E7%89%87_20250830025443_89_165.jpg?raw=true
+
+<h2>DEMO:</h2>
+
+
+<table align="center">
+  <tr>
+    <td>
+      <img src="https://github.com/dgh1818/immich_ohos/blob/v1.137.3-merge/%E5%BE%AE%E4%BF%A1%E5%9B%BE%E7%89%87_20250830024549_88_165.jpg" alt="手机1" width="400">
+    </td>
+    <td>
+      <img src="https://github.com/dgh1818/immich_ohos/blob/v1.137.3-merge/%E5%BE%AE%E4%BF%A1%E5%9B%BE%E7%89%87_20250830025443_89_165.jpg" alt="手机2" width="400">
+    </td>
+  </tr>
+</table>
+
+
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/bcd88029-4e22-4742-95ae-77477a2fc855" alt="平板1" width="800" />
+</p>
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/79e9e708-26d7-49d8-b2fc-e61859f581d3" alt="平板2" width="800" />
+</p>
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/b9087716-ef8e-4f24-b3dc-3728fc6400a6" alt="平板3" width="800" />
+</p>
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/dd8c81d6-e76b-4669-be88-2867eb94966f" alt="平板4" width="800" />
+</p>
+<p align="center">
+  <img src="https://github.com/dgh1818/immich_ohos/blob/v1.137.3-merge/%E5%BE%AE%E4%BF%A1%E5%9B%BE%E7%89%87_20250830031325_93_165.jpg" alt="平板5" width="800" />
+</p>
+
+
 ## Disclaimer
 
 - ⚠️ The project is under **very active** development.

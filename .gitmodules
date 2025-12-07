@@ -4,3 +4,9 @@
 [submodule "e2e/test-assets"]
 	path = e2e/test-assets
 	url = https://github.com/immich-app/test-assets
+[submodule "mobile/flutter_photo_manager"]
+	path = mobile/flutter_photo_manager
+	url = https://github.com/dgh1818/flutter_photo_manager
+[submodule "mobile/photo_manager_image_provider"]
+	path = mobile/photo_manager_image_provider
+	url = https://github.com/dgh1818/photo_manager_image_provider.git

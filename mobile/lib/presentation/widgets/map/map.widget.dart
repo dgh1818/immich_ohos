@@ -15,6 +15,9 @@ import 'package:immich_mobile/utils/async_mutex.dart';
 import 'package:immich_mobile/utils/debounce.dart';
 import 'package:immich_mobile/widgets/common/immich_toast.dart';
 import 'package:immich_mobile/widgets/map/map_theme_override.dart';
+
+import 'package:immich_mobile/providers/infrastructure/map.provider.dart';
+import 'package:flutter/foundation.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 
 class CustomSourceProperties implements SourceProperties {
@@ -66,10 +69,10 @@ class _DriftMapState extends ConsumerState<DriftMap> {
       return;
     }
 
-    await controller.addSource(
-      MapUtils.defaultSourceId,
-      const CustomSourceProperties(data: {'type': 'FeatureCollection', 'features': []}),
-    );
+    // await controller.addSource(
+    //   MapUtils.defaultSourceId,
+    //   const CustomSourceProperties(data: {'type': 'FeatureCollection', 'features': []}),
+    // );
 
     if (Platform.isAndroid) {
       await controller.addCircleLayer(
@@ -117,6 +120,21 @@ class _DriftMapState extends ConsumerState<DriftMap> {
     _reloadMutex.run(() async {
       if (mounted && ref.read(mapStateProvider.notifier).setBounds(bounds)) {
         final markers = await ref.read(mapMarkerProvider(bounds).future);
+
+        final mapService = ref.watch(mapServiceProvider);
+        final markersData = await mapService.getMarkers(bounds);
+
+        final List<LatLng> totalData = [];
+
+        for (final marker in markersData) {
+          totalData.add(marker.location);
+          // 使用 marker 的属性或方法
+        }
+
+        if (defaultTargetPlatform == TargetPlatform.ohos) {
+          await mapController?.addHeatmapData_Ohos(totalData);
+        }
+
         await reloadMarkers(markers);
       }
     });
@@ -128,7 +146,7 @@ class _DriftMapState extends ConsumerState<DriftMap> {
       return;
     }
 
-    await controller.setGeoJsonSource(MapUtils.defaultSourceId, markers);
+    //await controller.setGeoJsonSource(MapUtils.defaultSourceId, markers);
   }
 
   Future<void> onZoomToLocation() async {

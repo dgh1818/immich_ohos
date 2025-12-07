@@ -16,7 +16,7 @@ import 'package:immich_mobile/entities/store.entity.dart';
 import 'package:immich_mobile/extensions/build_context_extensions.dart';
 import 'package:immich_mobile/generated/codegen_loader.g.dart';
 import 'package:immich_mobile/providers/app_life_cycle.provider.dart';
-import 'package:immich_mobile/providers/asset_viewer/share_intent_upload.provider.dart';
+//import 'package:immich_mobile/providers/asset_viewer/share_intent_upload.provider.dart';
 import 'package:immich_mobile/providers/backup/backup.provider.dart';
 import 'package:immich_mobile/providers/db.provider.dart';
 import 'package:immich_mobile/providers/infrastructure/db.provider.dart';
@@ -40,14 +40,22 @@ import 'package:logging/logging.dart';
 import 'package:timezone/data/latest.dart';
 import 'package:worker_manager/worker_manager.dart';
 
+import 'package:path_provider/path_provider.dart';
+import 'package:permission_handler/permission_handler.dart';
+
+final RouteObserver<ModalRoute> routeObserver = RouteObserver<ModalRoute>();
+
 void main() async {
   ImmichWidgetsBinding();
   final (isar, drift, logDb) = await Bootstrap.initDB();
   await Bootstrap.initDomain(isar, drift, logDb);
   await initApp();
+  await _cleanupTempCache();
   // Warm-up isolate pool for worker manager
   await workerManager.init(dynamicSpawning: true);
   await migrateDatabaseIfNeeded(isar, drift);
+  await Permission.notification.request();
+
   HttpSSLOptions.apply();
 
   runApp(
@@ -114,6 +122,29 @@ Future<void> initApp() async {
   });
 }
 
+Future<void> _cleanupTempCache() async {
+  if (!(Platform.isIOS || defaultTargetPlatform == TargetPlatform.ohos)) {
+    return;
+  }
+
+  try {
+    final tempDir = await getTemporaryDirectory();
+    final targets = [Directory('${tempDir.path}/originalPhoto'), Directory('${tempDir.path}/movingPhoto')];
+
+    for (final dir in targets) {
+      if (await dir.exists()) {
+        try {
+          await dir.delete(recursive: true);
+        } catch (e) {
+          debugPrint("Failed to delete temp dir ${dir.path}: $e");
+        }
+      }
+    }
+  } catch (e) {
+    debugPrint("Failed to cleanup temp cache: $e");
+  }
+}
+
 class ImmichApp extends ConsumerStatefulWidget {
   const ImmichApp({super.key});
 
@@ -163,6 +194,12 @@ class ImmichAppState extends ConsumerState<ImmichApp> with WidgetsBindingObserve
         overlayStyle = context.isDarkTheme ? SystemUiOverlayStyle.dark : SystemUiOverlayStyle.light;
       }
     }
+
+    if (defaultTargetPlatform == TargetPlatform.ohos) {
+      // Android 8 does not support transparent app bars
+      overlayStyle = context.isDarkTheme ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark;
+    }
+
     SystemChrome.setSystemUIOverlayStyle(overlayStyle);
     await ref.read(localNotificationService).setup();
   }
@@ -205,14 +242,14 @@ class ImmichAppState extends ConsumerState<ImmichApp> with WidgetsBindingObserve
       // needs to be delayed so that EasyLocalization is working
       if (Store.isBetaTimelineEnabled) {
         ref.read(backgroundServiceProvider).disableService();
-        ref.read(driftBackgroundUploadFgService).enable();
+        //ref.read(driftBackgroundUploadFgService).enable();
       } else {
-        ref.read(driftBackgroundUploadFgService).disable();
+        //ref.read(driftBackgroundUploadFgService).disable();
         ref.read(backgroundServiceProvider).resumeServiceIfEnabled();
       }
     });
 
-    ref.read(shareIntentUploadProvider.notifier).init();
+    //ref.read(shareIntentUploadProvider.notifier).init();
   }
 
   @override
@@ -239,7 +276,7 @@ class ImmichAppState extends ConsumerState<ImmichApp> with WidgetsBindingObserve
         theme: getThemeData(colorScheme: immichTheme.light, locale: context.locale),
         routerConfig: router.config(
           deepLinkBuilder: _deepLinkBuilder,
-          navigatorObservers: () => [AppNavigationObserver(ref: ref), HeroController()],
+          navigatorObservers: () => [AppNavigationObserver(ref: ref), HeroController(), routeObserver],
         ),
       ),
     );

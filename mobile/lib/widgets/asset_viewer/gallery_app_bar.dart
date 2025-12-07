@@ -22,6 +22,9 @@ import 'package:immich_mobile/widgets/asset_grid/upload_dialog.dart';
 import 'package:immich_mobile/widgets/asset_viewer/top_control_app_bar.dart';
 import 'package:immich_mobile/widgets/common/immich_toast.dart';
 
+import 'package:immich_mobile/utils/selection_handlers.dart';
+import 'package:immich_mobile/pages/common/video_viewer.page.dart';
+
 class GalleryAppBar extends ConsumerWidget {
   final void Function() showInfo;
 
@@ -79,6 +82,12 @@ class GalleryAppBar extends ConsumerWidget {
       );
     }
 
+    handleCastAsset(String id) {
+      if (castController != null) {
+        castController!.startCast(id);
+      }
+    }
+
     handleDownloadAsset() {
       ref.read(downloadStateProvider.notifier).downloadAsset(asset);
     }
@@ -109,8 +118,10 @@ class GalleryAppBar extends ConsumerWidget {
             onRestorePressed: () => handleRestore(asset),
             onUploadPressed: asset.isLocal ? () => handleUpload(asset) : null,
             onDownloadPressed: asset.isLocal ? null : handleDownloadAsset,
+            //onDownloadPressed: asset.isLocal ? null : () => handleDownloadAsset(asset),
             onAddToAlbumPressed: () => addToAlbum(asset),
             onActivitiesPressed: handleActivities,
+            onCastPressed: asset.isVideo && asset.isRemote ? () => handleCastAsset(asset.remoteId!) : null,
           ),
         ),
       ),

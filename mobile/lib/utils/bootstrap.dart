@@ -24,6 +24,7 @@ import 'package:immich_mobile/infrastructure/repositories/logger_db.repository.d
 import 'package:immich_mobile/infrastructure/repositories/store.repository.dart';
 import 'package:isar/isar.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:isar_flutter_libs/isar_flutter_libs.dart';
 
 void configureFileDownloaderNotifications() {
   FileDownloader().configureNotificationForGroup(
@@ -79,6 +80,7 @@ abstract final class Bootstrap {
         ETagSchema,
         if (Platform.isAndroid) AndroidDeviceAssetSchema,
         if (Platform.isIOS) IOSDeviceAssetSchema,
+        if (defaultTargetPlatform == TargetPlatform.ohos) IOSDeviceAssetSchema,
         DeviceAssetEntitySchema,
       ],
       directory: dir.path,

@@ -7,11 +7,14 @@ import 'package:immich_mobile/entities/asset.entity.dart' hide AssetType;
 import 'package:immich_mobile/repositories/asset_media.repository.dart';
 import 'package:photo_manager/photo_manager.dart' hide AssetType;
 
+import 'package:image_gallery_saver/image_gallery_saver.dart';
+
 final fileMediaRepositoryProvider = Provider((ref) => const FileMediaRepository());
 
 class FileMediaRepository {
   const FileMediaRepository();
   Future<Asset?> saveImage(Uint8List data, {required String title, String? relativePath}) async {
+    final result = await ImageGallerySaver.saveImage(data, name: title);
     final entity = await PhotoManager.editor.saveImage(data, filename: title, title: title, relativePath: relativePath);
     return AssetMediaRepository.toAsset(entity);
   }
@@ -34,8 +37,15 @@ class FileMediaRepository {
   }
 
   Future<Asset?> saveLivePhoto({required File image, required File video, required String title}) async {
-    final entity = await PhotoManager.editor.darwin.saveLivePhoto(imageFile: image, videoFile: video, title: title);
-    return AssetMediaRepository.toAsset(entity);
+    if (Platform.isIOS) {
+      final entity = await PhotoManager.editor.darwin.saveLivePhoto(imageFile: image, videoFile: video, title: title);
+      return AssetMediaRepository.toAsset(entity);
+    } else if (Platform.isOhos) {
+      final entity = await PhotoManager.editor.ohos.saveLivePhoto(imageFile: image, videoFile: video, title: title);
+      return AssetMediaRepository.toAsset(entity);
+    } else {
+      return null;
+    }
   }
 
   Future<Asset?> saveVideo(File file, {required String title, String? relativePath}) async {

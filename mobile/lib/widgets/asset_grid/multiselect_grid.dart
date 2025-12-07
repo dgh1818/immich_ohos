@@ -401,7 +401,7 @@ class MultiselectGrid extends HookConsumerWidget {
     };
 
     return SafeArea(
-      top: true,
+      top: false,
       bottom: false,
       child: Stack(
         children: [

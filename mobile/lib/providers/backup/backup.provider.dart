@@ -461,7 +461,7 @@ class BackupNotifier extends StateNotifier<BackUpState> {
       // Perform Backup
       state = state.copyWith(cancelToken: CancellationToken());
 
-      final pmProgressHandler = Platform.isIOS ? PMProgressHandler() : null;
+      final pmProgressHandler = (Platform.isIOS || Platform.isOhos) ? PMProgressHandler() : null;
 
       pmProgressHandler?.stream.listen((event) {
         final double progress = event.progress;

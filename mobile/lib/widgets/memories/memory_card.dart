@@ -7,6 +7,7 @@ import 'package:immich_mobile/extensions/build_context_extensions.dart';
 import 'package:immich_mobile/pages/common/native_video_viewer.page.dart';
 import 'package:immich_mobile/utils/hooks/blurhash_hook.dart';
 import 'package:immich_mobile/widgets/common/immich_image.dart';
+import 'package:immich_mobile/pages/common/video_viewer.page.dart';
 
 class MemoryCard extends StatelessWidget {
   final Asset asset;
@@ -53,12 +54,32 @@ class MemoryCard extends StatelessWidget {
                   child: SizedBox(
                     width: context.width,
                     height: context.height,
+                    /*
                     child: NativeVideoViewerPage(
                       key: ValueKey(asset.id),
                       asset: asset,
                       showControls: false,
                       playbackDelayFactor: 2,
-                      image: ImmichImage(asset, width: context.width, height: context.height, fit: BoxFit.contain),
+                      image: ImmichImage(
+                        asset,
+                        width: context.width,
+                        height: context.height,
+                        fit: BoxFit.contain,
+                      ),
+                    ),
+*/
+                    child: VideoViewerPage(
+                      key: key,
+                      asset: asset,
+                      isMotionVideo: asset.livePhotoVideoId != null,
+                      showControls: false,
+                      //playbackDelayFactor: 2,
+                      placeholder: ImmichImage(
+                        asset,
+                        width: context.width,
+                        height: context.height,
+                        fit: BoxFit.contain,
+                      ),
                     ),
                   ),
                 );
@@ -87,31 +108,35 @@ class _BlurredBackdrop extends HookWidget {
 
   @override
   Widget build(BuildContext context) {
+    final blurhash = null;
+    /*
     final blurhash = useBlurHashRef(asset).value;
     if (blurhash != null) {
       // Use a nice cheap blur hash image decoration
       return Container(
         decoration: BoxDecoration(
-          image: DecorationImage(image: MemoryImage(blurhash), fit: BoxFit.cover),
+          image:
+              DecorationImage(image: MemoryImage(blurhash), fit: BoxFit.cover),
         ),
         child: Container(color: Colors.black.withValues(alpha: 0.2)),
       );
     } else {
-      // Fall back to using a more expensive image filtered
-      // Since the ImmichImage is already precached, we can
-      // safely use that as the image provider
-      return ImageFiltered(
-        imageFilter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
-        child: Container(
-          decoration: BoxDecoration(
-            image: DecorationImage(
-              image: ImmichImage.imageProvider(asset: asset, height: context.height, width: context.width),
-              fit: BoxFit.cover,
-            ),
+*/
+    // Fall back to using a more expensive image filtered
+    // Since the ImmichImage is already precached, we can
+    // safely use that as the image provider
+    return ImageFiltered(
+      imageFilter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
+      child: Container(
+        decoration: BoxDecoration(
+          image: DecorationImage(
+            image: ImmichImage.imageProvider(asset: asset, height: context.height, width: context.width),
+            fit: BoxFit.cover,
           ),
-          child: Container(color: Colors.black.withValues(alpha: 0.2)),
         ),
-      );
-    }
+        child: Container(color: Colors.black.withValues(alpha: 0.2)),
+      ),
+    );
+    //}
   }
 }

@@ -80,7 +80,7 @@ class BackgroundBackupSettings extends ConsumerWidget {
 
     return Column(
       children: [
-        if (!Platform.isIOS || iosSettings?.appRefreshEnabled == true)
+        if (!Platform.isIOS || iosSettings?.appRefreshEnabled == true) //Todo: Ohos
           _BackgroundSettingsEnabled(onError: showErrorToUser, onBatteryInfo: showBatteryOptimizationInfoToUser),
         if (Platform.isIOS && iosSettings?.appRefreshEnabled != true) const _IOSBackgroundRefreshDisabled(),
         if (Platform.isIOS && iosSettings != null) IosDebugInfoTile(settings: iosSettings),

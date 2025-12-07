@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:immich_mobile/constants/constants.dart';
 import 'package:immich_mobile/domain/models/album/local_album.model.dart';
@@ -6,7 +7,7 @@ import 'package:immich_mobile/domain/models/asset/base_asset.model.dart';
 import 'package:immich_mobile/infrastructure/repositories/local_album.repository.dart';
 import 'package:immich_mobile/infrastructure/repositories/local_asset.repository.dart';
 import 'package:immich_mobile/infrastructure/repositories/storage.repository.dart';
-import 'package:immich_mobile/platform/native_sync_api.g.dart';
+import 'package:immich_mobile/platform/native_sync_api_ohos.g.dart';
 import 'package:logging/logging.dart';
 
 class HashService {
@@ -15,7 +16,7 @@ class HashService {
   final DriftLocalAlbumRepository _localAlbumRepository;
   final DriftLocalAssetRepository _localAssetRepository;
   final StorageRepository _storageRepository;
-  final NativeSyncApi _nativeSyncApi;
+  final NativeSyncApiOhos _nativeSyncApi;
   final bool Function()? _cancelChecker;
   final _log = Logger('HashService');
 
@@ -23,7 +24,7 @@ class HashService {
     required DriftLocalAlbumRepository localAlbumRepository,
     required DriftLocalAssetRepository localAssetRepository,
     required StorageRepository storageRepository,
-    required NativeSyncApi nativeSyncApi,
+    required NativeSyncApiOhos nativeSyncApi,
     bool Function()? cancelChecker,
     this.batchSizeLimit = kBatchHashSizeLimit,
     this.batchFileLimit = kBatchHashFileLimit,
@@ -65,6 +66,7 @@ class HashService {
   Future<void> _hashAssets(LocalAlbum album, List<LocalAsset> assetsToHash) async {
     int bytesProcessed = 0;
     final toHash = <_AssetToPath>[];
+    File? file;
 
     for (final asset in assetsToHash) {
       if (isCancelled) {
@@ -72,22 +74,22 @@ class HashService {
         return;
       }
 
-      final file = await _storageRepository.getFileForAsset(asset.id);
-      if (file == null) {
-        _log.warning(
-          "Cannot get file for asset ${asset.id}, name: ${asset.name}, created on: ${asset.createdAt} from album: ${album.name}",
-        );
-        continue;
-      }
+      // final file = await _storageRepository.getFileForAsset(asset.id);
+      // if (file == null) {
+      //   _log.warning(
+      //     "Cannot get file for asset ${asset.id}, name: ${asset.name}, created on: ${asset.createdAt} from album: ${album.name}",
+      //   );
+      //   continue;
+      // }
 
-      bytesProcessed += await file.length();
-      toHash.add(_AssetToPath(asset: asset, path: file.path));
+      //bytesProcessed += await file.length();
+      toHash.add(_AssetToPath(asset: asset, path: asset.id));
 
-      if (toHash.length >= batchFileLimit || bytesProcessed >= batchSizeLimit) {
-        await _processBatch(album, toHash);
-        toHash.clear();
-        bytesProcessed = 0;
-      }
+      //if (toHash.length >= batchFileLimit || bytesProcessed >= batchSizeLimit) {
+      await _processBatch(album, toHash);
+      toHash.clear();
+      bytesProcessed = 0;
+      //}
     }
 
     await _processBatch(album, toHash);

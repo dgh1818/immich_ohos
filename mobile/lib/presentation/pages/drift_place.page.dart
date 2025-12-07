@@ -94,11 +94,14 @@ class _Map extends StatelessWidget {
                 height: 200,
                 width: context.width,
                 child: MapThumbnail(
-                  onTap: (_, __) => context.pushRoute(DriftMapRoute(initialLocation: currentLocation)),
+                  onTap: (_, __) =>
+                      context.pushRoute(DriftMapRoute(initialLocation: const LatLng(31.171944, 121.549722))),
                   zoom: 8,
-                  centre: currentLocation ?? const LatLng(21.44950, -157.91959),
+                  centre: currentLocation ?? const LatLng(31.171944, 121.549722),
                   showAttribution: false,
                   themeMode: context.isDarkTheme ? ThemeMode.dark : ThemeMode.light,
+
+                  isZoomControlsEnabled: false,
                 ),
               ),
             ),
@@ -111,6 +114,10 @@ class _PlaceList extends ConsumerWidget {
   const _PlaceList({required this.search});
 
   final ValueNotifier<String?> search;
+
+  bool containsChinese(String s) {
+    return s.runes.any((r) => r >= 0x4E00 && r <= 0x9FFF);
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -139,6 +146,15 @@ class _PlaceList extends ConsumerWidget {
             return place.$1.toLowerCase().contains(search.value!.toLowerCase());
           }).toList();
         }
+
+        places.sort((a, b) {
+          final hasChineseA = containsChinese(a.$1);
+          final hasChineseB = containsChinese(b.$1);
+
+          if (hasChineseA && !hasChineseB) return -1;
+          if (!hasChineseA && hasChineseB) return 1;
+          return a.$1.compareTo(b.$1); // 同类再按字典序
+        });
 
         return SliverList.builder(
           itemCount: places.length,

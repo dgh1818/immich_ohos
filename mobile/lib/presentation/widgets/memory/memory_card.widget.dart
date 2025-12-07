@@ -55,12 +55,12 @@ class DriftMemoryCard extends StatelessWidget {
                 return SizedBox(
                   width: context.width,
                   height: context.height,
-                  child: NativeVideoViewer(
+                  child: VideoViewer(
                     key: ValueKey(asset.id),
                     asset: asset,
                     showControls: false,
-                    playbackDelayFactor: 2,
-                    image: FullImage(asset, size: Size(context.width, context.height), fit: BoxFit.contain),
+                    // playbackDelayFactor: 2,
+                    // image: FullImage(asset, size: Size(context.width, context.height), fit: BoxFit.contain),
                   ),
                 );
               }
@@ -88,6 +88,7 @@ class _BlurredBackdrop extends HookWidget {
 
   @override
   Widget build(BuildContext context) {
+    /*
     final blurhash = useDriftBlurHashRef(asset).value;
     if (blurhash != null) {
       // Use a nice cheap blur hash image decoration
@@ -98,21 +99,22 @@ class _BlurredBackdrop extends HookWidget {
         child: Container(color: Colors.black.withValues(alpha: 0.2)),
       );
     } else {
-      // Fall back to using a more expensive image filtered
-      // Since the ImmichImage is already precached, we can
-      // safely use that as the image provider
-      return ImageFiltered(
-        imageFilter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
-        child: Container(
-          decoration: BoxDecoration(
-            image: DecorationImage(
-              image: getFullImageProvider(asset, size: Size(context.width, context.height)),
-              fit: BoxFit.cover,
-            ),
+    // Fall back to using a more expensive image filtered
+    // Since the ImmichImage is already precached, we can
+    // safely use that as the image provider
+    */
+    return ImageFiltered(
+      imageFilter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
+      child: Container(
+        decoration: BoxDecoration(
+          image: DecorationImage(
+            image: getFullImageProvider(asset, size: Size(context.width, context.height)),
+            fit: BoxFit.cover,
           ),
-          child: Container(color: Colors.black.withValues(alpha: 0.2)),
         ),
-      );
-    }
+        child: Container(color: Colors.black.withValues(alpha: 0.2)),
+      ),
+    );
+    //}
   }
 }

@@ -248,7 +248,7 @@ class ManualUploadNotifier extends StateNotifier<ManualUploadState> {
             ref.read(appSettingsServiceProvider).getSetting<bool>(AppSettingsEnum.backgroundBackupSingleProgress) ||
             state.totalAssetsToUpload == 1;
         state = state.copyWith(showDetailedNotification: showDetailedNotification);
-        final pmProgressHandler = Platform.isIOS ? PMProgressHandler() : null;
+        final pmProgressHandler = (Platform.isIOS || Platform.isOhos) ? PMProgressHandler() : null;
 
         final bool ok = await ref
             .read(backupServiceProvider)

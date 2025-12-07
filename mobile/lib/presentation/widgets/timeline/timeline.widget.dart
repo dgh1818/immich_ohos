@@ -34,7 +34,7 @@ class Timeline extends StatelessWidget {
     this.topSliverWidgetHeight,
     this.showStorageIndicator,
     this.withStack = false,
-    this.appBar = const ImmichSliverAppBar(floating: true, pinned: false, snap: false),
+    this.appBar = const ImmichSliverAppBar(floating: true, pinned: true, snap: false),
     this.bottomSheet = const GeneralBottomSheet(),
     this.groupBy,
     this.withScrubber = true,
@@ -280,7 +280,7 @@ class _SliverTimelineState extends ConsumerState<_SliverTimeline> {
           final grid = CustomScrollView(
             primary: true,
             physics: _scrollPhysics,
-            cacheExtent: maxHeight * 2,
+            cacheExtent: maxHeight * 6,
             slivers: [
               if (isSelectionMode) const SelectionSliverAppBar() else if (widget.appBar != null) widget.appBar!,
               if (widget.topSliverWidget != null) widget.topSliverWidget!,

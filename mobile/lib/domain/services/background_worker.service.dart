@@ -26,6 +26,7 @@ import 'package:isar/isar.dart';
 import 'package:logging/logging.dart';
 
 class BackgroundWorkerFgService {
+  // Todo Ohos
   final BackgroundWorkerFgHostApi _foregroundHostApi;
 
   const BackgroundWorkerFgService(this._foregroundHostApi);
@@ -194,6 +195,7 @@ class BackgroundWorkerBgService extends BackgroundWorkerFlutterApi {
       return;
     }
 
+    /*
     if (processBulk) {
       return _ref.read(driftBackupProvider.notifier).handleBackupResume(currentUser.id);
     }
@@ -204,6 +206,8 @@ class BackgroundWorkerBgService extends BackgroundWorkerFlutterApi {
     } else {
       await _ref.read(uploadServiceProvider).startBackupSerial(currentUser.id);
     }
+
+*/
   }
 
   Future<void> _syncAssets({Duration? hashTimeout}) async {

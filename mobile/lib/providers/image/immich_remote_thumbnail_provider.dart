@@ -21,9 +21,15 @@ class ImmichRemoteThumbnailProvider extends ImageProvider<ImmichRemoteThumbnailP
   final int? width;
 
   /// The image cache manager
-  final CacheManager? cacheManager;
+  //final CacheManager? cacheManager;
+  static final cacheThumbnail = ThumbnailImageCacheManager();
 
-  const ImmichRemoteThumbnailProvider({required this.assetId, this.height, this.width, this.cacheManager});
+  const ImmichRemoteThumbnailProvider({
+    required this.assetId,
+    this.height,
+    this.width,
+    //this.cacheManager,
+  });
 
   /// Converts an [ImageProvider]'s settings plus an [ImageConfiguration] to a key
   /// that describes the precise image to load.
@@ -34,8 +40,8 @@ class ImmichRemoteThumbnailProvider extends ImageProvider<ImmichRemoteThumbnailP
 
   @override
   ImageStreamCompleter loadImage(ImmichRemoteThumbnailProvider key, ImageDecoderCallback decode) {
-    final cache = cacheManager ?? ThumbnailImageCacheManager();
-    return MultiImageStreamCompleter(codec: _codec(key, cache, decode), scale: 1.0);
+    //final cache = cacheManager ?? ThumbnailImageCacheManager();
+    return MultiImageStreamCompleter(codec: _codec(key, cacheThumbnail, decode), scale: 1.0);
   }
 
   // Streams in each stage of the image as we ask for it

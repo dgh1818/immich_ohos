@@ -32,6 +32,13 @@ import 'package:immich_mobile/widgets/map/map_theme_override.dart';
 import 'package:immich_mobile/widgets/map/positioned_asset_marker_icon.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 
+import 'package:logging/logging.dart';
+import 'package:coordtransform_dart/coordtransform_dart.dart';
+import 'package:flutter/services.dart';
+import 'dart:ui' as ui;
+import 'package:immich_mobile/main.dart';
+import 'package:flutter/foundation.dart';
+
 @RoutePage()
 class MapPage extends HookConsumerWidget {
   const MapPage({super.key, this.initialLocation});
@@ -51,6 +58,22 @@ class MapPage extends HookConsumerWidget {
     final markerDebouncer = useDebouncer(interval: const Duration(milliseconds: 800));
     final selectedAssets = useValueNotifier<Set<Asset>>({});
     const mapZoomToAssetLevel = 12.0;
+    final Logger _log = Logger("map service");
+
+    final routeAware = useMemoized(() => _MyRouteAware());
+
+    useEffect(() {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final modalRoute = ModalRoute.of(context);
+        if (modalRoute is PageRoute) {
+          routeObserver.subscribe(routeAware, modalRoute);
+        }
+      });
+
+      return () {
+        routeObserver.unsubscribe(routeAware);
+      };
+    }, [context]);
 
     // updates the markersInBounds value with the map markers that are visible in the current
     // map camera bounds
@@ -74,6 +97,17 @@ class MapPage extends HookConsumerWidget {
     // removes all sources and layers and re-adds them with the updated markers
     Future<void> reloadLayers() async {
       if (mapController.value != null) {
+        ByteData mapMarkData = await rootBundle.load("assets/location-pin.png");
+        if (initialLocation != null) {
+          final outLngLat = CoordinateTransformUtil.wgs84ToGcj02(initialLocation!.longitude, initialLocation!.latitude);
+          final LatLng centreProcessed = LatLng(outLngLat[1], outLngLat[0]);
+
+          if (defaultTargetPlatform == TargetPlatform.ohos) {
+            await mapController.value?.addMarkerAtLatLng_Ohos(centreProcessed, mapMarkData, 0.15);
+            await mapController.value?.addHeatmapDataOhos(markers.value);
+          }
+        }
+
         layerDebouncer.run(() => mapController.value!.reloadAllLayersForMarkers(markers.value));
       }
     }
@@ -111,7 +145,9 @@ class MapPage extends HookConsumerWidget {
 
     // updates the selected markers position based on the current map camera
     Future<void> updateAssetMarkerPosition(MapMarker marker, {bool shouldAnimate = true}) async {
-      final assetPoint = await mapController.value!.toScreenLocation(marker.latLng);
+      final outLngLat = CoordinateTransformUtil.wgs84ToGcj02(marker.latLng.longitude, marker.latLng.latitude);
+      final LatLng centreProcessed = LatLng(outLngLat[1], outLngLat[0]);
+      final assetPoint = await mapController.value!.toScreenLocation(centreProcessed);
       selectedMarker.value = _AssetMarkerMeta(point: assetPoint, marker: marker, shouldAnimate: shouldAnimate);
       (assetPoint, marker, shouldAnimate);
     }
@@ -271,8 +307,8 @@ class MapPage extends HookConsumerWidget {
                           onMarkerTapped: onMarkerTapped,
                         ),
                         Positioned(
-                          right: 0,
-                          bottom: context.padding.bottom + 16,
+                          right: 3,
+                          bottom: 10,
                           child: ElevatedButton(
                             onPressed: onZoomToLocation,
                             style: ElevatedButton.styleFrom(shape: const CircleBorder()),
@@ -361,6 +397,7 @@ class _MapWithMarker extends StatelessWidget {
                 myLocationEnabled: false,
                 attributionButtonPosition: AttributionButtonPosition.topRight,
                 rotateGesturesEnabled: false,
+                zoomGesturesEnabled: true,
               ),
             ),
             ValueListenableBuilder(
@@ -379,4 +416,27 @@ class _MapWithMarker extends StatelessWidget {
       ),
     );
   }
+}
+
+class _MyRouteAware extends RouteAware {
+  //@override
+  // void didPopNext() {
+  //   super.didPopNext();
+  //   ui.SetHdr.setHdrMode(hdr: 0, is_image: true);
+  // }
+  // void didPush() { }
+
+  // @override
+  // void didPop() {
+  //   ui.SetHdr.setHdrMode(hdr: 0, is_image: true);
+  //   super.didPop();
+  // }
+
+  @override
+  didPush() {
+    ui.SetHdr.setHdrMode(hdr: 0, is_image: true);
+    super.didPushNext();
+  }
+
+  // void didPushNext() { }
 }
