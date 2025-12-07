@@ -1,0 +1,32 @@
+{
+  "string": [
+    {
+      "name": "module_desc",
+      "value": "module description"
+    },
+    {
+      "name": "EntryAbility_desc",
+      "value": "description"
+    },
+    {
+      "name": "EntryAbility_label",
+      "value": "Immich"
+    },
+    {
+      "name": "backup_desc",
+      "value": "备份媒体使用，拒绝则无法开启备份媒体功能"
+    },
+    {
+      "name": "WIFI_INFO_desc",
+      "value": "切换服务器使用"
+    },
+    {
+      "name": "video_play",
+      "value": "play video"
+    },
+    {
+      "name": "location_desc",
+      "value": "修改照片位置选取当前位置时需要定位权限"
+    }
+  ]
+}
