@@ -1,6 +1,7 @@
 {
   "apiType": 'stageMode',
   "buildOption": {
+
     "externalNativeOptions": {
       "abiFilters": [
         "arm64-v8a"

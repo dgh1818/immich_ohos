@@ -1,0 +1,55 @@
+{
+  "app": {
+    "signingConfigs": [
+      {
+        "name": "default",
+        "type": "HarmonyOS",
+        "material": {
+          "storeFile": "F:/immich_sign/immich_ohos.p12",
+          "storePassword": "0000001BFEA44EF60E3E268270EE2D5527887BAEDD5C8A3F388A0652D7B8C62901F37385C38F06CDF19503",
+          "keyAlias": "dgh18",
+          "keyPassword": "0000001B7F9F8F4DBA4B16464D76C97C11EE6780880A7697EED617AA27AECB886255BDDE29B2A70CD4C19A",
+          "signAlg": "SHA256withECDSA",
+          "profile": "F:/immich_sign/immich_OctDebug.p7b",
+          "certpath": "F:/immich_sign/immich_oct.cer"
+        }
+      }
+    ],
+    "products": [
+      {
+        "name": "default",
+        "signingConfig": "default",
+        "compatibleSdkVersion": "5.0.5(17)",
+        "runtimeOS": "HarmonyOS",
+        "targetSdkVersion": "6.0.0(20)",
+        "buildOption": {
+          "strictMode": {
+            "useNormalizedOHMUrl": true
+          }
+        }
+      }
+    ],
+    "buildModeSet": [
+      {
+        "name": "profile",
+        "buildOption": {
+          "debuggable": false
+        }
+      }
+    ]
+  },
+  "modules": [
+    {
+      "name": "entry",
+      "srcPath": "./entry",
+      "targets": [
+        {
+          "name": "default",
+          "applyToProducts": [
+            "default"
+          ]
+        }
+      ]
+    }
+  ]
+}
