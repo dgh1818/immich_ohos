@@ -76,13 +76,8 @@ import 'package:immich_mobile/pages/search/map/map_location_picker.page.dart';
 import 'package:immich_mobile/pages/search/person_result.page.dart';
 import 'package:immich_mobile/pages/search/recently_taken.page.dart';
 import 'package:immich_mobile/pages/search/search.page.dart';
-<<<<<<< HEAD
-import 'package:immich_mobile/pages/settings/beta_sync_settings.page.dart';
-//import 'package:immich_mobile/pages/share_intent/share_intent.page.dart';
-=======
 import 'package:immich_mobile/pages/settings/sync_status.page.dart';
-import 'package:immich_mobile/pages/share_intent/share_intent.page.dart';
->>>>>>> v1.142.1
+//import 'package:immich_mobile/pages/share_intent/share_intent.page.dart';
 import 'package:immich_mobile/presentation/pages/dev/feat_in_development.page.dart';
 import 'package:immich_mobile/presentation/pages/dev/main_timeline.page.dart';
 import 'package:immich_mobile/presentation/pages/dev/media_stat.page.dart';
