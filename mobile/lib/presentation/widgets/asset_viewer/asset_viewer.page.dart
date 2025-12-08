@@ -11,6 +11,7 @@ import 'package:immich_mobile/domain/models/timeline.model.dart';
 import 'package:immich_mobile/domain/services/timeline.service.dart';
 import 'package:immich_mobile/domain/utils/event_stream.dart';
 import 'package:immich_mobile/extensions/build_context_extensions.dart';
+import 'package:immich_mobile/extensions/platform_extensions.dart';
 import 'package:immich_mobile/extensions/scroll_extensions.dart';
 import 'package:immich_mobile/infrastructure/loaders/image_request.dart';
 import 'package:immich_mobile/presentation/widgets/asset_viewer/asset_stack.provider.dart';
@@ -32,7 +33,6 @@ import 'package:immich_mobile/providers/infrastructure/timeline.provider.dart';
 import 'package:immich_mobile/widgets/common/immich_loading_indicator.dart';
 import 'package:immich_mobile/widgets/photo_view/photo_view.dart';
 import 'package:immich_mobile/widgets/photo_view/photo_view_gallery.dart';
-import 'package:platform/platform.dart';
 
 import 'package:immich_mobile/main.dart';
 import 'package:immich_mobile/domain/models/setting.model.dart';
@@ -59,10 +59,9 @@ class AssetViewerPage extends StatelessWidget {
 
 class AssetViewer extends ConsumerStatefulWidget {
   final int initialIndex;
-  final Platform? platform;
   final int? heroOffset;
 
-  const AssetViewer({super.key, required this.initialIndex, this.platform, this.heroOffset});
+  const AssetViewer({super.key, required this.initialIndex, this.heroOffset});
 
   @override
   ConsumerState createState() => _AssetViewerState();
@@ -96,7 +95,6 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
   late final _MyRouteAware routeAware; // 替代 useMemoized
   ImageStreamListener? imageListener;
 
-  late Platform platform;
   late final int heroOffset;
   late PhotoViewControllerValue initialPhotoViewState;
   bool? hasDraggedDown;
@@ -126,7 +124,6 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
     super.initState();
     assert(ref.read(currentAssetNotifier) != null, "Current asset should not be null when opening the AssetViewer");
     pageController = PageController(initialPage: widget.initialIndex);
-    platform = widget.platform ?? const LocalPlatform();
     totalAssets = ref.read(timelineServiceProvider).totalAssets;
     bottomSheetController = DraggableScrollableController();
 
@@ -772,7 +769,7 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
           gaplessPlayback: true,
           loadingBuilder: _placeholderBuilder,
           pageController: pageController,
-          scrollPhysics: platform.isIOS
+          scrollPhysics: CurrentPlatform.isIOS
               ? const FastScrollPhysics() // Use bouncing physics for iOS
               : const FastClampingScrollPhysics(), // Use heavy physics for Android
           itemCount: totalAssets,
