@@ -1129,9 +1129,11 @@ packages:
   local_auth:
     dependency: "direct main"
     description:
-      path: "../../package_flutter/local_auth/local_auth"
-      relative: true
-    source: path
+      path: local_auth
+      ref: master
+      resolved-ref: "89b37b2acd8d36a80679aceb7ebea83124091a63"
+      url: "https://github.com/dgh1818/local_auth_ohos.git"
+    source: git
     version: "2.3.0"
   local_auth_android:
     dependency: transitive
@@ -1152,9 +1154,11 @@ packages:
   local_auth_ohos:
     dependency: transitive
     description:
-      path: "../../package_flutter/local_auth/local_auth_ohos"
-      relative: true
-    source: path
+      path: local_auth_ohos
+      ref: master
+      resolved-ref: "17c5d204a5b125f0f587d91846b9fc8db9affda9"
+      url: "https://github.com/dgh1818/local_auth_ohos.git"
+    source: git
     version: "1.0.0"
   local_auth_platform_interface:
     dependency: transitive

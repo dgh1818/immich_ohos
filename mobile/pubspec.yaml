@@ -96,13 +96,13 @@ dependencies:
 
 dependency_overrides:
   local_auth: 
-    # git:
-    #   url: 'https://gitcode.com/openharmony-sig/flutter_packages.git'
-    path: ../../package_flutter/local_auth/local_auth
-    # git:
-    #   url: 'https://github.com/dgh1818/local_auth_ohos.git'
-    #   path: './local_auth'
-    #   #ref: br_local_auth-v2.3.0_ohos
+    # # git:
+    # #   url: 'https://gitcode.com/openharmony-sig/flutter_packages.git'
+    # path: ../../package_flutter/local_auth/local_auth
+    git:
+      url: 'https://github.com/dgh1818/local_auth_ohos.git'
+      path: './local_auth'
+      ref: master
   pinput:
     git:
       url: 'https://github.com/dgh1818/Flutter_Pinput_ohos'
