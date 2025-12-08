@@ -92,7 +92,7 @@ class StoreService {
     _cache.clear();
   }
 
-  bool get isBetaTimelineEnabled => tryGet(StoreKey.betaTimeline) ?? true;
+  bool get isBetaTimelineEnabled => tryGet(StoreKey.betaTimeline) ?? false;
 }
 
 class StoreKeyNotFoundException implements Exception {

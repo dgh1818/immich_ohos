@@ -98,7 +98,7 @@ abstract final class Bootstrap {
     bool listenStoreUpdates = true,
     bool shouldBufferLogs = true,
   }) async {
-    final isBeta = await IsarStoreRepository(db).tryGet(StoreKey.betaTimeline) ?? true;
+    final isBeta = await IsarStoreRepository(db).tryGet(StoreKey.betaTimeline) ?? false;
     final IStoreRepository storeRepo = isBeta ? DriftStoreRepository(drift) : IsarStoreRepository(db);
 
     await StoreService.init(storeRepository: storeRepo, listenUpdates: listenStoreUpdates);

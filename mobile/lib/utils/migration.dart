@@ -71,15 +71,14 @@ Future<void> migrateDatabaseIfNeeded(Isar db, Drift drift) async {
     final isBeta = Store.tryGet(StoreKey.betaTimeline);
     final isNewInstallation = await _isNewInstallation(db, drift);
 
-    // For new installations, no migration needed
-    // For existing installations, only migrate if beta timeline is not enabled (null or false)
-    if (isNewInstallation || isBeta == true) {
-      await Store.put(StoreKey.needBetaMigration, false);
-      await Store.put(StoreKey.betaTimeline, true);
-    } else {
+    final useBetaTimeline = isBeta == true;
+
+    if (!useBetaTimeline && !isNewInstallation) {
       await drift.reset();
-      await Store.put(StoreKey.needBetaMigration, true);
     }
+
+    await Store.put(StoreKey.betaTimeline, useBetaTimeline);
+    await Store.put(StoreKey.needBetaMigration, false);
   }
 
   if (version < 16) {

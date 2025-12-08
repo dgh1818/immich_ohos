@@ -48,7 +48,7 @@ enum AppSettingsEnum<T> {
   syncAlbums<bool>(StoreKey.syncAlbums, null, false),
   autoEndpointSwitching<bool>(StoreKey.autoEndpointSwitching, null, false),
   photoManagerCustomFilter<bool>(StoreKey.photoManagerCustomFilter, null, true),
-  betaTimeline<bool>(StoreKey.betaTimeline, null, true),
+  betaTimeline<bool>(StoreKey.betaTimeline, null, false),
   enableBackup<bool>(StoreKey.enableBackup, null, false),
   useCellularForUploadVideos<bool>(StoreKey.useWifiForUploadVideos, null, false),
   useCellularForUploadPhotos<bool>(StoreKey.useWifiForUploadPhotos, null, false),
