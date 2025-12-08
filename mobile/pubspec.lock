@@ -1129,11 +1129,9 @@ packages:
   local_auth:
     dependency: "direct main"
     description:
-      path: local_auth
-      ref: HEAD
-      resolved-ref: "17c5d204a5b125f0f587d91846b9fc8db9affda9"
-      url: "https://github.com/dgh1818/local_auth_ohos.git"
-    source: git
+      path: "../../package_flutter/local_auth/local_auth"
+      relative: true
+    source: path
     version: "2.3.0"
   local_auth_android:
     dependency: transitive
@@ -1154,11 +1152,9 @@ packages:
   local_auth_ohos:
     dependency: transitive
     description:
-      path: "packages/local_auth/local_auth_ohos"
-      ref: "br_local_auth-v2.3.0_ohos"
-      resolved-ref: "607dc3779ead3ea6b072e870b212beb1b713e0d9"
-      url: "https://gitcode.com/openharmony-tpc/flutter_packages.git"
-    source: git
+      path: "../../package_flutter/local_auth/local_auth_ohos"
+      relative: true
+    source: path
     version: "1.0.0"
   local_auth_platform_interface:
     dependency: transitive
