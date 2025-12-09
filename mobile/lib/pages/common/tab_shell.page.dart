@@ -221,7 +221,7 @@ class _TabShellPageState extends ConsumerState<TabShellPage> with SingleTickerPr
                                 final scale = 1.0 + (targetScale - 1.0) * animationController.value;
                                 return Transform.scale(
                                   scale: scale,
-                                  alignment: Alignment.bottomRight, // 关键：右边保持不动
+                                  alignment: Alignment.topRight, // 以右上角为锚点，防止顶部图标上移出屏
                                   child: SizedBox(
                                     // 这个宽度是缩放前的“基准宽度”，也就是内容本来能占用的宽度
                                     width: baseWidth,
