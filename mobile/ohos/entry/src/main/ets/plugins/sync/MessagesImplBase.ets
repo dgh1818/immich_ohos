@@ -8,99 +8,49 @@ import { NativeSyncApiOhos, SyncDelta, PlatformAsset, PlatformAlbum, Result } fr
 import { BusinessError } from '@kit.BasicServicesKit';
 import fs from '@ohos.file.fs';
 import { util } from '@kit.ArkTS';
+import taskpool from '@ohos.taskpool';
+
+@Concurrent
+async function hashFileTask(path: string): Promise<Uint8Array> {
+  return await new Promise<Uint8Array>((resolve) => {
+    try {
+      hash.hash(path, "sha1", (err: BusinessError, digest: string) => {
+        console.error("hash:" + path + "success");
+        if (err) {
+          resolve(new Uint8Array());
+          return;
+        }
+        const bytes = new Uint8Array(digest.length / 2);
+        for (let i = 0; i < digest.length; i += 2) {
+          bytes[i / 2] = parseInt(digest.substring(i, i + 2), 16);
+        }
+        resolve(bytes);
+      });
+    } catch (_) {
+      resolve(new Uint8Array());
+    }
+  });
+}
 
 export class MessagesImplBase extends NativeSyncApiOhos {
   public async hashPaths(paths: string[], result: Result<Uint8Array[]>) {
+    const group = new taskpool.TaskGroup();
 
-    const args2: string[] = paths;
-    //const digest:string = "sha1"
-    const hashes: Promise<Uint8Array>[] = [];
-
-    for (let i = 0; i < args2.length; i++) {
-      let isTempFile = false;
-      const promise = new Promise<Uint8Array>((resolve) => {
-        try {
-          let stat = fs.statSync(args2[i]);
-          let isRemoteUri:boolean = stat.location.valueOf() == 2
-
-          if (isRemoteUri) {
-            console.error("hash cloud file")
-            isTempFile = true;
-            const uuid = util.generateRandomUUID();
-            if (!fs.accessSync(this.ctx!.cacheDir + "/originalPhoto")) {
-              fs.mkdirSync(this.ctx!.cacheDir + "/originalPhoto");
-            }
-            const targetDirectoryPath = this.ctx!.cacheDir + "/originalPhoto/" + uuid;
-            fs.mkdirSync(targetDirectoryPath);
-            let targetDir = fs.openSync(targetDirectoryPath);
-            fs.closeSync(targetDir);
-            const inputFilePath = args2[i].substring(args2[i].lastIndexOf("/") + 1);
-            const inputFilePathSplits = inputFilePath.split(".");
-            console.error("Sync" + "getPathFromUri inputFilePath: " + inputFilePath);
-            const outputFileName = inputFilePathSplits[0];
-            let extension: string = "";
-            if (inputFilePathSplits.length == 2) {
-              extension = "." + inputFilePathSplits[1];
-            }
-            const outputFilePath = targetDirectoryPath + "/" + outputFileName + extension;
-
-            let dstDirUriLocal: string = fileUri.getUriFromPath(outputFilePath);
-
-            fs.copy(args2[i], dstDirUriLocal, (err: BusinessError) => {
-              if (err) {
-                console.error(`Failed to copy. Code: ${err.code}, message: ${err.message}`);
-                resolve(new Uint8Array());
-                return;
-              }
-              console.info("Succeeded in copying.");
-              args2[i] = outputFilePath;
-            })
-
-          }
-
-          hash.hash(args2[i], "sha1", (err: BusinessError, digest: string) => {
-            if (err) {
-              console.error('process hash:' + args2[i] + err); //华为云端媒体也能获取asset，也有uri，但是本地不存在，因此报错
-              resolve(new Uint8Array());
-              return;
-            }
-            console.error('process hash:' + args2[i] + 'success'); //华为云端媒体也能获取asset，也有uri，但是本地不存在，因此报错
-            const bytes: Uint8Array = this.hexStringToBytes(digest);
-            if(isTempFile) {
-              fs.unlinkSync(args2[i]);
-            }
-
-            resolve(bytes);
-            // if (err) {
-            //   console.error(`Cannot calculate digest of ${args2[i]}: ${err.message}`);
-            //   resolve([]);
-            // } else {
-            //   try {
-            //     const bytes: number[] = this.hexStringToBytes(digest);
-            //     resolve(bytes);
-            //   } catch (e) {
-            //     console.error(`Invalid digest format for ${args2[i]}: ${e}`);
-            //     resolve([]);
-            //   }
-            //
-            // }
-          });
-        } catch (e) {
-          // console.error('process hash:' + args2[i] + e);  //华为云端媒体也能获取asset，也有uri，但是本地不存在，因此报错
-          // resolve(new Uint8Array());
-          ;
-        }
-
-      });
-      hashes.push(promise);
+    for (const p of paths) {
+      const task = new taskpool.Task(hashFileTask, p);
+      group.addTask(task);
     }
 
-    const results = await Promise.all(hashes);
-    result.success(results)
+    let hashes: Uint8Array[] = [];
+    try {
+      const res = await taskpool.execute(group,taskpool.Priority.HIGH) as Array<Uint8Array | undefined>;
+      hashes = (res ?? []).map((digest) => digest ?? new Uint8Array());
+    } catch (e) {
+      console.error(`hashPaths taskpool execute error: ${e}`);
+      hashes = paths.map(() => new Uint8Array());
+    }
 
-    // 直接用 results 就是 hashes 的结果数组
-    //return results;
-    return;
+    result.success(hashes);
   }
 
   hexStringToBytes(hex: string): Uint8Array {
@@ -245,7 +195,8 @@ export class MessagesImplBase extends NativeSyncApiOhos {
 
     //let fetchResult: photoAccessHelper.FetchResult<photoAccessHelper.Album>;
 
-    let assets: Array<photoAccessHelper.Album> = [];
+    let assets_user: Array<photoAccessHelper.Album> = [];
+    let assets_system: Array<photoAccessHelper.Album> = [];
     let assets_count_map: Map<number, number> = new Map();
 
     try {
@@ -260,7 +211,7 @@ export class MessagesImplBase extends NativeSyncApiOhos {
 
       while (!fetchResult.isAfterLast()) {
         let asset = await fetchResult.getNextObject()
-        assets.push(asset);
+        assets_user.push(asset);
         assets_count_map.set(iter, asset.count)
         console.info('getAlbums' + asset.albumName);
         iter++;
@@ -268,7 +219,7 @@ export class MessagesImplBase extends NativeSyncApiOhos {
 
       while (!fetchResult_sysytem.isAfterLast()) {
         let asset = await fetchResult_sysytem.getNextObject()
-        assets.push(asset);
+        assets_system.push(asset);
         assets_count_map.set(iter, asset.count)
         console.info('getAlbums' + asset.albumName);
         iter++;
@@ -278,7 +229,7 @@ export class MessagesImplBase extends NativeSyncApiOhos {
     }
     let iter: number = 0;
     //let sortedMap = this.sortMapByValue(assets_count_map);
-    for (let entry of assets) {
+    for (let entry of assets_system) {
       //for (let entry of sortedMap) {
       //let currrent_asset = assets[entry[0]];
       let currrent_asset = entry;
@@ -291,14 +242,50 @@ export class MessagesImplBase extends NativeSyncApiOhos {
       let fileUriResult_array = entry.albumUri;
       //let fileUriResult_array = FileUtils.getPathFromUri(getContext(),currrent_asset.albumUri)
       const fileUriResult = fileUriResult_array;
-      const album_name = ['所有', '视频', '图片'];
+      const path = fileUriResult;
+      let name = currrent_asset.albumName ?? '';
+      const hasName = name.trim().length > 0;
+      if (!hasName) {
+        const subtype = currrent_asset.albumSubtype;
+        switch (subtype) {
+          case photoAccessHelper.AlbumSubtype.FAVORITE:
+            name = 'Favorites';
+            break;
+          case photoAccessHelper.AlbumSubtype.VIDEO:
+            name = 'Videos';
+            break;
+          case photoAccessHelper.AlbumSubtype.IMAGE:
+            name = 'Images';
+            break;
+          default:
+            name = '';
+            break;
+        }
+      }
+      const updatedAt = -1;
+      const isCloud: boolean = false;
+      const assetCount = currrent_asset.count;
+
+      let album = new PlatformAlbum(path, name, updatedAt, isCloud, assetCount)
+      albums.push(album);
+    }
+
+    for (let entry of assets_user) {
+      //for (let entry of sortedMap) {
+      //let currrent_asset = assets[entry[0]];
+      let currrent_asset = entry;
+
+
+      //let uri_input: string[] = [currrent_asset.albumUri];
+
+
+      //FileUtils.getPathFromUri
+      let fileUriResult_array = entry.albumUri;
+      //let fileUriResult_array = FileUtils.getPathFromUri(getContext(),currrent_asset.albumUri)
+      const fileUriResult = fileUriResult_array;
 
       const path = fileUriResult;
       let name = currrent_asset.albumName;
-      if (name == '' || name == undefined) {
-        name = album_name[iter];
-        iter++;
-      }
       const updatedAt = -1;
       const isCloud: boolean = false;
       const assetCount = currrent_asset.count;
@@ -574,16 +561,6 @@ export class MessagesImplBase extends NativeSyncApiOhos {
       id = new fileUri.FileUri(id).path;
 
       let res: boolean = false;
-      try {
-        res = fs.accessSync(id);
-
-      } catch (err) {
-        console.error("accessSync failed with error message: " + err.message + ", error code: " + err.code);
-      }
-
-      if (!res) {
-        continue;
-      }
 
       let mediaType = current_asset.photoType;
       let name = current_asset.displayName;
@@ -624,66 +601,3 @@ export class MessagesImplBase extends NativeSyncApiOhos {
     return;
   }
 }
-
-// class FileUtils {
-//   private static readonly TAG = 'getPathFromUri'
-//
-//   public static getPathFromUri(context: common.Context | undefined, uri: string, defExtension?: string):string|undefined {
-//     console.info(FileUtils.TAG, "getPathFromUri : " + uri);
-//     let inputFile: fs.File;
-//     try {
-//       inputFile = fs.openSync(uri);
-//     } catch (err) {
-//       console.error(FileUtils.TAG, "open uri file failed err:" + err)
-//       return undefined;
-//     }
-//     if (inputFile == undefined) {
-//       return undefined;
-//     }
-//     const uuid = util.generateRandomUUID();
-//     if (!context) {
-//       return
-//     }
-//     {
-//       const targetDirectoryPath = context.cacheDir + "/" + uuid;
-//       try {
-//         fs.mkdirSync(targetDirectoryPath);
-//         let targetDir = fs.openSync(targetDirectoryPath);
-//         console.info(FileUtils.TAG, "mkdirSync success targetDirectoryPath:" + targetDirectoryPath + " fd: " + targetDir.fd);
-//         fs.closeSync(targetDir);
-//       } catch (err) {
-//         console.error(FileUtils.TAG, "mkdirSync failed err:" + err);
-//         return undefined;
-//       }
-//
-//       const inputFilePath = uri.substring(uri.lastIndexOf("/") + 1);
-//       const inputFilePathSplits = inputFilePath.split(".");
-//       console.info(FileUtils.TAG, "getPathFromUri inputFilePath: " + inputFilePath);
-//       const outputFileName = inputFilePathSplits[0];
-//       let extension: string;
-//       if (inputFilePathSplits.length == 2) {
-//         extension = "." + inputFilePathSplits[1];
-//       } else {
-//         if (defExtension) {
-//           extension = defExtension;
-//         } else {
-//           extension = ".jpg";
-//         }
-//       }
-//       const outputFilePath = targetDirectoryPath + "/" + outputFileName + extension;
-//       const outputFile = fs.openSync(outputFilePath, fs.OpenMode.CREATE);
-//       try {
-//         console.info(FileUtils.TAG, "copyFileSync inputFile fd:" + inputFile.fd + " outputFile fd:" + outputFile.fd);
-//         fs.copyFileSync(inputFile.fd, outputFilePath);
-//       } catch (err) {
-//        console.error(FileUtils.TAG, "copyFileSync failed err:" + err);
-//         return undefined;
-//       } finally {
-//         fs.closeSync(inputFile);
-//         fs.closeSync(outputFile);
-//       }
-//       return outputFilePath;
-//     }
-//   }
-// }
-

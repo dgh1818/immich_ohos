@@ -10,6 +10,8 @@ import 'package:immich_mobile/infrastructure/repositories/storage.repository.dar
 import 'package:immich_mobile/platform/native_sync_api_ohos.g.dart';
 import 'package:logging/logging.dart';
 
+import 'package:wakelock_plus/wakelock_plus.dart';
+
 class HashService {
   final int batchSizeLimit;
   final int batchFileLimit;
@@ -38,6 +40,8 @@ class HashService {
 
   Future<void> hashAssets() async {
     _log.info("Starting hashing of assets");
+    WakelockPlus.enable();
+
     final Stopwatch stopwatch = Stopwatch()..start();
     // Sorted by backupSelection followed by isCloud
     final localAlbums = await _localAlbumRepository.getAll(
@@ -56,6 +60,8 @@ class HashService {
       }
     }
 
+    WakelockPlus.disable();
+
     stopwatch.stop();
     _log.info("Hashing took - ${stopwatch.elapsedMilliseconds}ms");
   }
@@ -65,6 +71,7 @@ class HashService {
   /// [LocalAssetHashEntity] by local id. Only missing entries are newly hashed and added to the DB.
   Future<void> _hashAssets(LocalAlbum album, List<LocalAsset> assetsToHash) async {
     int bytesProcessed = 0;
+    int videosInBatch = 0;
     final toHash = <_AssetToPath>[];
     File? file;
 
@@ -74,26 +81,47 @@ class HashService {
         return;
       }
 
-      // final file = await _storageRepository.getFileForAsset(asset.id);
-      // if (file == null) {
-      //   _log.warning(
-      //     "Cannot get file for asset ${asset.id}, name: ${asset.name}, created on: ${asset.createdAt} from album: ${album.name}",
-      //   );
-      //   continue;
-      // }
+      final isIcloudAsset = await _isIcloudOnlyAsset(asset);
 
-      //bytesProcessed += await file.length();
-      toHash.add(_AssetToPath(asset: asset, path: asset.id));
+      if (isIcloudAsset) {
+        file = await _storageRepository.getFileForAsset(asset.id);
+        if (file == null) {
+          _log.warning(
+            "Cannot download iCloud asset ${asset.id} for hashing (album: ${album.name}, name: ${asset.name})",
+          );
+          continue;
+        }
+        toHash.add(_AssetToPath(asset: asset, path: file.path, deleteAfterHash: true));
+      } else {
+        toHash.add(_AssetToPath(asset: asset, path: asset.id));
+      }
 
-      //if (toHash.length >= batchFileLimit || bytesProcessed >= batchSizeLimit) {
-      if (toHash.length >= batchFileLimit || asset.isVideo) {
+      if (asset.isVideo) {
+        videosInBatch++;
+      }
+
+      if (toHash.length >= batchFileLimit || videosInBatch >= 5) {
         await _processBatch(album, toHash);
         toHash.clear();
         bytesProcessed = 0;
+        videosInBatch = 0;
       }
     }
 
     await _processBatch(album, toHash);
+  }
+
+  Future<bool> _isIcloudOnlyAsset(LocalAsset asset) async {
+    try {
+      final entity = await _storageRepository.getAssetEntityForAsset(asset);
+      if (entity == null) {
+        return false;
+      }
+      return !(await entity.isLocallyAvailable(isOrigin: true));
+    } catch (e, s) {
+      _log.warning("Failed to check local availability for asset ${asset.id}", e, s);
+      return false;
+    }
   }
 
   /// Processes a batch of assets.
@@ -105,6 +133,8 @@ class HashService {
     _log.fine("Hashing ${toHash.length} files");
 
     final hashed = <LocalAsset>[];
+    final tempPaths = toHash.where((e) => e.deleteAfterHash).map((e) => e.path).toList();
+
     final hashes = await _nativeSyncApi.hashPaths(toHash.map((e) => e.path).toList());
     assert(
       hashes.length == toHash.length,
@@ -131,7 +161,18 @@ class HashService {
     _log.fine("Hashed ${hashed.length}/${toHash.length} assets");
 
     await _localAssetRepository.updateHashes(hashed);
-    await _storageRepository.clearCache();
+    //await _storageRepository.clearCache();
+
+    for (final path in tempPaths) {
+      try {
+        final file = File(path);
+        if (await file.exists()) {
+          await file.delete();
+        }
+      } catch (e, s) {
+        _log.warning("Failed to delete temp file after hashing: $path", e, s);
+      }
+    }
   }
 }
 
@@ -139,5 +180,8 @@ class _AssetToPath {
   final LocalAsset asset;
   final String path;
 
-  const _AssetToPath({required this.asset, required this.path});
+  /// Whether the file at [path] should be deleted after hashing (e.g., temp download).
+  final bool deleteAfterHash;
+
+  const _AssetToPath({required this.asset, required this.path, this.deleteAfterHash = false});
 }
