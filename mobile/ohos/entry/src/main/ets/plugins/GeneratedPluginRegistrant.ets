@@ -3,7 +3,6 @@ import PhotoManagerPlugin from 'photo_manager';
 import BDPlugin from 'background_downloader';
 import MapLibreMapsPlugin from 'maplibre_gl';
 import HuaweiCastPlugin from 'huawei_cast';
-import LocalAuthPlugin from 'local_auth_ohos';
 import Sqlite3FlutterLibsPlugin from 'sqlite3_flutter_libs';
 import FluttertoastPlugin from 'fluttertoast';
 import ImageGallerySaverPlugin from 'image_gallery_saver';
@@ -22,6 +21,7 @@ import GeolocatorOhosPlugin from 'flutter_geolocator_ohos';
 import WakelockPlugin from 'wakelock_plus';
 import ImagePickerPlugin from 'image_picker_ohos';
 import IsarFlutterLibsPlugin from 'isar_flutter_libs';
+import LocalAuthPlugin from 'local_auth_ohos';
 import SharedPreferencesPlugin from 'shared_preferences_ohos';
 import NetworkInfoPlusOhosPlugin from 'network_info_plus_ohos';
 
@@ -41,7 +41,6 @@ export class GeneratedPluginRegistrant {
       flutterEngine.getPlugins()?.add(new BDPlugin());
       flutterEngine.getPlugins()?.add(new MapLibreMapsPlugin());
       flutterEngine.getPlugins()?.add(new HuaweiCastPlugin());
-      flutterEngine.getPlugins()?.add(new LocalAuthPlugin());
       flutterEngine.getPlugins()?.add(new Sqlite3FlutterLibsPlugin());
       flutterEngine.getPlugins()?.add(new FluttertoastPlugin());
       flutterEngine.getPlugins()?.add(new ImageGallerySaverPlugin());
@@ -60,6 +59,7 @@ export class GeneratedPluginRegistrant {
       flutterEngine.getPlugins()?.add(new WakelockPlugin());
       flutterEngine.getPlugins()?.add(new ImagePickerPlugin());
       flutterEngine.getPlugins()?.add(new IsarFlutterLibsPlugin());
+      flutterEngine.getPlugins()?.add(new LocalAuthPlugin());
       flutterEngine.getPlugins()?.add(new SharedPreferencesPlugin());
       flutterEngine.getPlugins()?.add(new NetworkInfoPlusOhosPlugin());
     } catch (e) {
