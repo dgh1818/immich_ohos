@@ -60,7 +60,7 @@
       },
       {
         "name": "BackgroundWorker",
-        "srcEntry": "./ets/plugins/Background/BackgroundWorker.ets",
+        "srcEntry": "./ets/workers/BackgroundWorker.ets",
         "type": "workScheduler"
       }
     ],

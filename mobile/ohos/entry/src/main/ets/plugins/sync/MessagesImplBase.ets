@@ -7,7 +7,7 @@ import { fileUriService } from '@kit.ScenarioFusionKit';
 import { NativeSyncApiOhos, SyncDelta, PlatformAsset, PlatformAlbum, Result } from './Messages_ohos.g'
 import { BusinessError } from '@kit.BasicServicesKit';
 import fs from '@ohos.file.fs';
-import { util } from '@kit.ArkTS';
+import { uri, util } from '@kit.ArkTS';
 import taskpool from '@ohos.taskpool';
 
 @Concurrent
@@ -43,7 +43,7 @@ export class MessagesImplBase extends NativeSyncApiOhos {
 
     let hashes: Uint8Array[] = [];
     try {
-      const res = await taskpool.execute(group,taskpool.Priority.HIGH) as Array<Uint8Array | undefined>;
+      const res = await taskpool.execute(group, taskpool.Priority.HIGH) as Array<Uint8Array | undefined>;
       hashes = (res ?? []).map((digest) => digest ?? new Uint8Array());
     } catch (e) {
       console.error(`hashPaths taskpool execute error: ${e}`);

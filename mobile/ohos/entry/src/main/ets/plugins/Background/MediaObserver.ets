@@ -1,7 +1,7 @@
 import { workScheduler, WorkSchedulerExtensionAbility } from '@kit.BackgroundTasksKit';
 import { common } from '@kit.AbilityKit';
 import { preferences } from '@kit.ArkData';
-import { BackgroundWorkerApiImpl } from './BackgroundWorkerApiImpl';
+import { BackgroundWorkerApiImpl } from '../../workers/BackgroundWorkerApiImpl';
 import dataPreferences from '@ohos.data.preferences'
 
 class MediaObserver extends WorkSchedulerExtensionAbility {

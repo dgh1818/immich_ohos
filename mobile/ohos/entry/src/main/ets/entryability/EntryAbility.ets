@@ -20,8 +20,8 @@ import { NativeSyncApiOhos } from '../../../main/ets/plugins/sync/Messages_ohos.
 import { ThumbnailApi } from '../../../main/ets/plugins/Images/Messages_ohos.g';
 import {MessagesImplBase} from '../plugins/sync/MessagesImplBase'
 import { MessagesImplBaseThumb } from '../plugins/Images/ThumbnailsImpl';
-import { BackgroundWorkerApiImpl } from '../plugins/Background/BackgroundWorkerApiImpl';
-import { BackgroundWorkerFgHostApi } from '../plugins/Background/BackgroundWorker.g';
+import { BackgroundWorkerApiImpl } from '../workers/BackgroundWorkerApiImpl';
+import { BackgroundWorkerFgHostApi } from '../workers/BackgroundWorker.g';
 import { ConnectivityApi } from '../plugins/connectivity/Connectivity.g';
 import { ConnectivityApiImpl } from '../plugins/connectivity/ConnectivityApiImpl';
 
@@ -44,7 +44,7 @@ export default class EntryAbility extends FlutterAbility {
     let connectivityApiImpl = new ConnectivityApiImpl(ctx.getApplicationContext());
     NativeSyncApiOhos.setup(messenger, nativeSyncApiImpl)
     ThumbnailApi.setup(messenger,ThumbApiImpl);
-    BackgroundWorkerFgHostApi.setup(messenger,backgroundWorkerApiImpl);
+    //BackgroundWorkerFgHostApi.setup(messenger,backgroundWorkerApiImpl);
     ConnectivityApi.setup(messenger,connectivityApiImpl)
   }
 }
