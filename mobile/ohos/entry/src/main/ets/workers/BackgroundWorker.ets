@@ -12,6 +12,7 @@ import dataPreferences from '@ohos.data.preferences'
 import preferences from "@ohos.data.preferences";
 import { BackgroundWorkerApiImpl } from "./BackgroundWorkerApiImpl";
 import EntryAbility from "../entryability/EntryAbility";
+import { notificationManager } from '@kit.NotificationKit';
 
 export class Deferred<T> {
   public promise: Promise<T>;
@@ -129,7 +130,23 @@ class BackgroundWorkerBgHostApiImpl extends BackgroundWorkerBgHostApi {
   }
 
   override showNotification(title: string, content: string): void {
-    ;
+    const request: notificationManager.NotificationRequest = {
+      id: 100,
+      content: {
+        notificationContentType: notificationManager.ContentType.NOTIFICATION_CONTENT_BASIC_TEXT,
+        normal: {
+          title: title ?? '',
+          text: content ?? '',
+        },
+      },
+      notificationSlotType: notificationManager.SlotType.SERVICE_INFORMATION,
+    };
+
+    try {
+      notificationManager.publish(request);
+    } catch (e) {
+      console.error(`${this.TAG} publish notification failed`, e);
+    }
   }
 
   override close() {
