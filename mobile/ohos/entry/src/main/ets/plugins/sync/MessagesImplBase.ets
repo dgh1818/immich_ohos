@@ -516,6 +516,16 @@ export class MessagesImplBase extends NativeSyncApiOhos {
       result.success();
       return;
     }
+
+    try {
+      if (this.liveNotificationId >= 0) {
+        await notificationManager.cancel(this.liveNotificationId);
+      }
+    } catch (cancelErr) {
+      const err = cancelErr as BusinessError;
+      console.error(`cancel notification fail code=${err.code} msg=${err.message}`);
+    }
+
     try {
       await backgroundTaskManager.stopBackgroundRunning(this.ctx);
       this.liveNotificationId = -1;

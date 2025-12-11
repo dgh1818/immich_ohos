@@ -79,20 +79,6 @@ class HashService {
 
     if (Platform.isOhos) {
       try {
-        await _nativeSyncApi.updateBackgroundTransferProgress(100, "Hash已完成", "");
-      } catch (_) {
-        // retry once after brief delay
-        await Future.delayed(const Duration(seconds: 3));
-        try {
-          await _nativeSyncApi.updateBackgroundTransferProgress(100, "Hash已完成", "");
-        } catch (_) {
-          // ignore if retry also fails
-        }
-      }
-    }
-
-    if (Platform.isOhos) {
-      try {
         await _nativeSyncApi.stopBackgroundTransfer();
       } catch (_) {
         // ignore stop failures
