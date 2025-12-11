@@ -296,7 +296,7 @@ class BackgroundService {
           // iOS should time out after some threshold so it doesn't wait
           // indefinitely and can run later
           // Android is fine to wait here until the lock releases
-          final waitForLock = Platform.isIOS || Platform.isOhos
+          final waitForLock = Platform.isIOS
               ? acquireLock().timeout(const Duration(seconds: 5), onTimeout: () => false)
               : acquireLock();
 

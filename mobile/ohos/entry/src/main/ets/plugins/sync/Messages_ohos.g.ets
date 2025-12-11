@@ -19,7 +19,7 @@ export class FlutterError implements Error {
   /** The error stack. */
   public stack?: string;
 
-  constructor(code: string, name: string,  message: string, stack?: string)
+  constructor(code: string, name: string,  message: string, stack?: string) 
   {
     this.code = code;
     this.name = name;
@@ -395,7 +395,7 @@ export class SyncDelta {
   }
 }
 
-class PigeonCodec extends StandardMessageCodec {
+export class PigeonCodec extends StandardMessageCodec {
   static readonly INSTANCE: PigeonCodec  = new PigeonCodec();
 
   getByte(n: number): number {
@@ -462,6 +462,12 @@ export abstract class NativeSyncApiOhos {
   abstract getAssetsForAlbum(albumId: string , updatedTimeCond: number , result: Result<Array<PlatformAsset>>): void;
 
   abstract hashPaths(paths: Array<string> , result: Result<Uint8Array[]>): void;
+
+  abstract startBackgroundTransfer(result: Result<number>): void;
+
+  abstract updateBackgroundTransferProgress(progress: number , title: string , fileName: string , result: Result<void>): void;
+
+  abstract stopBackgroundTransfer(result: Result<void>): void;
   /** The codec used by NativeSyncApiOhos. */
   static getCodec(): MessageCodec<Object>{
     return PigeonCodec.INSTANCE;
@@ -690,6 +696,88 @@ export abstract class NativeSyncApiOhos {
               let resultCallback: Result<Array<Uint8Array>> = new ResultImp();
 
               api!.hashPaths(args[0] as Array<string>, resultCallback);
+            } });
+      } else {
+        channel.setMessageHandler(null);
+      }
+    }
+    {
+      let channel: BasicMessageChannel<Object> =
+          new BasicMessageChannel(
+              binaryMessenger, "dev.flutter.pigeon.immich_mobile.NativeSyncApiOhos.startBackgroundTransfer", NativeSyncApiOhos.getCodec());
+      if (api != null) {
+        channel.setMessageHandler({
+            onMessage(message: Object ,reply: Reply<Object> ) {
+              class ResultImp implements Result<number>{
+                    success(result: number): void {
+                      let res: Array<Object> = [];
+                      res.push(result);
+                      reply.reply(res);
+                    }
+
+                    error(error: Error): void {
+                      let wrappedError: Array<Object> = wrapError(error);
+                      reply.reply(wrappedError);
+                    }
+              }
+              let resultCallback: Result<number> = new ResultImp();
+
+              api!.startBackgroundTransfer(resultCallback);
+            } });
+      } else {
+        channel.setMessageHandler(null);
+      }
+    }
+    {
+      let channel: BasicMessageChannel<Object> =
+          new BasicMessageChannel(
+              binaryMessenger, "dev.flutter.pigeon.immich_mobile.NativeSyncApiOhos.updateBackgroundTransferProgress", NativeSyncApiOhos.getCodec());
+      if (api != null) {
+        channel.setMessageHandler({
+            onMessage(message: Object ,reply: Reply<Object> ) {
+              let args: Array<Object> = message as Array<Object>;
+              class ResultImp implements Result<void>{
+                    success(result: void): void {
+                      let res: Array<Object> = [];
+                      res.push(null);
+                      reply.reply(res);
+                    }
+
+                    error(error: Error): void {
+                      let wrappedError: Array<Object> = wrapError(error);
+                      reply.reply(wrappedError);
+                    }
+              }
+              let resultCallback: Result<void> = new ResultImp();
+
+              api!.updateBackgroundTransferProgress(args[0] as number, args[1] as string, args[2] as string, resultCallback);
+            } });
+      } else {
+        channel.setMessageHandler(null);
+      }
+    }
+    {
+      let channel: BasicMessageChannel<Object> =
+          new BasicMessageChannel(
+              binaryMessenger, "dev.flutter.pigeon.immich_mobile.NativeSyncApiOhos.stopBackgroundTransfer", NativeSyncApiOhos.getCodec());
+      if (api != null) {
+        channel.setMessageHandler({
+            onMessage(message: Object ,reply: Reply<Object> ) {
+              class ResultImp implements Result<void>{
+                    success(result: void): void {
+                      let res: Array<Object> = [];
+                      res.push(null);
+                      reply.reply(res);
+                    }
+
+                    error(error: Error): void {
+                      let wrappedError: Array<Object> = wrapError(error);
+                      reply.reply(wrappedError);
+                    }
+              }
+              let resultCallback: Result<void> = new ResultImp();
+
+              api!.stopBackgroundTransfer(resultCallback);
             } });
       } else {
         channel.setMessageHandler(null);

@@ -99,4 +99,20 @@ abstract class NativeSyncApiOhos {
   @TaskQueue(type: TaskQueueType.serialBackgroundThread)
   @async
   List<Uint8List> hashPaths(List<String> paths);
+
+  @TaskQueue(type: TaskQueueType.serialBackgroundThread)
+  @async
+  int startBackgroundTransfer();
+
+  @TaskQueue(type: TaskQueueType.serialBackgroundThread)
+  @async
+  void updateBackgroundTransferProgress(
+    double progress,
+    String title,
+    String fileName,
+  );
+
+  @TaskQueue(type: TaskQueueType.serialBackgroundThread)
+  @async
+  void stopBackgroundTransfer();
 }

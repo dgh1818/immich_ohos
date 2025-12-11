@@ -37,6 +37,8 @@ class HashService {
        _nativeSyncApi = nativeSyncApi;
 
   bool get isCancelled => _cancelChecker?.call() ?? false;
+  int hashedCount = 0;
+  int toHashCount = 0;
 
   Future<void> hashAssets() async {
     _log.info("Starting hashing of assets");
@@ -48,6 +50,14 @@ class HashService {
       sortBy: {SortLocalAlbumsBy.backupSelection, SortLocalAlbumsBy.isIosSharedAlbum},
     );
 
+    if (Platform.isOhos) {
+      try {
+        await _nativeSyncApi.startBackgroundTransfer();
+      } catch (_) {
+        // ignore start failures
+      }
+    }
+
     for (final album in localAlbums) {
       if (isCancelled) {
         _log.warning("Hashing cancelled. Stopped processing albums.");
@@ -55,6 +65,8 @@ class HashService {
       }
 
       final assetsToHash = await _localAlbumRepository.getAssetsToHash(album.id);
+      toHashCount = assetsToHash.length;
+      hashedCount = 0;
       if (assetsToHash.isNotEmpty) {
         await _hashAssets(album, assetsToHash);
       }
@@ -64,6 +76,28 @@ class HashService {
 
     stopwatch.stop();
     _log.info("Hashing took - ${stopwatch.elapsedMilliseconds}ms");
+
+    if (Platform.isOhos) {
+      try {
+        await _nativeSyncApi.updateBackgroundTransferProgress(100, "Hash已完成", "");
+      } catch (_) {
+        // retry once after brief delay
+        await Future.delayed(const Duration(seconds: 3));
+        try {
+          await _nativeSyncApi.updateBackgroundTransferProgress(100, "Hash已完成", "");
+        } catch (_) {
+          // ignore if retry also fails
+        }
+      }
+    }
+
+    if (Platform.isOhos) {
+      try {
+        await _nativeSyncApi.stopBackgroundTransfer();
+      } catch (_) {
+        // ignore stop failures
+      }
+    }
   }
 
   /// Processes a list of [LocalAsset]s, storing their hash and updating the assets in the DB
@@ -155,6 +189,18 @@ class HashService {
         _log.warning(
           "Failed to hash file for ${asset.id}: ${asset.name} created at ${asset.createdAt} from album: ${album.name}",
         );
+      }
+
+      hashedCount++;
+
+      if (Platform.isOhos && toHash.isNotEmpty && toHashCount > 0) {
+        final progress = (hashedCount.toDouble() / toHashCount.toDouble()) * 100;
+        final name = asset.name;
+        try {
+          await _nativeSyncApi.updateBackgroundTransferProgress(progress, "正在Hash ${album.name}", name);
+        } catch (_) {
+          // ignore progress failures
+        }
       }
     }
 

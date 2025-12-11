@@ -9,17 +9,22 @@ import { BusinessError } from '@kit.BasicServicesKit';
 import fs from '@ohos.file.fs';
 import { uri, util } from '@kit.ArkTS';
 import taskpool from '@ohos.taskpool';
+import { wantAgent, WantAgent } from '@kit.AbilityKit';
+import { notificationManager } from '@kit.NotificationKit';
+import { backgroundTaskManager } from '@kit.BackgroundTasksKit';
 
 @Concurrent
 async function hashFileTask(path: string): Promise<Uint8Array> {
   return await new Promise<Uint8Array>((resolve) => {
     try {
       hash.hash(path, "sha1", (err: BusinessError, digest: string) => {
-        console.error("hash:" + path + "success");
+
         if (err) {
+          console.error("hash:" + path + "error");
           resolve(new Uint8Array());
           return;
         }
+        console.error("hash:" + path + "success");
         const bytes = new Uint8Array(digest.length / 2);
         for (let i = 0; i < digest.length; i += 2) {
           bytes[i / 2] = parseInt(digest.substring(i, i + 2), 16);
@@ -83,6 +88,8 @@ export class MessagesImplBase extends NativeSyncApiOhos {
 
   private ctx?: common.UIAbilityContext;
   private readonly TAG = "NativeSyncApiBase";
+  private liveNotificationId: number = -1;
+  private continuousTaskId: number = 0;
 
   constructor(context: common.UIAbilityContext) {
     super();
@@ -126,53 +133,6 @@ export class MessagesImplBase extends NativeSyncApiOhos {
       console.error(this.TAG + ' getCursor failed:', err);
       return null;
     }
-  }
-
-  protected async getAssets(cursor: photoAccessHelper.FetchResult<photoAccessHelper.PhotoAsset>): Promise<Array<PlatformAsset>> {
-    console.error("MessagesImplBase 3 ")
-    let path: string;
-    let assetResult: Array<PlatformAsset> = [];
-    await cursor.getFirstObject();
-    while (!cursor.isAfterLast()) {
-      let current_asset = await cursor.getNextObject();
-
-      let id = await hash.hash(current_asset.uri, "sha1");
-      let uri: Array<string> = [current_asset.uri];
-      let fileUriResult = (await fileUriService.convertFileUris(uri))[0];
-      if (fileUriResult.targetType == fileUriService.TargetType.UNKNOWN) {
-        continue;
-      }
-
-      let type = current_asset.photoType;
-      let name = current_asset.displayName;
-      let createdAt: number = current_asset.get(photoAccessHelper.PhotoKeys.DATE_TAKEN) as number ??
-        current_asset.get(photoAccessHelper.PhotoKeys.DATE_ADDED) as number;
-
-      let updatedAt = current_asset.get(photoAccessHelper.PhotoKeys.DATE_MODIFIED) as number;
-      let width = current_asset.get(photoAccessHelper.PhotoKeys.WIDTH) as number;
-      let height = current_asset.get(photoAccessHelper.PhotoKeys.HEIGHT) as number;
-      let durationInSeconds = type == photoAccessHelper.PhotoType.IMAGE ? 0 :
-        Math.floor((current_asset.get(photoAccessHelper.PhotoKeys.DURATION) as number) / 1000); //ohos not support
-      //let bucketId = current_asset.get(bucketIdColumn);
-      let bucketId = '-1';
-      let orientation = current_asset.get(photoAccessHelper.PhotoKeys.ORIENTATION) as number;
-      let isFavorite = current_asset.get(photoAccessHelper.PhotoKeys.FAVORITE) as boolean;
-
-      let asset: PlatformAsset = new PlatformAsset(id,
-        name,
-        type,
-        createdAt,
-        updatedAt,
-        width,
-        height,
-        durationInSeconds,
-        orientation,
-        isFavorite)
-
-      assetResult.push(asset);
-
-    }
-    return assetResult;
   }
 
   public async getAlbums(result: Result<Array<PlatformAlbum>>) {
@@ -341,17 +301,7 @@ export class MessagesImplBase extends NativeSyncApiOhos {
 
     let assetForAlbumfetchColumns: string[] = [
       photoAccessHelper.PhotoKeys.URI,
-      photoAccessHelper.PhotoKeys.DISPLAY_NAME,
-      photoAccessHelper.PhotoKeys.DATE_TAKEN,
-      photoAccessHelper.PhotoKeys.DATE_ADDED,
-      photoAccessHelper.PhotoKeys.DATE_MODIFIED,
-      photoAccessHelper.PhotoKeys.PHOTO_TYPE,
-      //photoAccessHelper.PhotoKeys.,
-      photoAccessHelper.PhotoKeys.WIDTH,
-      photoAccessHelper.PhotoKeys.HEIGHT,
-      photoAccessHelper.PhotoKeys.DURATION,
-      photoAccessHelper.PhotoKeys.ORIENTATION,
-      photoAccessHelper.PhotoKeys.FAVORITE
+      photoAccessHelper.PhotoKeys.POSITION,
     ];
     let photoPredicates: dataSharePredicates.DataSharePredicates = new dataSharePredicates.DataSharePredicates();
     let photoFetchOptions: photoAccessHelper.FetchOptions = {
@@ -366,7 +316,6 @@ export class MessagesImplBase extends NativeSyncApiOhos {
     let photoFetchResult = await album.getAssets(photoFetchOptions);
     let photoAsset = await photoFetchResult.getAllObjects();
     let assetsUri = photoAsset.map(pa => pa.uri);
-    let assetsPath: Array<string> = [];
 
     let i: number = 0;
 
@@ -376,15 +325,10 @@ export class MessagesImplBase extends NativeSyncApiOhos {
       let current_asset = await photoFetchResult!.getNextObject();
       console.error('7:5 success' + current_asset.uri);
 
-      // let position = current_asset.get(photoAccessHelper.PhotoKeys.POSITION) as photoAccessHelper.PositionType;
-      // if (!(position == photoAccessHelper.PositionType.LOCAL) &&
-      //   !(position == photoAccessHelper.PositionType.LOCAL_AND_CLOUD)) {
-      //   continue;
-      // }
-
-      let fileUriObject = new fileUri.FileUri(current_asset.uri);
-      console.error('get path success:' + fileUriObject.path);
-      assetsPath.push(fileUriObject.path);
+      let position = current_asset.get(photoAccessHelper.PhotoKeys.POSITION) as photoAccessHelper.PositionType;
+      if (position == photoAccessHelper.PositionType.CLOUD) {
+        continue;
+      }
     }
 
     return result.success(assetsUri);
@@ -423,16 +367,12 @@ export class MessagesImplBase extends NativeSyncApiOhos {
       photoAccessHelper.PhotoKeys.DATE_MODIFIED,
     ];
 
-
     let predicates: dataSharePredicates.DataSharePredicates = new dataSharePredicates.DataSharePredicates();
 
     let getAssetsCountetchOptions: photoAccessHelper.FetchOptions = {
       fetchColumns: assetsCountfetchColumns,
       predicates: predicates
     };
-
-    console.error('7:2 success')
-
 
     let count: number = 0;
     let fetchResult: photoAccessHelper.FetchResult<photoAccessHelper.PhotoAsset>
@@ -453,12 +393,10 @@ export class MessagesImplBase extends NativeSyncApiOhos {
     while (!fetchResult!.isAfterLast()) {
 
       let current_asset = await fetchResult!.getNextObject();
-      console.error('7:5 success' + current_asset.uri);
-
-      // let position = current_asset.get(photoAccessHelper.PhotoKeys.POSITION) as photoAccessHelper.PositionType;
-      // if(!(position==photoAccessHelper.PositionType.LOCAL) && !(position==photoAccessHelper.PositionType.LOCAL_AND_CLOUD)) {
-      //   continue;
-      // }
+      let position = current_asset.get(photoAccessHelper.PhotoKeys.POSITION) as photoAccessHelper.PositionType;
+      if(position==photoAccessHelper.PositionType.CLOUD) {
+        continue;
+      }
 
       if (timestamp != undefined) {
         let time_modified = current_asset.get(photoAccessHelper.PhotoKeys.DATE_MODIFIED).valueOf() as number;
@@ -485,6 +423,109 @@ export class MessagesImplBase extends NativeSyncApiOhos {
 
     return result.success(count);
 
+  }
+
+  /**
+   * 启动长时任务（上传/下载），返回通知 id，供进度更新使用
+   */
+  public async startBackgroundTransfer(result: Result<number>) {
+    if (!this.ctx) {
+      console.error(`${this.TAG} context is null, cannot start background running`);
+      result.success(0);
+      return;
+    }
+
+    const wantAgentInfo: wantAgent.WantAgentInfo = {
+      wants: [
+        {
+          bundleName: 'com.dgh18.immich',
+          abilityName: 'EntryAbility',
+        },
+      ],
+      actionType: wantAgent.OperationType.START_ABILITY,
+      requestCode: 0,
+      wantAgentFlags: [wantAgent.WantAgentFlags.UPDATE_PRESENT_FLAG],
+    };
+
+    try {
+      wantAgent.getWantAgent(wantAgentInfo).then((wantAgentObj: WantAgent) => {
+        backgroundTaskManager.startBackgroundRunning(
+          this.ctx!,
+          backgroundTaskManager.BackgroundMode.DATA_TRANSFER,
+          wantAgentObj,
+          (err: BusinessError | undefined) => {
+            if (err) {
+              console.error(`Failed to startBackgroundRunning. Code=${err.code} msg=${err.message}`);
+              result.success(0);
+              return;
+            }
+            this.liveNotificationId = 100;
+            console.info("Succeeded in startBackgroundRunning.");
+            result.success(this.liveNotificationId);
+          }
+        );
+      }).catch((err: BusinessError) => {
+        console.error(`getWantAgent failed code=${err.code} msg=${err.message}`);
+        result.success(0);
+      });
+    } catch (e) {
+      const err = e as BusinessError;
+      result.success(0);
+      console.error(`startBackgroundRunning failed code=${err.code} msg=${err.message}`);
+    }
+  }
+
+  /**
+   * 更新长时任务进度
+   */
+  public async updateBackgroundTransferProgress(progress: number , title: string , fileName: string , result: Result<void>) {
+    const targetId = 100;
+
+    let request: notificationManager.NotificationRequest = {
+      id: targetId,
+      content: {
+        notificationContentType: notificationManager.ContentType.NOTIFICATION_CONTENT_BASIC_TEXT,
+        normal: {
+          title: title,
+          text: fileName,
+          additionalText: progress.toString(),
+        }
+      },
+      // 构造进度条模板，name字段当前需要固定配置为downloadTemplate
+      template: {
+        name: 'downloadTemplate',
+        data: { title: title, fileName: fileName, progressValue: progress }
+      }
+    }
+
+    try {
+      await notificationManager.publish(request);
+      result.success();
+    } catch (e) {
+      const err = e as BusinessError;
+      console.error(`publish live view fail code=${err.code} msg=${err.message}`);
+      result.error(err as Error);
+    }
+  }
+
+  /**
+   * 停止长时任务
+   */
+  public async stopBackgroundTransfer(result: Result<void>) {
+    if (!this.ctx) {
+      result.success();
+      return;
+    }
+    try {
+      await backgroundTaskManager.stopBackgroundRunning(this.ctx);
+      this.liveNotificationId = -1;
+      this.continuousTaskId = 0;
+      result.success();
+    } catch (e) {
+      const err = e as BusinessError;
+      result.success();
+      console.error(`stopBackgroundRunning fail code=${err.code} msg=${err.message}`);
+    }
   }
 
   public async getAssetsForAlbum(albumId: string, updatedTimeCond?: number, result?: Result<Array<PlatformAsset>>) {
@@ -522,7 +563,6 @@ export class MessagesImplBase extends NativeSyncApiOhos {
       photoAccessHelper.PhotoKeys.DATE_MODIFIED,
       photoAccessHelper.PhotoKeys.PHOTO_TYPE,
       photoAccessHelper.PhotoKeys.SIZE,
-      //photoAccessHelper.PhotoKeys.,
       photoAccessHelper.PhotoKeys.WIDTH,
       photoAccessHelper.PhotoKeys.HEIGHT,
       photoAccessHelper.PhotoKeys.DURATION,
@@ -542,11 +582,11 @@ export class MessagesImplBase extends NativeSyncApiOhos {
     while (!photoFetchResult.isAfterLast()) {
       let current_asset = await photoFetchResult.getNextObject();
       let uri_input: string[] = [current_asset.uri];
-      // let position = current_asset.get(photoAccessHelper.PhotoKeys.POSITION) as photoAccessHelper.PositionType;
-      // if(!(position==photoAccessHelper.PositionType.LOCAL) && !(position==photoAccessHelper.PositionType.LOCAL_AND_CLOUD)) {
-      //   console.error(current_asset.uri + ": is cloud" );
-      //   continue;
-      // }
+      let position = current_asset.get(photoAccessHelper.PhotoKeys.POSITION) as photoAccessHelper.PositionType;
+      if(position==photoAccessHelper.PositionType.CLOUD) {
+        console.error(current_asset.uri + ": is cloud" );
+        continue;
+      }
 
       if (updatedTimeCond != undefined) {
         let time_modified = current_asset.get(photoAccessHelper.PhotoKeys.DATE_MODIFIED).valueOf() as number;
@@ -584,7 +624,7 @@ export class MessagesImplBase extends NativeSyncApiOhos {
 
       let asset: PlatformAsset = new PlatformAsset(
         id,
-        current_asset.displayName ?? "",
+        name ?? "",
         mediaType,
         createdAt ?? 0,
         modifiedAt ?? 0,

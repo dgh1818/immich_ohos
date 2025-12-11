@@ -13,8 +13,10 @@ import 'package:immich_mobile/providers/background_sync.provider.dart';
 import 'package:immich_mobile/providers/backup/backup_album.provider.dart';
 import 'package:immich_mobile/providers/backup/drift_backup.provider.dart';
 import 'package:immich_mobile/providers/user.provider.dart';
+import 'package:immich_mobile/providers/infrastructure/platform.provider.dart';
 import 'package:immich_mobile/routing/router.dart';
 import 'package:immich_mobile/widgets/backup/backup_info_card.dart';
+import 'dart:io';
 
 @RoutePage()
 class DriftBackupPage extends ConsumerStatefulWidget {
@@ -51,6 +53,14 @@ class _DriftBackupPageState extends ConsumerState<DriftBackupPage> {
       if (currentUser == null) {
         return;
       }
+
+        if (Platform.isOhos) {
+          try {
+            await ref.read(nativeSyncApiProvider).startBackgroundTransfer();
+          } catch (_) {
+            // ignore and continue
+          }
+        }
 
       await backgroundManager.syncRemote();
       await backupNotifier.getBackupStatus(currentUser.id);

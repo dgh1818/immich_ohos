@@ -19,6 +19,7 @@ import 'package:immich_mobile/providers/app_life_cycle.provider.dart';
 import 'package:immich_mobile/providers/auth.provider.dart';
 import 'package:immich_mobile/providers/backup/error_backup_list.provider.dart';
 import 'package:immich_mobile/providers/gallery_permission.provider.dart';
+import 'package:immich_mobile/providers/infrastructure/platform.provider.dart';
 import 'package:immich_mobile/repositories/album_media.repository.dart';
 import 'package:immich_mobile/repositories/backup.repository.dart';
 import 'package:immich_mobile/repositories/file_media.repository.dart';
@@ -431,6 +432,14 @@ class BackupNotifier extends StateNotifier<BackUpState> {
     assert(state.backupProgress == BackUpProgressEnum.idle);
     state = state.copyWith(backupProgress: BackUpProgressEnum.inProgress);
 
+    if (Platform.isOhos) {
+      try {
+        await ref.read(nativeSyncApiProvider).startBackgroundTransfer();
+      } catch (_) {
+        // ignore failure, backup can continue without long task
+      }
+    }
+
     await getBackupInfo();
 
     final hasPermission = _galleryPermissionNotifier.hasPermission;
@@ -440,6 +449,11 @@ class BackupNotifier extends StateNotifier<BackUpState> {
       if (state.allUniqueAssets.isEmpty) {
         log.info("No Asset On Device - Abort Backup Process");
         state = state.copyWith(backupProgress: BackUpProgressEnum.idle);
+        if (Platform.isOhos) {
+          try {
+            ref.read(nativeSyncApiProvider).stopBackgroundTransfer();
+          } catch (_) {}
+        }
         return;
       }
 
@@ -476,6 +490,11 @@ class BackupNotifier extends StateNotifier<BackUpState> {
     } else {
       openAppSettings();
     }
+    if (Platform.isOhos) {
+      try {
+        ref.read(nativeSyncApiProvider).stopBackgroundTransfer();
+      } catch (_) {}
+    }
   }
 
   void setAvailableAlbums(availableAlbums) {
@@ -493,6 +512,13 @@ class BackupNotifier extends StateNotifier<BackUpState> {
   void cancelBackup() {
     if (state.backupProgress != BackUpProgressEnum.inProgress) {
       notifyBackgroundServiceCanRun();
+    }
+    if (Platform.isOhos) {
+      try {
+        ref.read(nativeSyncApiProvider).stopBackgroundTransfer();
+      } catch (_) {
+        // ignore
+      }
     }
     state.cancelToken.cancel();
     state = state.copyWith(
@@ -533,6 +559,11 @@ class BackupNotifier extends StateNotifier<BackUpState> {
         progressInFileSpeedUpdateTime: DateTime.now(),
         progressInFileSpeedUpdateSentBytes: 0,
       );
+    if (Platform.isOhos) {
+      try {
+        ref.read(nativeSyncApiProvider).stopBackgroundTransfer();
+      } catch (_) {}
+    }
       _updatePersistentAlbumsSelection();
     }
 
@@ -569,6 +600,21 @@ class BackupNotifier extends StateNotifier<BackUpState> {
       progressInFileSpeedUpdateTime: lastUpdateTime,
       progressInFileSpeedUpdateSentBytes: lastSentBytes,
     );
+
+    if (Platform.isOhos && total > 0) {
+      try {
+        final name = state.currentUploadAsset.fileName;
+        ref
+            .read(nativeSyncApiProvider)
+            .updateBackgroundTransferProgress(
+              (sent.toDouble() / total.toDouble()) * 100,
+              'Immich Backup',
+              name,
+            );
+      } catch (_) {
+        // ignore background progress errors on OHOS
+      }
+    }
   }
 
   Future<void> updateDiskInfo() async {

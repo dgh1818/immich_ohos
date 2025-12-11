@@ -6,9 +6,9 @@
         "type": "HarmonyOS",
         "material": {
           "storeFile": "F:/immich_sign/immich_ohos.p12",
-          "storePassword": "0000001B1935A56AD831ACF0F3A77D7D36E7B7F4FB31BB8FF9E5F15EB47C79B3128A45EAC31EF0965A4BC9",
+          "storePassword": "0000001B461A71BAE7340C9C6B77C8302295C867233D374CD8449793310B24CD68189472425C63533A8E97",
           "keyAlias": "dgh18",
-          "keyPassword": "0000001B5B7645AE5B395D7504AEA11A1FD8EF4586C0F1E4F97F235C4AC05D72F30729E9745EBEB77F6EB3",
+          "keyPassword": "0000001BC89C7910B44BFE5354E6880F61EA5E53CCBDB5AB6DAEB5E8574500923F4546F5F50E1443B409A1",
           "signAlg": "SHA256withECDSA",
           "profile": "F:/immich_sign/immich_OctDebug.p7b",
           "certpath": "F:/immich_sign/immich_oct.cer"
@@ -21,7 +21,7 @@
         "signingConfig": "default",
         "compatibleSdkVersion": "5.0.5(17)",
         "runtimeOS": "HarmonyOS",
-        "targetSdkVersion": "6.0.0(20)",
+        "targetSdkVersion": "6.0.1(21)",
         "buildOption": {
           "strictMode": {
             "useNormalizedOHMUrl": true

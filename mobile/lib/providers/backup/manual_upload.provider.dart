@@ -18,6 +18,7 @@ import 'package:immich_mobile/providers/app_life_cycle.provider.dart';
 import 'package:immich_mobile/providers/app_settings.provider.dart';
 import 'package:immich_mobile/providers/backup/backup.provider.dart';
 import 'package:immich_mobile/providers/backup/error_backup_list.provider.dart';
+import 'package:immich_mobile/providers/infrastructure/platform.provider.dart';
 import 'package:immich_mobile/providers/gallery_permission.provider.dart';
 import 'package:immich_mobile/repositories/file_media.repository.dart';
 import 'package:immich_mobile/services/app_settings.service.dart';
@@ -162,6 +163,17 @@ class ManualUploadNotifier extends StateNotifier<ManualUploadState> {
       progressInFileSpeedUpdateSentBytes: lastSentBytes,
     );
 
+    if (Platform.isOhos && total > 0) {
+      try {
+        final name = state.currentUploadAsset.fileName;
+        ref
+            .read(nativeSyncApiProvider)
+            .updateBackgroundTransferProgress((sent.toDouble() / total.toDouble()) * 100, 'Immich Backup', name);
+      } catch (_) {
+        // ignore background progress errors on OHOS
+      }
+    }
+
     if (state.showDetailedNotification) {
       final title = "backup_background_service_current_upload_notification".tr(
         namedArgs: {'filename': state.currentUploadAsset.fileName},
@@ -188,6 +200,11 @@ class ManualUploadNotifier extends StateNotifier<ManualUploadState> {
     bool hasErrors = false;
     try {
       _backupProvider.updateBackupProgress(BackUpProgressEnum.manualInProgress);
+      if (Platform.isOhos) {
+        try {
+          await ref.read(nativeSyncApiProvider).startBackgroundTransfer();
+        } catch (_) {}
+      }
 
       if (ref.read(galleryPermissionNotifier.notifier).hasPermission) {
         await ref.read(fileMediaRepositoryProvider).clearFileCache();
@@ -301,6 +318,11 @@ class ManualUploadNotifier extends StateNotifier<ManualUploadState> {
       dPrint(() => "ERROR _startUpload: ${e.toString()}");
       hasErrors = true;
     } finally {
+      if (Platform.isOhos) {
+        try {
+          ref.read(nativeSyncApiProvider).stopBackgroundTransfer();
+        } catch (_) {}
+      }
       _backupProvider.updateBackupProgress(BackUpProgressEnum.idle);
       _handleAppInActivity();
       await _localNotificationService.closeNotification(LocalNotificationService.manualUploadDetailedNotificationID);
@@ -324,6 +346,11 @@ class ManualUploadNotifier extends StateNotifier<ManualUploadState> {
       _backupProvider.notifyBackgroundServiceCanRun();
     }
     state.cancelToken.cancel();
+    if (Platform.isOhos) {
+      try {
+        ref.read(nativeSyncApiProvider).stopBackgroundTransfer();
+      } catch (_) {}
+    }
     if (_backupProvider.backupProgress != BackUpProgressEnum.manualInProgress) {
       _backupProvider.updateBackupProgress(BackUpProgressEnum.idle);
     }

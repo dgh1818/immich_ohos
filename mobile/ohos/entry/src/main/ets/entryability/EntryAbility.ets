@@ -44,7 +44,7 @@ export default class EntryAbility extends FlutterAbility {
     let connectivityApiImpl = new ConnectivityApiImpl(ctx.getApplicationContext());
     NativeSyncApiOhos.setup(messenger, nativeSyncApiImpl)
     ThumbnailApi.setup(messenger,ThumbApiImpl);
-    //BackgroundWorkerFgHostApi.setup(messenger,backgroundWorkerApiImpl);
+    BackgroundWorkerFgHostApi.setup(messenger,backgroundWorkerApiImpl);
     ConnectivityApi.setup(messenger,connectivityApiImpl)
   }
 }

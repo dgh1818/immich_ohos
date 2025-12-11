@@ -39,6 +39,10 @@
             actions: ["action.system.home"],
           },
         ],
+        "backgroundModes": [
+          // 长时任务类型的配置项
+          "dataTransfer",
+        ]
       },
 
     ],
@@ -111,6 +115,14 @@
           when: "always",
         },
       },
+      {
+        name: "ohos.permission.KEEP_BACKGROUND_RUNNING",
+        reason: "$string:backup_desc",
+        usedScene: {
+          when: "always",
+        },
+      },
+
 
 
 
