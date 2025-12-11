@@ -31,6 +31,7 @@ class MapThumbnail extends HookConsumerWidget {
   final bool showAttribution;
   final MapCreatedCallback? onCreated;
   final bool isZoomControlsEnabled;
+  final void Function(String)? onReverseGeocoded;
 
   const MapThumbnail({
     super.key,
@@ -45,6 +46,7 @@ class MapThumbnail extends HookConsumerWidget {
     this.showAttribution = true,
     this.onCreated,
     this.isZoomControlsEnabled = true,
+    this.onReverseGeocoded,
   });
 
   @override
@@ -76,6 +78,9 @@ class MapThumbnail extends HookConsumerWidget {
     Future<void> onLocationChanged() async {
       reverseLocation.value = controller.value?.reverseLocation;
       ref.read(exifLocationTextProvider.notifier).state = reverseLocation.value!;
+      if (reverseLocation.value != null && onReverseGeocoded != null) {
+        onReverseGeocoded!(reverseLocation.value!);
+      }
     }
 
     Future<void> onStyleLoaded() async {

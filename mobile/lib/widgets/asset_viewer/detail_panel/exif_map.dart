@@ -14,8 +14,15 @@ class ExifMap extends StatelessWidget {
   final ExifInfo exifInfo;
   final String? markerId;
   final MapCreatedCallback? onMapCreated;
+  final void Function(String)? onReverseGeocoded;
 
-  const ExifMap({super.key, required this.exifInfo, this.markerId = 'marker', this.onMapCreated});
+  const ExifMap({
+    super.key,
+    required this.exifInfo,
+    this.markerId = 'marker',
+    this.onMapCreated,
+    this.onReverseGeocoded,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -65,6 +72,7 @@ class ExifMap extends StatelessWidget {
           width: constraints.maxWidth,
           zoom: 12.0,
           assetMarkerRemoteId: markerId,
+          onReverseGeocoded: onReverseGeocoded,
           onTap: (tapPosition, latLong) async {
             context.pushRoute<LatLng?>(
               MapRoute(initialLocation: LatLng(exifInfo.latitude ?? 0, exifInfo.longitude ?? 0)),
