@@ -105,9 +105,11 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
   bool assetReloadRequested = false;
   double? initialScale;
   double previousExtent = _kBottomSheetMinimumExtent;
+  double routeFade = 1.0;
   Offset dragDownPosition = Offset.zero;
   int totalAssets = 0;
   int stackIndex = 0;
+  Animation<double>? _routeAnimation;
   BuildContext? scaffoldContext;
   Map<String, GlobalKey> videoPlayerKeys = {};
   int imageHdrState = -1;
@@ -118,6 +120,26 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
 
   ImageStream? _prevPreCacheStream;
   ImageStream? _nextPreCacheStream;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final route = ModalRoute.of(context);
+    final animation = route?.animation;
+    if (_routeAnimation == animation) return;
+    _routeAnimation?.removeListener(_onRouteAnimationChanged);
+    _routeAnimation = animation;
+    _routeAnimation?.addListener(_onRouteAnimationChanged);
+  }
+
+  void _onRouteAnimationChanged() {
+    final value = _routeAnimation?.value ?? 1.0;
+    if (value != routeFade) {
+      setState(() {
+        routeFade = value;
+      });
+    }
+  }
 
   @override
   void initState() {
@@ -152,6 +174,7 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
     _nextPreCacheStream?.removeListener(_dummyListener);
 
     routeObserver.unsubscribe(routeAware);
+    _routeAnimation?.removeListener(_onRouteAnimationChanged);
     removeImageListener();
     super.dispose();
   }
@@ -160,7 +183,8 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
 
   Color get backgroundColor {
     final opacity = ref.read(assetViewerProvider.select((s) => s.backgroundOpacity));
-    return Colors.black.withAlpha(opacity);
+    final scaledOpacity = (opacity * routeFade).clamp(0, 255).round();
+    return Colors.black.withAlpha(scaledOpacity);
   }
 
   void _cancelTimers() {
@@ -724,6 +748,8 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
 
   @override
   Widget build(BuildContext context) {
+    // Track route animation value to fade background during pop transitions
+    routeFade = ModalRoute.of(context)?.animation?.value ?? 1.0;
     // Rebuild the widget when the asset viewer state changes
     // Using multiple selectors to avoid unnecessary rebuilds for other state changes
     ref.watch(assetViewerProvider.select((s) => s.showingBottomSheet));
