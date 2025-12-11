@@ -192,6 +192,8 @@ class AppRouter extends RootStackRouter {
       page: GalleryViewerRoute.page,
       guards: [_authGuard, _galleryGuard],
       transitionsBuilder: CustomTransitionsBuilders.zoomedPage,
+      durationInMilliseconds: 450,
+      reverseDurationInMilliseconds: 350,
     ),
     AutoRoute(page: BackupControllerRoute.page, guards: [_authGuard, _duplicateGuard, _backupPermissionGuard]),
     AutoRoute(page: AllPlacesRoute.page, guards: [_authGuard, _duplicateGuard]),

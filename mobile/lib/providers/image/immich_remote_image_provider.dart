@@ -59,9 +59,19 @@ class ImmichRemoteImageProvider extends ImageProvider<ImmichRemoteImageProvider>
     StreamController<ImageChunkEvent> chunkEvents,
   ) async* {
     // Load the higher resolution version of the image
-    final url = getThumbnailUrlForRemoteId(key.assetId, type: api.AssetMediaSize.preview);
+    final url = getThumbnailUrlForRemoteId(key.assetId);
     final codec = await ImageLoader.loadImageFromCache(url, cache: cache, decode: decode, chunkEvents: chunkEvents);
     yield codec;
+
+    // 2. 再用 preview：中倍数分辨率，用来替代直接从 thumbnail 跳原图那一下的“糊”
+    final previewUrl = getThumbnailUrlForRemoteId(key.assetId, type: api.AssetMediaSize.preview);
+    final previewCodec = await ImageLoader.loadImageFromCache(
+      previewUrl,
+      cache: cache,
+      decode: decode,
+      chunkEvents: chunkEvents,
+    );
+    yield previewCodec;
 
     // Load the final remote image
     if (_useOriginal) {
