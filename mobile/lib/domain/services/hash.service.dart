@@ -7,6 +7,7 @@ import 'package:immich_mobile/domain/models/asset/base_asset.model.dart';
 import 'package:immich_mobile/infrastructure/repositories/local_album.repository.dart';
 import 'package:immich_mobile/infrastructure/repositories/local_asset.repository.dart';
 import 'package:immich_mobile/infrastructure/repositories/storage.repository.dart';
+import 'package:openapi/api.dart';
 import 'package:immich_mobile/platform/native_sync_api_ohos.g.dart';
 import 'package:logging/logging.dart';
 
@@ -19,6 +20,7 @@ class HashService {
   final DriftLocalAssetRepository _localAssetRepository;
   final StorageRepository _storageRepository;
   final NativeSyncApiOhos _nativeSyncApi;
+  final AssetsApi _assetsApi;
   final bool Function()? _cancelChecker;
   final _log = Logger('HashService');
 
@@ -27,6 +29,7 @@ class HashService {
     required DriftLocalAssetRepository localAssetRepository,
     required StorageRepository storageRepository,
     required NativeSyncApiOhos nativeSyncApi,
+    required AssetsApi assetsApi,
     bool Function()? cancelChecker,
     this.batchSizeLimit = kBatchHashSizeLimit,
     this.batchFileLimit = kBatchHashFileLimit,
@@ -34,7 +37,8 @@ class HashService {
        _localAssetRepository = localAssetRepository,
        _storageRepository = storageRepository,
        _cancelChecker = cancelChecker,
-       _nativeSyncApi = nativeSyncApi;
+       _nativeSyncApi = nativeSyncApi,
+       _assetsApi = assetsApi;
 
   bool get isCancelled => _cancelChecker?.call() ?? false;
   int hashedCount = 0;
@@ -193,6 +197,9 @@ class HashService {
     _log.fine("Hashed ${hashed.length}/${toHash.length} assets");
 
     await _localAssetRepository.updateHashes(hashed);
+
+    // Attempt to pair this batch with existing assets on server by checksum
+    //await _pairHashedAssetsWithServer(hashed); 事实证明通过Native侧获取的资产文件与通过电脑拷贝上传的文件Hash不匹配
     //await _storageRepository.clearCache();
 
     for (final path in tempPaths) {
@@ -206,6 +213,36 @@ class HashService {
       }
     }
   }
+
+/*
+  Future<void> _pairHashedAssetsWithServer(List<LocalAsset> hashedBatch) async {
+    if (hashedBatch.isEmpty) {
+      return;
+    }
+
+    try {
+      final dto = AssetBulkUploadCheckDto(
+        assets: hashedBatch
+            .where((asset) => asset.checksum != null && asset.checksum!.isNotEmpty)
+            .map((asset) => AssetBulkUploadCheckItem(id: asset.id, checksum: asset.checksum!))
+            .toList(),
+      );
+
+      if (dto.assets.isEmpty) {
+        return;
+      }
+
+      final res = await _assetsApi.checkBulkUpload(dto);
+      final matched = res?.results.where((r) => r.assetId != null).length ?? 0;
+      _log.fine("Bulk upload check matched $matched/${dto.assets.length} assets, response: $res");
+
+      final skipped = hashedBatch.where((a) => a.checksum == null || a.checksum!.isEmpty).length;
+      _log.fine('Bulk upload check: sending ${dto.assets.length}, skipped $skipped empty checksums');
+    } catch (e, s) {
+      _log.warning("Bulk upload check failed", e, s);
+    }
+  }
+  *
 }
 
 class _AssetToPath {
