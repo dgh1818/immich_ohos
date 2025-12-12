@@ -214,7 +214,7 @@ class HashService {
     }
   }
 
-/*
+  /*
   Future<void> _pairHashedAssetsWithServer(List<LocalAsset> hashedBatch) async {
     if (hashedBatch.isEmpty) {
       return;
@@ -242,7 +242,7 @@ class HashService {
       _log.warning("Bulk upload check failed", e, s);
     }
   }
-  *
+  */
 }
 
 class _AssetToPath {
