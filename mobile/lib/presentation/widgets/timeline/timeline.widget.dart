@@ -275,7 +275,7 @@ class _SliverTimelineState extends ConsumerState<_SliverTimeline> {
           final topPadding = context.padding.top + (widget.appBar == null ? 0 : kToolbarHeight) + 10;
 
           const scrubberBottomPadding = 100.0;
-          final bottomPadding = context.padding.bottom + (widget.appBar == null ? 0 : scrubberBottomPadding);
+          final bottomPadding = 150.0;
 
           final grid = CustomScrollView(
             primary: true,
