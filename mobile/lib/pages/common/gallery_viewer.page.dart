@@ -19,6 +19,7 @@ import 'package:immich_mobile/providers/app_settings.provider.dart';
 import 'package:immich_mobile/providers/asset_viewer/asset_stack.provider.dart';
 import 'package:immich_mobile/providers/asset_viewer/current_asset.provider.dart';
 import 'package:immich_mobile/providers/asset_viewer/is_motion_video_playing.provider.dart';
+import 'package:immich_mobile/providers/asset_viewer/video_player_controller_provider.dart';
 import 'package:immich_mobile/providers/asset_viewer/show_controls.provider.dart';
 import 'package:immich_mobile/providers/asset_viewer/video_player_value_provider.dart';
 //import 'package:immich_mobile/providers/cast.provider.dart';
@@ -412,6 +413,17 @@ class GalleryViewerPage extends HookConsumerWidget {
       return buildVideo(context, newAsset);
     }
 
+    void stopMotionPlayback() {
+      final current = ref.read(currentAssetProvider);
+      if (current?.isMotionPhoto == true && ref.read(isPlayingMotionVideoProvider)) {
+        ref.read(isPlayingMotionVideoProvider.notifier).playing = false;
+        //ui.SetHdr.setHdrMode(hdr: 0, is_image: true);
+        lastPlayingState = 0;
+        final controller = ref.read(videoPlayerControllerProvider(asset: current!)).value;
+        controller?.pause();
+      }
+    }
+
     return PopScope(
       // Change immersive mode back to normal "edgeToEdge" mode
       onPopInvokedWithResult: (didPop, _) {
@@ -422,93 +434,95 @@ class GalleryViewerPage extends HookConsumerWidget {
       },
       child: Scaffold(
         backgroundColor: Colors.black,
-        body: Stack(
-          children: [
-            PhotoViewGallery.builder(
-              key: const ValueKey('gallery'),
-              scaleStateChangedCallback: (state) {
-                final asset = ref.read(currentAssetProvider);
-                if (asset == null) {
-                  return;
-                }
-
-                //if (asset.isImage && !ref.read(isPlayingMotionVideoProvider)) {
-                if (asset.isImage && !isPlayingMotionVideo) {
-                  if (lastPlayingState == 1) {
-                    if (imageHdrState == 1) {
-                      ui.SetHdr.setHdrMode(hdr: 1, is_image: true);
-                    }
-                    if (imageHdrState == 0) {
-                      ui.SetHdr.setHdrMode(hdr: 0, is_image: true);
-                    }
+        body: Listener(
+          onPointerUp: (_) => stopMotionPlayback(),
+          child: Stack(
+            children: [
+              PhotoViewGallery.builder(
+                key: const ValueKey('gallery'),
+                scaleStateChangedCallback: (state) {
+                  final asset = ref.read(currentAssetProvider);
+                  if (asset == null) {
+                    return;
                   }
-                  lastPlayingState = 0;
-                  isZoomed.value = state != PhotoViewScaleState.initial;
-                  ref.read(showControlsProvider.notifier).show = !isZoomed.value;
-                }
-              },
-              gaplessPlayback: true,
-              loadingBuilder: (context, event, index) {
-                final asset = loadAsset(index);
-                return ClipRect(
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      BackdropFilter(filter: ui.ImageFilter.blur(sigmaX: 10, sigmaY: 10)),
-                      ImmichThumbnail(key: ValueKey(asset), asset: asset, fit: BoxFit.contain),
-                    ],
-                  ),
-                );
-              },
-              pageController: controller,
-              scrollPhysics: isZoomed.value
-                  ? const NeverScrollableScrollPhysics() // Don't allow paging while scrolled in
-                  : (Platform.isIOS
-                        ? const FastScrollPhysics() // Use bouncing physics for iOS
-                        : const FastScrollPhysics() // Use heavy physics for Android
-                          ),
-              itemCount: totalAssets.value,
-              scrollDirection: Axis.horizontal,
-              onPageChanged: (value, _) {
-                ref.read(isPlayingMotionVideoProvider.notifier).playing = false;
 
-                final next = currentIndex.value < value ? value + 1 : value - 1;
-
-                ref.read(hapticFeedbackProvider.notifier).selectionClick();
-
-                final newAsset = loadAsset(value);
-
-                currentIndex.value = value;
-                stackIndex.value = 0;
-
-                ref.read(currentAssetProvider.notifier).set(newAsset);
-                if (newAsset.isVideo || newAsset.isMotionPhoto) {
-                  ref.read(videoPlaybackValueProvider.notifier).reset();
-                }
-
-                final a = loadAsset(currentIndex.value);
-                final ImageProvider provider = ImmichImage.imageProvider(asset: a);
-
-                if (a.isImage) {
-                  lastPlayingState = 0;
-                  imageHdrState = -1;
-                  setDisplayMode(provider, context);
-                } else {
-                  ui.SetHdr.setHdrMode(hdr: 0, is_image: true);
-                }
-
-                // Then precache the next image
-
-                // Wait for page change animation to finish, then precache the next image
-                timers.value.add(
-                  Timer(const Duration(milliseconds: 400), () {
-                    if (!a.isImage) {
-                      ui.SetHdr.setHdrMode(hdr: -1, is_image: false);
+                  //if (asset.isImage && !ref.read(isPlayingMotionVideoProvider)) {
+                  if (asset.isImage && !isPlayingMotionVideo) {
+                    if (lastPlayingState == 1) {
+                      if (imageHdrState == 1) {
+                        ui.SetHdr.setHdrMode(hdr: 1, is_image: true);
+                      }
+                      if (imageHdrState == 0) {
+                        ui.SetHdr.setHdrMode(hdr: 0, is_image: true);
+                      }
                     }
-                    precacheNextImage(next);
-                  }),
-                );
-                /*
+                    lastPlayingState = 0;
+                    isZoomed.value = state != PhotoViewScaleState.initial;
+                    ref.read(showControlsProvider.notifier).show = !isZoomed.value;
+                  }
+                },
+                gaplessPlayback: true,
+                loadingBuilder: (context, event, index) {
+                  final asset = loadAsset(index);
+                  return ClipRect(
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        BackdropFilter(filter: ui.ImageFilter.blur(sigmaX: 10, sigmaY: 10)),
+                        ImmichThumbnail(key: ValueKey(asset), asset: asset, fit: BoxFit.contain),
+                      ],
+                    ),
+                  );
+                },
+                pageController: controller,
+                scrollPhysics: isZoomed.value
+                    ? const NeverScrollableScrollPhysics() // Don't allow paging while scrolled in
+                    : (Platform.isIOS
+                          ? const FastScrollPhysics() // Use bouncing physics for iOS
+                          : const FastScrollPhysics() // Use heavy physics for Android
+                            ),
+                itemCount: totalAssets.value,
+                scrollDirection: Axis.horizontal,
+                onPageChanged: (value, _) {
+                  ref.read(isPlayingMotionVideoProvider.notifier).playing = false;
+
+                  final next = currentIndex.value < value ? value + 1 : value - 1;
+
+                  ref.read(hapticFeedbackProvider.notifier).selectionClick();
+
+                  final newAsset = loadAsset(value);
+
+                  currentIndex.value = value;
+                  stackIndex.value = 0;
+
+                  ref.read(currentAssetProvider.notifier).set(newAsset);
+                  if (newAsset.isVideo || newAsset.isMotionPhoto) {
+                    ref.read(videoPlaybackValueProvider.notifier).reset();
+                  }
+
+                  final a = loadAsset(currentIndex.value);
+                  final ImageProvider provider = ImmichImage.imageProvider(asset: a);
+
+                  if (a.isImage) {
+                    lastPlayingState = 0;
+                    imageHdrState = -1;
+                    setDisplayMode(provider, context);
+                  } else {
+                    ui.SetHdr.setHdrMode(hdr: 0, is_image: true);
+                  }
+
+                  // Then precache the next image
+
+                  // Wait for page change animation to finish, then precache the next image
+                  timers.value.add(
+                    Timer(const Duration(milliseconds: 400), () {
+                      if (!a.isImage) {
+                        ui.SetHdr.setHdrMode(hdr: -1, is_image: false);
+                      }
+                      precacheNextImage(next);
+                    }),
+                  );
+                  /*
                 context.scaffoldMessenger.hideCurrentSnackBar();
 
                 // send image to casting if the server has it
@@ -531,36 +545,37 @@ class GalleryViewerPage extends HookConsumerWidget {
                 }
                 }
 */
-              },
-              builder: buildAsset,
-            ),
-            Positioned(
-              top: 0,
-              left: 0,
-              right: 0,
-              child: GalleryAppBar(key: const ValueKey('app-bar'), showInfo: showInfo),
-            ),
-            Positioned(
-              bottom: 0,
-              left: 0,
-              right: 0,
-              child: Column(
-                children: [
-                  GalleryStackedChildren(stackIndex),
-                  BottomGalleryBar(
-                    key: const ValueKey('bottom-bar'),
-                    renderList: renderList,
-                    totalAssets: totalAssets,
-                    controller: controller,
-                    showStack: showStack,
-                    stackIndex: stackIndex,
-                    assetIndex: currentIndex,
-                  ),
-                ],
+                },
+                builder: buildAsset,
               ),
-            ),
-            const DownloadPanel(),
-          ],
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                child: GalleryAppBar(key: const ValueKey('app-bar'), showInfo: showInfo),
+              ),
+              Positioned(
+                bottom: 0,
+                left: 0,
+                right: 0,
+                child: Column(
+                  children: [
+                    GalleryStackedChildren(stackIndex),
+                    BottomGalleryBar(
+                      key: const ValueKey('bottom-bar'),
+                      renderList: renderList,
+                      totalAssets: totalAssets,
+                      controller: controller,
+                      showStack: showStack,
+                      stackIndex: stackIndex,
+                      assetIndex: currentIndex,
+                    ),
+                  ],
+                ),
+              ),
+              const DownloadPanel(),
+            ],
+          ),
         ),
       ),
     );

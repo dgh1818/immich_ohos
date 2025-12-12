@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:ui' as ui;
 
 import 'package:auto_route/auto_route.dart';
-import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -322,7 +321,7 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
         print("get hdr is $isHdr");
 
         if (isHdr) {
-          ui.SetHdr.setHdrMode(hdr: 0, is_image: true);
+          ui.SetHdr.setHdrMode(hdr: 1, is_image: true);
         } else {
           ui.SetHdr.setHdrMode(hdr: 0, is_image: true);
         }
@@ -642,6 +641,16 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
     lastPlayingState = 1;
   }
 
+  void _stopMotionPlayback() {
+    final asset = ref.read(currentAssetNotifier);
+    if (asset?.isMotionPhoto == true && ref.read(isPlayingMotionVideoProvider)) {
+      ref.read(isPlayingMotionVideoProvider.notifier).playing = false;
+      //ui.SetHdr.setHdrMode(hdr: 0, is_image: true);
+      lastPlayingState = 0;
+      ref.read(videoPlayerControlsProvider.notifier).pause();
+    }
+  }
+
   PhotoViewGalleryPageOptions _assetBuilder(BuildContext ctx, int index) {
     scaffoldContext ??= ctx;
     final timelineService = ref.read(timelineServiceProvider);
@@ -791,20 +800,23 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
         appBar: const ViewerTopAppBar(),
         extendBody: true,
         extendBodyBehindAppBar: true,
-        body: PhotoViewGallery.builder(
-          gaplessPlayback: true,
-          loadingBuilder: _placeholderBuilder,
-          pageController: pageController,
-          scrollPhysics: CurrentPlatform.isIOS
-              ? const FastScrollPhysics() // Use bouncing physics for iOS
-              : const FastClampingScrollPhysics(), // Use heavy physics for Android
-          itemCount: totalAssets,
-          onPageChanged: _onPageChanged,
-          onPageBuild: _onPageBuild,
-          scaleStateChangedCallback: _onScaleStateChanged,
-          builder: _assetBuilder,
-          backgroundDecoration: BoxDecoration(color: backgroundColor),
-          enablePanAlways: true,
+        body: Listener(
+          onPointerUp: (_) => _stopMotionPlayback(),
+          child: PhotoViewGallery.builder(
+            gaplessPlayback: true,
+            loadingBuilder: _placeholderBuilder,
+            pageController: pageController,
+            scrollPhysics: CurrentPlatform.isIOS
+                ? const FastScrollPhysics() // Use bouncing physics for iOS
+                : const FastClampingScrollPhysics(), // Use heavy physics for Android
+            itemCount: totalAssets,
+            onPageChanged: _onPageChanged,
+            onPageBuild: _onPageBuild,
+            scaleStateChangedCallback: _onScaleStateChanged,
+            builder: _assetBuilder,
+            backgroundDecoration: BoxDecoration(color: backgroundColor),
+            enablePanAlways: true,
+          ),
         ),
         bottomNavigationBar: showingBottomSheet
             ? const SizedBox.shrink()
