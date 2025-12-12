@@ -12,6 +12,7 @@ import taskpool from '@ohos.taskpool';
 import { wantAgent, WantAgent } from '@kit.AbilityKit';
 import { notificationManager } from '@kit.NotificationKit';
 import { backgroundTaskManager } from '@kit.BackgroundTasksKit';
+import { deviceInfo } from '@kit.BasicServicesKit';
 
 @Concurrent
 async function hashFileTask(path: string): Promise<Uint8Array> {
@@ -449,21 +450,38 @@ export class MessagesImplBase extends NativeSyncApiOhos {
 
     try {
       wantAgent.getWantAgent(wantAgentInfo).then((wantAgentObj: WantAgent) => {
-        backgroundTaskManager.startBackgroundRunning(
-          this.ctx!,
-          backgroundTaskManager.BackgroundMode.DATA_TRANSFER,
-          wantAgentObj,
-          (err: BusinessError | undefined) => {
-            if (err) {
-              console.error(`Failed to startBackgroundRunning. Code=${err.code} msg=${err.message}`);
-              result.success(0);
-              return;
-            }
-            this.liveNotificationId = 100;
-            console.info("Succeeded in startBackgroundRunning.");
+        let list: Array<string> = ["dataTransfer"];
+        if(deviceInfo.sdkApiVersion>=21) {
+          backgroundTaskManager.startBackgroundRunning(
+            this.ctx!,
+            list,
+            wantAgentObj,
+          ).then((res: backgroundTaskManager.ContinuousTaskNotification) => {
+            console.info("Operation startBackgroundRunning succeeded");
+            // 对于上传下载类的长时任务，应用可以使用res中返回的notificationId来更新通知，比如发送带进度条的模板通知
+            this.liveNotificationId = res.notificationId;
             result.success(this.liveNotificationId);
-          }
-        );
+          }).catch((error: BusinessError) => {
+            result.success(0);
+            console.error(`Operation startBackgroundRunning failed. code is ${error.code} message is ${error.message}`);
+          });;
+        } else {
+          backgroundTaskManager.startBackgroundRunning(
+            this.ctx!,
+            backgroundTaskManager.BackgroundMode.DATA_TRANSFER,
+            wantAgentObj,
+            (err: BusinessError | undefined) => {
+              if (err) {
+                console.error(`Failed to startBackgroundRunning. Code=${err.code} msg=${err.message}`);
+                result.success(0);
+                return;
+              }
+              this.liveNotificationId = 100;
+              console.info("Succeeded in startBackgroundRunning.");
+              result.success(this.liveNotificationId);
+            }
+          );
+        };
       }).catch((err: BusinessError) => {
         console.error(`getWantAgent failed code=${err.code} msg=${err.message}`);
         result.success(0);
@@ -479,7 +497,7 @@ export class MessagesImplBase extends NativeSyncApiOhos {
    * 更新长时任务进度
    */
   public async updateBackgroundTransferProgress(progress: number , title: string , fileName: string , result: Result<void>) {
-    const targetId = 100;
+    const targetId = this.liveNotificationId;
 
     let request: notificationManager.NotificationRequest = {
       id: targetId,
@@ -495,7 +513,8 @@ export class MessagesImplBase extends NativeSyncApiOhos {
       template: {
         name: 'downloadTemplate',
         data: { title: title, fileName: fileName, progressValue: progress }
-      }
+      },
+      notificationSlotType:notificationManager.SlotType.SERVICE_INFORMATION
     }
 
     try {
@@ -504,7 +523,7 @@ export class MessagesImplBase extends NativeSyncApiOhos {
     } catch (e) {
       const err = e as BusinessError;
       console.error(`publish live view fail code=${err.code} msg=${err.message}`);
-      result.error(err as Error);
+      result.success();
     }
   }
 
