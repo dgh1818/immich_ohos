@@ -43,7 +43,8 @@ export class MessagesImplBase extends NativeSyncApiOhos {
     const group = new taskpool.TaskGroup();
 
     for (const p of paths) {
-      const task = new taskpool.Task(hashFileTask, p);
+      let path = new fileUri.FileUri(p).path;
+      const task = new taskpool.Task(hashFileTask, path);
       group.addTask(task);
     }
 
@@ -313,10 +314,18 @@ export class MessagesImplBase extends NativeSyncApiOhos {
     let fetch_result_album =
       await phAccessHelper.getAlbums(photoAccessHelper.AlbumType.USER, photoAccessHelper.AlbumSubtype.USER_GENERIC,
         fetchOptions)
-    let album = await fetch_result_album.getFirstObject();
+    let album:photoAccessHelper.Album;
+    if(fetch_result_album.getCount()!=0) {
+      album = await fetch_result_album.getFirstObject();
+    } else {
+      let fetch_result_album =
+        await phAccessHelper.getAlbums(photoAccessHelper.AlbumType.SYSTEM, photoAccessHelper.AlbumSubtype.USER_GENERIC,
+          fetchOptions)
+      album = await fetch_result_album.getFirstObject();
+    }
+
     let photoFetchResult = await album.getAssets(photoFetchOptions);
-    let photoAsset = await photoFetchResult.getAllObjects();
-    let assetsUri = photoAsset.map(pa => pa.uri);
+    let assetsUri:string[] = [];
 
     let i: number = 0;
 
@@ -330,6 +339,7 @@ export class MessagesImplBase extends NativeSyncApiOhos {
       if (position == photoAccessHelper.PositionType.CLOUD) {
         continue;
       }
+      assetsUri.push(current_asset.uri);
     }
 
     return result.success(assetsUri);
@@ -625,9 +635,7 @@ export class MessagesImplBase extends NativeSyncApiOhos {
         }
       }
 
-      let id = current_asset.get(photoAccessHelper.PhotoKeys.URI).valueOf() as string;
-
-      id = new fileUri.FileUri(id).path;
+      let id = current_asset.uri;
 
       let res: boolean = false;
 

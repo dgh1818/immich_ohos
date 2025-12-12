@@ -224,10 +224,10 @@ export class MessagesImplBaseThumb extends ThumbnailApi {
     //, signal: CancellationSignal
   ): Promise<PixelMap> {
     //signal.throwIfCanceled()
-    let filePath = id;
+    let filePath = new fileUri.FileUri(id).path;;
     let opts: image.DecodingOptions;
 
-    const imageSource: image.ImageSource = image.createImageSource(id);
+    const imageSource: image.ImageSource = image.createImageSource(filePath);
 
     const imageInfo = await imageSource.getImageInfo();
 
