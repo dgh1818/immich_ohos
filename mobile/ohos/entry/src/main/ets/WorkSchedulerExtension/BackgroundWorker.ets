@@ -13,6 +13,7 @@ import preferences from "@ohos.data.preferences";
 import { BackgroundWorkerApiImpl } from "./BackgroundWorkerApiImpl";
 import EntryAbility from "../entryability/EntryAbility";
 import { notificationManager } from '@kit.NotificationKit';
+import { DartEntrypoint } from '@ohos/flutter_ohos/src/main/ets/embedding/engine/dart/DartExecutor';
 
 export class Deferred<T> {
   public promise: Promise<T>;
@@ -59,6 +60,9 @@ class BackgroundWorker extends WorkSchedulerExtensionAbility {
   }
 
   onWorkStart(workInfo: workScheduler.WorkInfo) {
+    // Reset state for each run
+    BackgroundWorker.isComplete = false;
+    BackgroundWorker.completionHandler = new Deferred<boolean>();
     BackgroundWorker.backgroundWorkerBgHostApiImpl = new BackgroundWorkerBgHostApiImpl();
     this.context.getApplicationContext();
     BackgroundWorker.workerInfo = workInfo;
@@ -66,7 +70,8 @@ class BackgroundWorker extends WorkSchedulerExtensionAbility {
     console.info(this.TAG, "Starting background upload worker")
     BackgroundWorker.mainAbility = new EntryAbility();
 
-    this.loader.ensureInitializationComplete;
+    // Ensure Flutter runtime is ready before creating an engine
+    this.loader.ensureInitializationComplete(null);
     BackgroundWorker.engine = new FlutterEngine(this.ctx, null, null, null);
     BackgroundWorker.mainAbility.registerPlugins(BackgroundWorker.mainAbility.getAbility().context,BackgroundWorker.engine)
 
@@ -78,9 +83,14 @@ class BackgroundWorker extends WorkSchedulerExtensionAbility {
       BackgroundWorker.backgroundWorkerBgHostApiImpl,
     )
 
+    // Kick off the Dart entrypoint that runs background sync
+    const entrypoint = new DartEntrypoint(
+      this.loader.findAppBundlePath(),
+      "package:immich_mobile/domain/services/background_worker.service.dart",
+      "backgroundSyncNativeEntrypoint"
+    );
+    BackgroundWorker.engine.dartExecutor.executeDartEntrypoint(entrypoint);
     return BackgroundWorker.completionHandler;
-
-    //BackgroundWorker.engine.dartExecutor.executeDartEntrypoint(new DartEntrypoint(this.loader.findAppBundlePath(),"package:immich_mobile/domain/services/background_worker.service.dart","backgroundSyncNativeEntrypoint"));
   }
 
   onWorkStop(workInfo: workScheduler.WorkInfo) {
@@ -139,7 +149,7 @@ class BackgroundWorkerBgHostApiImpl extends BackgroundWorkerBgHostApi {
           text: content ?? '',
         },
       },
-      notificationSlotType: notificationManager.SlotType.SERVICE_INFORMATION,
+      notificationSlotType: notificationManager.SlotType.OTHER_TYPES,
     };
 
     try {
@@ -187,16 +197,15 @@ class BackgroundWorkerBgHostApiImpl extends BackgroundWorkerBgHostApi {
    * - Parameter result: The result returned from a Flutter API call
    */
   private handleHostResult(result: boolean) {
-    workScheduler.stopWork(BackgroundWorker.workerInfo);
-
     if (result) {
+      workScheduler.stopWork(BackgroundWorker.workerInfo);
       console.log("Background Worker finished");
-    } else {
-      console.error("Background Worker failed");
-      throw new Error("Background Worker failed");
+      this.complete(true);
+      return;
     }
 
-    this.complete(result);
+    console.error("Background Worker failed");
+    this.complete(false);
   }
 
   /**

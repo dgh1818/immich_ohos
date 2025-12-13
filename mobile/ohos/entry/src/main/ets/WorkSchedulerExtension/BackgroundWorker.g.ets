@@ -19,7 +19,7 @@ export class FlutterError implements Error {
   /** The error stack. */
   public stack?: string;
 
-  constructor(code: string, name: string,  message: string, stack?: string) 
+  constructor(code: string, name: string,  message: string, stack?: string)
   {
     this.code = code;
     this.name = name;
@@ -232,7 +232,7 @@ export class BackgroundWorkerFlutterApi {
 
   onIosUpload(isRefreshArg: boolean,maxSecondsArg: number, callback: Reply<void>) {
     const channelName: string = 'dev.flutter.pigeon.immich_mobile.BackgroundWorkerFlutterApi.onIosUpload';
-    let channel: BasicMessageChannel<Object> = 
+    let channel: BasicMessageChannel<Object> =
         new BasicMessageChannel<Object>(
             this.binaryMessenger, channelName, BackgroundWorkerFlutterApi.getCodec());
     channel.send(
@@ -252,12 +252,12 @@ export class BackgroundWorkerFlutterApi {
           }  else {
             let connErr:ESObject = new FlutterError('channel-error', "Unable to establish connection on channel: " + channelName + ".", "")
             callback.reply(connErr);
-          } 
+          }
         });
   }
   onAndroidUpload(callback: Reply<void>):void {
     const channelName: string = 'dev.flutter.pigeon.immich_mobile.BackgroundWorkerFlutterApi.onAndroidUpload';
-    let channel: BasicMessageChannel<Object> = 
+    let channel: BasicMessageChannel<Object> =
         new BasicMessageChannel<Object>(
             this.binaryMessenger, channelName, BackgroundWorkerFlutterApi.getCodec());
     channel.send(
@@ -277,12 +277,12 @@ export class BackgroundWorkerFlutterApi {
           }  else {
             let connErr:ESObject = new FlutterError('channel-error', "Unable to establish connection on channel: " + channelName + ".", "")
             callback.reply(connErr);
-          } 
+          }
         });
   }
   cancel(callback: Reply<void>):void {
     const channelName: string = 'dev.flutter.pigeon.immich_mobile.BackgroundWorkerFlutterApi.cancel';
-    let channel: BasicMessageChannel<Object> = 
+    let channel: BasicMessageChannel<Object> =
         new BasicMessageChannel<Object>(
             this.binaryMessenger, channelName, BackgroundWorkerFlutterApi.getCodec());
     channel.send(
@@ -302,7 +302,7 @@ export class BackgroundWorkerFlutterApi {
           }  else {
             let connErr:ESObject = new FlutterError('channel-error', "Unable to establish connection on channel: " + channelName + ".", "")
             callback.reply(connErr);
-          } 
+          }
         });
   }
 }

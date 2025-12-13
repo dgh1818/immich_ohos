@@ -14,6 +14,22 @@ import { notificationManager } from '@kit.NotificationKit';
 import { backgroundTaskManager } from '@kit.BackgroundTasksKit';
 import { deviceInfo } from '@kit.BasicServicesKit';
 
+import { relationalStore } from '@kit.ArkData';
+
+interface MediaRecord {
+  uri: string;
+  mtime: number;
+  size: number;
+}
+
+const DB_NAME = 'media_snapshot.db';
+const TABLE = 'media';
+const CREATE_SQL = `
+  CREATE TABLE IF NOT EXISTS ${TABLE}(
+    uri TEXT PRIMARY KEY,
+    mtime INTEGER,
+    size INTEGER
+  )`;
 @Concurrent
 async function hashFileTask(path: string): Promise<Uint8Array> {
   return await new Promise<Uint8Array>((resolve) => {
@@ -524,7 +540,7 @@ export class MessagesImplBase extends NativeSyncApiOhos {
         name: 'downloadTemplate',
         data: { title: title, fileName: fileName, progressValue: progress }
       },
-      notificationSlotType:notificationManager.SlotType.SERVICE_INFORMATION
+      notificationSlotType:notificationManager.SlotType.OTHER_TYPES
     }
 
     try {
@@ -618,6 +634,7 @@ export class MessagesImplBase extends NativeSyncApiOhos {
     let photoFetchResult = await album.getAssets(photoFetchOptions);
     //await photoFetchResult.getFirstObject();
 
+    const snapshotRows: MediaRecord[] = [];
     while (!photoFetchResult.isAfterLast()) {
       let current_asset = await photoFetchResult.getNextObject();
       let uri_input: string[] = [current_asset.uri];
@@ -645,6 +662,7 @@ export class MessagesImplBase extends NativeSyncApiOhos {
         current_asset.get(photoAccessHelper.PhotoKeys.DATE_ADDED) as number;
 
       let modifiedAt = current_asset.get(photoAccessHelper.PhotoKeys.DATE_MODIFIED).valueOf() as number;
+      let size = current_asset.get(photoAccessHelper.PhotoKeys.SIZE).valueOf() as number;
       let width = current_asset.get(photoAccessHelper.PhotoKeys.WIDTH).valueOf() as number;
       let height = current_asset.get(photoAccessHelper.PhotoKeys.HEIGHT).valueOf() as number;
       let duration =
@@ -673,8 +691,63 @@ export class MessagesImplBase extends NativeSyncApiOhos {
       )
       console.error('get assets for album' + ':' + id);
       assetResult.push(asset);
+      snapshotRows.push({ uri: id, mtime: modifiedAt ?? 0, size: size ?? 0 });
+    }
+    try {
+      if (!this.store && this.ctx) {
+        await this.initStore(this.ctx);
+      }
+      if (this.store) {
+        await this.replaceSnapshot(snapshotRows);
+      }
+    } catch (e) {
+      console.error(`${this.TAG} replaceSnapshot failed`, e);
     }
     result?.success(assetResult);
     return;
+  }
+
+  private store?: relationalStore.RdbStore;
+
+  public async initStore(ctx: Context) {
+    this.store = await new Promise((resolve, reject) => {
+      relationalStore.getRdbStore(
+        ctx,
+        { name: DB_NAME, securityLevel: relationalStore.SecurityLevel.S3 },
+        async (err, s) => {
+          if (err) return reject(err);
+          try { await s.execute(CREATE_SQL); } catch (e) { return reject(e); }
+          resolve(s);
+        },
+      );
+    });
+  }
+
+  public async replaceSnapshot(rows: MediaRecord[]) {
+    if (!this.store) throw new Error('store not init');
+    await this.store.execute(`DELETE FROM ${TABLE}`);
+    for (const row of rows) {
+      const values: relationalStore.ValuesBucket = {
+        uri: row.uri,
+        mtime: row.mtime,
+        size: row.size,
+      };
+      await this.store.insert(TABLE, values);
+    }
+  }
+
+  public async loadSnapshot(): Promise<Map<string, MediaRecord>> {
+    if (!this.store) throw new Error('store not init');
+    const rs = await this.store.querySql(`SELECT uri, mtime, size FROM ${TABLE}`);
+    const map = new Map<string, MediaRecord>();
+    while (rs.goToNextRow()) {
+      map.set(rs.getString(0), {
+        uri: rs.getString(0),
+        mtime: rs.getLong(1),
+        size: rs.getLong(2),
+      });
+    }
+    rs.close();
+    return map;
   }
 }

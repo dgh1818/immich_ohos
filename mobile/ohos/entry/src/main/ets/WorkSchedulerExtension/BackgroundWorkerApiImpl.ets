@@ -14,6 +14,8 @@ export class BackgroundWorkerApiImpl extends BackgroundWorkerFgHostApi {
   }
 
   override enable() {
+    // Mirror Android: only enqueue the media observer. It will re-enqueue itself
+    // and trigger the background worker when it fires.
     BackgroundWorkerApiImpl.enqueueMediaObserver(this.ctx!)
   }
 
@@ -47,10 +49,11 @@ export class BackgroundWorkerApiImpl extends BackgroundWorkerFgHostApi {
   static MEDIAOBSERVER_WORKER_INFO:workScheduler.WorkInfo = {
     workId: BackgroundWorkerApiImpl.MediaObserver_WORKER_ID,
     bundleName: 'com.dgh18.immich',
-    abilityName: 'MediaObserver',
+    abilityName: 'MediaObserverScheduler',
     batteryStatus: workScheduler.BatteryStatus.BATTERY_STATUS_OKAY,
     isCharging:true,
     isDeepIdle:true,
+    networkType: workScheduler.NetworkType.NETWORK_TYPE_WIFI,
   };
 
   static updateUploadEnabled(context: common.ApplicationContext, enabled: Boolean) {
@@ -61,23 +64,9 @@ export class BackgroundWorkerApiImpl extends BackgroundWorkerFgHostApi {
 
   }
 
-  public static enqueueMediaObserver(ctx: common.ApplicationContext) {
-    // val constraints = Constraints.Builder()
-    //   .addContentUriTrigger(MediaStore.Images.Media.INTERNAL_CONTENT_URI, true)
-    //   .addContentUriTrigger(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, true)
-    //   .addContentUriTrigger(MediaStore.Video.Media.INTERNAL_CONTENT_URI, true)
-    //   .addContentUriTrigger(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, true)
-    //   .setTriggerContentUpdateDelay(5, TimeUnit.SECONDS)
-    //   .setTriggerContentMaxDelay(1, TimeUnit.MINUTES)
-    //   .build()
-    let constraints: workScheduler.WorkInfo = {
-      workId: BackgroundWorkerApiImpl.MediaObserver_WORKER_ID,
-      bundleName: 'com.dgh18.immich',
-      abilityName: 'MediaObserver',
-      batteryStatus: workScheduler.BatteryStatus.BATTERY_STATUS_OKAY,
-      isCharging:true,
-      isDeepIdle:true,
-    }
+
+  public static async enqueueMediaObserver(ctx: common.ApplicationContext) {
+    const constraints: workScheduler.WorkInfo = BackgroundWorkerApiImpl.MEDIAOBSERVER_WORKER_INFO;
 
     BackgroundWorkerApiImpl.MEDIAOBSERVER_WORKER_INFO = constraints;
     workScheduler.startWork(constraints);
@@ -85,24 +74,4 @@ export class BackgroundWorkerApiImpl extends BackgroundWorkerFgHostApi {
     BackgroundWorkerApiImpl.MediaObserver_WORKER_ID);
   }
 
-  public static enqueueBackgroundWorker(ctx: common.ApplicationContext) {
-    let constraints: workScheduler.WorkInfo = {
-      workId: BackgroundWorkerApiImpl.BACKGROUND_WORKER_ID,
-      bundleName: 'com.dgh18.immich',
-      abilityName: 'BackgroundWorker',
-      batteryStatus: workScheduler.BatteryStatus.BATTERY_STATUS_OKAY,
-      //.setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 1, TimeUnit.MINUTES)
-    }
-
-    BackgroundWorkerApiImpl.BACKGROUND_WORKER_INFO = constraints;
-
-    workScheduler.startWork(constraints);
-    console.info(BackgroundWorkerApiImpl.TAG, "Enqueued background worker with name" + BackgroundWorkerApiImpl.BACKGROUND_WORKER_NAME +
-    BackgroundWorkerApiImpl.BACKGROUND_WORKER_ID);
-  }
 }
-
-
-
-
-
