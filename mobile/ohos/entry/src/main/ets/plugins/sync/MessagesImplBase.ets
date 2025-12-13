@@ -3,6 +3,7 @@ import { photoAccessHelper, sendablePhotoAccessHelper } from '@kit.MediaLibraryK
 import { dataSharePredicates } from '@kit.ArkData';
 import { fileUri, hash } from '@kit.CoreFileKit';
 import { fileUriService } from '@kit.ScenarioFusionKit';
+import abilityAccessCtrl from '@ohos.abilityAccessCtrl';
 
 import { NativeSyncApiOhos, SyncDelta, PlatformAsset, PlatformAlbum, Result } from './Messages_ohos.g'
 import { BusinessError } from '@kit.BasicServicesKit';
@@ -155,6 +156,13 @@ export class MessagesImplBase extends NativeSyncApiOhos {
 
   public async getAlbums(result: Result<Array<PlatformAlbum>>) {
     console.error("MessagesImplBase 4 ")
+    let atManager = abilityAccessCtrl.createAtManager();
+    atManager.requestPermissionsFromUser(this.ctx, ["ohos.permission.MEDIA_LOCATION","ohos.permission.READ_MEDIA","ohos.permission.WRITE_MEDIA"]).then((data) => {
+      //console.info("data permissions:" + data.permissions);
+
+    }).catch((err: BusinessError) => {
+      console.error(`code: ${err.code}, message: ${err.message}`);
+    })
     let albums: PlatformAlbum[] = [];
     //let albumsCount: Map<string, number>;
 
@@ -300,6 +308,13 @@ export class MessagesImplBase extends NativeSyncApiOhos {
 
   public async getAssetIdsForAlbum(albumPath: string, result: Result<Array<string>>) {
     console.error("MessagesImplBase 6 ")
+    let atManager = abilityAccessCtrl.createAtManager();
+    await atManager.requestPermissionsFromUser(this.ctx, ["ohos.permission.MEDIA_LOCATION","ohos.permission.READ_MEDIA","ohos.permission.WRITE_MEDIA"]).then((data) => {
+      //console.info("data permissions:" + data.permissions);
+
+    }).catch((err: BusinessError) => {
+      console.error(`code: ${err.code}, message: ${err.message}`);
+    })
 
     //let albumUri = fileUri.getUriFromPath(albumPath);
 
@@ -363,6 +378,13 @@ export class MessagesImplBase extends NativeSyncApiOhos {
 
   public async getAssetsCountSince(albumPath: string, timestamp: number, result: Result<number>) {
     console.error("MessagesImplBase 7 ")
+    let atManager = abilityAccessCtrl.createAtManager();
+    await atManager.requestPermissionsFromUser(this.ctx, ["ohos.permission.MEDIA_LOCATION","ohos.permission.READ_MEDIA","ohos.permission.WRITE_MEDIA"]).then((data) => {
+      //console.info("data permissions:" + data.permissions);
+
+    }).catch((err: BusinessError) => {
+      console.error(`code: ${err.code}, message: ${err.message}`);
+    })
     const phAccessHelper = photoAccessHelper.getPhotoAccessHelper(this.ctx);
 
     let albumId: photoAccessHelper.AlbumKeys = photoAccessHelper.AlbumKeys.URI;
@@ -585,6 +607,14 @@ export class MessagesImplBase extends NativeSyncApiOhos {
 
   public async getAssetsForAlbum(albumId: string, updatedTimeCond?: number, result?: Result<Array<PlatformAsset>>) {
     console.error("MessagesImplBase 8 ")
+    let atManager = abilityAccessCtrl.createAtManager();
+    await atManager.requestPermissionsFromUser(this.ctx, ["ohos.permission.MEDIA_LOCATION","ohos.permission.READ_MEDIA","ohos.permission.WRITE_MEDIA"]).then((data) => {
+      // console.info("data permissions:" + data.permissions);
+      // console.info("data permissions:" + data.authResults);
+
+    }).catch((err: BusinessError) => {
+      console.error(`code: ${err.code}, message: ${err.message}`);
+    })
     let predicates_album: dataSharePredicates.DataSharePredicates = new dataSharePredicates.DataSharePredicates();
 
     let albumName: photoAccessHelper.AlbumKeys = photoAccessHelper.AlbumKeys.URI;

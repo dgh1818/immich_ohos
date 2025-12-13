@@ -84,6 +84,13 @@
         },
       },
       {
+        name: "ohos.permission.MEDIA_LOCATION",
+        reason: "$string:backup_desc",
+        usedScene: {
+          when: "always",
+        },
+      },
+      {
         name: "ohos.permission.WRITE_IMAGEVIDEO",
         reason: "$string:backup_desc",
         usedScene: {
