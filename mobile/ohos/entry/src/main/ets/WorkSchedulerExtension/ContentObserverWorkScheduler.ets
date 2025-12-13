@@ -1,5 +1,5 @@
 import { workScheduler, WorkSchedulerExtensionAbility } from "@kit.BackgroundTasksKit";
-import {BackupWorker} from "./BackupWorkerImpl"
+import {BackupWorker} from "../workers/BackupWorkerImpl"
 import { ThreadWorkerGlobalScope, worker } from "@kit.ArkTS";
 import { common, sendableContextManager } from '@kit.AbilityKit';
 import { SendableObject } from "../plugins/BackgroundServicePlugin";

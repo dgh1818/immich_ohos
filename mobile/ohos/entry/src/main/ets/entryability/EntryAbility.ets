@@ -20,8 +20,8 @@ import { NativeSyncApiOhos } from '../../../main/ets/plugins/sync/Messages_ohos.
 import { ThumbnailApi } from '../../../main/ets/plugins/Images/Messages_ohos.g';
 import {MessagesImplBase} from '../plugins/sync/MessagesImplBase'
 import { MessagesImplBaseThumb } from '../plugins/Images/ThumbnailsImpl';
-import { BackgroundWorkerApiImpl } from '../workers/BackgroundWorkerApiImpl';
-import { BackgroundWorkerFgHostApi } from '../workers/BackgroundWorker.g';
+import { BackgroundWorkerApiImpl } from '../WorkSchedulerExtension/BackgroundWorkerApiImpl';
+import { BackgroundWorkerFgHostApi } from '../WorkSchedulerExtension/BackgroundWorker.g';
 import { ConnectivityApi } from '../plugins/connectivity/Connectivity.g';
 import { ConnectivityApiImpl } from '../plugins/connectivity/ConnectivityApiImpl';
 

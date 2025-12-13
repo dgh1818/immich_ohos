@@ -58,13 +58,18 @@
 //        "type": "workScheduler"
 //      }
       {
-        "name": "MediaObserver",
-        "srcEntry": "./ets/plugins/Background/MediaObserver.ets",
+        "name": "MediaObserverScheduler",
+        "srcEntry": "./ets/WorkSchedulerExtension/ContentObserverWorkScheduler.ets",
         "type": "workScheduler"
       },
       {
-        "name": "BackgroundWorker",
-        "srcEntry": "./ets/workers/BackgroundWorker.ets",
+        "name": "BackupWorkScheduler",
+        "srcEntry": "./ets/WorkSchedulerExtension/BackupWorkScheduler.ets",
+        "type": "workScheduler"
+      },
+      {
+        "name": "BackgroundWorkScheduler",
+        "srcEntry": "./ets/WorkSchedulerExtension/BackgroundWorker.ets",
         "type": "workScheduler"
       }
     ],
