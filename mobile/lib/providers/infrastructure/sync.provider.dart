@@ -37,5 +37,6 @@ final hashServiceProvider = Provider(
     localAssetRepository: ref.watch(localAssetRepository),
     storageRepository: ref.watch(storageRepositoryProvider),
     nativeSyncApi: ref.watch(nativeSyncApiProvider),
+    assetsApi: ref.watch(apiServiceProvider).assetsApi,
   ),
 );
