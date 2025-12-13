@@ -48,30 +48,20 @@
     ],
     "extensionAbilities": [
 //      {
-//        "name": "BackupWorkerTask",
-//        "srcEntry": "./ets/workers/BackupWorkScheduler.ets",
-//        "type": "workScheduler"
-//      },
-//      {
 //        "name": "ContentObserverWorkerTask",
 //        "srcEntry": "./ets/workers/ContentObserverWorkScheduler.ets",
 //        "type": "workScheduler"
-//      }
+//      }ContentObserverWorkScheduler
       {
         "name": "MediaObserverScheduler",
-        "srcEntry": "./ets/WorkSchedulerExtension/ContentObserverWorkScheduler.ets",
+        "srcEntry": "./ets/WorkSchedulerExtension/MediaObserverScheduler.ets",
         "type": "workScheduler"
       },
       {
-        "name": "BackupWorkScheduler",
-        "srcEntry": "./ets/WorkSchedulerExtension/BackupWorkScheduler.ets",
-        "type": "workScheduler"
-      },
-      {
-        "name": "BackgroundWorkScheduler",
+        "name": "BackgroundWorker",
         "srcEntry": "./ets/WorkSchedulerExtension/BackgroundWorker.ets",
         "type": "workScheduler"
-      }
+      },
     ],
     requestPermissions: [
       {

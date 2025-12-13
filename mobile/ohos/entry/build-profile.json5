@@ -1,13 +1,6 @@
 {
   "apiType": 'stageMode',
   "buildOption": {
-    "sourceOption": {
-      "workers": [
-        "./src/main/ets/workers/BackupWorker.ets",
-        "./src/main/ets/workers/ContentObserverWorker.ets",
-      ]
-    },
-
     "externalNativeOptions": {
       "abiFilters": [
         "arm64-v8a"
@@ -16,7 +9,6 @@
     },
     "sourceOption": {
       "workers": [
-        "./src/main/ets/workers/ContentObserverWorker.ets",
         //上架屏蔽
         "./src/main/ets/workers/BackupWorker.ets"
       ]
