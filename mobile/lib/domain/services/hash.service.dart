@@ -1,24 +1,22 @@
-import 'dart:convert';
-import 'dart:io';
-
+import 'package:flutter/services.dart';
 import 'package:immich_mobile/constants/constants.dart';
 import 'package:immich_mobile/domain/models/album/local_album.model.dart';
 import 'package:immich_mobile/domain/models/asset/base_asset.model.dart';
 import 'package:immich_mobile/infrastructure/repositories/local_album.repository.dart';
 import 'package:immich_mobile/infrastructure/repositories/local_asset.repository.dart';
-import 'package:immich_mobile/infrastructure/repositories/storage.repository.dart';
-import 'package:openapi/api.dart';
 import 'package:immich_mobile/platform/native_sync_api_ohos.g.dart';
 import 'package:logging/logging.dart';
 
+const String _kHashCancelledCode = "HASH_CANCELLED";
+
+import 'dart:io';
+import 'package:openapi/api.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
 class HashService {
-  final int batchSizeLimit;
-  final int batchFileLimit;
+  final int _batchSize;
   final DriftLocalAlbumRepository _localAlbumRepository;
   final DriftLocalAssetRepository _localAssetRepository;
-  final StorageRepository _storageRepository;
   final NativeSyncApiOhos _nativeSyncApi;
   final AssetsApi _assetsApi;
   final bool Function()? _cancelChecker;
@@ -27,17 +25,16 @@ class HashService {
   HashService({
     required DriftLocalAlbumRepository localAlbumRepository,
     required DriftLocalAssetRepository localAssetRepository,
-    required StorageRepository storageRepository,
+    required NativeSyncApi nativeSyncApi,
     required NativeSyncApiOhos nativeSyncApi,
-    required AssetsApi assetsApi,
     bool Function()? cancelChecker,
-    this.batchSizeLimit = kBatchHashSizeLimit,
-    this.batchFileLimit = kBatchHashFileLimit,
+    int? batchSize,
   }) : _localAlbumRepository = localAlbumRepository,
        _localAssetRepository = localAssetRepository,
-       _storageRepository = storageRepository,
        _cancelChecker = cancelChecker,
        _nativeSyncApi = nativeSyncApi,
+       _batchSize = batchSize ?? kBatchHashFileLimit;
+
        _assetsApi = assetsApi;
 
   bool get isCancelled => _cancelChecker?.call() ?? false;
@@ -49,31 +46,40 @@ class HashService {
     WakelockPlus.enable();
 
     final Stopwatch stopwatch = Stopwatch()..start();
-    // Sorted by backupSelection followed by isCloud
-    final localAlbums = await _localAlbumRepository.getAll(
-      sortBy: {SortLocalAlbumsBy.backupSelection, SortLocalAlbumsBy.isIosSharedAlbum},
-    );
+    try {
+      // Sorted by backupSelection followed by isCloud
+      final localAlbums = await _localAlbumRepository.getBackupAlbums();
 
-    if (Platform.isOhos) {
-      try {
-        await _nativeSyncApi.startBackgroundTransfer();
-      } catch (_) {
-        // ignore start failures
-      }
-    }
-
-    for (final album in localAlbums) {
-      if (isCancelled) {
-        _log.warning("Hashing cancelled. Stopped processing albums.");
-        break;
+      if (Platform.isOhos) {
+        try {
+          await _nativeSyncApi.startBackgroundTransfer();
+        } catch (_) {
+          // ignore start failures
+        }
       }
 
-      final assetsToHash = await _localAlbumRepository.getAssetsToHash(album.id);
-      toHashCount = assetsToHash.length;
-      hashedCount = 0;
-      if (assetsToHash.isNotEmpty) {
-        await _hashAssets(album, assetsToHash);
+      for (final album in localAlbums) {
+        if (isCancelled) {
+          _log.warning("Hashing cancelled. Stopped processing albums.");
+          break;
+        }
+
+        final assetsToHash = await _localAlbumRepository.getAssetsToHash(album.id);
+
+        toHashCount = assetsToHash.length;
+        hashedCount = 0;
+
+        if (assetsToHash.isNotEmpty) {
+          await _hashAssets(album, assetsToHash);
+        }
       }
+    } on PlatformException catch (e) {
+      if (e.code == _kHashCancelledCode) {
+        _log.warning("Hashing cancelled by platform");
+        return;
+      }
+    } catch (e, s) {
+      _log.severe("Error during hashing", e, s);
     }
 
     WakelockPlus.disable();
@@ -94,9 +100,11 @@ class HashService {
   /// with hash for those that were successfully hashed. Hashes are looked up in a table
   /// [LocalAssetHashEntity] by local id. Only missing entries are newly hashed and added to the DB.
   Future<void> _hashAssets(LocalAlbum album, List<LocalAsset> assetsToHash) async {
+    final toHash = <String, LocalAsset>{};
+    final cloudTempPaths = <String>[];
+
     int bytesProcessed = 0;
     int videosInBatch = 0;
-    final toHash = <_AssetToPath>[];
     File? file;
 
     for (final asset in assetsToHash) {
@@ -115,24 +123,28 @@ class HashService {
           );
           continue;
         }
-        toHash.add(_AssetToPath(asset: asset, path: file.path, deleteAfterHash: true));
+        cloudTempPaths.add(file.path);
+        toHash[asset.id] = asset;
       } else {
-        toHash.add(_AssetToPath(asset: asset, path: asset.id));
+        toHash[asset.id] = asset;
       }
 
-      if (asset.isVideo) {
-        videosInBatch++;
-      }
-
-      if (toHash.length >= batchFileLimit || videosInBatch >= 5) {
+      if (toHash.length == _batchSize) {
         await _processBatch(album, toHash);
         toHash.clear();
-        bytesProcessed = 0;
-        videosInBatch = 0;
       }
     }
 
     await _processBatch(album, toHash);
+
+    // 清理云端资产临时文件
+    for (final path in cloudTempPaths) {
+      try {
+        await File(path).delete();
+      } catch (_) {
+        // ignore cleanup errors
+      }
+    }
   }
 
   Future<bool> _isIcloudOnlyAsset(LocalAsset asset) async {
@@ -149,37 +161,38 @@ class HashService {
   }
 
   /// Processes a batch of assets.
-  Future<void> _processBatch(LocalAlbum album, List<_AssetToPath> toHash) async {
+  Future<void> _processBatch(LocalAlbum album, Map<String, LocalAsset> toHash) async {
     if (toHash.isEmpty) {
       return;
     }
 
     _log.fine("Hashing ${toHash.length} files");
 
-    final hashed = <LocalAsset>[];
-    final tempPaths = toHash.where((e) => e.deleteAfterHash).map((e) => e.path).toList();
-
-    final hashes = await _nativeSyncApi.hashPaths(toHash.map((e) => e.path).toList());
+    final hashed = <String, String>{};
+    final hashResults = await _nativeSyncApi.hashAssets(
+      toHash.keys.toList(),
+      allowNetworkAccess: album.backupSelection == BackupSelection.selected,
+    );
     assert(
-      hashes.length == toHash.length,
-      "Hashes length does not match toHash length: ${hashes.length} != ${toHash.length}",
+      hashResults.length == toHash.length,
+      "Hashes length does not match toHash length: ${hashResults.length} != ${toHash.length}",
     );
 
-    for (int i = 0; i < hashes.length; i++) {
+    for (int i = 0; i < hashResults.length; i++) {
       if (isCancelled) {
         _log.warning("Hashing cancelled. Stopped processing batch.");
         return;
       }
 
-      final hash = hashes[i];
-      final asset = toHash[i].asset;
-      if (hash?.length == 20) {
-        hashed.add(asset.copyWith(checksum: base64.encode(hash!)));
+      final hashResult = hashResults[i];
+      final asset = toHash[hashResult.assetId];
+      if (hashResult.hash != null) {
+        hashed[hashResult.assetId] = hashResult.hash!;
       } else {
+        final asset = toHash[hashResult.assetId];
         _log.warning(
-          "Failed to hash file for ${asset.id}: ${asset.name} created at ${asset.createdAt} from album: ${album.name}",
+          "Failed to hash asset with id: ${hashResult.assetId}, name: ${asset?.name}, createdAt: ${asset?.createdAt}, from album: ${album.name}. Error: ${hashResult.error ?? "unknown"}",
         );
-      }
 
       hashedCount++;
 
@@ -197,60 +210,5 @@ class HashService {
     _log.fine("Hashed ${hashed.length}/${toHash.length} assets");
 
     await _localAssetRepository.updateHashes(hashed);
-
-    // Attempt to pair this batch with existing assets on server by checksum
-    //await _pairHashedAssetsWithServer(hashed); //事实证明通过Native侧获取的资产文件与通过电脑拷贝上传的文件Hash不匹配
-    //await _storageRepository.clearCache();
-
-    for (final path in tempPaths) {
-      try {
-        final file = File(path);
-        if (await file.exists()) {
-          await file.delete();
-        }
-      } catch (e, s) {
-        _log.warning("Failed to delete temp file after hashing: $path", e, s);
-      }
-    }
   }
-
-  /*
-  Future<void> _pairHashedAssetsWithServer(List<LocalAsset> hashedBatch) async {
-    if (hashedBatch.isEmpty) {
-      return;
-    }
-
-    try {
-      final dto = AssetBulkUploadCheckDto(
-        assets: hashedBatch
-            .where((asset) => asset.checksum != null && asset.checksum!.isNotEmpty)
-            .map((asset) => AssetBulkUploadCheckItem(id: asset.id, checksum: asset.checksum!))
-            .toList(),
-      );
-
-      if (dto.assets.isEmpty) {
-        return;
-      }
-
-      final res = await _assetsApi.checkBulkUpload(dto);
-      final matched = res?.results.where((r) => r.assetId != null).length ?? 0;
-      _log.fine("Bulk upload check matched $matched/${dto.assets.length} assets, response: $res");
-
-      final skipped = hashedBatch.where((a) => a.checksum == null || a.checksum!.isEmpty).length;
-      _log.fine('Bulk upload check: sending ${dto.assets.length}, skipped $skipped empty checksums');
-    } catch (e, s) {
-      _log.warning("Bulk upload check failed", e, s);
-    }
-  }
-  */
-}
-
-class _AssetToPath {
-  final LocalAsset asset;
-  final String path;
-
-  /// Whether the file at [path] should be deleted after hashing (e.g., temp download).
-  final bool deleteAfterHash;
-
-  const _AssetToPath({required this.asset, required this.path, this.deleteAfterHash = false});
 }

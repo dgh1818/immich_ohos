@@ -71,6 +71,7 @@ class MainTimelinePage extends ConsumerWidget {
           child: Timeline(
             topSliverWidget: const SliverToBoxAdapter(child: DriftMemoryLane()),
             topSliverWidgetHeight: hasMemories ? 200 : 0,
+            showStorageIndicator: true,
           ),
         ),
         Positioned(
