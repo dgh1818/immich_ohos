@@ -321,7 +321,7 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
         print("get hdr is $isHdr");
 
         if (isHdr) {
-          ui.SetHdr.setHdrMode(hdr: 1, is_image: true);
+          ui.SetHdr.setHdrMode(hdr: 0, is_image: true);
         } else {
           ui.SetHdr.setHdrMode(hdr: 0, is_image: true);
         }
@@ -648,6 +648,10 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
       //ui.SetHdr.setHdrMode(hdr: 0, is_image: true);
       lastPlayingState = 0;
       ref.read(videoPlayerControlsProvider.notifier).pause();
+
+      if (asset != null) {
+        setDisplayMode(getFullImageProvider(asset), context);
+      }
     }
   }
 
