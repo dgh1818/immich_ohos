@@ -199,7 +199,7 @@ class HashService {
     await _localAssetRepository.updateHashes(hashed);
 
     // Attempt to pair this batch with existing assets on server by checksum
-    //await _pairHashedAssetsWithServer(hashed); 事实证明通过Native侧获取的资产文件与通过电脑拷贝上传的文件Hash不匹配
+    //await _pairHashedAssetsWithServer(hashed); //事实证明通过Native侧获取的资产文件与通过电脑拷贝上传的文件Hash不匹配
     //await _storageRepository.clearCache();
 
     for (final path in tempPaths) {
