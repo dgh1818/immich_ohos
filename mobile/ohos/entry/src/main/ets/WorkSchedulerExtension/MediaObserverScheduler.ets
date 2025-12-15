@@ -26,7 +26,7 @@ const SNAPSHOT_SQL = `
     size INTEGER
   )`;
 
-class MediaObserverScheduler extends WorkSchedulerExtensionAbility {
+export class MediaObserverScheduler extends WorkSchedulerExtensionAbility {
   private ctx: common.ApplicationContext = this.context.getApplicationContext();
   private store?: relationalStore.RdbStore;
 
@@ -159,11 +159,11 @@ class MediaObserverScheduler extends WorkSchedulerExtensionAbility {
     const diff = this.diffSnapshot(current, previous);
     if (diff.changed.length > 0 || diff.deleted.length > 0) {
       await this.replaceSnapshot(current);
-      this.enqueueBackgroundWorker();
+      MediaObserverScheduler.enqueueBackgroundWorker();
     }
   }
 
-  private enqueueBackgroundWorker() {
+  public static enqueueBackgroundWorker() {
     const constraints: workScheduler.WorkInfo = BackgroundWorkerApiImpl.BACKGROUND_WORKER_INFO;
     BackgroundWorkerApiImpl.BACKGROUND_WORKER_INFO = constraints;
     workScheduler.startWork(constraints);

@@ -24,6 +24,10 @@ import { BackgroundWorkerApiImpl } from '../WorkSchedulerExtension/BackgroundWor
 import { BackgroundWorkerFgHostApi } from '../WorkSchedulerExtension/BackgroundWorker.g';
 import { ConnectivityApi } from '../plugins/connectivity/Connectivity.g';
 import { ConnectivityApiImpl } from '../plugins/connectivity/ConnectivityApiImpl';
+import { MediaObserverScheduler } from '../WorkSchedulerExtension/MediaObserverScheduler';
+import { workScheduler } from '@kit.BackgroundTasksKit';
+import BackgroundEngineLock from '../plugins/Background/BackgroundEngineLock';
+import { BackgroundWorkerLockApi } from '../plugins/Background/BackgroundWorkerLock.g';
 
 export default class EntryAbility extends FlutterAbility {
   configureFlutterEngine(flutterEngine: FlutterEngine) {
@@ -42,9 +46,20 @@ export default class EntryAbility extends FlutterAbility {
     let ThumbApiImpl = new MessagesImplBaseThumb(super.getAbility().context)
     let backgroundWorkerApiImpl = new BackgroundWorkerApiImpl(ctx.getApplicationContext());
     let connectivityApiImpl = new ConnectivityApiImpl(ctx.getApplicationContext());
+    let backgroundEngineLock = new BackgroundEngineLock(ctx.getApplicationContext())
     NativeSyncApiOhos.setup(messenger, nativeSyncApiImpl)
     ThumbnailApi.setup(messenger,ThumbApiImpl);
     BackgroundWorkerFgHostApi.setup(messenger,backgroundWorkerApiImpl);
-    ConnectivityApi.setup(messenger,connectivityApiImpl)
+    ConnectivityApi.setup(messenger,connectivityApiImpl);
+    BackgroundWorkerLockApi.setup(messenger,backgroundEngineLock);
+
+    const constraints: workScheduler.WorkInfo = BackgroundWorkerApiImpl.BACKGROUND_WORKER_INFO;
+    try {
+      workScheduler.startWork(constraints);
+    } catch (e) {
+
+    }
+
+    console.info("MediaObserverScheduler", "Enqueued background worker");
   }
 }

@@ -3,6 +3,7 @@ import {
   DartExecutor,
   FlutterCallbackInformation,
   FlutterEngine,
+  FlutterEngineCache,
   FlutterInjector,
   FlutterLoader,
   Reply,
@@ -82,6 +83,13 @@ class BackgroundWorker extends WorkSchedulerExtensionAbility {
       BackgroundWorker.engine.dartExecutor.getBinaryMessenger(),
       BackgroundWorker.backgroundWorkerBgHostApiImpl,
     )
+
+    // Cache the engine similar to Android, so we can detect running background worker if needed
+    try {
+      FlutterEngineCache.getInstance().put(BackgroundWorkerApiImpl.ENGINE_CACHE_KEY, BackgroundWorker.engine);
+    } catch (_) {
+      // ignore cache failures
+    }
 
     // Kick off the Dart entrypoint that runs background sync
     const entrypoint = new DartEntrypoint(

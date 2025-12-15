@@ -44,6 +44,70 @@ function wrapError(error: Error): Array<Object> {
 }
 
 /* Generated class from Pigeon that represents data sent in messages.*/
+export class HashResult {
+  private assetId?: string;
+
+  public setAssetId(assetId:string):void {
+    this.assetId = assetId;
+  }
+
+  getAssetId(): string | undefined{
+    return this.assetId;
+  }
+
+  private error?: string;
+
+  public setError(error:string):void {
+    this.error = error;
+  }
+
+  getError(): string | undefined{
+    return this.error;
+  }
+
+  private hash?: string;
+
+  public setHash(hash:string):void {
+    this.hash = hash;
+  }
+
+  getHash(): string | undefined{
+    return this.hash;
+  }
+
+  constructor(assetId?: string, error?: string, hash?: string) {
+    this.assetId = assetId;
+    this.error = error;
+    this.hash = hash;
+  }
+
+  toList(): Object[] {
+    let arr: Object[] = new Array();
+    if(this.assetId !==undefined){
+      arr.push(this.assetId);
+    }
+    if(this.error !==undefined){
+      arr.push(this.error);
+    }
+    if(this.hash !==undefined){
+      arr.push(this.hash);
+    }
+    return arr;
+  }
+
+  static fromList(arr: Object[]): HashResult {
+    let pigeonResult: HashResult = new HashResult();
+    let assetId: Object = arr[0];
+    pigeonResult.setAssetId(assetId as string);
+    let error: Object = arr[1];
+    pigeonResult.setError(error as string);
+    let hash: Object = arr[2];
+    pigeonResult.setHash(hash as string);
+    return pigeonResult;
+  }
+}
+
+/* Generated class from Pigeon that represents data sent in messages.*/
 export class PlatformAsset {
   private id?: string;
 
@@ -410,10 +474,12 @@ export class PigeonCodec extends StandardMessageCodec {
   readValueOfType(type: number,  buffer: ByteBuffer): ESObject {
     switch (type) {
       case this.getByte(129):
-        return PlatformAsset.fromList(super.readValue(buffer) as Object[]);
+        return HashResult.fromList(super.readValue(buffer) as Object[]);
       case this.getByte(130):
-        return PlatformAlbum.fromList(super.readValue(buffer) as Object[]);
+        return PlatformAsset.fromList(super.readValue(buffer) as Object[]);
       case this.getByte(131):
+        return PlatformAlbum.fromList(super.readValue(buffer) as Object[]);
+      case this.getByte(132):
         return SyncDelta.fromList(super.readValue(buffer) as Object[]);
       default:
         return super.readValueOfType(type, buffer);
@@ -421,14 +487,17 @@ export class PigeonCodec extends StandardMessageCodec {
   }
 
   writeValue(stream: ByteBuffer , value: ESObject): ESObject{
-    if (value instanceof PlatformAsset) {
+    if (value instanceof HashResult) {
       stream.writeUint8(this.getByte(129));
+      this.writeValue(stream, (value as HashResult).toList());
+    } else if (value instanceof PlatformAsset) {
+      stream.writeUint8(this.getByte(130));
       this.writeValue(stream, (value as PlatformAsset).toList());
     } else if (value instanceof PlatformAlbum) {
-      stream.writeUint8(this.getByte(130));
+      stream.writeUint8(this.getByte(131));
       this.writeValue(stream, (value as PlatformAlbum).toList());
     } else if (value instanceof SyncDelta) {
-      stream.writeUint8(this.getByte(131));
+      stream.writeUint8(this.getByte(132));
       this.writeValue(stream, (value as SyncDelta).toList());
     } else {
       super.writeValue(stream, value);
@@ -461,7 +530,9 @@ export abstract class NativeSyncApiOhos {
 
   abstract getAssetsForAlbum(albumId: string , updatedTimeCond: number , result: Result<Array<PlatformAsset>>): void;
 
-  abstract hashPaths(paths: Array<string> , result: Result<Uint8Array[]>): void;
+  abstract hashAssets(assetIds: Array<string> , allowNetworkAccess: boolean , result: Result<Array<HashResult>>): void;
+
+  abstract cancelHashing(): void;
 
   abstract startBackgroundTransfer(result: Result<number>): void;
 
@@ -676,13 +747,13 @@ export abstract class NativeSyncApiOhos {
     {
       let channel: BasicMessageChannel<Object> =
           new BasicMessageChannel(
-              binaryMessenger, "dev.flutter.pigeon.immich_mobile.NativeSyncApiOhos.hashPaths", NativeSyncApiOhos.getCodec());
+              binaryMessenger, "dev.flutter.pigeon.immich_mobile.NativeSyncApiOhos.hashAssets", NativeSyncApiOhos.getCodec());
       if (api != null) {
         channel.setMessageHandler({
             onMessage(message: Object ,reply: Reply<Object> ) {
               let args: Array<Object> = message as Array<Object>;
-              class ResultImp implements Result<Array<Uint8Array>>{
-                    success(result: Array<Uint8Array>): void {
+              class ResultImp implements Result<Array<HashResult>>{
+                    success(result: Array<HashResult>): void {
                       let res: Array<Object> = [];
                       res.push(result);
                       reply.reply(res);
@@ -693,9 +764,31 @@ export abstract class NativeSyncApiOhos {
                       reply.reply(wrappedError);
                     }
               }
-              let resultCallback: Result<Array<Uint8Array>> = new ResultImp();
+              let resultCallback: Result<Array<HashResult>> = new ResultImp();
 
-              api!.hashPaths(args[0] as Array<string>, resultCallback);
+              api!.hashAssets(args[0] as Array<string>, args[1] as boolean, resultCallback);
+            } });
+      } else {
+        channel.setMessageHandler(null);
+      }
+    }
+    {
+      let channel: BasicMessageChannel<Object> =
+          new BasicMessageChannel(
+              binaryMessenger, "dev.flutter.pigeon.immich_mobile.NativeSyncApiOhos.cancelHashing", NativeSyncApiOhos.getCodec());
+      if (api != null) {
+        channel.setMessageHandler({
+            onMessage(message: Object ,reply: Reply<Object> ) {
+              let res: Array<Object> = [];
+              try {
+                api!.cancelHashing();
+                res.push(null);
+              }
+ catch (error) {
+                let wrappedError: Array<Object> = wrapError(error);
+                res = wrappedError;
+              }
+              reply.reply(res);
             } });
       } else {
         channel.setMessageHandler(null);

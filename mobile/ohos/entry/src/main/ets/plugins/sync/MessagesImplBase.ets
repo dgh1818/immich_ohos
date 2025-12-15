@@ -5,10 +5,10 @@ import { fileUri, hash } from '@kit.CoreFileKit';
 import { fileUriService } from '@kit.ScenarioFusionKit';
 import abilityAccessCtrl from '@ohos.abilityAccessCtrl';
 
-import { NativeSyncApiOhos, SyncDelta, PlatformAsset, PlatformAlbum, Result } from './Messages_ohos.g'
+import { NativeSyncApiOhos, SyncDelta, PlatformAsset, PlatformAlbum, Result, HashResult } from './Messages_ohos.g'
 import { BusinessError } from '@kit.BasicServicesKit';
 import fs from '@ohos.file.fs';
-import { uri, util } from '@kit.ArkTS';
+import { uri } from '@kit.ArkTS';
 import taskpool from '@ohos.taskpool';
 import { wantAgent, WantAgent } from '@kit.AbilityKit';
 import { notificationManager } from '@kit.NotificationKit';
@@ -16,11 +16,18 @@ import { backgroundTaskManager } from '@kit.BackgroundTasksKit';
 import { deviceInfo } from '@kit.BasicServicesKit';
 
 import { relationalStore } from '@kit.ArkData';
+import util from '@ohos.util';
 
 interface MediaRecord {
   uri: string;
   mtime: number;
   size: number;
+}
+
+interface HashAssetParams {
+  uri: string;
+  isCloud: boolean;
+  cacheDir: string;
 }
 
 const DB_NAME = 'media_snapshot.db';
@@ -32,50 +39,196 @@ const CREATE_SQL = `
     size INTEGER
   )`;
 @Concurrent
-async function hashFileTask(path: string): Promise<Uint8Array> {
-  return await new Promise<Uint8Array>((resolve) => {
-    try {
-      hash.hash(path, "sha1", (err: BusinessError, digest: string) => {
+async function hashAssetTask(params: HashAssetParams): Promise<Uint8Array> {
+  let tmpPath: string | undefined;
+  try {
+    let path = new fileUri.FileUri(params.uri).path;
+    if (params.isCloud) {
+      const cacheRoot = `${params.cacheDir}/originalPhoto`;
+      if (!fs.accessSync(cacheRoot)) {
+        fs.mkdirSync(cacheRoot);
+      }
+      const uuid = util.generateRandomUUID();
+      const targetDirectoryPath = `${cacheRoot}/${uuid}`;
+      fs.mkdirSync(targetDirectoryPath);
 
-        if (err) {
-          console.error("hash:" + path + "error");
-          resolve(new Uint8Array());
-          return;
-        }
-        console.error("hash:" + path + "success");
-        const bytes = new Uint8Array(digest.length / 2);
-        for (let i = 0; i < digest.length; i += 2) {
-          bytes[i / 2] = parseInt(digest.substring(i, i + 2), 16);
-        }
-        resolve(bytes);
+      const inputFilePath = params.uri.substring(params.uri.lastIndexOf('/') + 1);
+      const inputSplits = inputFilePath.split('.');
+      const outputFileName = inputSplits[0];
+      const extension = inputSplits.length == 2 ? `.${inputSplits[1]}` : '.jpg';
+      tmpPath = `${targetDirectoryPath}/${outputFileName}${extension}`;
+
+      const dstDirUriLocal = fileUri.getUriFromPath(tmpPath);
+      const copied = await new Promise<boolean>((resolve) => {
+        fs.copy(params.uri, dstDirUriLocal, {}, (err: BusinessError | undefined) => {
+          if (err) {
+            console.error(`copy ${params.uri} failed`, err);
+            resolve(false);
+            return;
+          }
+          resolve(true);
+        });
       });
-    } catch (_) {
-      resolve(new Uint8Array());
+      if (!copied) {
+        return new Uint8Array();
+      }
+      path = tmpPath;
     }
-  });
+
+    return await new Promise<Uint8Array>((resolve) => {
+      try {
+        hash.hash(path, "sha1", (err: BusinessError, digest: string) => {
+          if (err) {
+            resolve(new Uint8Array());
+            return;
+          }
+          const bytes = new Uint8Array(digest.length / 2);
+          for (let i = 0; i < digest.length; i += 2) {
+            bytes[i / 2] = parseInt(digest.substring(i, i + 2), 16);
+          }
+          resolve(bytes);
+        });
+      } catch (_) {
+        resolve(new Uint8Array());
+      }
+    });
+  } catch (e) {
+    console.error(`hashAssetTask failed for ${params.uri}`, e);
+    return new Uint8Array();
+  } finally {
+    if (tmpPath) {
+      try {
+        if (fs.accessSync(tmpPath)) {
+          fs.unlinkSync(tmpPath);
+        }
+        const dir = tmpPath.substring(0, tmpPath.lastIndexOf('/'));
+        if (fs.accessSync(dir)) {
+          fs.rmdirSync(dir);
+        }
+      } catch (_) {
+        // best-effort cleanup
+      }
+    }
+  }
 }
 
 export class MessagesImplBase extends NativeSyncApiOhos {
-  public async hashPaths(paths: string[], result: Result<Uint8Array[]>) {
+  private cancelRequested = false;
+  private currentTasks: Array<taskpool.Task> = [];
+
+  /**
+   * Query a single PhotoAsset by uri and include position to know whether it's cloud/local.
+   */
+  private async getAssetByUri(uri: string): Promise<photoAccessHelper.PhotoAsset | null> {
+    const phAccessHelper = photoAccessHelper.getPhotoAccessHelper(this.ctx);
+    const predicates = new dataSharePredicates.DataSharePredicates();
+    predicates.equalTo(photoAccessHelper.PhotoKeys.URI, uri);
+
+    const fetchOption: photoAccessHelper.FetchOptions = {
+      fetchColumns: [
+        photoAccessHelper.PhotoKeys.URI,
+        photoAccessHelper.PhotoKeys.POSITION,
+      ],
+      predicates: predicates,
+    };
+
+    try {
+      const fetchResult = await phAccessHelper.getAssets(fetchOption);
+      return await fetchResult.getFirstObject();
+    } catch (e) {
+      console.error(`getAssetByUri failed for ${uri}`, e);
+      return null;
+    }
+  }
+
+  override cancelHashing(): void {
+    this.cancelRequested = true;
+    for (const t of this.currentTasks) {
+      try {
+        taskpool.cancel(t);
+      } catch (_) {
+        // ignore cancel errors
+      }
+    }
+    this.currentTasks = [];
+  }
+
+  override async hashAssets(assetIds: string[], allowNetworkAccess: boolean, result: Result<Array<HashResult>>) {
+    this.cancelRequested = false;
+    this.currentTasks = [];
     const group = new taskpool.TaskGroup();
 
-    for (const p of paths) {
-      let path = new fileUri.FileUri(p).path;
-      const task = new taskpool.Task(hashFileTask, path);
+    for (const id of assetIds) {
+      console.error(`hashAssets ${id}`);
+      const asset = await this.getAssetByUri(id);
+      console.error(`hashAssets asset ${id}`);
+      const position = asset?.get(photoAccessHelper.PhotoKeys.POSITION) as photoAccessHelper.PositionType | undefined;
+      const param: HashAssetParams = {
+        uri: id,
+        isCloud: position === photoAccessHelper.PositionType.CLOUD,
+        cacheDir: this.ctx!.cacheDir,
+      };
+      const task = new taskpool.Task(hashAssetTask, param);
       group.addTask(task);
+      this.currentTasks.push(task);
     }
 
-    let hashes: Uint8Array[] = [];
+    const results: HashResult[] = [];
     try {
       const res = await taskpool.execute(group, taskpool.Priority.HIGH) as Array<Uint8Array | undefined>;
-      hashes = (res ?? []).map((digest) => digest ?? new Uint8Array());
+      const hashes = (res ?? []).map((digest) => digest ?? new Uint8Array());
+      for (let i = 0; i < assetIds.length; i++) {
+        if (this.cancelRequested) {
+          break;
+        }
+        const bytes = hashes[i] ?? new Uint8Array();
+        const hex = Array.from(bytes).map((b) => b.toString(16).padStart(2, '0')).join('');
+        const hr = new HashResult();
+        hr.setAssetId(assetIds[i]);
+        hr.setHash(hex);
+        results.push(hr);
+      }
     } catch (e) {
-      console.error(`hashPaths taskpool execute error: ${e}`);
-      hashes = paths.map(() => new Uint8Array());
+      console.error(`hashAssets taskpool execute error: ${e}`);
+      for (const id of assetIds) {
+        const hr = new HashResult();
+        hr.setAssetId(id);
+        hr.setError('hash_failed');
+        results.push(hr);
+      }
     }
 
-    result.success(hashes);
+    result.success(results);
+    this.currentTasks = [];
   }
+
+  // public async hashPaths(paths: string[], result: Result<Uint8Array[]>) {
+  //   const group = new taskpool.TaskGroup();
+  //   this.currentTasks = [];
+
+  //   for (const p of paths) {
+  //     let path = new fileUri.FileUri(p).path;
+  //     const task = new taskpool.Task(hashFileTask, path);
+  //     group.addTask(task);
+  //     this.currentTasks.push(task);
+  //   }
+
+  //   let hashes: Uint8Array[] = [];
+  //   try {
+  //     const res = await taskpool.execute(group, taskpool.Priority.HIGH) as Array<Uint8Array | undefined>;
+  //     hashes = (res ?? []).map((digest) => digest ?? new Uint8Array());
+  //     if (this.cancelRequested) {
+  //       result.success([]);
+  //       return;
+  //     }
+  //   } catch (e) {
+  //     console.error(`hashPaths taskpool execute error: ${e}`);
+  //     hashes = paths.map(() => new Uint8Array());
+  //   }
+
+  //   result.success(hashes);
+  //   this.currentTasks = [];
+  // }
 
   hexStringToBytes(hex: string): Uint8Array {
     const bytes = new Uint8Array(hex.length / 2);
@@ -154,7 +307,7 @@ export class MessagesImplBase extends NativeSyncApiOhos {
     }
   }
 
-  public async getAlbums(result: Result<Array<PlatformAlbum>>) {
+  public override async getAlbums(result: Result<Array<PlatformAlbum>>) {
     console.error("MessagesImplBase 4 ")
     let atManager = abilityAccessCtrl.createAtManager();
     atManager.requestPermissionsFromUser(this.ctx, ["ohos.permission.MEDIA_LOCATION","ohos.permission.READ_MEDIA","ohos.permission.WRITE_MEDIA"]).then((data) => {
@@ -306,7 +459,7 @@ export class MessagesImplBase extends NativeSyncApiOhos {
     return new Map(entries);
   }
 
-  public async getAssetIdsForAlbum(albumPath: string, result: Result<Array<string>>) {
+  public override async getAssetIdsForAlbum(albumPath: string, result: Result<Array<string>>) {
     console.error("MessagesImplBase 6 ")
     let atManager = abilityAccessCtrl.createAtManager();
     await atManager.requestPermissionsFromUser(this.ctx, ["ohos.permission.MEDIA_LOCATION","ohos.permission.READ_MEDIA","ohos.permission.WRITE_MEDIA"]).then((data) => {
@@ -376,7 +529,7 @@ export class MessagesImplBase extends NativeSyncApiOhos {
     return result.success(assetsUri);
   }
 
-  public async getAssetsCountSince(albumPath: string, timestamp: number, result: Result<number>) {
+  public override async getAssetsCountSince(albumPath: string, timestamp: number, result: Result<number>) {
     console.error("MessagesImplBase 7 ")
     let atManager = abilityAccessCtrl.createAtManager();
     await atManager.requestPermissionsFromUser(this.ctx, ["ohos.permission.MEDIA_LOCATION","ohos.permission.READ_MEDIA","ohos.permission.WRITE_MEDIA"]).then((data) => {
@@ -477,7 +630,7 @@ export class MessagesImplBase extends NativeSyncApiOhos {
   /**
    * 启动长时任务（上传/下载），返回通知 id，供进度更新使用
    */
-  public async startBackgroundTransfer(result: Result<number>) {
+  public override async startBackgroundTransfer(result: Result<number>) {
     if (!this.ctx) {
       console.error(`${this.TAG} context is null, cannot start background running`);
       result.success(0);
@@ -544,7 +697,7 @@ export class MessagesImplBase extends NativeSyncApiOhos {
   /**
    * 更新长时任务进度
    */
-  public async updateBackgroundTransferProgress(progress: number , title: string , fileName: string , result: Result<void>) {
+  public override async updateBackgroundTransferProgress(progress: number , title: string , fileName: string , result: Result<void>) {
     const targetId = this.liveNotificationId;
 
     let request: notificationManager.NotificationRequest = {
@@ -578,7 +731,7 @@ export class MessagesImplBase extends NativeSyncApiOhos {
   /**
    * 停止长时任务
    */
-  public async stopBackgroundTransfer(result: Result<void>) {
+  public override async stopBackgroundTransfer(result: Result<void>) {
     if (!this.ctx) {
       result.success();
       return;
@@ -605,7 +758,7 @@ export class MessagesImplBase extends NativeSyncApiOhos {
     }
   }
 
-  public async getAssetsForAlbum(albumId: string, updatedTimeCond?: number, result?: Result<Array<PlatformAsset>>) {
+  public override async getAssetsForAlbum(albumId: string, updatedTimeCond?: number, result?: Result<Array<PlatformAsset>>) {
     console.error("MessagesImplBase 8 ")
     let atManager = abilityAccessCtrl.createAtManager();
     await atManager.requestPermissionsFromUser(this.ctx, ["ohos.permission.MEDIA_LOCATION","ohos.permission.READ_MEDIA","ohos.permission.WRITE_MEDIA"]).then((data) => {

@@ -3,10 +3,11 @@ import { BackgroundWorkerFgHostApi } from './BackgroundWorker.g'
 import dataPreferences from '@ohos.data.preferences'
 import preferences from '@ohos.data.preferences';
 import { workScheduler } from '@kit.BackgroundTasksKit';
+import { BackgroundWorkerPreferences } from '../plugins/Background/BackgroundWorkerPreferences';
 
 export class BackgroundWorkerApiImpl extends BackgroundWorkerFgHostApi {
   private ctx?: common.ApplicationContext;
-  static readonly TAG: string = "BackgroundUploadImpl"
+  static readonly TAG: string = "BackgroundWorkerApiImpl"
 
   constructor(context: common.ApplicationContext) {
     super();
@@ -37,6 +38,7 @@ export class BackgroundWorkerApiImpl extends BackgroundWorkerFgHostApi {
   public static readonly SHARED_PREF_NAME = "Immich::Background"
   public static readonly SHARED_PREF_BACKUP_ENABLED = "Background::backup::enabled"
   public static readonly SHARED_PREF_CALLBACK_HANDLE = "Background::backup::callbackHandle"
+  public static readonly ENGINE_CACHE_KEY = "immich::background_worker::engine"
   static BACKGROUND_WORKER_INFO:workScheduler.WorkInfo =
    {
     workId: BackgroundWorkerApiImpl.BACKGROUND_WORKER_ID,
@@ -66,12 +68,42 @@ export class BackgroundWorkerApiImpl extends BackgroundWorkerFgHostApi {
 
 
   public static async enqueueMediaObserver(ctx: common.ApplicationContext) {
-    const constraints: workScheduler.WorkInfo = BackgroundWorkerApiImpl.MEDIAOBSERVER_WORKER_INFO;
-
-    BackgroundWorkerApiImpl.MEDIAOBSERVER_WORKER_INFO = constraints;
+    let constraints: workScheduler.WorkInfo = BackgroundWorkerApiImpl.MEDIAOBSERVER_WORKER_INFO;
+    const settings = new BackgroundWorkerPreferences(ctx).getSettings();
+    constraints.isCharging = settings.requiresCharging;
     workScheduler.startWork(constraints);
     console.info(BackgroundWorkerApiImpl.TAG, "Enqueued media observer worker with name" + BackgroundWorkerApiImpl.OBSERVER_WORKER_NAME +
     BackgroundWorkerApiImpl.MediaObserver_WORKER_ID);
+  }
+
+  private async isBackgroundWorkerRunning(): Promise<boolean> {
+    return await new Promise<boolean>((resolve) => {
+      try {
+        workScheduler.obtainAllWorks((error: BusinessError, workInfoList: Array<workScheduler.WorkInfo>) => {
+          if (error) {
+            console.error(`isBackgroundWorkerRunning failed: ${error.code} ${error.message}`);
+            resolve(false);
+            return;
+          }
+          const running = workInfoList.some(
+            (info) => info.abilityName === BackgroundWorkerApiImpl.BACKGROUND_WORKER_INFO.abilityName,
+          );
+          resolve(running);
+        });
+      } catch (e) {
+        console.error('isBackgroundWorkerRunning exception', e);
+        resolve(false);
+      }
+    });
+  }
+
+  public static cancelBackgroundWorker() {
+    try {
+      workScheduler.stopWork(BackgroundWorkerApiImpl.BACKGROUND_WORKER_INFO);
+      console.info("MediaObserverScheduler", "Cancelled background worker");
+    } catch (e) {
+      console.error("MediaObserverScheduler cancelBackgroundWorker error", e);
+    }
   }
 
 }
