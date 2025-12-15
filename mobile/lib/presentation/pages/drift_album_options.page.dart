@@ -208,7 +208,8 @@ class DriftAlbumOptionsPage extends HookConsumerWidget {
                 activityEnabled.value = value;
                 await ref.read(remoteAlbumProvider.notifier).setActivityStatus(album.id, value);
               },
-              activeThumbColor: activityEnabled.value ? context.primaryColor : context.themeData.disabledColor,
+              activeColor: activityEnabled.value ? context.primaryColor : context.themeData.disabledColor, //3.35
+              //activeThumbColor: activityEnabled.value ? context.primaryColor : context.themeData.disabledColor,
               dense: true,
               title: Text(
                 "comments_and_likes",

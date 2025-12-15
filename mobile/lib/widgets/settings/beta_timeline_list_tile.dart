@@ -62,7 +62,8 @@ class BetaTimelineListTile extends ConsumerWidget {
         trailing: Switch.adaptive(
           value: betaTimelineValue,
           onChanged: onSwitchChanged,
-          activeThumbColor: context.primaryColor,
+          activeColor: context.primaryColor,
+          //activeThumbColor: context.primaryColor,  //3.35
         ),
         onTap: () => onSwitchChanged(!betaTimelineValue),
       ),

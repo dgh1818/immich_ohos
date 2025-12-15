@@ -115,7 +115,8 @@ class PrimaryColorSetting extends HookConsumerWidget {
               child: SwitchListTile.adaptive(
                 contentPadding: const EdgeInsets.symmetric(vertical: 6, horizontal: 20),
                 dense: true,
-                activeThumbColor: context.primaryColor,
+                activeColor: context.colorScheme.primary,
+                //activeThumbColor: context.primaryColor,   //3.35
                 tileColor: context.colorScheme.surfaceContainerHigh,
                 shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(15))),
                 title: Text(
