@@ -20,6 +20,7 @@ import 'package:immich_mobile/widgets/backup/backup_info_card.dart';
 import 'dart:async';
 
 import 'package:wakelock_plus/wakelock_plus.dart';
+import 'dart:io';
 
 @RoutePage()
 class DriftBackupPage extends ConsumerStatefulWidget {
@@ -72,21 +73,13 @@ class _DriftBackupPageState extends ConsumerState<DriftBackupPage> {
         return;
       }
 
-        if (Platform.isOhos) {
-          try {
-            await ref.read(nativeSyncApiProvider).startBackgroundTransfer();
-          } catch (_) {
-            // ignore and continue
-          }
+      if (Platform.isOhos) {
+        try {
+          await ref.read(nativeSyncApiProvider).startBackgroundTransfer();
+        } catch (_) {
+          // ignore and continue
         }
-
-        if (Platform.isOhos) {
-          try {
-            await ref.read(nativeSyncApiProvider).startBackgroundTransfer();
-          } catch (_) {
-            // ignore and continue
-          }
-        }
+      }
 
       await backupNotifier.getBackupStatus(currentUser.id);
       await backupNotifier.startBackup(currentUser.id);
