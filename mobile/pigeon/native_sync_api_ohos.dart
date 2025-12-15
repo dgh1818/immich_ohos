@@ -9,6 +9,14 @@ import 'package:pigeon/pigeon.dart';
     dartPackageName: 'immich_mobile',
   ),
 )
+class HashResult {
+  final String assetId;
+  final String? error;
+  final String? hash;
+
+  const HashResult({required this.assetId, this.error, this.hash});
+}
+
 class PlatformAsset {
   final String id;
   final String name;
@@ -98,7 +106,9 @@ abstract class NativeSyncApiOhos {
 
   @TaskQueue(type: TaskQueueType.serialBackgroundThread)
   @async
-  List<Uint8List> hashPaths(List<String> paths);
+  List<HashResult> hashAssets(List<String> assetIds, {bool allowNetworkAccess = false});
+
+  void cancelHashing();
 
   @TaskQueue(type: TaskQueueType.serialBackgroundThread)
   @async
@@ -106,11 +116,7 @@ abstract class NativeSyncApiOhos {
 
   @TaskQueue(type: TaskQueueType.serialBackgroundThread)
   @async
-  void updateBackgroundTransferProgress(
-    double progress,
-    String title,
-    String fileName,
-  );
+  void updateBackgroundTransferProgress(double progress, String title, String fileName);
 
   @TaskQueue(type: TaskQueueType.serialBackgroundThread)
   @async
