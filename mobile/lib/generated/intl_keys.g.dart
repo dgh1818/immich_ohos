@@ -87,8 +87,7 @@ abstract class IntlKeys {
   static const admin_image_fullsize_quality_description = 'admin.image.fullsize.quality.description';
   static const admin_image_fullsize_title = 'admin.image.fullsize.title';
   static const admin_image_prefer_embedded_preview = 'admin.image.prefer.embedded.preview';
-  static const admin_image_prefer_embedded_preview_setting_description =
-      'admin.image.prefer.embedded.preview.setting.description';
+  static const admin_image_prefer_embedded_preview_setting_description = 'admin.image.prefer.embedded.preview.setting.description';
   static const admin_image_prefer_wide_gamut = 'admin.image.prefer.wide.gamut';
   static const admin_image_prefer_wide_gamut_setting_description = 'admin.image.prefer.wide.gamut.setting.description';
   static const admin_image_preview_description = 'admin.image.preview.description';
@@ -125,45 +124,41 @@ abstract class IntlKeys {
   static const admin_logging_enable_description = 'admin.logging.enable.description';
   static const admin_logging_level_description = 'admin.logging.level.description';
   static const admin_logging_settings = 'admin.logging.settings';
+  static const admin_machine_learning_availability_checks = 'admin.machine.learning.availability.checks';
+  static const admin_machine_learning_availability_checks_description = 'admin.machine.learning.availability.checks.description';
+  static const admin_machine_learning_availability_checks_enabled = 'admin.machine.learning.availability.checks.enabled';
+  static const admin_machine_learning_availability_checks_interval = 'admin.machine.learning.availability.checks.interval';
+  static const admin_machine_learning_availability_checks_interval_description = 'admin.machine.learning.availability.checks.interval.description';
+  static const admin_machine_learning_availability_checks_timeout = 'admin.machine.learning.availability.checks.timeout';
+  static const admin_machine_learning_availability_checks_timeout_description = 'admin.machine.learning.availability.checks.timeout.description';
   static const admin_machine_learning_clip_model = 'admin.machine.learning.clip.model';
   static const admin_machine_learning_clip_model_description = 'admin.machine.learning.clip.model.description';
   static const admin_machine_learning_duplicate_detection = 'admin.machine.learning.duplicate.detection';
-  static const admin_machine_learning_duplicate_detection_enabled =
-      'admin.machine.learning.duplicate.detection.enabled';
-  static const admin_machine_learning_duplicate_detection_enabled_description =
-      'admin.machine.learning.duplicate.detection.enabled.description';
-  static const admin_machine_learning_duplicate_detection_setting_description =
-      'admin.machine.learning.duplicate.detection.setting.description';
+  static const admin_machine_learning_duplicate_detection_enabled = 'admin.machine.learning.duplicate.detection.enabled';
+  static const admin_machine_learning_duplicate_detection_enabled_description = 'admin.machine.learning.duplicate.detection.enabled.description';
+  static const admin_machine_learning_duplicate_detection_setting_description = 'admin.machine.learning.duplicate.detection.setting.description';
   static const admin_machine_learning_enabled = 'admin.machine.learning.enabled';
   static const admin_machine_learning_enabled_description = 'admin.machine.learning.enabled.description';
   static const admin_machine_learning_facial_recognition = 'admin.machine.learning.facial.recognition';
-  static const admin_machine_learning_facial_recognition_description =
-      'admin.machine.learning.facial.recognition.description';
+  static const admin_machine_learning_facial_recognition_description = 'admin.machine.learning.facial.recognition.description';
   static const admin_machine_learning_facial_recognition_model = 'admin.machine.learning.facial.recognition.model';
-  static const admin_machine_learning_facial_recognition_model_description =
-      'admin.machine.learning.facial.recognition.model.description';
+  static const admin_machine_learning_facial_recognition_model_description = 'admin.machine.learning.facial.recognition.model.description';
   static const admin_machine_learning_facial_recognition_setting = 'admin.machine.learning.facial.recognition.setting';
-  static const admin_machine_learning_facial_recognition_setting_description =
-      'admin.machine.learning.facial.recognition.setting.description';
+  static const admin_machine_learning_facial_recognition_setting_description = 'admin.machine.learning.facial.recognition.setting.description';
   static const admin_machine_learning_max_detection_distance = 'admin.machine.learning.max.detection.distance';
-  static const admin_machine_learning_max_detection_distance_description =
-      'admin.machine.learning.max.detection.distance.description';
+  static const admin_machine_learning_max_detection_distance_description = 'admin.machine.learning.max.detection.distance.description';
   static const admin_machine_learning_max_recognition_distance = 'admin.machine.learning.max.recognition.distance';
-  static const admin_machine_learning_max_recognition_distance_description =
-      'admin.machine.learning.max.recognition.distance.description';
+  static const admin_machine_learning_max_recognition_distance_description = 'admin.machine.learning.max.recognition.distance.description';
   static const admin_machine_learning_min_detection_score = 'admin.machine.learning.min.detection.score';
-  static const admin_machine_learning_min_detection_score_description =
-      'admin.machine.learning.min.detection.score.description';
+  static const admin_machine_learning_min_detection_score_description = 'admin.machine.learning.min.detection.score.description';
   static const admin_machine_learning_min_recognized_faces = 'admin.machine.learning.min.recognized.faces';
-  static const admin_machine_learning_min_recognized_faces_description =
-      'admin.machine.learning.min.recognized.faces.description';
+  static const admin_machine_learning_min_recognized_faces_description = 'admin.machine.learning.min.recognized.faces.description';
   static const admin_machine_learning_settings = 'admin.machine.learning.settings';
   static const admin_machine_learning_settings_description = 'admin.machine.learning.settings.description';
   static const admin_machine_learning_smart_search = 'admin.machine.learning.smart.search';
   static const admin_machine_learning_smart_search_description = 'admin.machine.learning.smart.search.description';
   static const admin_machine_learning_smart_search_enabled = 'admin.machine.learning.smart.search.enabled';
-  static const admin_machine_learning_smart_search_enabled_description =
-      'admin.machine.learning.smart.search.enabled.description';
+  static const admin_machine_learning_smart_search_enabled_description = 'admin.machine.learning.smart.search.enabled.description';
   static const admin_machine_learning_url_description = 'admin.machine.learning.url.description';
   static const admin_manage_concurrency = 'admin.manage.concurrency';
   static const admin_manage_log_settings = 'admin.manage.log.settings';
@@ -190,26 +185,20 @@ abstract class IntlKeys {
   static const admin_metadata_settings_description = 'admin.metadata.settings.description';
   static const admin_migration_job = 'admin.migration.job';
   static const admin_migration_job_description = 'admin.migration.job.description';
-  static const admin_nightly_tasks_cluster_faces_setting_description =
-      'admin.nightly.tasks.cluster.faces.setting.description';
+  static const admin_nightly_tasks_cluster_faces_setting_description = 'admin.nightly.tasks.cluster.faces.setting.description';
   static const admin_nightly_tasks_cluster_new_faces_setting = 'admin.nightly.tasks.cluster.new.faces.setting';
   static const admin_nightly_tasks_database_cleanup_setting = 'admin.nightly.tasks.database.cleanup.setting';
-  static const admin_nightly_tasks_database_cleanup_setting_description =
-      'admin.nightly.tasks.database.cleanup.setting.description';
+  static const admin_nightly_tasks_database_cleanup_setting_description = 'admin.nightly.tasks.database.cleanup.setting.description';
   static const admin_nightly_tasks_generate_memories_setting = 'admin.nightly.tasks.generate.memories.setting';
-  static const admin_nightly_tasks_generate_memories_setting_description =
-      'admin.nightly.tasks.generate.memories.setting.description';
+  static const admin_nightly_tasks_generate_memories_setting_description = 'admin.nightly.tasks.generate.memories.setting.description';
   static const admin_nightly_tasks_missing_thumbnails_setting = 'admin.nightly.tasks.missing.thumbnails.setting';
-  static const admin_nightly_tasks_missing_thumbnails_setting_description =
-      'admin.nightly.tasks.missing.thumbnails.setting.description';
+  static const admin_nightly_tasks_missing_thumbnails_setting_description = 'admin.nightly.tasks.missing.thumbnails.setting.description';
   static const admin_nightly_tasks_settings = 'admin.nightly.tasks.settings';
   static const admin_nightly_tasks_settings_description = 'admin.nightly.tasks.settings.description';
   static const admin_nightly_tasks_start_time_setting = 'admin.nightly.tasks.start.time.setting';
-  static const admin_nightly_tasks_start_time_setting_description =
-      'admin.nightly.tasks.start.time.setting.description';
+  static const admin_nightly_tasks_start_time_setting_description = 'admin.nightly.tasks.start.time.setting.description';
   static const admin_nightly_tasks_sync_quota_usage_setting = 'admin.nightly.tasks.sync.quota.usage.setting';
-  static const admin_nightly_tasks_sync_quota_usage_setting_description =
-      'admin.nightly.tasks.sync.quota.usage.setting.description';
+  static const admin_nightly_tasks_sync_quota_usage_setting_description = 'admin.nightly.tasks.sync.quota.usage.setting.description';
   static const admin_no_paths_added = 'admin.no.paths.added';
   static const admin_no_pattern_added = 'admin.no.pattern.added';
   static const admin_note_apply_storage_label_previous_assets = 'admin.note.apply.storage.label.previous.assets';
@@ -217,10 +206,8 @@ abstract class IntlKeys {
   static const admin_notification_email_from_address = 'admin.notification.email.from.address';
   static const admin_notification_email_from_address_description = 'admin.notification.email.from.address.description';
   static const admin_notification_email_host_description = 'admin.notification.email.host.description';
-  static const admin_notification_email_ignore_certificate_errors =
-      'admin.notification.email.ignore.certificate.errors';
-  static const admin_notification_email_ignore_certificate_errors_description =
-      'admin.notification.email.ignore.certificate.errors.description';
+  static const admin_notification_email_ignore_certificate_errors = 'admin.notification.email.ignore.certificate.errors';
+  static const admin_notification_email_ignore_certificate_errors_description = 'admin.notification.email.ignore.certificate.errors.description';
   static const admin_notification_email_password_description = 'admin.notification.email.password.description';
   static const admin_notification_email_port_description = 'admin.notification.email.port.description';
   static const admin_notification_email_sent_test_email_button = 'admin.notification.email.sent.test.email.button';
@@ -241,8 +228,7 @@ abstract class IntlKeys {
   static const admin_oauth_enable_description = 'admin.oauth.enable.description';
   static const admin_oauth_mobile_redirect_uri = 'admin.oauth.mobile.redirect.uri';
   static const admin_oauth_mobile_redirect_uri_override = 'admin.oauth.mobile.redirect.uri.override';
-  static const admin_oauth_mobile_redirect_uri_override_description =
-      'admin.oauth.mobile.redirect.uri.override.description';
+  static const admin_oauth_mobile_redirect_uri_override_description = 'admin.oauth.mobile.redirect.uri.override.description';
   static const admin_oauth_role_claim = 'admin.oauth.role.claim';
   static const admin_oauth_role_claim_description = 'admin.oauth.role.claim.description';
   static const admin_oauth_settings = 'admin.oauth.settings';
@@ -287,8 +273,7 @@ abstract class IntlKeys {
   static const admin_storage_template_date_time_sample = 'admin.storage.template.date.time.sample';
   static const admin_storage_template_enable_description = 'admin.storage.template.enable.description';
   static const admin_storage_template_hash_verification_enabled = 'admin.storage.template.hash.verification.enabled';
-  static const admin_storage_template_hash_verification_enabled_description =
-      'admin.storage.template.hash.verification.enabled.description';
+  static const admin_storage_template_hash_verification_enabled_description = 'admin.storage.template.hash.verification.enabled.description';
   static const admin_storage_template_migration = 'admin.storage.template.migration';
   static const admin_storage_template_migration_description = 'admin.storage.template.migration.description';
   static const admin_storage_template_migration_info = 'admin.storage.template.migration.info';
@@ -323,46 +308,38 @@ abstract class IntlKeys {
   static const admin_transcoding_acceleration_rkmpp = 'admin.transcoding.acceleration.rkmpp';
   static const admin_transcoding_acceleration_vaapi = 'admin.transcoding.acceleration.vaapi';
   static const admin_transcoding_accepted_audio_codecs = 'admin.transcoding.accepted.audio.codecs';
-  static const admin_transcoding_accepted_audio_codecs_description =
-      'admin.transcoding.accepted.audio.codecs.description';
+  static const admin_transcoding_accepted_audio_codecs_description = 'admin.transcoding.accepted.audio.codecs.description';
   static const admin_transcoding_accepted_containers = 'admin.transcoding.accepted.containers';
   static const admin_transcoding_accepted_containers_description = 'admin.transcoding.accepted.containers.description';
   static const admin_transcoding_accepted_video_codecs = 'admin.transcoding.accepted.video.codecs';
-  static const admin_transcoding_accepted_video_codecs_description =
-      'admin.transcoding.accepted.video.codecs.description';
+  static const admin_transcoding_accepted_video_codecs_description = 'admin.transcoding.accepted.video.codecs.description';
   static const admin_transcoding_advanced_options_description = 'admin.transcoding.advanced.options.description';
   static const admin_transcoding_audio_codec = 'admin.transcoding.audio.codec';
   static const admin_transcoding_audio_codec_description = 'admin.transcoding.audio.codec.description';
   static const admin_transcoding_bitrate_description = 'admin.transcoding.bitrate.description';
   static const admin_transcoding_codecs_learn_more = 'admin.transcoding.codecs.learn.more';
   static const admin_transcoding_constant_quality_mode = 'admin.transcoding.constant.quality.mode';
-  static const admin_transcoding_constant_quality_mode_description =
-      'admin.transcoding.constant.quality.mode.description';
+  static const admin_transcoding_constant_quality_mode_description = 'admin.transcoding.constant.quality.mode.description';
   static const admin_transcoding_constant_rate_factor = 'admin.transcoding.constant.rate.factor';
-  static const admin_transcoding_constant_rate_factor_description =
-      'admin.transcoding.constant.rate.factor.description';
+  static const admin_transcoding_constant_rate_factor_description = 'admin.transcoding.constant.rate.factor.description';
   static const admin_transcoding_disabled_description = 'admin.transcoding.disabled.description';
   static const admin_transcoding_encoding_options = 'admin.transcoding.encoding.options';
   static const admin_transcoding_encoding_options_description = 'admin.transcoding.encoding.options.description';
   static const admin_transcoding_hardware_acceleration = 'admin.transcoding.hardware.acceleration';
-  static const admin_transcoding_hardware_acceleration_description =
-      'admin.transcoding.hardware.acceleration.description';
+  static const admin_transcoding_hardware_acceleration_description = 'admin.transcoding.hardware.acceleration.description';
   static const admin_transcoding_hardware_decoding = 'admin.transcoding.hardware.decoding';
-  static const admin_transcoding_hardware_decoding_setting_description =
-      'admin.transcoding.hardware.decoding.setting.description';
+  static const admin_transcoding_hardware_decoding_setting_description = 'admin.transcoding.hardware.decoding.setting.description';
   static const admin_transcoding_max_b_frames = 'admin.transcoding.max.b.frames';
   static const admin_transcoding_max_b_frames_description = 'admin.transcoding.max.b.frames.description';
   static const admin_transcoding_max_bitrate = 'admin.transcoding.max.bitrate';
   static const admin_transcoding_max_bitrate_description = 'admin.transcoding.max.bitrate.description';
   static const admin_transcoding_max_keyframe_interval = 'admin.transcoding.max.keyframe.interval';
-  static const admin_transcoding_max_keyframe_interval_description =
-      'admin.transcoding.max.keyframe.interval.description';
+  static const admin_transcoding_max_keyframe_interval_description = 'admin.transcoding.max.keyframe.interval.description';
   static const admin_transcoding_optimal_description = 'admin.transcoding.optimal.description';
   static const admin_transcoding_policy = 'admin.transcoding.policy';
   static const admin_transcoding_policy_description = 'admin.transcoding.policy.description';
   static const admin_transcoding_preferred_hardware_device = 'admin.transcoding.preferred.hardware.device';
-  static const admin_transcoding_preferred_hardware_device_description =
-      'admin.transcoding.preferred.hardware.device.description';
+  static const admin_transcoding_preferred_hardware_device_description = 'admin.transcoding.preferred.hardware.device.description';
   static const admin_transcoding_preset_preset = 'admin.transcoding.preset.preset';
   static const admin_transcoding_preset_preset_description = 'admin.transcoding.preset.preset.description';
   static const admin_transcoding_reference_frames = 'admin.transcoding.reference.frames';
@@ -381,8 +358,7 @@ abstract class IntlKeys {
   static const admin_transcoding_transcode_policy = 'admin.transcoding.transcode.policy';
   static const admin_transcoding_transcode_policy_description = 'admin.transcoding.transcode.policy.description';
   static const admin_transcoding_two_pass_encoding = 'admin.transcoding.two.pass.encoding';
-  static const admin_transcoding_two_pass_encoding_setting_description =
-      'admin.transcoding.two.pass.encoding.setting.description';
+  static const admin_transcoding_two_pass_encoding_setting_description = 'admin.transcoding.two.pass.encoding.setting.description';
   static const admin_transcoding_video_codec = 'admin.transcoding.video.codec';
   static const admin_transcoding_video_codec_description = 'admin.transcoding.video.codec.description';
   static const admin_trash_enabled_description = 'admin.trash.enabled.description';
@@ -418,12 +394,8 @@ abstract class IntlKeys {
   static const admin_password = 'admin_password';
   static const administration = 'administration';
   static const advanced = 'advanced';
-  static const advanced_settings_beta_timeline_subtitle = 'advanced_settings_beta_timeline_subtitle';
-  static const advanced_settings_beta_timeline_title = 'advanced_settings_beta_timeline_title';
-  static const advanced_settings_enable_alternate_media_filter_subtitle =
-      'advanced_settings_enable_alternate_media_filter_subtitle';
-  static const advanced_settings_enable_alternate_media_filter_title =
-      'advanced_settings_enable_alternate_media_filter_title';
+  static const advanced_settings_enable_alternate_media_filter_subtitle = 'advanced_settings_enable_alternate_media_filter_subtitle';
+  static const advanced_settings_enable_alternate_media_filter_title = 'advanced_settings_enable_alternate_media_filter_title';
   static const advanced_settings_log_level_title = 'advanced_settings_log_level_title';
   static const advanced_settings_prefer_remote_subtitle = 'advanced_settings_prefer_remote_subtitle';
   static const advanced_settings_prefer_remote_title = 'advanced_settings_prefer_remote_title';
@@ -458,6 +430,7 @@ abstract class IntlKeys {
   static const album_remove_user_confirmation = 'album_remove_user_confirmation';
   static const album_search_not_found = 'album_search_not_found';
   static const album_share_no_users = 'album_share_no_users';
+  static const album_summary = 'album_summary';
   static const album_updated = 'album_updated';
   static const album_updated_setting_description = 'album_updated_setting_description';
   static const album_user_left = 'album_user_left';
@@ -529,6 +502,8 @@ abstract class IntlKeys {
   static const asset_restored_successfully = 'asset_restored_successfully';
   static const asset_skipped = 'asset_skipped';
   static const asset_skipped_in_trash = 'asset_skipped_in_trash';
+  static const asset_trashed = 'asset_trashed';
+  static const asset_troubleshoot = 'asset_troubleshoot';
   static const asset_uploaded = 'asset_uploaded';
   static const asset_uploading = 'asset_uploading';
   static const asset_viewer_settings_subtitle = 'asset_viewer_settings_subtitle';
@@ -562,8 +537,10 @@ abstract class IntlKeys {
   static const autoplay_slideshow = 'autoplay_slideshow';
   static const back = 'back';
   static const back_close_deselect = 'back_close_deselect';
+  static const background_backup_running_error = 'background_backup_running_error';
   static const background_location_permission = 'background_location_permission';
   static const background_location_permission_content = 'background_location_permission_content';
+  static const background_options = 'background_options';
   static const backup = 'backup';
   static const backup_album_selection_page_albums_device = 'backup_album_selection_page_albums_device';
   static const backup_album_selection_page_albums_tap = 'backup_album_selection_page_albums_tap';
@@ -571,32 +548,23 @@ abstract class IntlKeys {
   static const backup_album_selection_page_select_albums = 'backup_album_selection_page_select_albums';
   static const backup_album_selection_page_selection_info = 'backup_album_selection_page_selection_info';
   static const backup_album_selection_page_total_assets = 'backup_album_selection_page_total_assets';
+  static const backup_albums_sync = 'backup_albums_sync';
   static const backup_all = 'backup_all';
   static const backup_background_service_backup_failed_message = 'backup_background_service_backup_failed_message';
-  static const backup_background_service_connection_failed_message =
-      'backup_background_service_connection_failed_message';
-  static const backup_background_service_current_upload_notification =
-      'backup_background_service_current_upload_notification';
+  static const backup_background_service_connection_failed_message = 'backup_background_service_connection_failed_message';
+  static const backup_background_service_current_upload_notification = 'backup_background_service_current_upload_notification';
   static const backup_background_service_default_notification = 'backup_background_service_default_notification';
   static const backup_background_service_error_title = 'backup_background_service_error_title';
-  static const backup_background_service_in_progress_notification =
-      'backup_background_service_in_progress_notification';
-  static const backup_background_service_upload_failure_notification =
-      'backup_background_service_upload_failure_notification';
+  static const backup_background_service_in_progress_notification = 'backup_background_service_in_progress_notification';
+  static const backup_background_service_upload_failure_notification = 'backup_background_service_upload_failure_notification';
   static const backup_controller_page_albums = 'backup_controller_page_albums';
-  static const backup_controller_page_background_app_refresh_disabled_content =
-      'backup_controller_page_background_app_refresh_disabled_content';
-  static const backup_controller_page_background_app_refresh_disabled_title =
-      'backup_controller_page_background_app_refresh_disabled_title';
-  static const backup_controller_page_background_app_refresh_enable_button_text =
-      'backup_controller_page_background_app_refresh_enable_button_text';
-  static const backup_controller_page_background_battery_info_link =
-      'backup_controller_page_background_battery_info_link';
-  static const backup_controller_page_background_battery_info_message =
-      'backup_controller_page_background_battery_info_message';
+  static const backup_controller_page_background_app_refresh_disabled_content = 'backup_controller_page_background_app_refresh_disabled_content';
+  static const backup_controller_page_background_app_refresh_disabled_title = 'backup_controller_page_background_app_refresh_disabled_title';
+  static const backup_controller_page_background_app_refresh_enable_button_text = 'backup_controller_page_background_app_refresh_enable_button_text';
+  static const backup_controller_page_background_battery_info_link = 'backup_controller_page_background_battery_info_link';
+  static const backup_controller_page_background_battery_info_message = 'backup_controller_page_background_battery_info_message';
   static const backup_controller_page_background_battery_info_ok = 'backup_controller_page_background_battery_info_ok';
-  static const backup_controller_page_background_battery_info_title =
-      'backup_controller_page_background_battery_info_title';
+  static const backup_controller_page_background_battery_info_title = 'backup_controller_page_background_battery_info_title';
   static const backup_controller_page_background_charging = 'backup_controller_page_background_charging';
   static const backup_controller_page_background_configure_error = 'backup_controller_page_background_configure_error';
   static const backup_controller_page_background_delay = 'backup_controller_page_background_delay';
@@ -697,6 +665,8 @@ abstract class IntlKeys {
   static const change_pin_code = 'change_pin_code';
   static const change_your_password = 'change_your_password';
   static const changed_visibility_successfully = 'changed_visibility_successfully';
+  static const charging = 'charging';
+  static const charging_requirement_mobile_backup = 'charging_requirement_mobile_backup';
   static const check_corrupt_asset_backup = 'check_corrupt_asset_backup';
   static const check_corrupt_asset_backup_button = 'check_corrupt_asset_backup_button';
   static const check_corrupt_asset_backup_description = 'check_corrupt_asset_backup_description';
@@ -783,6 +753,7 @@ abstract class IntlKeys {
   static const create_user = 'create_user';
   static const created = 'created';
   static const created_at = 'created_at';
+  static const creating_linked_albums = 'creating_linked_albums';
   static const crop = 'crop';
   static const curated_object_page_title = 'curated_object_page_title';
   static const current_device = 'current_device';
@@ -868,8 +839,7 @@ abstract class IntlKeys {
   static const download_failed = 'download_failed';
   static const download_finished = 'download_finished';
   static const download_include_embedded_motion_videos = 'download_include_embedded_motion_videos';
-  static const download_include_embedded_motion_videos_description =
-      'download_include_embedded_motion_videos_description';
+  static const download_include_embedded_motion_videos_description = 'download_include_embedded_motion_videos_description';
   static const download_notfound = 'download_notfound';
   static const download_paused = 'download_paused';
   static const download_settings = 'download_settings';
@@ -933,7 +903,9 @@ abstract class IntlKeys {
   static const error = 'error';
   static const error_change_sort_album = 'error_change_sort_album';
   static const error_delete_face = 'error_delete_face';
+  static const error_getting_places = 'error_getting_places';
   static const error_loading_image = 'error_loading_image';
+  static const error_loading_partners = 'error_loading_partners';
   static const error_saving_image = 'error_saving_image';
   static const error_tag_face_bounding_box = 'error_tag_face_bounding_box';
   static const error_title = 'error_title';
@@ -1096,6 +1068,7 @@ abstract class IntlKeys {
   static const favorites_page_no_favorites = 'favorites_page_no_favorites';
   static const feature_photo_updated = 'feature_photo_updated';
   static const features = 'features';
+  static const features_in_development = 'features_in_development';
   static const features_setting_description = 'features_setting_description';
   static const file_name = 'file_name';
   static const file_name_or_extension = 'file_name_or_extension';
@@ -1258,6 +1231,7 @@ abstract class IntlKeys {
   static const local = 'local';
   static const local_asset_cast_failed = 'local_asset_cast_failed';
   static const local_assets = 'local_assets';
+  static const local_media_summary = 'local_media_summary';
   static const local_network = 'local_network';
   static const local_network_sheet_info = 'local_network_sheet_info';
   static const location_permission = 'location_permission';
@@ -1269,6 +1243,7 @@ abstract class IntlKeys {
   static const location_picker_longitude_hint = 'location_picker_longitude_hint';
   static const lock = 'lock';
   static const locked_folder = 'locked_folder';
+  static const log_detail_title = 'log_detail_title';
   static const log_out = 'log_out';
   static const log_out_all_devices = 'log_out_all_devices';
   static const logged_in_as = 'logged_in_as';
@@ -1299,6 +1274,7 @@ abstract class IntlKeys {
   static const login_password_changed_success = 'login_password_changed_success';
   static const logout_all_device_confirmation = 'logout_all_device_confirmation';
   static const logout_this_device_confirmation = 'logout_this_device_confirmation';
+  static const logs = 'logs';
   static const longitude = 'longitude';
   static const look = 'look';
   static const loop_videos = 'loop_videos';
@@ -1341,6 +1317,7 @@ abstract class IntlKeys {
   static const mark_as_read = 'mark_as_read';
   static const marked_all_as_read = 'marked_all_as_read';
   static const matches = 'matches';
+  static const matching_assets = 'matching_assets';
   static const media_type = 'media_type';
   static const memories = 'memories';
   static const memories_all_caught_up = 'memories_all_caught_up';
@@ -1381,6 +1358,7 @@ abstract class IntlKeys {
   static const name_or_nickname = 'name_or_nickname';
   static const network_requirement_photos_upload = 'network_requirement_photos_upload';
   static const network_requirement_videos_upload = 'network_requirement_videos_upload';
+  static const network_requirements = 'network_requirements';
   static const network_requirements_updated = 'network_requirements_updated';
   static const networking_settings = 'networking_settings';
   static const networking_subtitle = 'networking_subtitle';
@@ -1391,6 +1369,7 @@ abstract class IntlKeys {
   static const new_person = 'new_person';
   static const new_pin_code = 'new_pin_code';
   static const new_pin_code_subtitle = 'new_pin_code_subtitle';
+  static const new_timeline = 'new_timeline';
   static const new_user_created = 'new_user_created';
   static const new_version_available = 'new_version_available';
   static const newest_first = 'newest_first';
@@ -1404,24 +1383,28 @@ abstract class IntlKeys {
   static const no_assets_message = 'no_assets_message';
   static const no_assets_to_show = 'no_assets_to_show';
   static const no_cast_devices_found = 'no_cast_devices_found';
+  static const no_checksum_local = 'no_checksum_local';
+  static const no_checksum_remote = 'no_checksum_remote';
   static const no_duplicates_found = 'no_duplicates_found';
   static const no_exif_info_available = 'no_exif_info_available';
   static const no_explore_results_message = 'no_explore_results_message';
   static const no_favorites_message = 'no_favorites_message';
   static const no_libraries_message = 'no_libraries_message';
+  static const no_local_assets_found = 'no_local_assets_found';
   static const no_locked_photos_message = 'no_locked_photos_message';
   static const no_name = 'no_name';
   static const no_notifications = 'no_notifications';
   static const no_people_found = 'no_people_found';
   static const no_places = 'no_places';
+  static const no_remote_assets_found = 'no_remote_assets_found';
   static const no_results = 'no_results';
   static const no_results_description = 'no_results_description';
   static const no_shared_albums_message = 'no_shared_albums_message';
   static const no_uploads_in_progress = 'no_uploads_in_progress';
+  static const not_available = 'not_available';
   static const not_in_any_album = 'not_in_any_album';
   static const not_selected = 'not_selected';
-  static const note_apply_storage_label_to_previously_uploaded_assets =
-      'note_apply_storage_label_to_previously_uploaded assets';
+  static const note_apply_storage_label_to_previously_uploaded_assets = 'note_apply_storage_label_to_previously_uploaded assets';
   static const notes = 'notes';
   static const nothing_here_yet = 'nothing_here_yet';
   static const notification_permission_dialog_content = 'notification_permission_dialog_content';
@@ -1538,6 +1521,7 @@ abstract class IntlKeys {
   static const port = 'port';
   static const preferences_settings_subtitle = 'preferences_settings_subtitle';
   static const preferences_settings_title = 'preferences_settings_title';
+  static const preparing = 'preparing';
   static const preset = 'preset';
   static const preview = 'preview';
   static const previous = 'previous';
@@ -1603,6 +1587,7 @@ abstract class IntlKeys {
   static const read_changelog = 'read_changelog';
   static const readonly_mode_disabled = 'readonly_mode_disabled';
   static const readonly_mode_enabled = 'readonly_mode_enabled';
+  static const ready_for_upload = 'ready_for_upload';
   static const reassign = 'reassign';
   static const reassigned_assets_to_existing_person = 'reassigned_assets_to_existing_person';
   static const reassigned_assets_to_new_person = 'reassigned_assets_to_new_person';
@@ -1627,6 +1612,7 @@ abstract class IntlKeys {
   static const regenerating_thumbnails = 'regenerating_thumbnails';
   static const remote = 'remote';
   static const remote_assets = 'remote_assets';
+  static const remote_media_summary = 'remote_media_summary';
   static const remove = 'remove';
   static const remove_assets_album_confirmation = 'remove_assets_album_confirmation';
   static const remove_assets_shared_link_confirmation = 'remove_assets_shared_link_confirmation';
@@ -1800,8 +1786,7 @@ abstract class IntlKeys {
   static const setting_image_viewer_title = 'setting_image_viewer_title';
   static const setting_languages_apply = 'setting_languages_apply';
   static const setting_languages_subtitle = 'setting_languages_subtitle';
-  static const setting_notifications_notify_failures_grace_period =
-      'setting_notifications_notify_failures_grace_period';
+  static const setting_notifications_notify_failures_grace_period = 'setting_notifications_notify_failures_grace_period';
   static const setting_notifications_notify_hours = 'setting_notifications_notify_hours';
   static const setting_notifications_notify_immediately = 'setting_notifications_notify_immediately';
   static const setting_notifications_notify_minutes = 'setting_notifications_notify_minutes';
@@ -1903,6 +1888,7 @@ abstract class IntlKeys {
   static const show_slideshow_transition = 'show_slideshow_transition';
   static const show_supporter_badge = 'show_supporter_badge';
   static const show_supporter_badge_description = 'show_supporter_badge_description';
+  static const show_text_search_menu = 'show_text_search_menu';
   static const shuffle = 'shuffle';
   static const sidebar = 'sidebar';
   static const sidebar_display_description = 'sidebar_display_description';
@@ -1933,6 +1919,7 @@ abstract class IntlKeys {
   static const stacktrace = 'stacktrace';
   static const start = 'start';
   static const start_date = 'start_date';
+  static const start_date_before_end_date = 'start_date_before_end_date';
   static const state = 'state';
   static const status = 'status';
   static const stop_casting = 'stop_casting';
@@ -2136,4 +2123,5 @@ abstract class IntlKeys {
   static const you_dont_have_any_shared_links = 'you_dont_have_any_shared_links';
   static const your_wifi_name = 'your_wifi_name';
   static const zoom_image = 'zoom_image';
+  static const zoom_to_bounds = 'zoom_to_bounds';
 }
