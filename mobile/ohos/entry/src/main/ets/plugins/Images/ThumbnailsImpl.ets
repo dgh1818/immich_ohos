@@ -276,7 +276,8 @@ export class MessagesImplBaseThumb extends ThumbnailApi {
   }
 
   override async getHdr(assetId: string, result: Result<Map<string, boolean>>) {
-    const imageSource: image.ImageSource = image.createImageSource(assetId);
+    let filePath = new fileUri.FileUri(assetId).path;;
+    const imageSource: image.ImageSource = image.createImageSource(filePath);
     const imageInfo = await imageSource.getImageInfo();
     const isHdr = imageInfo.isHdr;
     let resOut = new Map<string, boolean>();
