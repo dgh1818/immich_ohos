@@ -1,5 +1,5 @@
 import { common } from '@kit.AbilityKit'
-import { BackgroundWorkerFgHostApi } from './BackgroundWorker.g'
+import { BackgroundWorkerFgHostApi, BackgroundWorkerSettings } from './BackgroundWorker.g'
 import dataPreferences from '@ohos.data.preferences'
 import preferences from '@ohos.data.preferences';
 import { workScheduler } from '@kit.BackgroundTasksKit';
@@ -18,6 +18,20 @@ export class BackgroundWorkerApiImpl extends BackgroundWorkerFgHostApi {
     // Mirror Android: only enqueue the media observer. It will re-enqueue itself
     // and trigger the background worker when it fires.
     BackgroundWorkerApiImpl.enqueueMediaObserver(this.ctx!)
+  }
+
+  override saveNotificationMessage(title: string, body: string): void {
+    const prefs = new BackgroundWorkerPreferences(this.ctx!);
+    prefs.updateNotificationConfig(title, body);
+  }
+
+  override configure(settings: BackgroundWorkerSettings): void {
+    const prefs = new BackgroundWorkerPreferences(this.ctx!);
+    prefs.updateSettings({
+      minimumDelaySeconds: settings.getMinimumDelaySeconds() ?? 0,
+      requiresCharging: settings.getRequiresCharging() ?? false,
+    });
+    BackgroundWorkerApiImpl.enqueueMediaObserver(this.ctx!);
   }
 
   override disable() {

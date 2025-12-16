@@ -25,6 +25,7 @@ import { ConnectivityApi } from '../plugins/connectivity/Connectivity.g';
 import { ConnectivityApiImpl } from '../plugins/connectivity/ConnectivityApiImpl';
 import BackgroundEngineLock from '../plugins/Background/BackgroundEngineLock';
 import { BackgroundWorkerLockApi } from '../plugins/Background/BackgroundWorkerLock.g';
+import { BackgroundWorkerPreferences } from '../plugins/Background/BackgroundWorkerPreferences';
 import { UIAbility } from "@kit.AbilityKit";
 import { common } from '@kit.AbilityKit'
 
@@ -96,6 +97,12 @@ class BackgroundWorker extends WorkSchedulerExtensionAbility {
     BackgroundWorker.workerInfo = workInfo;
     console.info(`onWorkStart, workInfo = ${JSON.stringify(workInfo)}`);
     console.info(this.TAG, "Starting background upload worker")
+    try {
+      const notif = new BackgroundWorkerPreferences(this.ctx).getNotificationConfig();
+      BackgroundWorker.backgroundWorkerBgHostApiImpl?.showNotification(notif.title, notif.message);
+    } catch (e) {
+      console.error(this.TAG, 'showNotification failed', e);
+    }
     // Ensure Flutter runtime is ready before creating an engine
     this.loader.ensureInitializationComplete(null);
     BackgroundWorker.engine = new FlutterEngine(this.ctx, null, null, null);
@@ -172,7 +179,7 @@ class BackgroundWorkerBgHostApiImpl extends BackgroundWorkerBgHostApi {
     }
   }
 
-  override showNotification(title: string, content: string): void {
+  showNotification(title: string, content: string): void {
     const request: notificationManager.NotificationRequest = {
       id: 100,
       content: {

@@ -134,6 +134,8 @@ export abstract class BackgroundWorkerFgHostApi {
 
   abstract enable(): void;
 
+  abstract saveNotificationMessage(title: string , body: string ): void;
+
   abstract configure(settings: BackgroundWorkerSettings ): void;
 
   abstract disable(): void;
@@ -153,6 +155,29 @@ export abstract class BackgroundWorkerFgHostApi {
               let res: Array<Object> = [];
               try {
                 api!.enable();
+                res.push(null);
+              }
+ catch (error) {
+                let wrappedError: Array<Object> = wrapError(error);
+                res = wrappedError;
+              }
+              reply.reply(res);
+            } });
+      } else {
+        channel.setMessageHandler(null);
+      }
+    }
+    {
+      let channel: BasicMessageChannel<Object> =
+          new BasicMessageChannel(
+              binaryMessenger, "dev.flutter.pigeon.immich_mobile.BackgroundWorkerFgHostApi.saveNotificationMessage", BackgroundWorkerFgHostApi.getCodec());
+      if (api != null) {
+        channel.setMessageHandler({
+            onMessage(message: Object ,reply: Reply<Object> ) {
+              let args: Array<Object> = message as Array<Object>;
+              let res: Array<Object> = [];
+              try {
+                api!.saveNotificationMessage(args[0] as string, args[1] as string);
                 res.push(null);
               }
  catch (error) {
@@ -217,8 +242,6 @@ export abstract class BackgroundWorkerBgHostApi {
 
   abstract onInitialized(): void;
 
-  abstract showNotification(title: string , content: string ): void;
-
   abstract close(): void;
   /** The codec used by BackgroundWorkerBgHostApi. */
   static getCodec(): MessageCodec<Object>{
@@ -236,29 +259,6 @@ export abstract class BackgroundWorkerBgHostApi {
               let res: Array<Object> = [];
               try {
                 api!.onInitialized();
-                res.push(null);
-              }
- catch (error) {
-                let wrappedError: Array<Object> = wrapError(error);
-                res = wrappedError;
-              }
-              reply.reply(res);
-            } });
-      } else {
-        channel.setMessageHandler(null);
-      }
-    }
-    {
-      let channel: BasicMessageChannel<Object> =
-          new BasicMessageChannel(
-              binaryMessenger, "dev.flutter.pigeon.immich_mobile.BackgroundWorkerBgHostApi.showNotification", BackgroundWorkerBgHostApi.getCodec());
-      if (api != null) {
-        channel.setMessageHandler({
-            onMessage(message: Object ,reply: Reply<Object> ) {
-              let args: Array<Object> = message as Array<Object>;
-              let res: Array<Object> = [];
-              try {
-                api!.showNotification(args[0] as string, args[1] as string);
                 res.push(null);
               }
  catch (error) {
