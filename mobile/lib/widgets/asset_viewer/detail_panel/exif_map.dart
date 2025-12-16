@@ -75,7 +75,7 @@ class ExifMap extends StatelessWidget {
           onReverseGeocoded: onReverseGeocoded,
           onTap: (tapPosition, latLong) async {
             context.pushRoute<LatLng?>(
-              MapRoute(initialLocation: LatLng(exifInfo.latitude ?? 0, exifInfo.longitude ?? 0)),
+              DriftMapRoute(initialLocation: LatLng(exifInfo.latitude ?? 0, exifInfo.longitude ?? 0)),
             );
           },
           /*
