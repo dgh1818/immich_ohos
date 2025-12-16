@@ -11,7 +11,7 @@ class MapService with ErrorLoggerMixin {
   final logger = Logger("MapService");
 
   MapService(this._apiService) {
-    _setMapUserAgentHeader();
+    //_setMapUserAgentHeader();
   }
 
   Future<void> _setMapUserAgentHeader() async {
