@@ -39,13 +39,16 @@ const CREATE_SQL = `
     mtime INTEGER,
     size INTEGER
   )`;
+
 @Concurrent
-async function hashAssetTask(params: HashAssetParams): Promise<Uint8Array> {
+async function hashAssetTask(uri: string,
+isCloud: boolean,
+cacheDir: string): Promise<string> {
   let tmpPath: string | undefined;
   try {
-    let path = new fileUri.FileUri(params.uri).path;
-    if (params.isCloud) {
-      const cacheRoot = `${params.cacheDir}/originalPhoto`;
+    let path = new fileUri.FileUri(uri).path;
+    if (isCloud) {
+      const cacheRoot = `${cacheDir}/originalPhoto`;
       if (!fs.accessSync(cacheRoot)) {
         fs.mkdirSync(cacheRoot);
       }
@@ -53,7 +56,7 @@ async function hashAssetTask(params: HashAssetParams): Promise<Uint8Array> {
       const targetDirectoryPath = `${cacheRoot}/${uuid}`;
       fs.mkdirSync(targetDirectoryPath);
 
-      const inputFilePath = params.uri.substring(params.uri.lastIndexOf('/') + 1);
+      const inputFilePath = uri.substring(uri.lastIndexOf('/') + 1);
       const inputSplits = inputFilePath.split('.');
       const outputFileName = inputSplits[0];
       const extension = inputSplits.length == 2 ? `.${inputSplits[1]}` : '.jpg';
@@ -61,9 +64,9 @@ async function hashAssetTask(params: HashAssetParams): Promise<Uint8Array> {
 
       const dstDirUriLocal = fileUri.getUriFromPath(tmpPath);
       const copied = await new Promise<boolean>((resolve) => {
-        fs.copy(params.uri, dstDirUriLocal, {}, (err: BusinessError | undefined) => {
+        fs.copy(uri, dstDirUriLocal, {}, (err: BusinessError | undefined) => {
           if (err) {
-            console.error(`copy ${params.uri} failed`, err);
+            console.error(`copy ${uri} failed`, err);
             resolve(false);
             return;
           }
@@ -71,31 +74,33 @@ async function hashAssetTask(params: HashAssetParams): Promise<Uint8Array> {
         });
       });
       if (!copied) {
-        return new Uint8Array();
+        return '';
       }
       path = tmpPath;
     }
 
-    return await new Promise<Uint8Array>((resolve) => {
+    return await new Promise<string>((resolve) => {
       try {
         hash.hash(path, "sha1", (err: BusinessError, digest: string) => {
           if (err) {
-            resolve(new Uint8Array());
+            resolve('');
             return;
           }
-          const bytes = new Uint8Array(digest.length / 2);
-          for (let i = 0; i < digest.length; i += 2) {
-            bytes[i / 2] = parseInt(digest.substring(i, i + 2), 16);
+          const clean = digest.trim();
+          const bytes = new Uint8Array(clean.length / 2);
+          for (let i = 0; i < bytes.length; i++) {
+            bytes[i] = parseInt(clean.substr(i * 2, 2), 16);
           }
-          resolve(bytes);
+          const helper = new util.Base64Helper();
+          resolve(helper.encodeToString(bytes));
         });
       } catch (_) {
-        resolve(new Uint8Array());
+        resolve('');
       }
     });
   } catch (e) {
-    console.error(`hashAssetTask failed for ${params.uri}`, e);
-    return new Uint8Array();
+    console.error(`hashAssetTask failed for ${uri}`, e);
+    return '';
   } finally {
     if (tmpPath) {
       try {
@@ -176,39 +181,41 @@ export class MessagesImplBase extends NativeSyncApiOhos {
       const asset = await this.getAssetByUri(id);
       console.error(`hashAssets asset ${id}`);
       const position = asset?.get(photoAccessHelper.PhotoKeys.POSITION) as photoAccessHelper.PositionType | undefined;
-      const param: HashAssetParams = {
-        uri: id,
-        isCloud: position === photoAccessHelper.PositionType.CLOUD,
-        cacheDir: this.ctx!.cacheDir,
-      };
-      const task = new taskpool.Task(hashAssetTask, param);
+      let isCloud = position === photoAccessHelper.PositionType.CLOUD;
+      // const param: HashAssetParams = {
+      //   uri: id,
+      //   isCloud: position === photoAccessHelper.PositionType.CLOUD,
+      //   cacheDir: this.ctx!.cacheDir,
+      // };
+      const task = new taskpool.Task(hashAssetTask, id,isCloud,this.ctx!.cacheDir);
       group.addTask(task);
       this.currentTasks.push(task);
     }
 
     const results: HashResult[] = [];
     try {
-      const res = await taskpool.execute(group, taskpool.Priority.HIGH) as Array<Uint8Array | undefined>;
-      const hashes = (res ?? []).map((digest) => digest ?? new Uint8Array());
+      const res = await taskpool.execute(group, taskpool.Priority.HIGH) as Array<string | undefined>;
+      const hashes = (res ?? []).map((digest) => digest ?? '');
       for (let i = 0; i < assetIds.length; i++) {
         if (this.cancelRequested) {
           break;
         }
-        const bytes = hashes[i] ?? new Uint8Array();
-        const hex = Array.from(bytes).map((b) => b.toString(16).padStart(2, '0')).join('');
+        const b64 = hashes[i] ?? '';
         const hr = new HashResult();
         hr.setAssetId(assetIds[i]);
-        hr.setHash(hex);
+        hr.setHash(b64.length === 0 ? '' : b64);
+        // Always set error field so the list has a fixed length [assetId, error, hash].
+        hr.setError(b64.length === 0 ? 'hash_failed' : '');
         results.push(hr);
       }
     } catch (e) {
       console.error(`hashAssets taskpool execute error: ${e}`);
-      for (const id of assetIds) {
-        const hr = new HashResult();
-        hr.setAssetId(id);
-        hr.setError('hash_failed');
-        results.push(hr);
-      }
+      // for (const id of assetIds) {
+      //   const hr = new HashResult();
+      //   hr.setAssetId(id);
+      //   hr.setError('hash_failed');
+      //   results.push(hr);
+      // }
     }
 
     result.success(results);
