@@ -12,9 +12,21 @@ import { BackgroundWorkerBgHostApi, BackgroundWorkerFlutterApi } from "./Backgro
 import dataPreferences from '@ohos.data.preferences'
 import preferences from "@ohos.data.preferences";
 import { BackgroundWorkerApiImpl } from "./BackgroundWorkerApiImpl";
-import EntryAbility from "../entryability/EntryAbility";
 import { notificationManager } from '@kit.NotificationKit';
 import { DartEntrypoint } from '@ohos/flutter_ohos/src/main/ets/embedding/engine/dart/DartExecutor';
+import { GeneratedPluginRegistrant } from '../plugins/GeneratedPluginRegistrant';
+import { BackgroundServicePlugin } from '../plugins/BackgroundServicePlugin';
+import { NativeSyncApiOhos } from '../plugins/sync/Messages_ohos.g';
+import { MessagesImplBase } from '../plugins/sync/MessagesImplBase';
+import { MessagesImplBaseThumb } from '../plugins/Images/ThumbnailsImpl';
+import { ThumbnailApi } from '../plugins/Images/Messages_ohos.g';
+import { BackgroundWorkerFgHostApi } from './BackgroundWorker.g';
+import { ConnectivityApi } from '../plugins/connectivity/Connectivity.g';
+import { ConnectivityApiImpl } from '../plugins/connectivity/ConnectivityApiImpl';
+import BackgroundEngineLock from '../plugins/Background/BackgroundEngineLock';
+import { BackgroundWorkerLockApi } from '../plugins/Background/BackgroundWorkerLock.g';
+import { UIAbility } from "@kit.AbilityKit";
+import { common } from '@kit.AbilityKit'
 
 export class Deferred<T> {
   public promise: Promise<T>;
@@ -48,7 +60,6 @@ class BackgroundWorker extends WorkSchedulerExtensionAbility {
   public static isComplete = false
   private TAG = "BackgroundWorker";
   public static workerInfo?: workScheduler.WorkInfo;
-  public static mainAbility?:EntryAbility;
 
   public static backgroundWorkerBgHostApiImpl?:BackgroundWorkerBgHostApiImpl;
 
@@ -60,21 +71,35 @@ class BackgroundWorker extends WorkSchedulerExtensionAbility {
     }
   }
 
+  private registerPlugins(flutterEngine: FlutterEngine) {
+    this.ctx.getApplicationContext()
+    GeneratedPluginRegistrant.registerWith(flutterEngine);
+    const messenger = flutterEngine.dartExecutor.getBinaryMessenger();
+    const nativeSyncApiImpl = new MessagesImplBase(this.ctx.getApplicationContext());   //可能后台ability根本没办法对媒体库进行扫描
+    const thumbApiImpl = new MessagesImplBaseThumb(this.ctx.getApplicationContext());
+    const backgroundWorkerApiImpl = new BackgroundWorkerApiImpl(this.ctx.getApplicationContext());
+    const connectivityApiImpl = new ConnectivityApiImpl(this.ctx.getApplicationContext());
+    const backgroundEngineLock = new BackgroundEngineLock(this.ctx);
+
+    NativeSyncApiOhos.setup(messenger, nativeSyncApiImpl);
+    ThumbnailApi.setup(messenger, thumbApiImpl);
+    BackgroundWorkerFgHostApi.setup(messenger, backgroundWorkerApiImpl);
+    ConnectivityApi.setup(messenger, connectivityApiImpl);
+    BackgroundWorkerLockApi.setup(messenger, backgroundEngineLock);
+  }
+
   onWorkStart(workInfo: workScheduler.WorkInfo) {
     // Reset state for each run
     BackgroundWorker.isComplete = false;
     BackgroundWorker.completionHandler = new Deferred<boolean>();
     BackgroundWorker.backgroundWorkerBgHostApiImpl = new BackgroundWorkerBgHostApiImpl();
-    this.context.getApplicationContext();
     BackgroundWorker.workerInfo = workInfo;
     console.info(`onWorkStart, workInfo = ${JSON.stringify(workInfo)}`);
     console.info(this.TAG, "Starting background upload worker")
-    BackgroundWorker.mainAbility = new EntryAbility();
-
     // Ensure Flutter runtime is ready before creating an engine
     this.loader.ensureInitializationComplete(null);
     BackgroundWorker.engine = new FlutterEngine(this.ctx, null, null, null);
-    BackgroundWorker.mainAbility.registerPlugins(BackgroundWorker.mainAbility.getAbility().context,BackgroundWorker.engine)
+    this.registerPlugins(BackgroundWorker.engine);
 
     BackgroundWorker.flutterApi =
       new BackgroundWorkerFlutterApi(BackgroundWorker.engine.dartExecutor.getBinaryMessenger())

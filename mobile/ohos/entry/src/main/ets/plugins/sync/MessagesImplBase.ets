@@ -116,6 +116,10 @@ export class MessagesImplBase extends NativeSyncApiOhos {
   private cancelRequested = false;
   private currentTasks: Array<taskpool.Task> = [];
 
+  private isUiContext(ctx: common.Context | undefined): boolean {
+    return !!ctx && (ctx as common.UIAbilityContext).abilityInfo !== undefined;
+  }
+
   /**
    * Query a single PhotoAsset by uri and include position to know whether it's cloud/local.
    */
@@ -258,12 +262,12 @@ export class MessagesImplBase extends NativeSyncApiOhos {
     throw new Error();
   }
 
-  private ctx?: common.UIAbilityContext;
+  private ctx?: common.Context;
   private readonly TAG = "NativeSyncApiBase";
   private liveNotificationId: number = -1;
   private continuousTaskId: number = 0;
 
-  constructor(context: common.UIAbilityContext) {
+  constructor(context: common.Context) {
     super();
     this.ctx = context;
   }
@@ -309,13 +313,17 @@ export class MessagesImplBase extends NativeSyncApiOhos {
 
   public override async getAlbums(result: Result<Array<PlatformAlbum>>) {
     console.error("MessagesImplBase 4 ")
-    let atManager = abilityAccessCtrl.createAtManager();
-    atManager.requestPermissionsFromUser(this.ctx, ["ohos.permission.MEDIA_LOCATION","ohos.permission.READ_MEDIA","ohos.permission.WRITE_MEDIA"]).then((data) => {
-      //console.info("data permissions:" + data.permissions);
+    if (this.isUiContext(this.ctx)) {
+      let atManager = abilityAccessCtrl.createAtManager();
+      atManager.requestPermissionsFromUser(this.ctx, ["ohos.permission.MEDIA_LOCATION","ohos.permission.READ_MEDIA","ohos.permission.WRITE_MEDIA"]).then((data) => {
+        //console.info("data permissions:" + data.permissions);
 
-    }).catch((err: BusinessError) => {
-      console.error(`code: ${err.code}, message: ${err.message}`);
-    })
+      }).catch((err: BusinessError) => {
+        console.error(`code: ${err.code}, message: ${err.message}`);
+      })
+    } else {
+      console.info("No UI context, skip permission request");
+    }
     let albums: PlatformAlbum[] = [];
     //let albumsCount: Map<string, number>;
 
@@ -760,14 +768,18 @@ export class MessagesImplBase extends NativeSyncApiOhos {
 
   public override async getAssetsForAlbum(albumId: string, updatedTimeCond?: number, result?: Result<Array<PlatformAsset>>) {
     console.error("MessagesImplBase 8 ")
-    let atManager = abilityAccessCtrl.createAtManager();
-    await atManager.requestPermissionsFromUser(this.ctx, ["ohos.permission.MEDIA_LOCATION","ohos.permission.READ_MEDIA","ohos.permission.WRITE_MEDIA"]).then((data) => {
-      // console.info("data permissions:" + data.permissions);
-      // console.info("data permissions:" + data.authResults);
+    if (this.isUiContext(this.ctx)) {
+      let atManager = abilityAccessCtrl.createAtManager();
+      await atManager.requestPermissionsFromUser(this.ctx, ["ohos.permission.MEDIA_LOCATION","ohos.permission.READ_MEDIA","ohos.permission.WRITE_MEDIA"]).then((data) => {
+        // console.info("data permissions:" + data.permissions);
+        // console.info("data permissions:" + data.authResults);
 
-    }).catch((err: BusinessError) => {
-      console.error(`code: ${err.code}, message: ${err.message}`);
-    })
+      }).catch((err: BusinessError) => {
+        console.error(`code: ${err.code}, message: ${err.message}`);
+      })
+    } else {
+      console.info("No UI context, skip permission request in getAssetsForAlbum");
+    }
     let predicates_album: dataSharePredicates.DataSharePredicates = new dataSharePredicates.DataSharePredicates();
 
     let albumName: photoAccessHelper.AlbumKeys = photoAccessHelper.AlbumKeys.URI;

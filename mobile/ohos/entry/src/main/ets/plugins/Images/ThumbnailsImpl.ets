@@ -23,10 +23,10 @@ if (canIUse('api.version >= 18')) {
 //let runner:taskpool.AsyncRunner = new taskpool.AsyncRunner("runner1", 5);
 
 export class MessagesImplBaseThumb extends ThumbnailApi {
-  static ctx?: common.UIAbilityContext;
+  static ctx?: common.Context;
   private requestMap = new Map<number, taskpool.Task>();
 
-  constructor(context: common.UIAbilityContext) {
+  constructor(context: common.Context) {
     super();
     MessagesImplBaseThumb.ctx = context;
   }
@@ -150,7 +150,7 @@ export class MessagesImplBaseThumb extends ThumbnailApi {
     width: number,
     height: number,
     isVideo: boolean,
-    ctx: common.UIAbilityContext,
+    ctx: common.Context,
     //callback: Result<Map<string, number>>,
     //signal: CancellationSignal
   ): Promise<ThumbHashResult | undefined> {
