@@ -835,7 +835,7 @@ export class MessagesImplBase extends NativeSyncApiOhos {
       let uri_input: string[] = [current_asset.uri];
       let position = current_asset.get(photoAccessHelper.PhotoKeys.POSITION) as photoAccessHelper.PositionType;
       if(position==photoAccessHelper.PositionType.CLOUD) {
-        console.error(current_asset.uri + ": is cloud" );
+        //console.error(current_asset.uri + ": is cloud" );
         continue;
       }
 
@@ -884,7 +884,7 @@ export class MessagesImplBase extends NativeSyncApiOhos {
         orientation,
         isFavorite
       )
-      console.error('get assets for album' + ':' + id);
+      //console.error('get assets for album' + ':' + id);
       assetResult.push(asset);
       snapshotRows.push({ uri: id, mtime: modifiedAt ?? 0, size: size ?? 0 });
     }
