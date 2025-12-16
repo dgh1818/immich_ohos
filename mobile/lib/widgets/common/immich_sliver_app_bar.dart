@@ -197,7 +197,7 @@ class BackupIndicator extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final indicatorIcon = _getBackupBadgeIcon(context, ref);
+    final indicatorIcon = getBackupBadgeIcon(context, ref);
 
     return InkWell(
       onTap: () => context.pushRoute(const DriftBackupRoute()),
