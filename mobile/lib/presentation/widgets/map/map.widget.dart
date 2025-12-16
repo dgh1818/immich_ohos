@@ -118,27 +118,29 @@ class _DriftMapState extends ConsumerState<DriftMap> {
     }
 
     final bounds = await controller.getVisibleRegion();
-    _reloadMutex.run(() async {
-      if (mounted && ref.read(mapStateProvider.notifier).setBounds(bounds)) {
-        final markers = await ref.read(mapMarkerProvider(bounds).future);
+    unawaited(
+      _reloadMutex.run(() async {
+        if (mounted && ref.read(mapStateProvider.notifier).setBounds(bounds)) {
+          final markers = await ref.read(mapMarkerProvider(bounds).future);
 
-        final mapService = ref.watch(mapServiceProvider);
-        final markersData = await mapService.getMarkers(bounds);
+          final mapService = ref.watch(mapServiceProvider);
+          final markersData = await mapService.getMarkers(bounds);
 
-        final List<LatLng> totalData = [];
+          final List<LatLng> totalData = [];
 
-        for (final marker in markersData) {
-          totalData.add(marker.location);
-          // 使用 marker 的属性或方法
+          for (final marker in markersData) {
+            totalData.add(marker.location);
+            // 使用 marker 的属性或方法
+          }
+
+          if (defaultTargetPlatform == TargetPlatform.ohos) {
+            await mapController?.addHeatmapData_Ohos(totalData);
+          }
+
+          await reloadMarkers(markers);
         }
-
-        if (defaultTargetPlatform == TargetPlatform.ohos) {
-          await mapController?.addHeatmapData_Ohos(totalData);
-        }
-
-        await reloadMarkers(markers);
-      }
-    });
+      }),
+    );
   }
 
   Future<void> reloadMarkers(Map<String, dynamic> markers) async {
@@ -166,7 +168,7 @@ class _DriftMapState extends ConsumerState<DriftMap> {
 
     final controller = mapController;
     if (controller != null && location != null) {
-      controller.animateCamera(
+      await controller.animateCamera(
         CameraUpdate.newLatLngZoom(LatLng(location.latitude, location.longitude), MapUtils.mapZoomToAssetLevel),
         duration: const Duration(milliseconds: 800),
       );

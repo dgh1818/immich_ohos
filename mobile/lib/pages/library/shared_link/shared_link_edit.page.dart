@@ -337,7 +337,7 @@ class SharedLinkEditPage extends HookConsumerWidget {
             changeExpiry: changeExpiry,
           );
       ref.invalidate(sharedLinksStateProvider);
-      context.maybePop();
+      await context.maybePop();
     }
 
     return Scaffold(

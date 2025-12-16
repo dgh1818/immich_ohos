@@ -1,11 +1,12 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:immich_mobile/domain/models/exif.model.dart';
+import 'package:immich_mobile/utils/debug_print.dart';
 import 'package:immich_mobile/widgets/map/map_thumbnail.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:immich_mobile/utils/debug_print.dart';
 
 import 'package:immich_mobile/routing/router.dart';
 import 'package:auto_route/auto_route.dart';
@@ -87,7 +88,7 @@ class ExifMap extends StatelessWidget {
             }
 
             dPrint(() => 'Opening Map Uri: $uri');
-            launchUrl(uri);
+            unawaited(launchUrl(uri));
           },
 */
           onCreated: onMapCreated,

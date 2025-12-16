@@ -381,7 +381,7 @@ class BackupNotifier extends StateNotifier<BackUpState> {
 
     state = state.copyWith(backgroundBackup: isEnabled);
     if (isEnabled != Store.get(StoreKey.backgroundBackup, !isEnabled)) {
-      Store.put(StoreKey.backgroundBackup, isEnabled);
+      await Store.put(StoreKey.backgroundBackup, isEnabled);
     }
 
     if (state.backupProgress != BackUpProgressEnum.inBackground) {
@@ -488,11 +488,11 @@ class BackupNotifier extends StateNotifier<BackUpState> {
       );
       await notifyBackgroundServiceCanRun();
     } else {
-      openAppSettings();
+      await openAppSettings();
     }
     if (Platform.isOhos) {
       try {
-        ref.read(nativeSyncApiProvider).stopBackgroundTransfer();
+        await ref.read(nativeSyncApiProvider).stopBackgroundTransfer();
       } catch (_) {}
     }
   }
@@ -559,15 +559,15 @@ class BackupNotifier extends StateNotifier<BackUpState> {
         progressInFileSpeedUpdateTime: DateTime.now(),
         progressInFileSpeedUpdateSentBytes: 0,
       );
-    if (Platform.isOhos) {
-      try {
-        ref.read(nativeSyncApiProvider).stopBackgroundTransfer();
-      } catch (_) {}
-    }
-      _updatePersistentAlbumsSelection();
+      if (Platform.isOhos) {
+        try {
+          await ref.read(nativeSyncApiProvider).stopBackgroundTransfer();
+        } catch (_) {}
+      }
+      await _updatePersistentAlbumsSelection();
     }
 
-    updateDiskInfo();
+    await updateDiskInfo();
   }
 
   void _onUploadProgress(int sent, int total) {
@@ -606,11 +606,7 @@ class BackupNotifier extends StateNotifier<BackUpState> {
         final name = state.currentUploadAsset.fileName;
         ref
             .read(nativeSyncApiProvider)
-            .updateBackgroundTransferProgress(
-              (sent.toDouble() / total.toDouble()) * 100,
-              'Immich Backup',
-              name,
-            );
+            .updateBackgroundTransferProgress((sent.toDouble() / total.toDouble()) * 100, 'Immich Backup', name);
       } catch (_) {
         // ignore background progress errors on OHOS
       }
