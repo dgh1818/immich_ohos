@@ -1073,8 +1073,8 @@ packages:
     dependency: "direct dev"
     description:
       path: "packages/isar_generator"
-      ref: v3
-      resolved-ref: ad574f60ed6f39d2995cd16fc7dc3de9a646ef30
+      ref: bb1dca40fe87a001122e5d43bc6254718cb49f3a
+      resolved-ref: bb1dca40fe87a001122e5d43bc6254718cb49f3a
       url: "https://github.com/immich-app/isar"
     source: git
     version: "3.1.8"
