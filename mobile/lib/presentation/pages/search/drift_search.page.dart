@@ -15,7 +15,7 @@ import 'package:immich_mobile/extensions/translate_extensions.dart';
 import 'package:immich_mobile/models/search/search_filter.model.dart';
 import 'package:immich_mobile/presentation/pages/search/paginated_search.provider.dart';
 import 'package:immich_mobile/presentation/widgets/bottom_sheet/general_bottom_sheet.widget.dart';
-import 'package:immich_mobile/presentation/widgets/search/quick_date_picker.dart';
+//import 'package:immich_mobile/presentation/widgets/search/quick_date_picker.dart';
 import 'package:immich_mobile/presentation/widgets/timeline/timeline.widget.dart';
 import 'package:immich_mobile/providers/infrastructure/timeline.provider.dart';
 import 'package:immich_mobile/providers/search/search_input_focus.provider.dart';
@@ -55,7 +55,7 @@ class DriftSearchPage extends HookConsumerWidget {
     );
 
     final previousFilter = useState<SearchFilter?>(null);
-    final dateInputFilter = useState<DateFilterInputModel?>(null);
+    //final dateInputFilter = useState<DateFilterInputModel?>(null);   //3.35
 
     final peopleCurrentFilterWidget = useState<Widget?>(null);
     final dateRangeCurrentFilterWidget = useState<Widget?>(null);
@@ -247,32 +247,32 @@ class DriftSearchPage extends HookConsumerWidget {
       );
     }
 
-    datePicked(DateFilterInputModel? selectedDate) {
-      dateInputFilter.value = selectedDate;
-      if (selectedDate == null) {
-        filter.value = filter.value.copyWith(date: SearchDateFilter());
+    // datePicked(DateFilterInputModel? selectedDate) {
+    //   dateInputFilter.value = selectedDate;
+    //   if (selectedDate == null) {
+    //     filter.value = filter.value.copyWith(date: SearchDateFilter());
 
-        dateRangeCurrentFilterWidget.value = null;
-        unawaited(search());
-        return;
-      }
+    //     dateRangeCurrentFilterWidget.value = null;
+    //     unawaited(search());
+    //     return;
+    //   }
 
-      final date = selectedDate.asDateTimeRange();
+    //   final date = selectedDate.asDateTimeRange(); //3.35
 
-      filter.value = filter.value.copyWith(
-        date: SearchDateFilter(
-          takenAfter: date.start,
-          takenBefore: date.end.add(const Duration(hours: 23, minutes: 59, seconds: 59)),
-        ),
-      );
+    //   filter.value = filter.value.copyWith(
+    //     date: SearchDateFilter(
+    //       takenAfter: date.start,
+    //       takenBefore: date.end.add(const Duration(hours: 23, minutes: 59, seconds: 59)),
+    //     ),
+    //   );
 
-      dateRangeCurrentFilterWidget.value = Text(
-        selectedDate.asHumanReadable(context),
-        style: context.textTheme.labelLarge,
-      );
+    //   dateRangeCurrentFilterWidget.value = Text(
+    //     selectedDate.asHumanReadable(context),
+    //     style: context.textTheme.labelLarge,
+    //   );
 
-      unawaited(search());
-    }
+    //   unawaited(search());
+    // }
 
     showDatePicker() async {
       final firstDate = DateTime(1900);
@@ -307,34 +307,34 @@ class DriftSearchPage extends HookConsumerWidget {
         keyboardType: TextInputType.text,
       );
 
-      if (date == null) {
-        datePicked(null);
-      } else {
-        datePicked(CustomDateFilter.fromRange(date));
-      }
+      // if (date == null) {     //3.35
+      //   datePicked(null);
+      // } else {
+      //   datePicked(CustomDateFilter.fromRange(date));
+      // }
     }
 
-    showQuickDatePicker() {
-      showFilterBottomSheet(
-        context: context,
-        child: FilterBottomSheetScaffold(
-          title: "pick_date_range".tr(),
-          expanded: true,
-          onClear: () => datePicked(null),
-          child: QuickDatePicker(
-            currentInput: dateInputFilter.value,
-            onRequestPicker: () {
-              context.pop();
-              showDatePicker();
-            },
-            onSelect: (date) {
-              context.pop();
-              datePicked(date);
-            },
-          ),
-        ),
-      );
-    }
+    // showQuickDatePicker() {
+    //   showFilterBottomSheet(
+    //     context: context,
+    //     child: FilterBottomSheetScaffold(
+    //       title: "pick_date_range".tr(),
+    //       expanded: true,
+    //       onClear: () => datePicked(null),
+    //       child: QuickDatePicker(
+    //         currentInput: dateInputFilter.value,
+    //         onRequestPicker: () {
+    //           context.pop();
+    //           showDatePicker();
+    //         },
+    //         onSelect: (date) {
+    //           context.pop();
+    //           datePicked(date);
+    //         },
+    //       ),
+    //     ),
+    //   );
+    // }
 
     // MEDIA PICKER
     showMediaTypePicker() {
@@ -616,12 +616,12 @@ class DriftSearchPage extends HookConsumerWidget {
                       label: 'camera'.t(context: context),
                       currentFilter: cameraCurrentFilterWidget.value,
                     ),
-                    SearchFilterChip(
-                      icon: Icons.date_range_outlined,
-                      onTap: showQuickDatePicker,
-                      label: 'search_filter_date'.t(context: context),
-                      currentFilter: dateRangeCurrentFilterWidget.value,
-                    ),
+                    // SearchFilterChip(
+                    //   icon: Icons.date_range_outlined,
+                    //   onTap: showQuickDatePicker,
+                    //   label: 'search_filter_date'.t(context: context),
+                    //   currentFilter: dateRangeCurrentFilterWidget.value,
+                    // ),
                     SearchFilterChip(
                       key: const Key('media_type_chip'),
                       icon: Icons.video_collection_outlined,
