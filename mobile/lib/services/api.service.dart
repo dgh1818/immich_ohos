@@ -19,7 +19,7 @@ class ApiService implements Authentication {
 
   late UsersApi usersApi;
   late AuthenticationApi authenticationApi;
-  late OAuthApi oAuthApi;
+  late AuthenticationApi oAuthApi;
   late AlbumsApi albumsApi;
   late AssetsApi assetsApi;
   late SearchApi searchApi;
@@ -34,7 +34,7 @@ class ApiService implements Authentication {
   late DownloadApi downloadApi;
   late TrashApi trashApi;
   late StacksApi stacksApi;
-  late ViewApi viewApi;
+  late ViewsApi viewApi;
   late MemoriesApi memoriesApi;
   late SessionsApi sessionsApi;
 
@@ -58,7 +58,7 @@ class ApiService implements Authentication {
     }
     usersApi = UsersApi(_apiClient);
     authenticationApi = AuthenticationApi(_apiClient);
-    oAuthApi = OAuthApi(_apiClient);
+    oAuthApi = AuthenticationApi(_apiClient);
     albumsApi = AlbumsApi(_apiClient);
     assetsApi = AssetsApi(_apiClient);
     serverInfoApi = ServerApi(_apiClient);
@@ -73,7 +73,7 @@ class ApiService implements Authentication {
     downloadApi = DownloadApi(_apiClient);
     trashApi = TrashApi(_apiClient);
     stacksApi = StacksApi(_apiClient);
-    viewApi = ViewApi(_apiClient);
+    viewApi = ViewsApi(_apiClient);
     memoriesApi = MemoriesApi(_apiClient);
     sessionsApi = SessionsApi(_apiClient);
   }

@@ -29,7 +29,7 @@ import 'package:isar/isar.dart';
 // ignore: import_rule_photo_manager
 import 'package:photo_manager/photo_manager.dart';
 
-const int targetVersion = 17;
+const int targetVersion = 18;
 
 Future<void> migrateDatabaseIfNeeded(Isar db, Drift drift) async {
   final hasVersion = Store.tryGet(StoreKey.version) != null;
@@ -63,37 +63,19 @@ Future<void> migrateDatabaseIfNeeded(Isar db, Drift drift) async {
     await Store.populateCache();
   }
 
-  // Handle migration only for this version
-  // TODO: remove when old timeline is removed
-  final needBetaMigration = Store.tryGet(StoreKey.needBetaMigration);
-  if (version == 15 && needBetaMigration == null) {
-    // Check both databases directly instead of relying on cache
-
-    final isBeta = Store.tryGet(StoreKey.betaTimeline);
-    final isNewInstallation = await _isNewInstallation(db, drift);
-
-    final useBetaTimeline = isBeta == true;
-
-    if (!useBetaTimeline && !isNewInstallation) {
-      await drift.reset();
-    }
-
-    await Store.put(StoreKey.betaTimeline, useBetaTimeline);
-    await Store.put(StoreKey.needBetaMigration, false);
-  }
-
-  if (version < 16) {
-    await SyncStreamRepository(drift).reset();
-    await Store.put(StoreKey.shouldResetSync, true);
-  }
-
-  await handleBetaMigration(version, await _isNewInstallation(db, drift), SyncStreamRepository(drift));
+  final syncStreamRepository = SyncStreamRepository(drift);
+  await handleBetaMigration(version, await _isNewInstallation(db, drift), syncStreamRepository);
 
   if (version < 17 && Store.isBetaTimelineEnabled) {
     final delay = Store.get(StoreKey.backupTriggerDelay, AppSettingsEnum.backupTriggerDelay.defaultValue);
     if (delay >= 1000) {
       await Store.put(StoreKey.backupTriggerDelay, (delay / 1000).toInt());
     }
+  }
+
+  if (version < 18 && Store.isBetaTimelineEnabled) {
+    await syncStreamRepository.reset();
+    await Store.put(StoreKey.shouldResetSync, true);
   }
 
   if (targetVersion >= 12) {

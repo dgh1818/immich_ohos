@@ -2,7 +2,7 @@ name: immich_mobile
 description: Immich - selfhosted backup media file on mobile phone
 
 publish_to: 'none'
-version: 2.2.3+220030001
+version: 2.3.1+230011000
 
 environment:
   sdk: '>=3.8.0 <4.0.0'
@@ -13,10 +13,7 @@ isar_version: &isar_version 3.1.0+1
 dependencies:
   async: ^2.13.0
   auto_route: ^9.2.0
-  background_downloader: ^9.2.5  #ohos待适配
-  video_player: ^2.9.2
-  video_player_android: 2.6.0
-  chewie: ^1.7.4
+  background_downloader: ^9.3.0 #ohos待适配
   cached_network_image: ^3.4.1
   cancellation_token_http: ^2.1.0
   #cast: ^2.1.0
@@ -340,7 +337,17 @@ dev_dependency_overrides:
   #     ref: br_pigeon-v25.3.2_ohos
 
   # Type safe platform code
-  //pigeon: ^25.3.1
+  pigeon: ^25.3.1
+  # riverpod_generator: ^2.6.1
+  # riverpod_lint: ^2.6.1
+
+
+# dependency_overrides:
+#   drift:
+#     git:
+#       url: https://github.com/immich-app/drift
+#       ref: '53ef7e9f19fe8f68416251760b4b99fe43f1c575'
+#       path: drift/
 
 flutter:
   uses-material-design: true

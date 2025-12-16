@@ -7,12 +7,11 @@ import { ONE_HOUR } from 'src/constants';
 import { ConfigRepository } from 'src/repositories/config.repository';
 import { LoggingRepository } from 'src/repositories/logging.repository';
 import { AuthService } from 'src/services/auth.service';
-import { JobService } from 'src/services/job.service';
 import { SharedLinkService } from 'src/services/shared-link.service';
 import { VersionService } from 'src/services/version.service';
 import { OpenGraphTags } from 'src/utils/misc';
 
-const render = (index: string, meta: OpenGraphTags) => {
+export const render = (index: string, meta: OpenGraphTags) => {
   const [title, description, imageUrl] = [meta.title, meta.description, meta.imageUrl].map((item) =>
     item ? sanitizeHtml(item, { allowedTags: [] }) : '',
   );
@@ -88,7 +87,6 @@ function isPrivateIp(ip?: string): boolean {
 export class ApiService {
   constructor(
     private authService: AuthService,
-    private jobService: JobService,
     private sharedLinkService: SharedLinkService,
     private versionService: VersionService,
     private configRepository: ConfigRepository,
@@ -113,7 +111,7 @@ export class ApiService {
     }
 
     return async (request: Request, res: Response, next: NextFunction) => {
-
+      const method = request.method.toLowerCase();
       
       const forwarded = request.headers['x-forwarded-for'];
       const realIp = request.headers['x-real-ip'];
@@ -122,7 +120,7 @@ export class ApiService {
         (typeof forwarded === 'string' && forwarded.split(',')[0].trim()) || request.ip;
       if (
         request.url.startsWith('/api') ||
-        request.method.toLowerCase() !== 'get' ||
+        (method !== 'get' && method !== 'head') ||
         excludePaths.some((item) => request.url.startsWith(item))
       ) {
         return next();

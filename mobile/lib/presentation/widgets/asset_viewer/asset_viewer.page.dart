@@ -804,10 +804,10 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
     // Rebuild the widget when the asset viewer state changes
     // Using multiple selectors to avoid unnecessary rebuilds for other state changes
     ref.watch(assetViewerProvider.select((s) => s.showingBottomSheet));
-    ref.watch(assetViewerProvider.select((s) => s.showingControls));
     ref.watch(assetViewerProvider.select((s) => s.backgroundOpacity));
     ref.watch(assetViewerProvider.select((s) => s.stackIndex));
     ref.watch(isPlayingMotionVideoProvider);
+    final showingControls = ref.watch(assetViewerProvider.select((s) => s.showingControls));
 
     /*
     Listen for casting changes and send initial asset to the cast provider
@@ -842,7 +842,14 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
         appBar: const ViewerTopAppBar(),
         extendBody: true,
         extendBodyBehindAppBar: true,
-        floatingActionButton: const DownloadStatusFloatingButton(),
+        floatingActionButton: IgnorePointer(
+          ignoring: !showingControls,
+          child: AnimatedOpacity(
+            opacity: showingControls ? 1.0 : 0.0,
+            duration: Durations.short2,
+            child: const DownloadStatusFloatingButton(),
+          ),
+        ),
         body: Listener(
           onPointerUp: (_) => _stopMotionPlayback(),
           child: PhotoViewGallery.builder(
