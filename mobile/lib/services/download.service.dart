@@ -16,6 +16,7 @@ import 'package:logging/logging.dart';
 import 'package:path/path.dart' as p;
 import 'package:image_gallery_saver/image_gallery_saver.dart';
 import 'package:immich_mobile/services/asset.service.dart';
+import 'package:video_compress/video_compress.dart';
 
 final downloadServiceProvider = Provider(
   (ref) => DownloadService(
@@ -125,11 +126,33 @@ class DownloadService {
     final imageFilePath = await imageRecord.task.filePath();
     final videoFilePath = await videoRecord.task.filePath();
     final title = _titleWithoutExtension(task.filename);
+    String actualVideoPath = videoFilePath;
+    File? convertedVideoFile;
+
+    if (videoFilePath.toLowerCase().endsWith('.mov')) {
+      try {
+        final info = await VideoCompress.compressVideo(
+          videoFilePath,
+          quality: VideoQuality.HighestQuality,
+          includeAudio: true,
+          deleteOrigin: false,
+        );
+        if (info != null && info.path != null && info.path!.isNotEmpty) {
+          actualVideoPath = info.path!;
+          convertedVideoFile = File(actualVideoPath);
+          _log.fine("Converted live photo video to MP4: $actualVideoPath");
+        } else {
+          _log.warning("MOV to MP4 conversion returned null for live photo video $videoFilePath");
+        }
+      } catch (e, s) {
+        _log.warning("Failed to convert live photo video $videoFilePath to MP4", e, s);
+      }
+    }
 
     try {
       final result = await _fileMediaRepository.saveLivePhoto(
         image: File(imageFilePath),
-        video: File(videoFilePath),
+        video: File(actualVideoPath),
         title: title,
       );
 
@@ -155,6 +178,9 @@ class DownloadService {
       final videoFile = File(videoFilePath);
       if (await videoFile.exists()) {
         await videoFile.delete();
+      }
+      if (convertedVideoFile != null && convertedVideoFile.path != videoFilePath && await convertedVideoFile.exists()) {
+        await convertedVideoFile.delete();
       }
 
       await _downloadRepository.deleteRecordsWithIds([imageRecord.task.taskId, videoRecord.task.taskId]);

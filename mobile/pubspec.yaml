@@ -76,6 +76,7 @@ dependencies:
   worker_manager: ^7.2.3
   scroll_date_picker: ^3.8.0
   #ffi: ^2.1.4
+  video_compress: ^3.1.0
 
   native_video_player:
     git:
@@ -103,6 +104,10 @@ dependency_overrides:
       url: 'https://github.com/dgh1818/local_auth_ohos.git'
       path: './local_auth'
       ref: master
+  video_compress: 
+    git:
+      url: 'https://gitcode.com/openharmony-sig/fluttertpc_video_compress.git'
+      path: ./
   pinput:
     git:
       url: 'https://github.com/dgh1818/Flutter_Pinput_ohos'
