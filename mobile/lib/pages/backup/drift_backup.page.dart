@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:auto_route/auto_route.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
@@ -8,6 +10,7 @@ import 'package:immich_mobile/entities/store.entity.dart';
 import 'package:immich_mobile/extensions/build_context_extensions.dart';
 import 'package:immich_mobile/extensions/theme_extensions.dart';
 import 'package:immich_mobile/extensions/translate_extensions.dart';
+import 'package:immich_mobile/generated/intl_keys.g.dart';
 import 'package:immich_mobile/presentation/widgets/backup/backup_toggle_button.widget.dart';
 import 'package:immich_mobile/providers/background_sync.provider.dart';
 import 'package:immich_mobile/providers/backup/backup_album.provider.dart';
@@ -17,8 +20,7 @@ import 'package:immich_mobile/providers/user.provider.dart';
 import 'package:immich_mobile/providers/infrastructure/platform.provider.dart';
 import 'package:immich_mobile/routing/router.dart';
 import 'package:immich_mobile/widgets/backup/backup_info_card.dart';
-import 'dart:async';
-
+import 'package:logging/logging.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 import 'dart:io';
 
@@ -31,6 +33,8 @@ class DriftBackupPage extends ConsumerStatefulWidget {
 }
 
 class _DriftBackupPageState extends ConsumerState<DriftBackupPage> {
+  bool? syncSuccess;
+
   @override
   void initState() {
     super.initState();
@@ -44,7 +48,13 @@ class _DriftBackupPageState extends ConsumerState<DriftBackupPage> {
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await ref.read(driftBackupProvider.notifier).getBackupStatus(currentUser.id);
-      await ref.read(backgroundSyncProvider).syncRemote();
+
+      ref.read(driftBackupProvider.notifier).updateSyncing(true);
+      syncSuccess = await ref.read(backgroundSyncProvider).syncRemote();
+      ref
+          .read(driftBackupProvider.notifier)
+          .updateError(syncSuccess == true ? BackupError.none : BackupError.syncFailed);
+      ref.read(driftBackupProvider.notifier).updateSyncing(false);
 
       if (mounted) {
         await ref.read(driftBackupProvider.notifier).getBackupStatus(currentUser.id);
@@ -65,12 +75,21 @@ class _DriftBackupPageState extends ConsumerState<DriftBackupPage> {
         .where((album) => album.backupSelection == BackupSelection.selected)
         .toList();
 
+    final error = ref.watch(driftBackupProvider.select((p) => p.error));
+
     final backupNotifier = ref.read(driftBackupProvider.notifier);
+    final backupSyncManager = ref.read(backgroundSyncProvider);
 
     Future<void> startBackup() async {
       final currentUser = Store.tryGet(StoreKey.currentUser);
       if (currentUser == null) {
         return;
+      }
+
+      if (syncSuccess == null) {
+        ref.read(driftBackupProvider.notifier).updateSyncing(true);
+        syncSuccess = await backupSyncManager.syncRemote();
+        ref.read(driftBackupProvider.notifier).updateSyncing(false);
       }
 
       if (Platform.isOhos) {
@@ -82,6 +101,12 @@ class _DriftBackupPageState extends ConsumerState<DriftBackupPage> {
       }
 
       await backupNotifier.getBackupStatus(currentUser.id);
+
+      if (syncSuccess == false) {
+        Logger("DriftBackupPage").warning("Remote sync did not complete successfully, skipping backup");
+        backupNotifier.updateError(BackupError.syncFailed);
+        return;
+      }
       await backupNotifier.startBackup(currentUser.id);
     }
 
@@ -123,7 +148,33 @@ class _DriftBackupPageState extends ConsumerState<DriftBackupPage> {
                   const _BackupCard(),
                   const _RemainderCard(),
                   const Divider(),
-                  BackupToggleButton(onStart: () async => await startBackup(), onStop: () async => await stopBackup()),
+                  BackupToggleButton(
+                    onStart: () async => await startBackup(),
+                    onStop: () async {
+                      syncSuccess = null;
+                      await stopBackup();
+                    },
+                  ),
+                  switch (error) {
+                    BackupError.none => const SizedBox.shrink(),
+                    BackupError.syncFailed => Padding(
+                      padding: const EdgeInsets.only(top: 10),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        mainAxisSize: MainAxisSize.max,
+                        children: [
+                          Icon(Icons.warning_rounded, color: context.colorScheme.error, fill: 1),
+                          const SizedBox(width: 8),
+                          Text(
+                            IntlKeys.backup_error_sync_failed.t(),
+                            style: context.textTheme.bodyMedium?.copyWith(color: context.colorScheme.error),
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
+                      ),
+                    ),
+                  },
                   TextButton.icon(
                     icon: const Icon(Icons.info_outline_rounded),
                     onPressed: () => context.pushRoute(const DriftUploadDetailRoute()),

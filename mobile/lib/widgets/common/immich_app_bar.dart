@@ -227,11 +227,13 @@ class ImmichAppBar extends ConsumerWidget implements PreferredSizeWidget {
       title: Builder(
         builder: (BuildContext context) {
           return Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Builder(
                 builder: (context) {
                   return Padding(
                     padding: const EdgeInsets.only(top: 3.0),
+
                     /*
                     child: SvgPicture.asset(
                       context.isDarkTheme

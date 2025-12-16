@@ -60,8 +60,8 @@ class ViewerTopAppBar extends ConsumerWidget implements PreferredSizeWidget {
     //final isCasting = ref.watch(castProvider.select((c) => c.isCasting));
 
     final actions = <Widget>[
-      if (asset.hasRemote) const DownloadActionButton(source: ActionSource.viewer, menuItem: true),
-      if (!(asset.hasLocal && (!asset.hasRemote || !AppSetting.get(Setting.preferRemoteImage))))
+      if (asset.isRemoteOnly) const DownloadActionButton(source: ActionSource.viewer, menuItem: true),
+      if (asset.isVideo && !(asset.hasLocal && (!asset.hasRemote || !AppSetting.get(Setting.preferRemoteImage))))
         CastActionButton(id: (asset as RemoteAsset).id, menuItem: true),
       //if (isCasting || (asset.hasRemote)) const CastActionButton(menuItem: true),
       if (album != null && album.isActivityEnabled && album.isShared)
