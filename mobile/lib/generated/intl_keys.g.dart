@@ -30,6 +30,7 @@ abstract class IntlKeys {
   static const add_to_album = 'add_to_album';
   static const add_to_album_bottom_sheet_added = 'add_to_album_bottom_sheet_added';
   static const add_to_album_bottom_sheet_already_exists = 'add_to_album_bottom_sheet_already_exists';
+  static const add_to_album_bottom_sheet_some_local_assets = 'add_to_album_bottom_sheet_some_local_assets';
   static const add_to_album_toggle = 'add_to_album_toggle';
   static const add_to_albums = 'add_to_albums';
   static const add_to_albums_count = 'add_to_albums_count';
@@ -598,6 +599,7 @@ abstract class IntlKeys {
   static const backup_controller_page_turn_on = 'backup_controller_page_turn_on';
   static const backup_controller_page_uploading_file_info = 'backup_controller_page_uploading_file_info';
   static const backup_err_only_album = 'backup_err_only_album';
+  static const backup_error_sync_failed = 'backup_error_sync_failed';
   static const backup_info_card_assets = 'backup_info_card_assets';
   static const backup_manual_cancelled = 'backup_manual_cancelled';
   static const backup_manual_in_progress = 'backup_manual_in_progress';
