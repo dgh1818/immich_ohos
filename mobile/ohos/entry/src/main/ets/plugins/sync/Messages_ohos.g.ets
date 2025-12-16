@@ -539,6 +539,8 @@ export abstract class NativeSyncApiOhos {
   abstract updateBackgroundTransferProgress(progress: number , title: string , fileName: string , result: Result<void>): void;
 
   abstract stopBackgroundTransfer(result: Result<void>): void;
+
+  abstract getTrashedAssets(): Map<string, Array<PlatformAsset>>;
   /** The codec used by NativeSyncApiOhos. */
   static getCodec(): MessageCodec<Object>{
     return PigeonCodec.INSTANCE;
@@ -871,6 +873,28 @@ export abstract class NativeSyncApiOhos {
               let resultCallback: Result<void> = new ResultImp();
 
               api!.stopBackgroundTransfer(resultCallback);
+            } });
+      } else {
+        channel.setMessageHandler(null);
+      }
+    }
+    {
+      let channel: BasicMessageChannel<Object> =
+          new BasicMessageChannel(
+              binaryMessenger, "dev.flutter.pigeon.immich_mobile.NativeSyncApiOhos.getTrashedAssets", NativeSyncApiOhos.getCodec());
+      if (api != null) {
+        channel.setMessageHandler({
+            onMessage(message: Object ,reply: Reply<Object> ) {
+              let res: Array<Object> = [];
+              try {
+                let output: Map<string, Array<PlatformAsset>> = api!.getTrashedAssets();
+                res.push(output);
+              }
+ catch (error) {
+                let wrappedError: Array<Object> = wrapError(error);
+                res = wrappedError;
+              }
+              reply.reply(res);
             } });
       } else {
         channel.setMessageHandler(null);

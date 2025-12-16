@@ -121,4 +121,7 @@ abstract class NativeSyncApiOhos {
   @TaskQueue(type: TaskQueueType.serialBackgroundThread)
   @async
   void stopBackgroundTransfer();
+
+  @TaskQueue(type: TaskQueueType.serialBackgroundThread)
+  Map<String, List<PlatformAsset>> getTrashedAssets();
 }

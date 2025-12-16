@@ -5,7 +5,8 @@ import { fileUri, hash } from '@kit.CoreFileKit';
 import { fileUriService } from '@kit.ScenarioFusionKit';
 import abilityAccessCtrl from '@ohos.abilityAccessCtrl';
 
-import { NativeSyncApiOhos, SyncDelta, PlatformAsset, PlatformAlbum, Result, HashResult } from './Messages_ohos.g'
+import { NativeSyncApiOhos, SyncDelta, PlatformAsset, PlatformAlbum, Result, HashResult,
+  FlutterError } from './Messages_ohos.g'
 import { BusinessError } from '@kit.BasicServicesKit';
 import fs from '@ohos.file.fs';
 import { uri } from '@kit.ArkTS';
@@ -144,6 +145,14 @@ export class MessagesImplBase extends NativeSyncApiOhos {
       return null;
     }
   }
+
+  override getTrashedAssets(): Map<string, Array<PlatformAsset>> {
+    throw new FlutterError(
+      'UNSUPPORTED_OS',
+      'This feature is not supported on HarmonyOS.',
+      'This feature is not supported on HarmonyOS.'
+    );
+  };
 
   override cancelHashing(): void {
     this.cancelRequested = true;
