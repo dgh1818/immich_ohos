@@ -7,6 +7,10 @@ import { FlutterPlugin, FlutterPluginBinding } from '@ohos/flutter_ohos';
 export default class ImmichPlugin implements FlutterPlugin {
   private detached: boolean = false;
 
+  getUniqueClassName(): string {
+    return 'ImmichPlugin';
+  }
+
   onAttachedToEngine(_binding: FlutterPluginBinding): void {
     this.detached = false;
   }

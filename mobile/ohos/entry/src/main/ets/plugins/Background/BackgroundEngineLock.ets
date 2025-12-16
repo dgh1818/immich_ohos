@@ -3,6 +3,7 @@ import { preferences } from '@kit.ArkData';
 import { workScheduler } from '@kit.BackgroundTasksKit';
 import { BackgroundWorkerApiImpl } from '../../WorkSchedulerExtension/BackgroundWorkerApiImpl';
 import { FlutterPlugin, FlutterPluginBinding } from '@ohos/flutter_ohos';
+import ImmichPlugin from '../core/ImmichPlugin';
 
 class BackgroundWorkerPreferences {
   private readonly ctx: Context;
@@ -29,6 +30,7 @@ class BackgroundWorkerPreferences {
 class BackgroundEngineLock extends BackgroundWorkerLockApi implements FlutterPlugin{
   private ctx: Context;
   private static engineCount = 0;
+  private pluginHelper: ImmichPlugin = new ImmichPlugin();
 
   constructor(ctx: Context) {
     super();
@@ -64,11 +66,17 @@ class BackgroundEngineLock extends BackgroundWorkerLockApi implements FlutterPlu
   }
 
   onAttachedToEngine(binding: FlutterPluginBinding): void {
+    this.pluginHelper.onAttachedToEngine(binding);
     BackgroundEngineLock.onEngineAttached(binding.getApplicationContext());
   }
 
   onDetachedFromEngine(binding: FlutterPluginBinding): void {
+    this.pluginHelper.onDetachedFromEngine(binding);
     BackgroundEngineLock.onEngineDetached();
+  }
+
+  public detachFromEngine(): void {
+    this.pluginHelper.detachFromEngine();
   }
 
   // 需要在合适位置调用，比如插件注册时

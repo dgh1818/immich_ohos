@@ -1,4 +1,4 @@
-import { workScheduler, WorkSchedulerExtensionAbility } from "@kit.BackgroundTasksKit";
+﻿import { workScheduler, WorkSchedulerExtensionAbility } from "@kit.BackgroundTasksKit";
 import {
   DartExecutor,
   FlutterCallbackInformation,
@@ -63,6 +63,9 @@ class BackgroundWorker extends WorkSchedulerExtensionAbility {
   public static workerInfo?: workScheduler.WorkInfo;
 
   public static backgroundWorkerBgHostApiImpl?:BackgroundWorkerBgHostApiImpl;
+  public static nativeSyncApiImpl?: MessagesImplBase;
+  public static thumbApiImpl?: MessagesImplBaseThumb;
+  public static backgroundEngineLock?: BackgroundEngineLock;
 
 
   constructor() {
@@ -71,22 +74,29 @@ class BackgroundWorker extends WorkSchedulerExtensionAbility {
       this.loader.startInitialization(this.ctx);
     }
   }
-
   private registerPlugins(flutterEngine: FlutterEngine) {
     this.ctx.getApplicationContext()
     GeneratedPluginRegistrant.registerWith(flutterEngine);
     const messenger = flutterEngine.dartExecutor.getBinaryMessenger();
-    const nativeSyncApiImpl = new MessagesImplBase(this.ctx.getApplicationContext());   //可能后台ability根本没办法对媒体库进行扫描
-    const thumbApiImpl = new MessagesImplBaseThumb(this.ctx.getApplicationContext());
+    BackgroundWorker.nativeSyncApiImpl = new MessagesImplBase(this.ctx.getApplicationContext());   //??????ability?????????y?????????
+    BackgroundWorker.thumbApiImpl = new MessagesImplBaseThumb(this.ctx.getApplicationContext());
     const backgroundWorkerApiImpl = new BackgroundWorkerApiImpl(this.ctx.getApplicationContext());
     const connectivityApiImpl = new ConnectivityApiImpl(this.ctx.getApplicationContext());
-    const backgroundEngineLock = new BackgroundEngineLock(this.ctx);
+    BackgroundWorker.backgroundEngineLock = new BackgroundEngineLock(this.ctx);
 
-    NativeSyncApiOhos.setup(messenger, nativeSyncApiImpl);
-    ThumbnailApi.setup(messenger, thumbApiImpl);
+    NativeSyncApiOhos.setup(messenger, BackgroundWorker.nativeSyncApiImpl);
+    ThumbnailApi.setup(messenger, BackgroundWorker.thumbApiImpl);
     BackgroundWorkerFgHostApi.setup(messenger, backgroundWorkerApiImpl);
     ConnectivityApi.setup(messenger, connectivityApiImpl);
-    BackgroundWorkerLockApi.setup(messenger, backgroundEngineLock);
+    BackgroundWorkerLockApi.setup(messenger, BackgroundWorker.backgroundEngineLock);
+  }
+  public static cancelPlugins() {
+    try {
+      BackgroundWorker.backgroundEngineLock?.detachFromEngine();
+    } catch (_) {}
+    BackgroundWorker.nativeSyncApiImpl = undefined;
+    BackgroundWorker.thumbApiImpl = undefined;
+    BackgroundWorker.backgroundEngineLock = undefined;
   }
 
   onWorkStart(workInfo: workScheduler.WorkInfo) {
@@ -204,26 +214,19 @@ class BackgroundWorkerBgHostApiImpl extends BackgroundWorkerBgHostApi {
       return;
     }
 
-
-
-    // 尝试调用 FlutterApi cancel
     if (BackgroundWorker.flutterApi != null) {
       try {
         BackgroundWorker.flutterApi.cancel({
           reply: () => {
-
-            // FlutterApi 回调完成，标记失败
             BackgroundWorker.backgroundWorkerBgHostApiImpl!.complete(false);
           }
         });
       } catch (e) {
         console.error("flutterApi.cancel error:", e);
-        // 出错也保证失败
         BackgroundWorker.backgroundWorkerBgHostApiImpl!.complete(false);
       }
     }
 
-    // 5 秒后 fallback，保证任务完成
     setTimeout(() => {
       BackgroundWorker.backgroundWorkerBgHostApiImpl!.complete(false);
     }, 5000);
@@ -255,15 +258,15 @@ class BackgroundWorkerBgHostApiImpl extends BackgroundWorkerBgHostApi {
    * background task lifecycle and should only be called once per task instance.
    *
    * - Parameter success: Indicates whether the background task completed successfully
-   */
+  */
   public complete(success: boolean) {
     console.info(this.TAG, "About to complete BackupWorker with result:" +success)
     BackgroundWorker.isComplete = true;
+    BackgroundWorker.cancelPlugins();
     BackgroundWorker.engine?.destroy();
-    BackgroundWorker.engine=undefined;
+    BackgroundWorker.engine = undefined;
     BackgroundWorker.flutterApi = undefined;
 
-    // 通知完成
     BackgroundWorker.completionHandler.resolve(success);
   }
 }
