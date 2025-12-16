@@ -41,6 +41,7 @@
     "@ohos/flutter_module": "file:./entry",
     "@ohos/flutter_ohos": "file:./har/flutter.har",
     "wakelock_plus": "file:./har/wakelock_plus.har",
-    "sqlite3_flutter_libs": "file:./har/sqlite3_flutter_libs.har"
+    "sqlite3_flutter_libs": "file:./har/sqlite3_flutter_libs.har",
+    "video_compress": "file:./har/video_compress.har"
   }
 }
