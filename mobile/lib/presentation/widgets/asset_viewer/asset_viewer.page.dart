@@ -344,6 +344,9 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
         } else {
           ui.SetHdr.setHdrMode(hdr: 0, is_image: true);
         }
+      } else {
+        final provider = getFullImageProvider(asset);
+        setDisplayMode(provider, context);
       }
     }
 
