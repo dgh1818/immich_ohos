@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -20,6 +21,7 @@ import 'package:immich_mobile/widgets/map/map_theme_override.dart';
 import 'package:immich_mobile/providers/infrastructure/map.provider.dart';
 import 'package:flutter/foundation.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
+import 'package:coordtransform_dart/coordtransform_dart.dart';
 
 class CustomSourceProperties implements SourceProperties {
   final Map<String, dynamic> data;
@@ -97,6 +99,16 @@ class _DriftMapState extends ConsumerState<DriftMap> {
         MapUtils.defaultHeatMapLayerId,
         MapUtils.defaultHeatmapLayerProperties,
       );
+    }
+
+    if (defaultTargetPlatform == TargetPlatform.ohos && widget.initialLocation != null) {
+      final out = CoordinateTransformUtil.wgs84ToGcj02(
+        widget.initialLocation!.longitude,
+        widget.initialLocation!.latitude,
+      );
+      final LatLng centreProcessed = LatLng(out[1], out[0]);
+      final ByteData mapMarkData = await rootBundle.load("assets/location-pin.png");
+      await controller.addMarkerAtLatLng_Ohos(centreProcessed, mapMarkData, 0.15);
     }
 
     _debouncer.run(setBounds);
@@ -199,12 +211,19 @@ class _Map extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final initialLocation = this.initialLocation;
+    LatLng? processedInitialLocation = initialLocation;
+
+    if (defaultTargetPlatform == TargetPlatform.ohos && initialLocation != null) {
+      final out = CoordinateTransformUtil.wgs84ToGcj02(initialLocation.longitude, initialLocation.latitude);
+      processedInitialLocation = LatLng(out[1], out[0]);
+    }
+
     return MapThemeOverride(
       mapBuilder: (style) => style.widgetWhen(
         onData: (style) => MapLibreMap(
-          initialCameraPosition: initialLocation == null
+          initialCameraPosition: processedInitialLocation == null
               ? const CameraPosition(target: LatLng(0, 0), zoom: 0)
-              : CameraPosition(target: initialLocation, zoom: MapUtils.mapZoomToAssetLevel),
+              : CameraPosition(target: processedInitialLocation, zoom: MapUtils.mapZoomToAssetLevel),
           compassEnabled: false,
           rotateGesturesEnabled: false,
           styleString: style,
