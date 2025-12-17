@@ -63,7 +63,9 @@ class MapThumbnail extends HookConsumerWidget {
       controller.value = mapController;
       styleLoaded.value = false;
 
-      if (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS) {
+      if (defaultTargetPlatform == TargetPlatform.android ||
+          defaultTargetPlatform == TargetPlatform.iOS ||
+          defaultTargetPlatform == TargetPlatform.ohos) {
         if (assetMarkerRemoteId != null) {
           // The iOS impl returns wrong toScreenLocation without the delay
           Future.delayed(

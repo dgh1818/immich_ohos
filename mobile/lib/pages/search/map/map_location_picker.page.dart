@@ -14,6 +14,7 @@ import 'package:maplibre_gl/maplibre_gl.dart';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'package:coordtransform_dart/coordtransform_dart.dart';
 
 @RoutePage()
 class MapLocationPickerPage extends HookConsumerWidget {
@@ -39,6 +40,13 @@ class MapLocationPickerPage extends HookConsumerWidget {
 
     Future<void> onMapClick(Point<num> point, LatLng centre) async {
       selectedLatLng.value = centre;
+
+      if (defaultTargetPlatform == TargetPlatform.ohos) {
+        final outLngLat = CoordinateTransformUtil.gcj02ToWgs84(centre.longitude, centre.latitude);
+        final LatLng centreProcessed = LatLng(outLngLat[1], outLngLat[0]);
+        selectedLatLng.value = centreProcessed;
+      }
+
       await controller.value?.animateCamera(CameraUpdate.newLatLng(centre));
       if (marker.value != null) {
         if (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS) {
