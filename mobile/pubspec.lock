@@ -217,7 +217,7 @@ packages:
     source: hosted
     version: "2.0.4"
   chewie:
-    dependency: "direct main"
+    dependency: "direct overridden"
     description:
       path: "."
       ref: "br_v1.11.3_ohos"
@@ -291,7 +291,7 @@ packages:
     source: hosted
     version: "3.1.2"
   coordtransform_dart:
-    dependency: "direct overridden"
+    dependency: "direct main"
     description:
       path: "."
       ref: master
@@ -2088,7 +2088,7 @@ packages:
     source: git
     version: "3.1.2"
   video_player:
-    dependency: "direct main"
+    dependency: "direct overridden"
     description:
       path: "packages/video_player/video_player"
       ref: "br_video_player-v2.9.2_ohos"
@@ -2097,7 +2097,7 @@ packages:
     source: git
     version: "2.9.2"
   video_player_android:
-    dependency: "direct main"
+    dependency: "direct overridden"
     description:
       path: "packages/video_player/video_player_android"
       ref: "br_video_player-v2.9.2_ohos"

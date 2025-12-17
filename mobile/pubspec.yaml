@@ -91,6 +91,7 @@ dependencies:
   pigeon: ^25.3.1
   image_gallery_saver: ^2.0.3
   huawei_cast: ^1.0.0
+  coordtransform_dart: ^1.0.4
 
 dependency_overrides:
   local_auth: 
