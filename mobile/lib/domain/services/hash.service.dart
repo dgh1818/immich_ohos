@@ -161,7 +161,7 @@ class HashService {
 
       final hashResult = hashResults[i];
       final asset = toHash[hashResult.assetId];
-      if (hashResult.hash != null || hashResult.hash!.isNotEmpty) {
+      if (hashResult.hash != null && hashResult.hash!.isNotEmpty) {
         hashed[hashResult.assetId] = hashResult.hash!;
       } else {
         final asset = toHash[hashResult.assetId];

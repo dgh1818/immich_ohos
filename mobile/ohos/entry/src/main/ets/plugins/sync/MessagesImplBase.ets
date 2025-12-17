@@ -47,53 +47,60 @@ cacheDir: string): Promise<string> {
   let tmpPath: string | undefined;
   try {
     let path = new fileUri.FileUri(uri).path;
-    if (isCloud) {
-      const cacheRoot = `${cacheDir}/originalPhoto`;
-      if (!fs.accessSync(cacheRoot)) {
-        fs.mkdirSync(cacheRoot);
-      }
-      const uuid = util.generateRandomUUID();
-      const targetDirectoryPath = `${cacheRoot}/${uuid}`;
-      fs.mkdirSync(targetDirectoryPath);
+    // if (isCloud) {
+    //   const cacheRoot = `${cacheDir}/originalPhoto`;
+    //   if (!fs.accessSync(cacheRoot)) {
+    //     fs.mkdirSync(cacheRoot);
+    //   }
+    //   const uuid = util.generateRandomUUID();
+    //   const targetDirectoryPath = `${cacheRoot}/${uuid}`;
+    //   fs.mkdirSync(targetDirectoryPath);
+    //
+    //   const inputFilePath = uri.substring(uri.lastIndexOf('/') + 1);
+    //   const inputSplits = inputFilePath.split('.');
+    //   const outputFileName = inputSplits[0];
+    //   const extension = inputSplits.length == 2 ? `.${inputSplits[1]}` : '.jpg';
+    //   tmpPath = `${targetDirectoryPath}/${outputFileName}${extension}`;
+    //
+    //   const dstDirUriLocal = fileUri.getUriFromPath(tmpPath);
+    //   const copied = await new Promise<boolean>((resolve) => {
+    //     fs.copy(uri, dstDirUriLocal, {}, (err: BusinessError | undefined) => {
+    //       if (err) {
+    //         console.error(`copy ${uri} failed`, err);
+    //         resolve(false);
+    //         return;
+    //       }
+    //       resolve(true);
+    //     });
+    //   });
+    //   if (!copied) {
+    //     return '';
+    //   }
+    //   path = tmpPath;
+    // }
 
-      const inputFilePath = uri.substring(uri.lastIndexOf('/') + 1);
-      const inputSplits = inputFilePath.split('.');
-      const outputFileName = inputSplits[0];
-      const extension = inputSplits.length == 2 ? `.${inputSplits[1]}` : '.jpg';
-      tmpPath = `${targetDirectoryPath}/${outputFileName}${extension}`;
 
-      const dstDirUriLocal = fileUri.getUriFromPath(tmpPath);
-      const copied = await new Promise<boolean>((resolve) => {
-        fs.copy(uri, dstDirUriLocal, {}, (err: BusinessError | undefined) => {
-          if (err) {
-            console.error(`copy ${uri} failed`, err);
-            resolve(false);
-            return;
-          }
-          resolve(true);
-        });
-      });
-      if (!copied) {
-        return '';
-      }
-      path = tmpPath;
-    }
 
     return await new Promise<string>((resolve) => {
       try {
-        hash.hash(path, "sha1", (err: BusinessError, digest: string) => {
-          if (err) {
-            resolve('');
-            return;
-          }
-          const clean = digest.trim();
-          const bytes = new Uint8Array(clean.length / 2);
-          for (let i = 0; i < bytes.length; i++) {
-            bytes[i] = parseInt(clean.substr(i * 2, 2), 16);
-          }
-          const helper = new util.Base64Helper();
-          resolve(helper.encodeToString(bytes));
-        });
+        if (isCloud) {
+          resolve('');
+        } else {
+          hash.hash(path, "sha1", (err: BusinessError, digest: string) => {
+            if (err) {
+              resolve('');
+              return;
+            }
+            const clean = digest.trim();
+            const bytes = new Uint8Array(clean.length / 2);
+            for (let i = 0; i < bytes.length; i++) {
+              bytes[i] = parseInt(clean.substr(i * 2, 2), 16);
+            }
+            const helper = new util.Base64Helper();
+            resolve(helper.encodeToString(bytes));
+          });
+        }
+
       } catch (_) {
         resolve('');
       }
@@ -395,21 +402,14 @@ export class MessagesImplBase extends NativeSyncApiOhos {
     for (let entry of assets_system) {
       //for (let entry of sortedMap) {
       //let currrent_asset = assets[entry[0]];
-      let currrent_asset = entry;
 
 
-      //let uri_input: string[] = [currrent_asset.albumUri];
 
-
-      //FileUtils.getPathFromUri
-      let fileUriResult_array = entry.albumUri;
-      //let fileUriResult_array = FileUtils.getPathFromUri(getContext(),currrent_asset.albumUri)
-      const fileUriResult = fileUriResult_array;
-      const path = fileUriResult;
-      let name = currrent_asset.albumName ?? '';
+      const path = entry.albumUri;
+      let name = entry.albumName ?? '';
       const hasName = name.trim().length > 0;
       if (!hasName) {
-        const subtype = currrent_asset.albumSubtype;
+        const subtype = entry.albumSubtype;
         switch (subtype) {
           case photoAccessHelper.AlbumSubtype.FAVORITE:
             name = 'Favorites';
@@ -427,36 +427,39 @@ export class MessagesImplBase extends NativeSyncApiOhos {
       }
       const updatedAt = -1;
       const isCloud: boolean = false;
-      const assetCount = currrent_asset.count;
+      const assetCount = entry.count;
 
-      let album = new PlatformAlbum(path, name, updatedAt, isCloud, assetCount)
+      let album = new PlatformAlbum(path, name, -1, isCloud, assetCount)
       albums.push(album);
     }
 
     for (let entry of assets_user) {
       //for (let entry of sortedMap) {
       //let currrent_asset = assets[entry[0]];
-      let currrent_asset = entry;
+
 
 
       //let uri_input: string[] = [currrent_asset.albumUri];
 
 
-      //FileUtils.getPathFromUri
-      let fileUriResult_array = entry.albumUri;
-      //let fileUriResult_array = FileUtils.getPathFromUri(getContext(),currrent_asset.albumUri)
-      const fileUriResult = fileUriResult_array;
 
-      const path = fileUriResult;
-      let name = currrent_asset.albumName;
+
+      const path = entry.albumUri;
+      let name = entry.albumName;
       const updatedAt = -1;
       const isCloud: boolean = false;
-      const assetCount = currrent_asset.count;
+      const assetCount = entry.count;
 
-      let album = new PlatformAlbum(path, name, updatedAt, isCloud, assetCount)
+      let album = new PlatformAlbum(path, name, -1, isCloud, assetCount)
       albums.push(album);
     }
 
+    // Sort albums by id to align with Android ordering expectations.
+    albums.sort((a, b) => {
+      const aid = a.getId() ?? '';
+      const bid = b.getId() ?? '';
+      return aid.localeCompare(bid);
+    });
     result.success(albums);
 
     return;
@@ -520,14 +523,14 @@ export class MessagesImplBase extends NativeSyncApiOhos {
     };
 
     let fetch_result_album =
-      await phAccessHelper.getAlbums(photoAccessHelper.AlbumType.USER, photoAccessHelper.AlbumSubtype.USER_GENERIC,
+      await phAccessHelper.getAlbums(photoAccessHelper.AlbumType.USER, photoAccessHelper.AlbumSubtype.ANY,
         fetchOptions)
     let album:photoAccessHelper.Album;
     if(fetch_result_album.getCount()!=0) {
       album = await fetch_result_album.getFirstObject();
     } else {
       let fetch_result_album =
-        await phAccessHelper.getAlbums(photoAccessHelper.AlbumType.SYSTEM, photoAccessHelper.AlbumSubtype.USER_GENERIC,
+        await phAccessHelper.getAlbums(photoAccessHelper.AlbumType.SYSTEM, photoAccessHelper.AlbumSubtype.ANY,
           fetchOptions)
       album = await fetch_result_album.getFirstObject();
     }
@@ -544,9 +547,9 @@ export class MessagesImplBase extends NativeSyncApiOhos {
       console.error('7:5 success' + current_asset.uri);
 
       let position = current_asset.get(photoAccessHelper.PhotoKeys.POSITION) as photoAccessHelper.PositionType;
-      if (position == photoAccessHelper.PositionType.CLOUD) {
-        continue;
-      }
+      // if (position == photoAccessHelper.PositionType.CLOUD) {
+      //   continue;
+      // }
       assetsUri.push(current_asset.uri);
     }
 
@@ -620,9 +623,9 @@ export class MessagesImplBase extends NativeSyncApiOhos {
 
       let current_asset = await fetchResult!.getNextObject();
       let position = current_asset.get(photoAccessHelper.PhotoKeys.POSITION) as photoAccessHelper.PositionType;
-      if(position==photoAccessHelper.PositionType.CLOUD) {
-        continue;
-      }
+      // if(position==photoAccessHelper.PositionType.CLOUD) {
+      //   continue;
+      // }
 
       if (timestamp != undefined) {
         let time_modified = current_asset.get(photoAccessHelper.PhotoKeys.DATE_MODIFIED).valueOf() as number;
@@ -850,10 +853,10 @@ export class MessagesImplBase extends NativeSyncApiOhos {
       let current_asset = await photoFetchResult.getNextObject();
       let uri_input: string[] = [current_asset.uri];
       let position = current_asset.get(photoAccessHelper.PhotoKeys.POSITION) as photoAccessHelper.PositionType;
-      if(position==photoAccessHelper.PositionType.CLOUD) {
-        //console.error(current_asset.uri + ": is cloud" );
-        continue;
-      }
+      // if(position==photoAccessHelper.PositionType.CLOUD) {
+      //   //console.error(current_asset.uri + ": is cloud" );
+      //   continue;
+      // }
 
       if (updatedTimeCond != undefined) {
         let time_modified = current_asset.get(photoAccessHelper.PhotoKeys.DATE_MODIFIED).valueOf() as number;

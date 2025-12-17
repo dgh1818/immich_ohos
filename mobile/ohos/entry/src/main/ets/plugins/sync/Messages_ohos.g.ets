@@ -236,9 +236,10 @@ export class PlatformAsset {
     if(this.createdAt !==undefined){
       arr.push(this.createdAt);
     }
-    if(this.updatedAt !==undefined){
+    if(this.updatedAt){
       arr.push(this.updatedAt);
     }
+
     if(this.width !==undefined){
       arr.push(this.width);
     }
