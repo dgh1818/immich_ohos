@@ -19,7 +19,7 @@ export class FlutterError implements Error {
   /** The error stack. */
   public stack?: string;
 
-  constructor(code: string, name: string,  message: string, stack?: string) 
+  constructor(code: string, name: string,  message: string, stack?: string)
   {
     this.code = code;
     this.name = name;
@@ -209,7 +209,37 @@ export class PlatformAsset {
     return this.isFavorite;
   }
 
-  constructor(id?: string, name?: string, type?: number, createdAt?: number, updatedAt?: number, width?: number, height?: number, durationInSeconds?: number, orientation?: number, isFavorite?: boolean) {
+  private adjustmentTime?: number;
+
+  public setAdjustmentTime(adjustmentTime:number):void {
+    this.adjustmentTime = adjustmentTime;
+  }
+
+  getAdjustmentTime(): number | undefined{
+    return this.adjustmentTime;
+  }
+
+  private latitude?: number;
+
+  public setLatitude(latitude:number):void {
+    this.latitude = latitude;
+  }
+
+  getLatitude(): number | undefined{
+    return this.latitude;
+  }
+
+  private longitude?: number;
+
+  public setLongitude(longitude:number):void {
+    this.longitude = longitude;
+  }
+
+  getLongitude(): number | undefined{
+    return this.longitude;
+  }
+
+  constructor(id?: string, name?: string, type?: number, createdAt?: number, updatedAt?: number, width?: number, height?: number, durationInSeconds?: number, orientation?: number, isFavorite?: boolean, adjustmentTime?: number, latitude?: number, longitude?: number) {
     this.id = id;
     this.name = name;
     this.type = type;
@@ -220,6 +250,9 @@ export class PlatformAsset {
     this.durationInSeconds = durationInSeconds;
     this.orientation = orientation;
     this.isFavorite = isFavorite;
+    this.adjustmentTime = adjustmentTime;
+    this.latitude = latitude;
+    this.longitude = longitude;
   }
 
   toList(): Object[] {
@@ -236,10 +269,9 @@ export class PlatformAsset {
     if(this.createdAt !==undefined){
       arr.push(this.createdAt);
     }
-    if(this.updatedAt){
+    if(this.updatedAt !==undefined){
       arr.push(this.updatedAt);
     }
-
     if(this.width !==undefined){
       arr.push(this.width);
     }
@@ -254,6 +286,15 @@ export class PlatformAsset {
     }
     if(this.isFavorite !==undefined){
       arr.push(this.isFavorite);
+    }
+    if(this.adjustmentTime !==undefined){
+      arr.push(this.adjustmentTime);
+    }
+    if(this.latitude !==undefined){
+      arr.push(this.latitude);
+    }
+    if(this.longitude !==undefined){
+      arr.push(this.longitude);
     }
     return arr;
   }
@@ -280,6 +321,12 @@ export class PlatformAsset {
     pigeonResult.setOrientation(orientation as number);
     let isFavorite: Object = arr[9];
     pigeonResult.setIsFavorite(isFavorite as boolean);
+    let adjustmentTime: Object = arr[10];
+    pigeonResult.setAdjustmentTime(adjustmentTime as number);
+    let latitude: Object = arr[11];
+    pigeonResult.setLatitude(latitude as number);
+    let longitude: Object = arr[12];
+    pigeonResult.setLongitude(longitude as number);
     return pigeonResult;
   }
 }
@@ -542,6 +589,8 @@ export abstract class NativeSyncApiOhos {
   abstract stopBackgroundTransfer(result: Result<void>): void;
 
   abstract getTrashedAssets(): Map<string, Array<PlatformAsset>>;
+
+  abstract getPathFromUri(uri: string , result: Result<string>): void;
   /** The codec used by NativeSyncApiOhos. */
   static getCodec(): MessageCodec<Object>{
     return PigeonCodec.INSTANCE;
@@ -896,6 +945,34 @@ export abstract class NativeSyncApiOhos {
                 res = wrappedError;
               }
               reply.reply(res);
+            } });
+      } else {
+        channel.setMessageHandler(null);
+      }
+    }
+    {
+      let channel: BasicMessageChannel<Object> =
+          new BasicMessageChannel(
+              binaryMessenger, "dev.flutter.pigeon.immich_mobile.NativeSyncApiOhos.getPathFromUri", NativeSyncApiOhos.getCodec());
+      if (api != null) {
+        channel.setMessageHandler({
+            onMessage(message: Object ,reply: Reply<Object> ) {
+              let args: Array<Object> = message as Array<Object>;
+              class ResultImp implements Result<string>{
+                    success(result: string): void {
+                      let res: Array<Object> = [];
+                      res.push(result);
+                      reply.reply(res);
+                    }
+
+                    error(error: Error): void {
+                      let wrappedError: Array<Object> = wrapError(error);
+                      reply.reply(wrappedError);
+                    }
+              }
+              let resultCallback: Result<string> = new ResultImp();
+
+              api!.getPathFromUri(args[0] as string, resultCallback);
             } });
       } else {
         channel.setMessageHandler(null);

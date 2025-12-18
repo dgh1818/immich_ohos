@@ -3,6 +3,7 @@ import 'package:immich_mobile/entities/store.entity.dart';
 import 'package:immich_mobile/services/api.service.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:video_player/video_player.dart';
+import 'package:immich_mobile/platform/native_sync_api_ohos.g.dart';
 
 import 'package:immich_mobile/domain/models/store.model.dart';
 
@@ -19,7 +20,10 @@ Future<VideoPlayerController> videoPlayerController(VideoPlayerControllerRef ref
   if (asset.isLocal && asset.livePhotoVideoId == null) {
     // Use a local file for the video player controller
     //final file = await asset.local!.file;
-    controller = VideoPlayerController.contentUri(Uri.parse(asset.local!.id));
+    final nativeSyncApi = NativeSyncApiOhos();
+    final path = await nativeSyncApi.getPathFromUri(asset.local!.id);
+    final file = File(path);
+    controller = VideoPlayerController.file(file);
   } else {
     // Use a network URL for the video player controller
     final serverEndpoint = Store.get(StoreKey.serverEndpoint);

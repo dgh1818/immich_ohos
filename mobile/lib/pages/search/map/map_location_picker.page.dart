@@ -73,7 +73,7 @@ class MapLocationPickerPage extends HookConsumerWidget {
 
       var currentLatLng = LatLng(currentLocation.latitude, currentLocation.longitude);
       selectedLatLng.value = currentLatLng;
-      await controller.value?.animateCamera(CameraUpdate.newLatLng(currentLatLng));
+      await controller.value?.animateCamera(CameraUpdate.newLatLngZoom(currentLatLng, 12));
 
       if (defaultTargetPlatform == TargetPlatform.ohos) {
         ByteData mapMarkData = await rootBundle.load("assets/location-pin.png");
@@ -95,7 +95,10 @@ class MapLocationPickerPage extends HookConsumerWidget {
                 borderRadius: BorderRadius.only(bottomLeft: Radius.circular(40), bottomRight: Radius.circular(40)),
               ),
               child: MapLibreMap(
-                initialCameraPosition: CameraPosition(target: initialLatLng, zoom: 12),
+                initialCameraPosition: CameraPosition(
+                  target: initialLatLng,
+                  zoom: (initialLatLng.latitude == 0 && initialLatLng.longitude == 0) ? 1 : 12,
+                ),
                 styleString: style,
                 onMapCreated: (mapController) => controller.value = mapController,
                 onStyleLoadedCallback: onStyleLoaded,

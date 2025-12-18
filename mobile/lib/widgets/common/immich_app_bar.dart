@@ -254,8 +254,8 @@ class ImmichAppBar extends ConsumerWidget implements PreferredSizeWidget {
 
         if (kDebugMode || kProfileMode)
           IconButton(
-            icon: const Icon(Icons.science_rounded),
-            onPressed: () => context.pushRoute(const FeatInDevRoute()),
+            icon: const Icon(Icons.palette_rounded),
+            onPressed: () => context.pushRoute(const ImmichUIShowcaseRoute()),
           ),
         /*
         if (isCasting)
