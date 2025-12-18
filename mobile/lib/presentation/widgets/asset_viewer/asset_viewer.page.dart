@@ -229,7 +229,7 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
       (context.height * extent) - (context.height * _kBottomSheetMinimumExtent);
 
   ImageStream _precacheImage(BaseAsset asset) {
-    final provider = getFullImageProvider(asset, size: const Size(-1, -1)); //-1,-1表示原图
+    final provider = getFullImageProvider(asset, size: context.sizeData); //-1,-1表示原图
     return provider.resolve(ImageConfiguration.empty)..addListener(_dummyListener);
   }
 
@@ -346,14 +346,14 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
       if (asset.hasLocal && (!asset.hasRemote || !AppSetting.get(Setting.preferRemoteImage))) {
         final localImageRequest = LocalImageRequest(
           localId: (asset as LocalAsset).id,
-          size: const Size(-1, -1),
+          size: const Size(0, 0),
           assetType: AssetType.image,
         );
         final isHdr = await localImageRequest.getHdr(); //本地媒体通过Native侧获取HDR信息
         print("get hdr is $isHdr");
 
         if (isHdr) {
-          ui.SetHdr.setHdrMode(hdr: 0, is_image: true);
+          ui.SetHdr.setHdrMode(hdr: 1, is_image: true);
         } else {
           ui.SetHdr.setHdrMode(hdr: 0, is_image: true);
         }
@@ -744,7 +744,7 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
     final size = ctx.sizeData;
     return PhotoViewGalleryPageOptions(
       key: ValueKey(asset.heroTag),
-      imageProvider: getFullImageProvider(asset, size: const Size(-1, -1)),
+      imageProvider: getFullImageProvider(asset, size: size),
       heroAttributes: PhotoViewHeroAttributes(tag: '${asset.heroTag}_$heroOffset'),
       filterQuality: FilterQuality.high,
       tightMode: true,

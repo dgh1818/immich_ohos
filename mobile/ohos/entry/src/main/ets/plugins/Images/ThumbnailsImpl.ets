@@ -44,6 +44,7 @@ export class MessagesImplBaseThumb extends ThumbnailApi {
           finalResult.set("height", res.height);
           finalResult.set("pointer", new Uint8Array(res.pointer));
           finalResult.set("isHdr", res.isHdr);
+          finalResult.set("stride", res.stride);
 
           return result.success(finalResult);
         }
@@ -110,6 +111,7 @@ export class MessagesImplBaseThumb extends ThumbnailApi {
           resOut.set("height", res.height);
           resOut.set("pointer", new Uint8Array(res.pointer));
           resOut.set("isHdr", res.isHdr);
+          resOut.set("stride", res.stride);
 
 
           return callback.success(resOut);
@@ -181,32 +183,38 @@ export class MessagesImplBaseThumb extends ThumbnailApi {
     let imageInfo = bitmap.getImageInfoSync();
     let actualWidth = imageInfo.size.width;
     let actualHeight = imageInfo.size.height;
-
-    let size = actualWidth * actualHeight * 4
-    //let pointer = allocateNative(size)
+    let stride = imageInfo.stride;
 
     try {
       const bufferSize = bitmap.getPixelBytesNumber();
-      //console.error("enter processBitmap2" + bufferSize);
-      let buffer: ArrayBuffer = new ArrayBuffer(bufferSize);
-      //console.error("enter processBitmap3");
-
+      let buffer: ArrayBuffer = new ArrayBuffer(stride * actualHeight);
       bitmap.readPixelsToBufferSync(buffer);
 
-      //console.error("enter processBitmap4");
+      const bytesPerPixel = 4;
+      const rowBytes = actualWidth * bytesPerPixel;
+      const expectedSize = rowBytes * actualHeight;
+      let outStride = stride ?? rowBytes;
 
-      let uint8Array: Uint8Array = new Uint8Array(buffer);
+      if (bufferSize > expectedSize && stride != undefined && stride > rowBytes) {
+        const raw = new Uint8Array(buffer);
+        const packed = new Uint8Array(rowBytes * actualHeight);
+        for (let y = 0; y < actualHeight; y++) {
+          const srcStart = y * stride;
+          const srcEnd = srcStart + rowBytes;
+          packed.set(raw.subarray(srcStart, srcEnd), y * rowBytes);
+        }
+        const packedBuffer: ArrayBuffer = new ArrayBuffer(packed.byteLength);
+        new Uint8Array(packedBuffer).set(packed);
+        buffer = packedBuffer;
+        outStride = rowBytes;
+      } else if (bufferSize < expectedSize) {
+        console.warn(`Unexpected pixel buffer size: ${bufferSize} < ${expectedSize}`);
+      }
+
       let bitmapInfo = bitmap.getImageInfoSync();
       let isHdr = bitmapInfo.isHdr;
 
-      //console.error("enter processBitmap5");
-      let collectionsUint8Array: collections.Uint8Array = new collections.Uint8Array(uint8Array);
-      //uint8Array = undefined;
-      //let collectionsUint8Array = new collections.Uint8Array(buffer);
-
-      //console.error("enter processBitmap6" + collectionsUint8Array.byteLength);
-
-      let finalResult = new ThumbHashResult(actualWidth, actualHeight, buffer, isHdr);
+      let finalResult = new ThumbHashResult(actualWidth, actualHeight, buffer, isHdr, outStride);
 
       return finalResult;
 
@@ -233,12 +241,13 @@ export class MessagesImplBaseThumb extends ThumbnailApi {
 
     let colorManager = colorSpaceManager.create(colorSpaceManager.ColorSpace.DISPLAY_P3);
 
-    if (targetHeight == -1 && targetWidth == -1) {
-      opts = { editable: true, desiredDynamicRange: image.DecodingDynamicRange.SDR,desiredPixelFormat: image.PixelMapFormat.RGBA_8888,desiredColorSpace:colorManager};
+
+    if (targetHeight == 0 && targetWidth == 0) {
+      opts = { editable: true, desiredDynamicRange: image.DecodingDynamicRange.AUTO};
     } else {
       opts = {
         editable: true,
-        //desiredPixelFormat: image.PixelMapFormat.RGBA_8888,
+        desiredPixelFormat: image.PixelMapFormat.RGBA_8888,
         desiredSize: { height: targetHeight, width: imageInfo.size.width * targetHeight / imageInfo.size.height
         },
         desiredDynamicRange: image.DecodingDynamicRange.SDR

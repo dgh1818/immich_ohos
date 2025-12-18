@@ -54,6 +54,7 @@ abstract class ImageRequest {
     final int actualHeight;
     final int actualSize;
     final ui.ImmutableBuffer buffer;
+    final int stride;
     final isHdr;
     try {
       actualWidth = info['width']! as int;
@@ -61,6 +62,7 @@ abstract class ImageRequest {
       actualSize = actualWidth * actualHeight * 4;
       buffer = await ImmutableBuffer.fromUint8List(address);
       isHdr = info['isHdr']! as bool;
+      stride = info['stride']! as int;
     } finally {
       //malloc.free(pointer);
     }
