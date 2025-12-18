@@ -1012,6 +1012,13 @@ packages:
       relative: true
     source: path
     version: "0.0.0"
+  immich_ui:
+    dependency: "direct main"
+    description:
+      path: "packages/ui"
+      relative: true
+    source: path
+    version: "0.0.0"
   intl:
     dependency: "direct main"
     description:

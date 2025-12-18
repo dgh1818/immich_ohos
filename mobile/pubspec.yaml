@@ -85,6 +85,7 @@ dependencies:
     git:
       url: https://github.com/immich-app/native_video_player
       ref: '893894b'
+  video_player: ^2.9.2
   isar: ^3.1.0+1 #ok
   isar_flutter_libs: ^3.1.0+1 #ok
   # DB
