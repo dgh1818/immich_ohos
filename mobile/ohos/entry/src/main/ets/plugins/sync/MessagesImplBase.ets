@@ -901,7 +901,10 @@ export class MessagesImplBase extends NativeSyncApiOhos {
         height ?? 0,
         duration ?? 0,
         orientation,
-        isFavorite
+        isFavorite,
+        -1,
+        199.9,
+        199.9,
       )
       //console.error('get assets for album' + ':' + id);
       assetResult.push(asset);
@@ -963,5 +966,11 @@ export class MessagesImplBase extends NativeSyncApiOhos {
     }
     rs.close();
     return map;
+  }
+
+  override getPathFromUri(uri: string, result: Result<string>): void {
+    let obj = new fileUri.FileUri(uri);
+    let path = obj.path;
+    result.success(path);
   }
 }

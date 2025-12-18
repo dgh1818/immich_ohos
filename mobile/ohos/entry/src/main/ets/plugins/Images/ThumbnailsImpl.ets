@@ -257,7 +257,7 @@ export class MessagesImplBaseThumb extends ThumbnailApi {
     const phAccessHelper = photoAccessHelper.getPhotoAccessHelper(MessagesImplBaseThumb.ctx);
     let predicates: dataSharePredicates.DataSharePredicates = new dataSharePredicates.DataSharePredicates();
 
-    let uri = fileUri.getUriFromPath(id)
+    let uri = id;
     predicates.equalTo('uri', uri);
     let videoFetchResult: photoAccessHelper.FetchResult<photoAccessHelper.PhotoAsset> =
       await phAccessHelper.getAssets({

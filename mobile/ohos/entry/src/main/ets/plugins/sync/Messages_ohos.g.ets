@@ -19,7 +19,7 @@ export class FlutterError implements Error {
   /** The error stack. */
   public stack?: string;
 
-  constructor(code: string, name: string,  message: string, stack?: string)
+  constructor(code: string, name: string,  message: string, stack?: string) 
   {
     this.code = code;
     this.name = name;
