@@ -59,7 +59,7 @@ class Timeline extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       resizeToAvoidBottomInset: false,
-      floatingActionButton: const DownloadStatusFloatingButton(),
+      floatingActionButton: const Padding(padding: EdgeInsets.only(bottom: 60), child: DownloadStatusFloatingButton()),
       body: LayoutBuilder(
         builder: (_, constraints) => ProviderScope(
           overrides: [

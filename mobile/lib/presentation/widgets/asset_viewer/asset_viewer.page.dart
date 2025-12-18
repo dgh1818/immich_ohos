@@ -851,7 +851,7 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
           child: AnimatedOpacity(
             opacity: showingControls ? 1.0 : 0.0,
             duration: Durations.short2,
-            child: const DownloadStatusFloatingButton(),
+            child: const Padding(padding: EdgeInsets.only(bottom: 60), child: DownloadStatusFloatingButton()),
           ),
         ),
         body: Stack(
