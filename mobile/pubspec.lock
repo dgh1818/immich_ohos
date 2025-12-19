@@ -2095,7 +2095,7 @@ packages:
     source: git
     version: "3.1.2"
   video_player:
-    dependency: "direct overridden"
+    dependency: "direct main"
     description:
       path: "packages/video_player/video_player"
       ref: "br_video_player-v2.9.2_ohos"
