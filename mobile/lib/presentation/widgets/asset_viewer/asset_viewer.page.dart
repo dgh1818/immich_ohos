@@ -312,11 +312,8 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
     }
 
     if (asset.isImage) {
-      //判断是否使用本地位置媒体
-      if (!(asset.hasLocal && (!asset.hasRemote || !AppSetting.get(Setting.preferRemoteImage)))) {
-        final provider = getFullImageProvider(asset);
-        setDisplayMode(provider, context);
-      }
+      final provider = getFullImageProvider(asset);
+      setDisplayMode(provider, context);
     } else {
       ui.SetHdr.setHdrMode(hdr: 0, is_image: true);
     }
@@ -341,27 +338,6 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
     }
 
     widget.changeAsset(ref, asset);
-
-    if (asset.isImage) {
-      if (asset.hasLocal && (!asset.hasRemote || !AppSetting.get(Setting.preferRemoteImage))) {
-        final localImageRequest = LocalImageRequest(
-          localId: (asset as LocalAsset).id,
-          size: const Size(0, 0),
-          assetType: AssetType.image,
-        );
-        final isHdr = await localImageRequest.getHdr(); //本地媒体通过Native侧获取HDR信息
-        print("get hdr is $isHdr");
-
-        if (isHdr) {
-          ui.SetHdr.setHdrMode(hdr: 1, is_image: true);
-        } else {
-          ui.SetHdr.setHdrMode(hdr: 0, is_image: true);
-        }
-      } else {
-        final provider = getFullImageProvider(asset);
-        setDisplayMode(provider, context);
-      }
-    }
 
     _precacheAssets(index);
     //_handleCasting();

@@ -232,7 +232,8 @@ export class MessagesImplBaseThumb extends ThumbnailApi {
     //, signal: CancellationSignal
   ): Promise<PixelMap> {
     //signal.throwIfCanceled()
-    let filePath = new fileUri.FileUri(id).path;;
+    let filePath = new fileUri.FileUri(id).path;
+
     let opts: image.DecodingOptions;
 
     const imageSource: image.ImageSource = image.createImageSource(filePath);
@@ -244,7 +245,23 @@ export class MessagesImplBaseThumb extends ThumbnailApi {
 
     if (targetHeight == 0 && targetWidth == 0) {
       opts = { editable: true, desiredDynamicRange: image.DecodingDynamicRange.AUTO};
+      let imageOut = await imageSource.createPixelMap(opts);
+      return imageOut;
     } else {
+      const phAccessHelper = photoAccessHelper.getPhotoAccessHelper(MessagesImplBaseThumb.ctx);
+      let predicates: dataSharePredicates.DataSharePredicates = new dataSharePredicates.DataSharePredicates();
+
+      let uri = id;
+      predicates.equalTo('uri', uri);
+      let videoFetchResult: photoAccessHelper.FetchResult<photoAccessHelper.PhotoAsset> =
+        await phAccessHelper.getAssets({
+          fetchColumns: ['width', 'height', 'orientation'],
+          predicates: predicates
+        });
+      let thumbnailSize: Size = { height: targetHeight, width: imageInfo.size.width * targetHeight / imageInfo.size.height }
+      let photoAsset: photoAccessHelper.PhotoAsset = await videoFetchResult.getFirstObject();
+      let imageOut = await photoAsset.getThumbnail(thumbnailSize);
+
       opts = {
         editable: true,
         desiredPixelFormat: image.PixelMapFormat.RGBA_8888,
@@ -252,11 +269,10 @@ export class MessagesImplBaseThumb extends ThumbnailApi {
         },
         desiredDynamicRange: image.DecodingDynamicRange.SDR
       };
+      return imageOut;
     }
 
-    let imageOut = await imageSource.createPixelMap(opts);
-
-    return imageOut;
+    //let imageOut = await imageSource.createPixelMap(opts);
   }
 
   public static async decodeVideoThumbnail(

@@ -547,9 +547,9 @@ export class MessagesImplBase extends NativeSyncApiOhos {
       console.error('7:5 success' + current_asset.uri);
 
       let position = current_asset.get(photoAccessHelper.PhotoKeys.POSITION) as photoAccessHelper.PositionType;
-      // if (position == photoAccessHelper.PositionType.CLOUD) {
-      //   continue;
-      // }
+      if (position == photoAccessHelper.PositionType.CLOUD) {
+        continue;
+      }
       assetsUri.push(current_asset.uri);
     }
 
@@ -623,9 +623,9 @@ export class MessagesImplBase extends NativeSyncApiOhos {
 
       let current_asset = await fetchResult!.getNextObject();
       let position = current_asset.get(photoAccessHelper.PhotoKeys.POSITION) as photoAccessHelper.PositionType;
-      // if(position==photoAccessHelper.PositionType.CLOUD) {
-      //   continue;
-      // }
+      if(position==photoAccessHelper.PositionType.CLOUD) {
+        continue;
+      }
 
       if (timestamp != undefined) {
         let time_modified = current_asset.get(photoAccessHelper.PhotoKeys.DATE_MODIFIED).valueOf() as number;
@@ -853,10 +853,10 @@ export class MessagesImplBase extends NativeSyncApiOhos {
       let current_asset = await photoFetchResult.getNextObject();
       let uri_input: string[] = [current_asset.uri];
       let position = current_asset.get(photoAccessHelper.PhotoKeys.POSITION) as photoAccessHelper.PositionType;
-      // if(position==photoAccessHelper.PositionType.CLOUD) {
-      //   //console.error(current_asset.uri + ": is cloud" );
-      //   continue;
-      // }
+      if(position==photoAccessHelper.PositionType.CLOUD) {
+        //console.error(current_asset.uri + ": is cloud" );
+        continue;
+      }
 
       if (updatedTimeCond != undefined) {
         let time_modified = current_asset.get(photoAccessHelper.PhotoKeys.DATE_MODIFIED).valueOf() as number;
