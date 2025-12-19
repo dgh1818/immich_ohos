@@ -421,6 +421,8 @@ class GalleryViewerPage extends HookConsumerWidget {
         lastPlayingState = 0;
         final controller = ref.read(videoPlayerControllerProvider(asset: current!)).value;
         controller?.pause();
+
+        setDisplayMode(ImmichImage.imageProvider(asset: current), context);
       }
     }
 
