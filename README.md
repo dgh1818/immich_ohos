@@ -40,6 +40,14 @@
 </p>
 
 # Harmonyos Next 鸿蒙端的 Immich
+
+升级v2.4.0 (最新release版本) <br/>
+注意事项：
+1. 需安装2.x.x版本服务器   <br/>
+2. 第一次打开APP白屏，请尝试重启APP    <br/>
+3. 如果APP打开一直白屏需重新安装APP    <br/>
+4. 大地图页面待完善   <br/>
+
 链接已实测可用，解决了发布地区在海外导致不能安装的问题，推荐先卸载自签名版本再重新安装，如仍不可用可以提issue <br/>
 https://appgallery.huawei.com/link/invite-test-wap?taskId=deb1d8328ba23e71862727bc86ef8c9f&invitationCode=61Oeh6V932r <br/>
 https://appgallery.huawei.com/app/detail?id=com.dgh18.immich&channelId=SHARE&source=appshare  正式上架版 无beta时间线 <br/>
@@ -71,7 +79,6 @@ GEOCODE_WITH_AMAP: 'true' // 启用高德 逆地理编码 个人开发者国内�
 
 <h1>已知问题：</h1>
 2. 每行显示数量更改不即时生效（原版app也存在） <br/>
-3. Beta时间线“在此设备”HDR显示异常 <br/>
 
 <h1>未完成的功能：</h1>
 4. 桌面小组件 <br/>
@@ -79,7 +86,6 @@ GEOCODE_WITH_AMAP: 'true' // 启用高德 逆地理编码 个人开发者国内�
 6. dynamic_color <br/>
 
 <h1>适配计划：</h1>
-   1.143.0开始需要flutter 3.35.4 华为官方尚未适配 <br/>
 4. 动态照片播放改为使用Native侧组件，因为arkts组件有放大照片的防抖算法，停止长按也可立即停止播放动态照片 <br/>
 7. 桌面小组件 <br/>
 
