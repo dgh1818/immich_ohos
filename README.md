@@ -143,52 +143,6 @@ https://github.com/dgh1818/immich_ohos/blob/v1.137.3-merge/%E5%BE%AE%E4%BF%A1%E5
 
 </h1>
 
-<h2>History：</h2>
-
-To Do：
-
-1. 华为动态照片的播放显示（修改 Server 端？）初步完成！需使用本项目服务器，重新分析元数据
-2. 替换地图：ExifInfo 小地图替换完成！ （需App Gallery Connect开通地图权限并签名才能显示地图）
-https://ost.51cto.com/answer/23898 mapkit开通教程
-3. AI HDR（待完成）
-4. 地理反向编码中文化：完成！（需使用本项目服务器，重新分析元数据）（需App Gallery Connect开通地图权限并签名
-
-<h2>备忘：</h2>
-1. photopicker最大媒体数量从9修改为了500
-
-https://github.com/dgh1818/immich_ohos/blob/v1.137.3-merge/%E5%BE%AE%E4%BF%A1%E5%9B%BE%E7%89%87_20250830025443_89_165.jpg?raw=true
-
-<h2>DEMO:</h2>
-
-
-<table align="center">
-  <tr>
-    <td>
-      <img src="https://github.com/dgh1818/immich_ohos/blob/v1.137.3-merge/%E5%BE%AE%E4%BF%A1%E5%9B%BE%E7%89%87_20250830024549_88_165.jpg" alt="手机1" width="400">
-    </td>
-    <td>
-      <img src="https://github.com/dgh1818/immich_ohos/blob/v1.137.3-merge/%E5%BE%AE%E4%BF%A1%E5%9B%BE%E7%89%87_20250830025443_89_165.jpg" alt="手机2" width="400">
-    </td>
-  </tr>
-</table>
-
-
-<p align="center">
-  <img src="https://github.com/user-attachments/assets/bcd88029-4e22-4742-95ae-77477a2fc855" alt="平板1" width="800" />
-</p>
-<p align="center">
-  <img src="https://github.com/user-attachments/assets/79e9e708-26d7-49d8-b2fc-e61859f581d3" alt="平板2" width="800" />
-</p>
-<p align="center">
-  <img src="https://github.com/user-attachments/assets/b9087716-ef8e-4f24-b3dc-3728fc6400a6" alt="平板3" width="800" />
-</p>
-<p align="center">
-  <img src="https://github.com/user-attachments/assets/dd8c81d6-e76b-4669-be88-2867eb94966f" alt="平板4" width="800" />
-</p>
-<p align="center">
-  <img src="https://github.com/dgh1818/immich_ohos/blob/v1.137.3-merge/%E5%BE%AE%E4%BF%A1%E5%9B%BE%E7%89%87_20250830031325_93_165.jpg" alt="平板5" width="800" />
-</p>
-
 
 
 > [!WARNING]
