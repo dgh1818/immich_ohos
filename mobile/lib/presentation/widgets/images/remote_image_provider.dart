@@ -92,12 +92,6 @@ class RemoteFullImageProvider extends CancellableImageProvider<RemoteFullImagePr
       return;
     }
 
-    if (is_image != null) {
-      if (!is_image!) {
-        return;
-      }
-    }
-
     final headers = ApiService.getRequestHeaders();
     final request = this.request = RemoteImageRequest(
       uri: getPreviewUrlForRemoteId(key.assetId),
@@ -105,6 +99,12 @@ class RemoteFullImageProvider extends CancellableImageProvider<RemoteFullImagePr
       cacheManager: cacheManager,
     );
     yield* loadRequest(request, decode);
+
+    if (is_image != null) {
+      if (!is_image!) {
+        return;
+      }
+    }
 
     if (isCancelled) {
       unawaited(evict());

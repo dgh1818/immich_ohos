@@ -762,7 +762,7 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
           asset: asset,
           image: Image(
             key: ValueKey(asset),
-            image: getThumbnailImageProvider(asset)!,
+            image: getFullImageProvider(asset, size: ctx.sizeData),
             fit: BoxFit.contain,
             height: ctx.height,
             width: ctx.width,
