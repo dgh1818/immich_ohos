@@ -50,7 +50,7 @@
 
 链接已实测可用，解决了发布地区在海外导致不能安装的问题，推荐先卸载自签名版本再重新安装，如仍不可用可以提issue <br/>
 https://appgallery.huawei.com/link/invite-test-wap?taskId=deb1d8328ba23e71862727bc86ef8c9f&invitationCode=61Oeh6V932r <br/>
-https://appgallery.huawei.com/app/detail?id=com.dgh18.immich&channelId=SHARE&source=appshare  正式上架版 无beta时间线 <br/>
+https://appgallery.huawei.com/app/detail?id=com.dgh18.immich&channelId=SHARE&source=appshare   <br/>
 **IMMICH 搭配对应版本 本项目下服务器 使用**
 <h1>签名有关注意事项：</h1>
 1. 本目录下服务器可实现华为动态照片解析<br/>
