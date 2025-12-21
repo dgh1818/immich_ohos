@@ -87,7 +87,7 @@ export class MetadataRepository {
     geoTz: (lat, lon) => geotz.find(lat, lon)[0],
     geolocation: false,
     // Enable exiftool LFS to parse metadata for files larger than 2GB.
-    readArgs: ['-api', 'largefilesupport=1'],
+    readArgs: ['-fast', '-api', 'largefilesupport=1'],
     writeArgs: ['-api', 'largefilesupport=1', '-overwrite_original'],
   });
 
