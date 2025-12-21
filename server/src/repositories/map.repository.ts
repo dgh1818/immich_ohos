@@ -167,12 +167,17 @@ export class MapRepository {
       body: body,
     });
 
-    if (!response.ok || !data?.sites?.[0]) {
+    if (!response.ok) {
       this.logger.error(`Request failed with status ${response.status}`);
       return { country: null, state: null, city: null };
     }
 
     const data = await response.json();
+
+    if (!data?.sites?.[0]){
+      this.logger.error(`no site found`);
+      return { country: null, state: null, city: null };
+    }
     const country = data.sites[0].address.country;
     const state = data.sites[0].address.adminArea;
     let city = data.sites[0].address.city;
