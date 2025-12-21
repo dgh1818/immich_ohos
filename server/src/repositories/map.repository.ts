@@ -167,7 +167,7 @@ export class MapRepository {
       body: body,
     });
 
-    if (!response.ok) {
+    if (!response.ok || !data?.sites?.[0]) {
       this.logger.error(`Request failed with status ${response.status}`);
       return { country: null, state: null, city: null };
     }
