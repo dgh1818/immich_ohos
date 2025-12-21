@@ -1124,9 +1124,10 @@ export class MetadataService extends BaseService {
     }
 
     let startPos:number = 0;
+    const tailLen_2 = 20000;
 
     if(!hasOhosLivePhoto) {
-      startPos = Math.max(0, ohosFileSize - 15000);;
+      startPos = Math.max(0, ohosFileSize - tailLen_2);;
     }
 
     if (startPos < 0) {
@@ -1135,9 +1136,9 @@ export class MetadataService extends BaseService {
       return { hasOhosLivePhoto, ohosFileSize, ohosVideoOffset };
     }
 
-    const buffer = Buffer.alloc(15000);
+    const buffer = Buffer.alloc(tailLen_2);
     const fd_2 = await fs.open(filePath, 'r');
-    const tailLen_2 = 15000;
+    
     
 
      try {
