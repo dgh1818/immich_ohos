@@ -76,6 +76,19 @@ class MapPage extends HookConsumerWidget {
       };
     }, [context]);
 
+    LatLngBounds _toWgs84Bounds(LatLngBounds bounds) {
+      if (defaultTargetPlatform != TargetPlatform.ohos) {
+        return bounds;
+      }
+
+      final sw = bounds.southwest;
+      final ne = bounds.northeast;
+      final swWgs = CoordinateTransformUtil.gcj02ToWgs84(sw.longitude, sw.latitude);
+      final neWgs = CoordinateTransformUtil.gcj02ToWgs84(ne.longitude, ne.latitude);
+
+      return LatLngBounds(southwest: LatLng(swWgs[1], swWgs[0]), northeast: LatLng(neWgs[1], neWgs[0]));
+    }
+
     // updates the markersInBounds value with the map markers that are visible in the current
     // map camera bounds
     Future<void> updateAssetsInBounds() async {
@@ -84,10 +97,16 @@ class MapPage extends HookConsumerWidget {
         return;
       }
 
-      final bounds = await mapController.value!.getVisibleRegion();
-      final inBounds = markers.value
-          .where((m) => bounds.contains(LatLng(m.latLng.latitude, m.latLng.longitude)))
-          .toList();
+      final bounds = _toWgs84Bounds(await mapController.value!.getVisibleRegion());
+      final inBounds = markers.value.where((m) {
+        // marker 原始是 WGS84
+        final wgs = m.latLng;
+
+        // 转成 GCJ-02 后再判断
+        final gcj = CoordinateTransformUtil.wgs84ToGcj02(wgs.longitude, wgs.latitude);
+        final p = LatLng(gcj[1], gcj[0]); // [lon, lat] -> LatLng(lat, lon)
+        return bounds.contains(p);
+      }).toList();
       // Notify bottom sheet to update asset grid only when there are new assets
       if (markersInBounds.value.length != inBounds.length) {
         bottomSheetStreamController.add(MapAssetsInBoundsUpdated(inBounds.map((e) => e.assetRemoteId).toList()));

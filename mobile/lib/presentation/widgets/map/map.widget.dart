@@ -125,6 +125,22 @@ class _DriftMapState extends ConsumerState<DriftMap> {
     _debouncer.run(setBounds);
   }
 
+  LatLngBounds _toWgs84Bounds(LatLngBounds bounds) {
+    if (defaultTargetPlatform != TargetPlatform.ohos) {
+      return bounds;
+    }
+
+    final sw = bounds.southwest;
+    final ne = bounds.northeast;
+    final swWgs = CoordinateTransformUtil.gcj02ToWgs84(sw.longitude, sw.latitude);
+    final neWgs = CoordinateTransformUtil.gcj02ToWgs84(ne.longitude, ne.latitude);
+
+    return LatLngBounds(
+      southwest: LatLng(swWgs[1], swWgs[0]),
+      northeast: LatLng(neWgs[1], neWgs[0]),
+    );
+  }
+
   Future<void> setBounds() async {
     final controller = mapController;
     if (controller == null || !mounted) {
@@ -139,7 +155,7 @@ class _DriftMapState extends ConsumerState<DriftMap> {
       return;
     }
 
-    final bounds = await controller.getVisibleRegion();
+    final bounds = _toWgs84Bounds(await controller.getVisibleRegion());
     unawaited(
       _reloadMutex.run(() async {
         if (mounted && ref.read(mapStateProvider.notifier).setBounds(bounds)) {
@@ -151,7 +167,11 @@ class _DriftMapState extends ConsumerState<DriftMap> {
           final List<LatLng> totalData = [];
 
           for (final marker in markersData) {
-            totalData.add(marker.location);
+            final coordinateProcessed = CoordinateTransformUtil.wgs84ToGcj02(
+              marker.location.longitude,
+              marker.location.latitude,
+            );
+            totalData.add(LatLng(coordinateProcessed[1], coordinateProcessed[0]));
             // 使用 marker 的属性或方法
           }
 

@@ -8,6 +8,7 @@ import 'package:immich_mobile/utils/map_utils.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 
 import 'package:flutter/foundation.dart';
+import 'package:coordtransform_dart/coordtransform_dart.dart';
 
 extension MapMarkers on MapLibreMapController {
   static var _completer = Completer()..complete();
@@ -23,7 +24,8 @@ extension MapMarkers on MapLibreMapController {
     final List<LatLng> totalData = [];
 
     for (final marker in markers) {
-      totalData.add(marker.latLng);
+      final coordinateProcessed = CoordinateTransformUtil.wgs84ToGcj02(marker.latLng.longitude, marker.latLng.latitude);
+      totalData.add(LatLng(coordinateProcessed[1], coordinateProcessed[0]));
       // 使用 marker 的属性或方法
     }
 
