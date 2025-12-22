@@ -73,7 +73,7 @@ class ImmichRemoteImageProvider extends ImageProvider<ImmichRemoteImageProvider>
     );
     yield previewCodec;
 
-    if (!is_image!) {
+    if (!(is_image ?? true)) {
       await chunkEvents.close();
       return;
     }
