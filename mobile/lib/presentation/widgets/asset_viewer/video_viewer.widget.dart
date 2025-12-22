@@ -631,7 +631,7 @@ class VideoViewer extends HookConsumerWidget {
         );
       }
 
-      final unauthenticatedUrlThumb = getThumbnailUrlForRemoteId(asset.id);
+      final unauthenticatedUrlThumb = getThumbnailUrlForRemoteId(asset.remoteId!);
       final authenticatedURLThumb = "$unauthenticatedUrlThumb&sessionKey=${sessionKey?.token}";
 
       final String unauthenticatedUrlVideo = getPlaybackUrlForRemoteId(asset.id);
