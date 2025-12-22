@@ -18,6 +18,7 @@ import { deviceInfo } from '@kit.BasicServicesKit';
 
 import { relationalStore } from '@kit.ArkData';
 import util from '@ohos.util';
+import { vibrator } from '@kit.SensorServiceKit';
 
 interface MediaRecord {
   uri: string;
@@ -182,6 +183,10 @@ export class MessagesImplBase extends NativeSyncApiOhos {
     this.cancelRequested = false;
     this.currentTasks = [];
     const group = new taskpool.TaskGroup();
+    //vibrator.HapticFeedback.EFFECT_HARD
+
+    // await vibrator.startVibration({ type: 'preset', effectId: vibrator.HapticFeedback.EFFECT_HARD },
+    //   { id: 0, usage: 'touch' });
 
     for (const id of assetIds) {
       console.error(`hashAssets ${id}`);
