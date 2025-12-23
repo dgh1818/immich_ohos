@@ -294,9 +294,6 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
       ui.SetHdr.setHdrMode(hdr: -1, is_image: false);
     }
 
-    if (asset?.isVideo == true) {
-      return;
-    }
     // This will trigger the pre-caching of adjacent assets ensuring
     // that they are ready when the user navigates to them.
     // This will trigger the pre-caching of adjacent assets ensuring
@@ -321,10 +318,6 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
     // The currentAssetNotifier actually holds the current asset that is displayed
     // which could be stack children as well
     ref.read(currentAssetNotifier.notifier).setAsset(asset);
-    if (asset.isVideo || asset.isMotionPhoto) {
-      ref.read(videoPlaybackValueProvider.notifier).reset();
-      ref.read(videoPlayerControlsProvider.notifier).pause();
-    }
 
     _delayedOperations.add(timer);
   }

@@ -11,6 +11,7 @@ import 'package:immich_mobile/domain/models/store.model.dart';
 import 'package:flutter/foundation.dart';
 import 'package:logging/logging.dart';
 
+import 'dart:async';
 import 'dart:io';
 import 'package:immich_mobile/platform/native_sync_api_ohos.g.dart';
 
@@ -51,6 +52,10 @@ Future<VideoPlayerController> videoViewerController(VideoViewerControllerRef ref
   } catch (e) {
     log.severe('Error playing video: $e');
   }
+
+  ref.onDispose(() {
+    unawaited(controller.dispose());
+  });
 
   return controller;
 }

@@ -121,7 +121,7 @@ class GalleryViewerPage extends HookConsumerWidget {
         if (index < totalAssets.value && index >= 0) {
           final asset = loadAsset(index);
           await precacheImage(
-            ImmichImage.imageProvider(asset: asset, width: asset.width!.toDouble(), height: asset.height!.toDouble()),
+            ImmichImage.imageProvider(asset: asset, width: context.width.toDouble(), height: context.height.toDouble()),
             context,
             onError: onError,
           );
@@ -374,8 +374,8 @@ class GalleryViewerPage extends HookConsumerWidget {
             placeholder: Image(
               image: ImmichImage.imageProvider(
                 asset: asset,
-                width: asset.width!.toDouble(),
-                height: asset.height!.toDouble(),
+                width: context.width.toDouble(),
+                height: context.height.toDouble(),
               ),
               fit: BoxFit.contain,
               height: context.height,
