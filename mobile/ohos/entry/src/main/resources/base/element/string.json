@@ -14,7 +14,7 @@
     },
     {
       "name": "backup_desc",
-      "value": "备份媒体使用，拒绝则无法开启备份媒体功能"
+      "value": "备份媒体和保存动态照片使用"
     },
     {
       "name": "secure_desc",
