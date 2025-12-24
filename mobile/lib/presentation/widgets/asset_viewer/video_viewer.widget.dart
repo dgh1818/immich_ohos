@@ -516,8 +516,6 @@ class VideoViewer extends HookConsumerWidget {
     final controller = ref.watch(videoViewerControllerProvider(asset: asset)).value;
     // The last volume of the video used when mute is toggled
     final lastVolume = useState(0.5);
-    final lastPlaybackUpdate = useRef<DateTime?>(null);
-    final lastPlaybackState = useRef<VideoPlaybackState?>(null);
 
     SessionCreateResponse? sessionKey;
     final _sessionsApiService = ref.watch(sessionsAPIRepositoryProvider);
@@ -574,15 +572,7 @@ class VideoViewer extends HookConsumerWidget {
     // Also sets the error if there is an error in the playback
     void updateVideoPlayback() {
       final videoPlayback = VideoPlaybackValue.fromController(controller);
-      final now = DateTime.now();
-      final stateChanged = lastPlaybackState.value != videoPlayback.state;
-      final lastUpdate = lastPlaybackUpdate.value;
-      final shouldUpdate = stateChanged || lastUpdate == null || now.difference(lastUpdate).inMilliseconds >= 1000;
-      if (!shouldUpdate) {
-        return;
-      }
-      lastPlaybackUpdate.value = now;
-      lastPlaybackState.value = videoPlayback.state;
+
       ref.read(videoPlaybackValueProvider.notifier).value = videoPlayback;
 
       // 检测视频是否自然结束
@@ -661,8 +651,6 @@ class VideoViewer extends HookConsumerWidget {
 
     // Adds and removes the listener to the video player
     useEffect(() {
-      lastPlaybackUpdate.value = null;
-      lastPlaybackState.value = null;
       Future.microtask(() => ref.read(videoPlayerControlsProvider.notifier).reset());
       // Guard no controller
       if (controller == null) {
