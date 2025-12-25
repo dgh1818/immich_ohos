@@ -516,6 +516,8 @@ class VideoViewer extends HookConsumerWidget {
     final controller = ref.watch(videoViewerControllerProvider(asset: asset)).value;
     // The last volume of the video used when mute is toggled
     final lastVolume = useState(0.5);
+    final pendingSeekTarget = useRef<Duration?>(null); //待跳转的进度位置
+    final pendingSeekAt = useRef<DateTime?>(null); //点击进度条的时间
 
     SessionCreateResponse? sessionKey;
     final _sessionsApiService = ref.watch(sessionsAPIRepositoryProvider);
@@ -549,12 +551,15 @@ class VideoViewer extends HookConsumerWidget {
     // When the position changes, seek to the position
     ref.listen(videoPlayerControlsProvider.select((value) => value.position), (_, position) {
       if (controller == null) {
-        // No seeeking if there is no video
+        // No seeking if there is no video
         return;
       }
 
       // Find the position to seek to
       final Duration seek = controller.value.duration * (position / 100.0);
+      pendingSeekTarget.value = seek;
+      pendingSeekAt.value = DateTime.now();
+      ref.read(videoPlaybackValueProvider.notifier).position = seek;
       controller.seekTo(seek);
     });
 
@@ -570,10 +575,30 @@ class VideoViewer extends HookConsumerWidget {
     // Updates the [videoPlaybackValueProvider] with the current
     // position and duration of the video from the Chewie [controller]
     // Also sets the error if there is an error in the playback
+    bool shouldHoldPosition(VideoPlaybackValue playback) {
+      final target = pendingSeekTarget.value;
+      final seekAt = pendingSeekAt.value;
+      if (target == null || seekAt == null) {
+        return false;
+      }
+
+      if (DateTime.now().difference(seekAt) > const Duration(seconds: 1)) {
+        pendingSeekTarget.value = null; //seekto两秒以后开始正常更新进度
+        pendingSeekAt.value = null;
+        return false;
+      }
+
+      return true;
+    }
+
     void updateVideoPlayback() {
       final videoPlayback = VideoPlaybackValue.fromController(controller);
+      final holdPosition = shouldHoldPosition(videoPlayback);
+      final updatedPlayback = holdPosition
+          ? videoPlayback.copyWith(position: ref.read(videoPlaybackValueProvider).position)
+          : videoPlayback;
 
-      ref.read(videoPlaybackValueProvider.notifier).value = videoPlayback;
+      ref.read(videoPlaybackValueProvider.notifier).value = updatedPlayback;
 
       // 检测视频是否自然结束
       final isAtEnd = videoPlayback.position >= videoPlayback.duration;
@@ -651,6 +676,8 @@ class VideoViewer extends HookConsumerWidget {
 
     // Adds and removes the listener to the video player
     useEffect(() {
+      pendingSeekTarget.value = null;
+      pendingSeekAt.value = null;
       Future.microtask(() => ref.read(videoPlayerControlsProvider.notifier).reset());
       // Guard no controller
       if (controller == null) {
