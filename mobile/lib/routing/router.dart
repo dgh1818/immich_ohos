@@ -15,7 +15,7 @@ import 'package:immich_mobile/models/folder/recursive_folder.model.dart';
 import 'package:immich_mobile/models/memories/memory.model.dart';
 import 'package:immich_mobile/models/search/search_filter.model.dart';
 import 'package:immich_mobile/models/shared_link/shared_link.model.dart';
-//import 'package:immich_mobile/models/upload/share_intent_attachment.model.dart';
+import 'package:immich_mobile/models/upload/share_intent_attachment.model.dart';
 import 'package:immich_mobile/pages/album/album_additional_shared_user_selection.page.dart';
 import 'package:immich_mobile/pages/album/album_asset_selection.page.dart';
 import 'package:immich_mobile/pages/album/album_options.page.dart';
@@ -77,7 +77,7 @@ import 'package:immich_mobile/pages/search/person_result.page.dart';
 import 'package:immich_mobile/pages/search/recently_taken.page.dart';
 import 'package:immich_mobile/pages/search/search.page.dart';
 import 'package:immich_mobile/pages/settings/sync_status.page.dart';
-//import 'package:immich_mobile/pages/share_intent/share_intent.page.dart';
+import 'package:immich_mobile/pages/share_intent/share_intent.page.dart';
 import 'package:immich_mobile/presentation/pages/dev/main_timeline.page.dart';
 import 'package:immich_mobile/presentation/pages/dev/media_stat.page.dart';
 import 'package:immich_mobile/presentation/pages/dev/ui_showcase.page.dart';
@@ -285,7 +285,7 @@ class AppRouter extends RootStackRouter {
       transitionsBuilder: TransitionsBuilders.slideLeft,
     ),
     // AutoRoute(page: NativeVideoViewerRoute.page, guards: [_authGuard, _duplicateGuard]),
-    // AutoRoute(page: ShareIntentRoute.page, guards: [_authGuard, _duplicateGuard]),
+    AutoRoute(page: ShareIntentRoute.page, guards: [_authGuard, _duplicateGuard]),
     AutoRoute(page: LockedRoute.page, guards: [_authGuard, _lockedGuard, _duplicateGuard]),
     AutoRoute(page: PinAuthRoute.page, guards: [_authGuard, _duplicateGuard]),
     AutoRoute(page: LocalMediaSummaryRoute.page, guards: [_authGuard, _duplicateGuard]),

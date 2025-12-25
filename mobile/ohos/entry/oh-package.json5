@@ -34,6 +34,7 @@
     "background_downloader": "file:../har/background_downloader.har",
     "wakelock_plus": "file:../har/wakelock_plus.har",
     "sqlite3_flutter_libs": "file:../har/sqlite3_flutter_libs.har",
-    "video_compress": "file:../har/video_compress.har"
+    "video_compress": "file:../har/video_compress.har",
+    "receive_sharing_intent": "file:../har/receive_sharing_intent.har"
   }
 }

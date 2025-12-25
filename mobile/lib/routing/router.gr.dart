@@ -2499,6 +2499,43 @@ class SettingsSubRouteArgs {
 }
 
 /// generated route for
+/// [ShareIntentPage]
+class ShareIntentRoute extends PageRouteInfo<ShareIntentRouteArgs> {
+  ShareIntentRoute({
+    Key? key,
+    required List<ShareIntentAttachment> attachments,
+    List<PageRouteInfo>? children,
+  }) : super(
+         ShareIntentRoute.name,
+         args: ShareIntentRouteArgs(key: key, attachments: attachments),
+         initialChildren: children,
+       );
+
+  static const String name = 'ShareIntentRoute';
+
+  static PageInfo page = PageInfo(
+    name,
+    builder: (data) {
+      final args = data.argsAs<ShareIntentRouteArgs>();
+      return ShareIntentPage(key: args.key, attachments: args.attachments);
+    },
+  );
+}
+
+class ShareIntentRouteArgs {
+  const ShareIntentRouteArgs({this.key, required this.attachments});
+
+  final Key? key;
+
+  final List<ShareIntentAttachment> attachments;
+
+  @override
+  String toString() {
+    return 'ShareIntentRouteArgs{key: $key, attachments: $attachments}';
+  }
+}
+
+/// generated route for
 /// [SharedLinkEditPage]
 class SharedLinkEditRoute extends PageRouteInfo<SharedLinkEditRouteArgs> {
   SharedLinkEditRoute({

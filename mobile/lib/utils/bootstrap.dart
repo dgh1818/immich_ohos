@@ -49,6 +49,13 @@ void configureFileDownloaderNotifications() {
   );
 
   FileDownloader().configureNotificationForGroup(
+    kManualLivePhotoGroup,
+    running: TaskNotification('uploading_media'.t(), 'backup_background_service_in_progress_notification'.t()),
+    complete: TaskNotification('upload_finished'.t(), 'backup_background_service_complete_notification'.t()),
+    groupNotificationId: kManualUploadGroup,
+  );
+
+  FileDownloader().configureNotificationForGroup(
     kBackupGroup,
     running: TaskNotification('uploading_media'.t(), 'backup_background_service_in_progress_notification'.t()),
     complete: TaskNotification('upload_finished'.t(), 'backup_background_service_complete_notification'.t()),

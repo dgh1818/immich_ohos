@@ -21,7 +21,7 @@ import 'package:immich_mobile/generated/codegen_loader.g.dart';
 import 'package:immich_mobile/generated/intl_keys.g.dart';
 import 'package:immich_mobile/platform/background_worker_lock_api.g.dart';
 import 'package:immich_mobile/providers/app_life_cycle.provider.dart';
-//import 'package:immich_mobile/providers/asset_viewer/share_intent_upload.provider.dart';
+import 'package:immich_mobile/providers/asset_viewer/share_intent_upload.provider.dart';
 import 'package:immich_mobile/providers/db.provider.dart';
 import 'package:immich_mobile/providers/infrastructure/db.provider.dart';
 import 'package:immich_mobile/providers/infrastructure/platform.provider.dart';
@@ -264,7 +264,7 @@ class ImmichAppState extends ConsumerState<ImmichApp> with WidgetsBindingObserve
       }
     });
 
-    //ref.read(shareIntentUploadProvider.notifier).init();
+    ref.read(shareIntentUploadProvider.notifier).init();
   }
 
   @override

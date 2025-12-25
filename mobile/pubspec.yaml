@@ -66,8 +66,11 @@ dependencies:
   punycode: ^1.0.0
   riverpod_annotation: ^2.6.1
   scrollable_positioned_list: ^0.3.8
-  share_handler: ^0.0.25 #ohos待适配
-  #share_plus: ^10.1.4
+  receive_sharing_intent:
+    git:
+      url: https://gitcode.com/openharmony-sig/fluttertpc_receive_sharing_intent.git
+      ref: br_v1.8.1_ohos
+  share_plus: ^10.1.4
   sliver_tools: ^0.2.12
   socket_io_client: ^2.0.3+1
   stream_transform: ^2.1.1

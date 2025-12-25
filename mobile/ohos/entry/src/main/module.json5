@@ -36,7 +36,22 @@
         skills: [
           {
             entities: ["entity.system.home"],
-            actions: ["action.system.home"],
+            actions: [
+              "action.system.home",
+              "ohos.want.action.sendData",
+            ],
+            uris: [
+              {
+                scheme: "file",
+                utd: "general.image",
+                maxFileSupported: 50,
+              },
+              {
+                scheme: "file",
+                utd: "general.video",
+                maxFileSupported: 50,
+              },
+            ],
           },
         ],
         "backgroundModes": [
