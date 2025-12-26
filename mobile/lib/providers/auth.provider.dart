@@ -84,7 +84,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
   Future<void> logout() async {
     try {
       await _secureStorageService.delete(kSecuredPinCode);
-      //await _widgetService.clearCredentials();
+      await _widgetService.clearCredentials();
 
       await _authService.logout();
       await _uploadService.cancelBackup();
@@ -123,7 +123,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
     final serverEndpoint = Store.get(StoreKey.serverEndpoint);
     final customHeaders = Store.tryGet(StoreKey.customHeaders);
-    //await _widgetService.writeCredentials(serverEndpoint, accessToken, customHeaders);
+    await _widgetService.writeCredentials(serverEndpoint, accessToken, customHeaders);
 
     // Get the deviceid from the store if it exists, otherwise generate a new one
     String deviceId = Store.tryGet(StoreKey.deviceId) ?? await FlutterUdid.consistentUdid;

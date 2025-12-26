@@ -722,6 +722,7 @@ export class MessagesImplBase extends NativeSyncApiOhos {
     } catch (e) {
       const err = e as BusinessError;
       result.success(0);
+      this.ctx.getApplicationContext().cacheDir
       console.error(`startBackgroundRunning failed code=${err.code} msg=${err.message}`);
     }
   }

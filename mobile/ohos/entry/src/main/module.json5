@@ -59,6 +59,16 @@
           "dataTransfer",
         ]
       },
+      {
+        name: "RandomConfigureAbility",
+        srcEntry: "./ets/plugins/widget/configure/RandomConfigureAbility.ets",
+        description: "Immich widget configuration",
+        icon: "$media:start_icon",
+        label: "$string:EntryAbility_label",
+        startWindowIcon: "$media:app_icon",
+        startWindowBackground: "$color:start_window_background",
+        exported: true
+      },
 
     ],
     "extensionAbilities": [
@@ -67,6 +77,28 @@
 //        "srcEntry": "./ets/workers/ContentObserverWorkScheduler.ets",
 //        "type": "workScheduler"
 //      }ContentObserverWorkScheduler
+      {
+        "name": "RandomReceiver",
+        "srcEntry": "./ets/plugins/widget/RandomReceiver.ets",
+        "type": "form",
+        "metadata": [
+          {
+            "name": "ohos.extension.form",
+            "resource": "$profile:form_config_random"
+          }
+        ]
+      },
+      {
+        "name": "MemoryReceiver",
+        "srcEntry": "./ets/plugins/widget/MemoryReceiver.ets",
+        "type": "form",
+        "metadata": [
+          {
+            "name": "ohos.extension.form",
+            "resource": "$profile:form_config_memories"
+          }
+        ]
+      },
       {
         "name": "MediaObserverScheduler",
         "srcEntry": "./ets/WorkSchedulerExtension/MediaObserverScheduler.ets",

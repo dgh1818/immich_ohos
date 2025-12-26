@@ -29,6 +29,7 @@ import { workScheduler } from '@kit.BackgroundTasksKit';
 import BackgroundEngineLock from '../plugins/Background/BackgroundEngineLock';
 import { BackgroundWorkerLockApi } from '../plugins/Background/BackgroundWorkerLock.g';
 import ImmichPlugin from '../plugins/core/ImmichPlugin';
+import HomeWidgetPlugin from '../plugins/widget/HomeWidgetPlugin';
 
 export default class EntryAbility extends FlutterAbility {
   configureFlutterEngine(flutterEngine: FlutterEngine) {
@@ -40,6 +41,7 @@ export default class EntryAbility extends FlutterAbility {
 
   public registerPlugins(ctx: Context, flutterEngine: FlutterEngine){
     this.addPlugin(new BackgroundServicePlugin()); // 加载插件
+    this.addPlugin(new HomeWidgetPlugin());
     
     //this.addPlugin(new HttpSSLOptionsPlugin());
 
