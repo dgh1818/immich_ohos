@@ -2,8 +2,11 @@ import UIAbility from '@ohos.app.ability.UIAbility';
 import window from '@ohos.window';
 import { AbilityConstant, Want } from '@kit.AbilityKit';
 
-const FORM_ID_PLAIN_KEY = 'formId';
-const FORM_NAME_PLAIN_KEY = 'formName';
+import { loadFormNameMap } from '../model/Model';
+
+const FORM_ID_KEY = 'ohos.extra.param.key.form_identity';
+const FORM_ID_KEY_ALT = 'formId';
+const FORM_NAME_KEY = 'ohos.extra.param.key.form_name';
 
 export default class RandomConfigureAbility extends UIAbility {
   private formId: string = '';
@@ -13,13 +16,25 @@ export default class RandomConfigureAbility extends UIAbility {
     const params = want.parameters as Record<string, ESObject> | undefined;
     const paramKeys = params ? Object.keys(params) : [];
     console.error(`[WidgetConfigAbility] onCreate params keys=${paramKeys.join(',')}`);
-    const rawFormIdPlain = (params?.[FORM_ID_PLAIN_KEY] as string) ?? '';
-    const rawFormNamePlain = (params?.[FORM_NAME_PLAIN_KEY] as string) ?? '';
+    const rawFormIdPlain =
+      (params?.[FORM_ID_KEY] as string) ?? (params?.[FORM_ID_KEY_ALT] as string) ?? '';
+    const rawFormNamePlain = (params?.[FORM_NAME_KEY] as string) ?? '';
+    let resolvedFormName = rawFormNamePlain;
+    if (!resolvedFormName && rawFormIdPlain) {
+      const formNameMap = loadFormNameMap(this.context);
+      const storedFormName = formNameMap[rawFormIdPlain];
+      if (storedFormName) {
+        resolvedFormName = storedFormName;
+        console.error(
+          `[WidgetConfigAbility] fallback formName=${resolvedFormName} formId=${rawFormIdPlain}`,
+        );
+      }
+    }
     console.error(
       `[WidgetConfigAbility] raw formId=${rawFormIdPlain} formName=${rawFormNamePlain}`
     );
     this.formId = rawFormIdPlain;
-    this.formName = rawFormNamePlain;
+    this.formName = resolvedFormName;
     console.error(`[WidgetConfigAbility] resolved formId=${this.formId} formName=${this.formName}`);
     AppStorage.setOrCreate('widgetConfigFormId', this.formId);
     AppStorage.setOrCreate('widgetConfigFormName', this.formName);
@@ -36,4 +51,5 @@ export default class RandomConfigureAbility extends UIAbility {
       }
     });
   }
+
 }

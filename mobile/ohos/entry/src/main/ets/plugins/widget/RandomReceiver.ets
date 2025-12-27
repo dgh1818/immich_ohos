@@ -4,28 +4,42 @@ import { Want } from '@kit.AbilityKit';
 
 import {
   FORM_NAME_MEMORIES,
+  DEFAULT_SLIDE_INTERVAL_SECONDS,
   WidgetState,
   WidgetType,
   WidgetFormData,
   loadFormMap,
+  loadFormNameMap,
   saveFormMap,
+  saveFormNameMap,
+  saveWidgetIndex,
 } from './model/Model';
-import { updateWidgetForm } from './ImageDownloadWorker';
+import { loadMoreWidgetImages, updateWidgetForm } from './ImageDownloadWorker';
 
-const FORM_ID_PLAIN_KEY = 'formId';
-const FORM_NAME_PLAIN_KEY = 'formName';
+const FORM_ID_KEY = 'ohos.extra.param.key.form_identity';
+const FORM_NAME_KEY = 'ohos.extra.param.key.form_name';
 
 export default class RandomReceiver extends FormExtensionAbility {
   private readonly formTypes: Map<string, WidgetType> = new Map();
+  private readonly loadMoreInFlight: Set<string> = new Set();
 
   onAddForm(want: Want): formBindingData.FormBindingData {
-    const formId = (want.parameters?.[FORM_ID_PLAIN_KEY] as string) ?? '';
-    const formName = (want.parameters?.[FORM_NAME_PLAIN_KEY] as string) ?? '';
-    const widgetType = formName === FORM_NAME_MEMORIES ? WidgetType.MEMORIES : WidgetType.RANDOM;
-    console.error(`[WidgetReceiver] onAddForm formId=${formId} formName=${formName} type=${widgetType}`);
+    const params = want.parameters as Record<string, ESObject> | undefined;
+    const paramKeys = params ? Object.keys(params) : [];
+    console.error(`[WidgetReceiver] onAddForm params keys=${paramKeys.join(',')}`);
+    const formId = (params?.[FORM_ID_KEY] as string) ?? '';
+    const formName = (params?.[FORM_NAME_KEY] as string) ?? '';
+    const isMemories = formName === FORM_NAME_MEMORIES;
+    const widgetType = isMemories ? WidgetType.MEMORIES : WidgetType.RANDOM;
+    console.error(
+      `[WidgetReceiver] onAddForm formId=${formId} formName=${formName} type=${widgetType}`,
+    );
+    console.error(
+      `[WidgetReceiver] onAddForm resolve memoriesName=${FORM_NAME_MEMORIES} isMemories=${isMemories}`,
+    );
 
     if (formId) {
-      this.rememberFormType(formId, widgetType);
+      this.rememberFormType(formId, widgetType, formName);
     }
 
     const formImages: Record<string, number> = {};
@@ -35,10 +49,15 @@ export default class RandomReceiver extends FormExtensionAbility {
       imgName: '',
       formImages,
       deeplink: 'immich://',
+      entriesJson: '[]',
+      activeIndex: 0,
+      slideIntervalSeconds: DEFAULT_SLIDE_INTERVAL_SECONDS,
       state: WidgetState.LOADING,
     };
 
-    updateWidgetForm(this.context, formId, widgetType).catch(() => {});
+    if (formId) {
+      updateWidgetForm(this.context, formId, widgetType).catch(() => {});
+    }
     return formBindingData.createFormBindingData(initialData);
   }
 
@@ -61,7 +80,45 @@ export default class RandomReceiver extends FormExtensionAbility {
     this.forgetFormType(formId);
   }
 
-  private rememberFormType(formId: string, widgetType: WidgetType): void {
+  onFormEvent(formId: string, message: string): void {
+    if (!formId) {
+      console.error('[WidgetReceiver] onFormEvent missing formId');
+      return;
+    }
+    console.error(`[WidgetReceiver] onFormEvent formId=${formId} message=${message}`);
+    let payload: Record<string, string | number | boolean> = {};
+    try {
+      payload = JSON.parse(message) as Record<string, string | number | boolean>;
+    } catch (err) {
+      console.error(`[WidgetReceiver] onFormEvent parse failed error=${err}`);
+      return;
+    }
+    const rawIndex = payload['index'];
+    const index =
+      typeof rawIndex === 'number' ? rawIndex : parseInt(`${rawIndex ?? ''}`, 10);
+    const normalizedIndex = Number.isFinite(index) ? index : 0;
+    if (Number.isFinite(index)) {
+      saveWidgetIndex(this.context, formId, index);
+    }
+    const loadMore = payload['loadMore'] === true || payload['event'] === 'load_more';
+    if (loadMore) {
+      const rawImgName = payload['imgName'];
+      const imgName = typeof rawImgName === 'string' ? rawImgName : '';
+      const widgetType = this.resolveWidgetType(formId);
+      if (this.loadMoreInFlight.has(formId)) {
+        console.error(`[WidgetReceiver] onFormEvent skip loadMore (in flight) formId=${formId}`);
+        return;
+      }
+      this.loadMoreInFlight.add(formId);
+      loadMoreWidgetImages(this.context, formId, widgetType, imgName, normalizedIndex)
+        .catch(() => {})
+        .finally(() => {
+          this.loadMoreInFlight.delete(formId);
+        });
+    }
+  }
+
+  private rememberFormType(formId: string, widgetType: WidgetType, formName?: string): void {
     if (!formId) {
       return;
     }
@@ -70,6 +127,14 @@ export default class RandomReceiver extends FormExtensionAbility {
     formMap[formId] = widgetType;
     saveFormMap(this.context, formMap);
     console.error(`[WidgetReceiver] rememberFormType saved formId=${formId} type=${widgetType}`);
+    if (formName) {
+      const formNameMap = loadFormNameMap(this.context);
+      formNameMap[formId] = formName;
+      saveFormNameMap(this.context, formNameMap);
+      console.error(
+        `[WidgetReceiver] rememberFormType saved formName=${formName} formId=${formId}`,
+      );
+    }
   }
 
   private forgetFormType(formId: string): void {
@@ -90,6 +155,17 @@ export default class RandomReceiver extends FormExtensionAbility {
     } else {
       console.error(`[WidgetReceiver] forgetFormType no entry for formId=${formId}`);
     }
+    const formNameMap = loadFormNameMap(this.context);
+    if (formNameMap[formId]) {
+      const nextFormNameMap: Record<string, string> = {};
+      for (const key of Object.keys(formNameMap)) {
+        if (key !== formId) {
+          nextFormNameMap[key] = formNameMap[key];
+        }
+      }
+      saveFormNameMap(this.context, nextFormNameMap);
+      console.error(`[WidgetReceiver] forgetFormType removed formName formId=${formId}`);
+    }
   }
 
   private resolveWidgetType(formId: string): WidgetType {
@@ -108,4 +184,5 @@ export default class RandomReceiver extends FormExtensionAbility {
     console.error(`[WidgetReceiver] resolveWidgetType fallback formId=${formId}`);
     return WidgetType.RANDOM;
   }
+
 }

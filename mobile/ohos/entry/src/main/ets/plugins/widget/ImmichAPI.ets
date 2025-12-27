@@ -1,5 +1,5 @@
 import { http } from '@kit.NetworkKit';
-import { ServerConfig, SearchFilters, MemoryResult, Asset, Album } from './model/Model';
+import { ServerConfig, SearchFilters, MemoryResult, Asset, Album, AlbumInfo } from './model/Model';
 
 export class ImmichAPI {
   private readonly config: ServerConfig;
@@ -23,6 +23,14 @@ export class ImmichAPI {
   async fetchAlbums(): Promise<Array<Album>> {
     const url = this.buildRequestUrl('/albums');
     return (await this.requestJson(url, http.RequestMethod.GET)) as Array<Album>;
+  }
+
+  async fetchAlbumInfo(albumId: string): Promise<AlbumInfo | null> {
+    if (!albumId) {
+      return null;
+    }
+    const url = this.buildRequestUrl(`/albums/${albumId}`, { 'withoutAssets': 'true' });
+    return (await this.requestJson(url, http.RequestMethod.GET)) as AlbumInfo;
   }
 
   async fetchImage(assetId: string): Promise<ArrayBuffer> {

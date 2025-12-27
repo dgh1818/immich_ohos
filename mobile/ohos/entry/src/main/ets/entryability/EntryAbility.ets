@@ -30,13 +30,27 @@ import BackgroundEngineLock from '../plugins/Background/BackgroundEngineLock';
 import { BackgroundWorkerLockApi } from '../plugins/Background/BackgroundWorkerLock.g';
 import ImmichPlugin from '../plugins/core/ImmichPlugin';
 import HomeWidgetPlugin from '../plugins/widget/HomeWidgetPlugin';
+import { AbilityConstant, Want } from '@kit.AbilityKit';
 
 export default class EntryAbility extends FlutterAbility {
+  private pendingDeepLink: string | null = null;
+
+  onCreate(want: Want, launchParam: AbilityConstant.LaunchParam): void {
+    super.onCreate(want, launchParam);
+    this.handleWidgetRouter(want);
+  }
+
+  onNewWant(want: Want, launchParam: AbilityConstant.LaunchParam): void {
+    super.onNewWant(want, launchParam);
+    this.handleWidgetRouter(want);
+  }
+
   configureFlutterEngine(flutterEngine: FlutterEngine) {
     super.configureFlutterEngine(flutterEngine)
     GeneratedPluginRegistrant.registerWith(flutterEngine)
 
     this.registerPlugins(super.getAbility().context,flutterEngine);
+    this.dispatchPendingDeepLink();
   }
 
   public registerPlugins(ctx: Context, flutterEngine: FlutterEngine){
@@ -65,5 +79,36 @@ export default class EntryAbility extends FlutterAbility {
     }
 
     console.info("MediaObserverScheduler", "Enqueued background worker");
+  }
+
+  private handleWidgetRouter(want: Want): void {
+    const rawParams = want?.parameters?.params as string | undefined;
+    if (!rawParams) {
+      return;
+    }
+    try {
+      const params = JSON.parse(rawParams) as Record<string, string>;
+      const deeplink = params?.deeplink ?? '';
+      if (!deeplink) {
+        return;
+      }
+      this.pendingDeepLink = deeplink;
+      this.dispatchPendingDeepLink();
+    } catch (error) {
+      console.error(`[EntryAbility] parse widget params failed: ${error}`);
+    }
+  }
+
+  private dispatchPendingDeepLink(): void {
+    if (!this.pendingDeepLink) {
+      return;
+    }
+    const engine = this.getFlutterEngine();
+    const nav = engine?.getNavigationChannel();
+    if (!nav) {
+      return;
+    }
+    nav.pushRouteInformation(this.pendingDeepLink);
+    this.pendingDeepLink = null;
   }
 }

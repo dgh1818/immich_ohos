@@ -31,6 +31,22 @@
     {
       "name": "location_desc",
       "value": "修改照片位置选取当前位置时需要定位权限"
+    },
+    {
+      "name": "memory_card",
+      "value": "时刻推荐"
+    },
+    {
+      "name": "album_card",
+      "value": "自定义相册照片"
+    },
+    {
+      "name": "memory_card_desc",
+      "value": "添加至桌面，重温珍贵回忆"
+    },
+    {
+      "name": "album_card_desc",
+      "value": "相册与照片，随心选择"
     }
   ]
 }

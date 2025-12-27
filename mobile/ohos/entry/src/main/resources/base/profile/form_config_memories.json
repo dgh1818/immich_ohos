@@ -2,7 +2,8 @@
   "forms": [
     {
       "name": "ImmichMemories",
-      "description": "Immich memories widget",
+      "displayName": "$string:memory_card",
+      "description": "$string:memory_card_desc",
       "src": "./ets/plugins/widget/PhotoWidget.ets",
       "uiSyntax": "arkts",
       "colorMode": "auto",

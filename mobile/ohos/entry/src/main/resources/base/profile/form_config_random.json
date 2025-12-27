@@ -2,7 +2,8 @@
   "forms": [
     {
       "name": "ImmichRandom",
-      "description": "Immich random photo widget",
+      "displayName": "$string:album_card",
+      "description": "$string:album_card_desc",
       "src": "./ets/plugins/widget/PhotoWidget.ets",
       "uiSyntax": "arkts",
       "colorMode": "auto",

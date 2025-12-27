@@ -5,11 +5,13 @@ import {
   DEFAULT_ALBUM_ID,
   DEFAULT_ALBUM_NAME,
   DEFAULT_REFRESH_MINUTES,
+  DEFAULT_SLIDE_INTERVAL_SECONDS,
   FAVORITES_ALBUM_ID,
   FORM_NAME_MEMORIES,
   WidgetConfig,
   WidgetConfigState,
   WidgetType,
+  markWidgetAlbumOverride,
   loadServerConfig,
   loadWidgetConfig,
   saveWidgetConfig,
@@ -31,9 +33,9 @@ export struct RandomConfigure {
   @State selectedAlbumId: string = DEFAULT_ALBUM_ID;
   @State selectedAlbumName: string = DEFAULT_ALBUM_NAME;
   @State showAlbumName: boolean = false;
-  @State refreshItems: Array<DropdownItem> = [];
-  @State selectedRefreshId: string = DEFAULT_REFRESH_MINUTES.toString();
-  @State selectedRefreshLabel: string = `${DEFAULT_REFRESH_MINUTES} min`;
+  @State slideItems: Array<DropdownItem> = [];
+  @State selectedSlideId: string = DEFAULT_SLIDE_INTERVAL_SECONDS.toString();
+  @State selectedSlideLabel: string = `${DEFAULT_SLIDE_INTERVAL_SECONDS} sec`;
 
   aboutToAppear() {
     console.error(`[WidgetConfig] aboutToAppear formId=${this.formId} formName=${this.formName}`);
@@ -53,13 +55,20 @@ export struct RandomConfigure {
     return item;
   }
 
-  private buildRefreshItems(): Array<DropdownItem> {
+  private buildSlideItems(): Array<DropdownItem> {
     return [
-      this.buildItem('5 min', '5'),
-      this.buildItem('15 min', '15'),
-      this.buildItem('20 min', '20'),
-      this.buildItem('30 min', '30'),
-      this.buildItem('60 min', '60'),
+      this.buildItem('5 sec', '5'),
+      this.buildItem('15 sec', '15'),
+      this.buildItem('30 sec', '30'),
+      this.buildItem('45 sec', '45'),
+      this.buildItem('60 sec', '60'),
+      this.buildItem('2 min', '120'),
+      this.buildItem('3 min', '180'),
+      this.buildItem('5 min', '300'),
+      this.buildItem('10 min', '600'),
+      this.buildItem('15 min', '900'),
+      this.buildItem('20 min', '1200'),
+      this.buildItem('30 min', '1800'),
     ];
   }
 
@@ -71,13 +80,13 @@ export struct RandomConfigure {
     this.selectedAlbumId = stored.albumId;
     this.selectedAlbumName = stored.albumName;
     this.showAlbumName = stored.showAlbumName;
-    this.selectedRefreshId = stored.refreshMinutes.toString();
-    this.selectedRefreshLabel = `${stored.refreshMinutes} min`;
+    this.selectedSlideId = stored.slideIntervalSeconds.toString();
+    this.selectedSlideLabel = `${stored.slideIntervalSeconds} sec`;
     console.error(
-      `[WidgetConfig] stored config albumId=${stored.albumId} albumName=${stored.albumName} show=${stored.showAlbumName} refresh=${stored.refreshMinutes}`
+      `[WidgetConfig] stored config albumId=${stored.albumId} albumName=${stored.albumName} show=${stored.showAlbumName} slide=${stored.slideIntervalSeconds}`
     );
-    this.refreshItems = this.buildRefreshItems();
-    this.syncRefreshSelection();
+    this.slideItems = this.buildSlideItems();
+    this.syncSlideSelection();
 
     const serverConfig = loadServerConfig(this.context);
     if (!serverConfig) {
@@ -145,20 +154,20 @@ export struct RandomConfigure {
     );
   }
 
-  private syncRefreshSelection(): void {
-    if (this.refreshItems.length === 0) {
-      console.error('[WidgetConfig] syncRefreshSelection skipped: no items');
+  private syncSlideSelection(): void {
+    if (this.slideItems.length === 0) {
+      console.error('[WidgetConfig] syncSlideSelection skipped: no items');
       return;
     }
-    const selected = this.refreshItems.find((item) => item.id === this.selectedRefreshId);
+    const selected = this.slideItems.find((item) => item.id === this.selectedSlideId);
     if (selected) {
-      this.selectedRefreshLabel = selected.label;
+      this.selectedSlideLabel = selected.label;
     } else {
-      this.selectedRefreshId = this.refreshItems[0].id;
-      this.selectedRefreshLabel = this.refreshItems[0].label;
+      this.selectedSlideId = this.slideItems[0].id;
+      this.selectedSlideLabel = this.slideItems[0].label;
     }
     console.error(
-      `[WidgetConfig] syncRefreshSelection result refreshId=${this.selectedRefreshId} refreshLabel=${this.selectedRefreshLabel}`
+      `[WidgetConfig] syncSlideSelection result slideId=${this.selectedSlideId} slideLabel=${this.selectedSlideLabel}`
     );
   }
 
@@ -167,19 +176,21 @@ export struct RandomConfigure {
       `[WidgetConfig] saveAndClose formId=${this.formId} isRandom=${this.isRandomWidget()}`
     );
     if (this.formId) {
-      const parsedRefresh = parseInt(this.selectedRefreshId, 10);
-      const refreshMinutes =
-        parsedRefresh > 0 ? parsedRefresh : DEFAULT_REFRESH_MINUTES;
+      const parsedSlideInterval = parseInt(this.selectedSlideId, 10);
+      const slideIntervalSeconds =
+        parsedSlideInterval > 0 ? parsedSlideInterval : DEFAULT_SLIDE_INTERVAL_SECONDS;
       const config: WidgetConfig = {
         albumId: this.selectedAlbumId,
         albumName: this.selectedAlbumName,
         showAlbumName: this.showAlbumName,
-        refreshMinutes,
+        refreshMinutes: DEFAULT_REFRESH_MINUTES,
+        slideIntervalSeconds,
       };
       console.error(
-        `[WidgetConfig] saving config albumId=${config.albumId} albumName=${config.albumName} show=${config.showAlbumName} refresh=${config.refreshMinutes}`
+        `[WidgetConfig] saving config albumId=${config.albumId} albumName=${config.albumName} show=${config.showAlbumName} slide=${config.slideIntervalSeconds}`
       );
       saveWidgetConfig(this.context, this.formId, config);
+      markWidgetAlbumOverride(this.context, this.formId);
       console.error('[WidgetConfig] saveWidgetConfig done');
       updateWidgetForm(this.context, this.formId, this.resolveWidgetType()).catch(() => {});
     } else {
@@ -191,62 +202,76 @@ export struct RandomConfigure {
   build() {
     Column() {
       Row() {
-        Text('Widget Configuration')
-          .fontSize(18)
-          .fontColor(0xFF222222)
-          .fontWeight(FontWeight.Medium);
+        Text('服务卡片设置')
+          .fontSize(22)
+          .fontColor(0xFF1F1F1F)
+          .fontWeight(FontWeight.Bold)
+          .letterSpacing(0.5);
         Button(this.isRandomWidget() ? '保存' : '完成')
+          .fontSize(14)
+          .fontWeight(FontWeight.Medium)
           .onClick(() => this.saveAndClose());
       }
       .width('100%')
       .justifyContent(FlexAlign.SpaceBetween)
-      .padding({ left: 16, right: 16, top: 12, bottom: 12 });
+      .alignItems(VerticalAlign.Center)
+      .padding({ left: 20, right: 20, top: 16, bottom: 12 });
 
       if (this.configState === WidgetConfigState.LOADING) {
         Column() {
           Text('加载配置中...')
             .fontSize(14)
-            .fontColor(0xFF8A8A8A);
+            .fontColor(0xFF8A8A8A)
+            .textAlign(TextAlign.Center);
         }
         .width('100%')
-        .padding(16);
+        .padding(20)
+        .alignItems(HorizontalAlign.Center);
       } else if (this.configState === WidgetConfigState.LOG_IN) {
         Column() {
           Text('需要登录')
             .fontSize(14)
-            .fontColor(0xFF8A8A8A);
+            .fontColor(0xFF8A8A8A)
+            .textAlign(TextAlign.Center);
         }
         .width('100%')
-        .padding(16);
+        .padding(20)
+        .alignItems(HorizontalAlign.Center);
       } else {
         Column() {
           if (this.isRandomWidget()) {
             Text('选择一个待展示随机相册')
               .fontSize(14)
-              .fontColor(0xFF666666);
-          } else {
-            Text('刷新间隔')
-              .fontSize(14)
-              .fontColor(0xFF666666);
+              .fontColor(0xFF6A6A6A)
+              .margin({ bottom: 8 })
+              .width('100%')
+              .textAlign(TextAlign.Start);
           }
 
           if (this.isRandomWidget() && this.configState === WidgetConfigState.NO_CONNECTION) {
             Column() {
-              Text('No connection to the server is available. Please try again later.')
+              Text('服务器未连接')
                 .fontSize(14)
-                .fontColor(0xFF8A1C1C);
+                .fontColor(0xFFB3261E)
+                .textAlign(TextAlign.Center);
             }
             .width('100%')
             .padding(12)
             .backgroundColor(0xFFFCE8E8)
-            .borderRadius(8);
+            .border({ width: 1, color: 0xFFF2B8B5 })
+            .borderRadius(10);
           }
 
           Column() {
             if (this.isRandomWidget()) {
-              Text('Album')
-                .fontSize(14)
-                .fontColor(0xFF222222);
+              Text('相册')
+                .fontSize(12)
+                .fontColor(0xFF555555)
+                .fontWeight(FontWeight.Medium)
+                .letterSpacing(0.6)
+                .padding({ bottom: 6 })
+                .width('100%')
+                .textAlign(TextAlign.Start);
               Dropdown({
                 items: this.albumItems,
                 selectedId: $selectedAlbumId,
@@ -255,9 +280,10 @@ export struct RandomConfigure {
               });
 
               Row() {
-                Text('Show Album Name')
+                Text('显示相册名字')
                   .fontSize(14)
-                  .fontColor(0xFF222222);
+                  .fontColor(0xFF444444)
+                  .fontWeight(FontWeight.Medium);
                 Toggle({ type: ToggleType.Switch, isOn: this.showAlbumName })
                   .onChange((value: boolean) => {
                     this.showAlbumName = value;
@@ -265,24 +291,30 @@ export struct RandomConfigure {
                   .enabled(this.configState !== WidgetConfigState.NO_CONNECTION);
               }
               .justifyContent(FlexAlign.SpaceBetween)
+              .alignItems(VerticalAlign.Center)
               .width('100%')
               .padding({ top: 8 });
             }
 
-            Text('Refresh Interval')
-              .fontSize(14)
-              .fontColor(0xFF222222)
-              .padding({ top: 12 });
+            Text('滑动间隔')
+              .fontSize(12)
+              .fontColor(0xFF555555)
+              .fontWeight(FontWeight.Medium)
+              .letterSpacing(0.6)
+              .padding({ top: 16 })
+              .width('100%')
+              .textAlign(TextAlign.Start);
             Dropdown({
-              items: this.refreshItems,
-              selectedId: $selectedRefreshId,
-              selectedLabel: $selectedRefreshLabel,
+              items: this.slideItems,
+              selectedId: $selectedSlideId,
+              selectedLabel: $selectedSlideLabel,
               isEnabled: true,
             });
           }
-          .padding(12)
-          .backgroundColor(0xFFF5F5F5)
-          .borderRadius(8);
+          .padding(16)
+          .backgroundColor(0xFFF9F9FB)
+          .border({ width: 1, color: 0xFFE6E6E8 })
+          .borderRadius(12);
         }
         .padding(16)
         .width('100%')
@@ -291,6 +323,6 @@ export struct RandomConfigure {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor(0xFFFFFFFF);
+    .backgroundColor(0xFFF7F7FA);
   }
 }

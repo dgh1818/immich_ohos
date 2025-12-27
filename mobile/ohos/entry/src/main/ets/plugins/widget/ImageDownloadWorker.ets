@@ -7,25 +7,39 @@ import { fileIo as fs } from '@kit.CoreFileKit';
 import { ImmichAPI } from './ImmichAPI';
 import {
   DEFAULT_ALBUM_ID,
+  DEFAULT_REFRESH_MINUTES,
   FAVORITES_ALBUM_ID,
   WidgetFormData,
+  WidgetConfig,
   WidgetState,
   WidgetType,
   assetDeeplink,
-  imageFilename,
   loadServerConfig,
   loadWidgetConfig,
+  loadWidgetEntries,
+  loadWidgetIndex,
+  loadWidgetSlot,
+  isWidgetAlbumOverride,
   SearchFilters,
+  saveWidgetConfig,
+  saveWidgetEntries,
+  saveWidgetIndex,
+  saveWidgetSlot,
+  markWidgetAlbumOverride,
   WidgetEntry,
+  WidgetImageEntry,
 } from './model/Model';
 
 const DEFAULT_DEEPLINK = 'immich://';
+const MAX_WIDGET_IMAGES = 20;
+const LOAD_MORE_COUNT = 1;
 
 interface ImageDownloadResult {
   imgName: string;
   formImages: Record<string, number>;
-  file: fs.File;
-  filePath: string;
+  files: Array<fs.File>;
+  entries: Array<WidgetImageEntry>;
+  nextSlot: number;
 }
 
 export async function updateWidgetForm(
@@ -39,12 +53,27 @@ export async function updateWidgetForm(
     return;
   }
 
+  const widgetConfig = loadWidgetConfig(context, formId);
+  const slideIntervalSeconds = widgetConfig.slideIntervalSeconds;
   const config = loadServerConfig(context);
   if (!config) {
     console.error('[WidgetUpdate] no server config -> LOG_IN');
     const formImages: Record<string, number> = {};
-    const data = buildFormData('', DEFAULT_DEEPLINK, WidgetState.LOG_IN, '', formImages, false);
+    const data = buildFormData(
+      '',
+      DEFAULT_DEEPLINK,
+      WidgetState.LOG_IN,
+      '',
+      formImages,
+      false,
+      '[]',
+      0,
+      slideIntervalSeconds,
+    );
     await updateForm(formId, data);
+    saveWidgetEntries(context, formId, '[]');
+    saveWidgetIndex(context, formId, 0);
+    saveWidgetSlot(context, formId, 0);
     scheduleNextRefresh(context, formId);
     return;
   }
@@ -53,36 +82,183 @@ export async function updateWidgetForm(
   const api = new ImmichAPI(config);
   let imageResult: ImageDownloadResult | null = null;
   try {
-    const entry = await fetchEntry(context, api, widgetType, formId);
-    console.error(`[WidgetUpdate] fetched entry assetId=${entry.assetId} subtitle=${entry.subtitle}`);
-    imageResult = await downloadImage(context, api, entry.assetId, formId);
-    console.error(
-      `[WidgetUpdate] downloaded image path=${imageResult.filePath} imgName=${imageResult.imgName}`,
-    );
-    const data = buildFormData(
-      entry.subtitle,
-      entry.deeplink,
-      WidgetState.SUCCESS,
-      imageResult.imgName,
-      imageResult.formImages,
+    const entries = await fetchEntries(
+      context,
+      api,
+      widgetType,
+      formId,
+      MAX_WIDGET_IMAGES,
       true,
     );
+    console.error(`[WidgetUpdate] fetched entries count=${entries.length}`);
+    imageResult = await downloadImages(context, api, entries, formId);
+    const primaryEntry = imageResult.entries[0];
+    const primaryText = primaryEntry?.text ?? '';
+    const primaryDeeplink = primaryEntry?.deeplink ?? DEFAULT_DEEPLINK;
+    const primaryImgName = primaryEntry?.imgName ?? '';
+    const entriesJson = JSON.stringify(imageResult.entries);
+    const storedEntries = parseEntriesJson(loadWidgetEntries(context, formId));
+    const storedIndex = loadWidgetIndex(context, formId);
+    let activeIndex = clampIndex(storedIndex, imageResult.entries.length);
+    if (storedEntries.length > 0 && imageResult.entries.length > 0) {
+      activeIndex = (activeIndex + 1) % imageResult.entries.length;
+    }
+    const data = buildFormData(
+      primaryText,
+      primaryDeeplink,
+      WidgetState.SUCCESS,
+      primaryImgName,
+      imageResult.formImages,
+      true,
+      entriesJson,
+      activeIndex,
+      slideIntervalSeconds,
+    );
+    saveWidgetEntries(context, formId, entriesJson);
+    saveWidgetIndex(context, formId, activeIndex);
+    saveWidgetSlot(context, formId, imageResult.nextSlot);
     await updateForm(formId, data);
   } catch (error) {
     console.error(`[WidgetUpdate] update failed error=${error}`);
     const formImages: Record<string, number> = {};
-    const data = buildFormData('', DEFAULT_DEEPLINK, WidgetState.ERROR, '', formImages, false);
+    const data = buildFormData(
+      '',
+      DEFAULT_DEEPLINK,
+      WidgetState.ERROR,
+      '',
+      formImages,
+      false,
+      '[]',
+      0,
+      slideIntervalSeconds,
+    );
     await updateForm(formId, data);
+    saveWidgetEntries(context, formId, '[]');
+    saveWidgetIndex(context, formId, 0);
+    saveWidgetSlot(context, formId, 0);
   } finally {
     if (imageResult) {
-      try {
-        fs.closeSync(imageResult.file);
-      } catch (error) {
-        console.error(`[WidgetUpdate] close image file failed error=${error}`);
+      for (const file of imageResult.files) {
+        try {
+          fs.closeSync(file);
+        } catch (error) {
+          console.error(`[WidgetUpdate] close image file failed error=${error}`);
+        }
       }
     }
   }
   scheduleNextRefresh(context, formId);
+}
+
+export async function loadMoreWidgetImages(
+  context: common.Context,
+  formId: string,
+  widgetType: WidgetType,
+  currentImgName: string,
+  currentIndex: number,
+): Promise<void> {
+  console.error(`[WidgetUpdate] loadMoreWidgetImages start formId=${formId} index=${currentIndex}`);
+  if (!formId) {
+    console.error('[WidgetUpdate] loadMoreWidgetImages missing formId');
+    return;
+  }
+  const widgetConfig = loadWidgetConfig(context, formId);
+  const slideIntervalSeconds = widgetConfig.slideIntervalSeconds;
+  const config = loadServerConfig(context);
+  if (!config) {
+    console.error('[WidgetUpdate] loadMoreWidgetImages no server config');
+    const formImages: Record<string, number> = {};
+    const data = buildFormData(
+      '',
+      DEFAULT_DEEPLINK,
+      WidgetState.LOG_IN,
+      '',
+      formImages,
+      false,
+      '[]',
+      0,
+      slideIntervalSeconds,
+    );
+    await updateForm(formId, data);
+    return;
+  }
+
+  const storedEntries = parseEntriesJson(loadWidgetEntries(context, formId));
+  if (storedEntries.length === 0) {
+    console.error('[WidgetUpdate] loadMoreWidgetImages empty entries -> full refresh');
+    await updateWidgetForm(context, formId, widgetType);
+    return;
+  }
+
+  const api = new ImmichAPI(config);
+  let files: Array<fs.File> = [];
+  try {
+    const newEntries = await fetchEntries(
+      context,
+      api,
+      widgetType,
+      formId,
+      LOAD_MORE_COUNT,
+      false,
+    );
+    if (newEntries.length === 0) {
+      console.error('[WidgetUpdate] loadMoreWidgetImages no new entries');
+      return;
+    }
+
+    const unusedSlot = findUnusedSlot(formId, storedEntries);
+    let slot =
+      unusedSlot !== null ? unusedSlot : loadWidgetSlot(context, formId) % MAX_WIDGET_IMAGES;
+    const currentSlot = imageSlotFromName(formId, currentImgName);
+    if (currentSlot !== null && slot === currentSlot) {
+      slot = (slot + 1) % MAX_WIDGET_IMAGES;
+    }
+    await downloadImageToSlot(context, api, newEntries[0], formId, slot);
+    const nextSlot = (slot + 1) % MAX_WIDGET_IMAGES;
+    saveWidgetSlot(context, formId, nextSlot);
+
+    const appended: WidgetImageEntry = {
+      imgName: imageNameForSlot(formId, slot),
+      text: newEntries[0].subtitle ?? '',
+      deeplink: newEntries[0].deeplink ?? DEFAULT_DEEPLINK,
+    };
+
+    let merged = storedEntries.filter((entry) => entry.imgName !== appended.imgName);
+    merged.push(appended);
+    if (merged.length > MAX_WIDGET_IMAGES) {
+      merged = merged.slice(merged.length - MAX_WIDGET_IMAGES);
+    }
+
+    const activeIndex = resolveActiveIndex(merged, currentImgName, currentIndex);
+    const entriesJson = JSON.stringify(merged);
+    const openResult = openEntryFiles(context, merged, formId);
+    files = openResult.files;
+    const primary = merged[0];
+    const data = buildFormData(
+      primary?.text ?? '',
+      primary?.deeplink ?? DEFAULT_DEEPLINK,
+      WidgetState.SUCCESS,
+      primary?.imgName ?? '',
+      openResult.formImages,
+      true,
+      entriesJson,
+      activeIndex,
+      slideIntervalSeconds,
+    );
+    saveWidgetEntries(context, formId, entriesJson);
+    saveWidgetIndex(context, formId, activeIndex);
+    await updateForm(formId, data);
+  } catch (error) {
+    console.error(`[WidgetUpdate] loadMoreWidgetImages failed error=${error}`);
+  } finally {
+    for (const file of files) {
+      try {
+        fs.closeSync(file);
+      } catch (error) {
+        console.error(`[WidgetUpdate] loadMoreWidgetImages close file failed error=${error}`);
+      }
+    }
+  }
 }
 
 function buildFormData(
@@ -92,6 +268,9 @@ function buildFormData(
   imgName: string,
   formImages: Record<string, number>,
   loaded: boolean,
+  entriesJson: string,
+  activeIndex: number,
+  slideIntervalSeconds: number,
 ): WidgetFormData {
   const data: WidgetFormData = {
     text,
@@ -99,6 +278,9 @@ function buildFormData(
     imgName,
     formImages,
     deeplink,
+    entriesJson,
+    activeIndex,
+    slideIntervalSeconds,
     state,
   };
   return data;
@@ -115,8 +297,7 @@ function scheduleNextRefresh(context: common.Context, formId: string): void {
   if (!formId) {
     return;
   }
-  const config = loadWidgetConfig(context, formId);
-  const refreshMinutes = config.refreshMinutes;
+  const refreshMinutes = DEFAULT_REFRESH_MINUTES;
   if (!refreshMinutes || refreshMinutes <= 0) {
     console.error(`[WidgetUpdate] skip schedule refreshMinutes=${refreshMinutes}`);
     return;
@@ -139,90 +320,60 @@ function scheduleNextRefresh(context: common.Context, formId: string): void {
   }
 }
 
-async function fetchEntry(
-  context: common.Context,
-  api: ImmichAPI,
-  widgetType: WidgetType,
-  formId: string,
-): Promise<WidgetEntry> {
-  if (widgetType === WidgetType.MEMORIES) {
-    return await fetchMemoryEntry(context, api, formId);
+function clampIndex(index: number, length: number): number {
+  if (!Number.isFinite(index) || length <= 0) {
+    return 0;
   }
-  return await fetchRandomEntry(context, api, formId);
+  if (index < 0) {
+    return 0;
+  }
+  if (index >= length) {
+    return length - 1;
+  }
+  return index;
 }
 
-async function fetchRandomEntry(
-  context: common.Context,
-  api: ImmichAPI,
-  formId: string,
-): Promise<WidgetEntry> {
-  const config = loadWidgetConfig(context, formId);
-  const filters: SearchFilters = { type: 'IMAGE', size: 1 };
-  let subtitle = config.showAlbumName ? config.albumName : '';
-  console.error(
-    `[WidgetUpdate] fetchRandomEntry formId=${formId} albumId=${config.albumId} albumName=${config.albumName} show=${config.showAlbumName}`,
-  );
-
-  if (config.albumId === FAVORITES_ALBUM_ID) {
-    filters.isFavorite = true;
-  } else if (config.albumId && config.albumId !== DEFAULT_ALBUM_ID) {
-    filters.albumIds = [config.albumId];
+function resolveActiveIndex(
+  entries: Array<WidgetImageEntry>,
+  currentImgName: string,
+  fallbackIndex: number,
+): number {
+  if (entries.length === 0) {
+    return 0;
   }
-
-  let assets = await api.fetchSearchResults(filters);
-  console.error(`[WidgetUpdate] fetchRandomEntry results count=${assets?.length ?? 0}`);
-  if (!assets || assets.length === 0) {
-    if (config.albumId && config.albumId !== DEFAULT_ALBUM_ID) {
-      assets = await api.fetchSearchResults({ type: 'IMAGE', size: 1 });
-      console.error(`[WidgetUpdate] fallback fetchRandomEntry count=${assets?.length ?? 0}`);
-      subtitle = '';
+  if (currentImgName) {
+    const idx = entries.findIndex((entry) => entry.imgName === currentImgName);
+    if (idx >= 0) {
+      return idx;
     }
   }
-  if (!assets || assets.length === 0) {
-    throw new Error('No assets returned');
-  }
-
-  const asset = assets[0];
-  return {
-    assetId: asset.id,
-    subtitle,
-    deeplink: assetDeeplink(asset.id),
-  };
+  return clampIndex(fallbackIndex, entries.length);
 }
 
-async function fetchMemoryEntry(
-  context: common.Context,
-  api: ImmichAPI,
-  formId: string,
-): Promise<WidgetEntry> {
-  const today = new Date();
-  const memories = await api.fetchMemory(today);
-  console.error(`[WidgetUpdate] fetchMemoryEntry count=${memories?.length ?? 0}`);
-
-  if (memories && memories.length > 0) {
-    const memory = memories[Math.floor(Math.random() * memories.length)];
-    const asset = memory.assets[Math.floor(Math.random() * memory.assets.length)];
-    const yearDiff = today.getFullYear() - memory.data.year;
-    const subtitle = `${yearDiff} ${yearDiff === 1 ? 'year' : 'years'} ago`;
-    return {
-      assetId: asset.id,
-      subtitle,
-      deeplink: assetDeeplink(asset.id),
-    };
+function parseEntriesJson(raw: string): Array<WidgetImageEntry> {
+  if (!raw) {
+    return [];
   }
-
-  return await fetchRandomEntry(context, api, formId);
+  try {
+    const parsed = JSON.parse(raw) as Array<WidgetImageEntry>;
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+    return parsed.filter(
+      (entry) => !!entry && typeof entry.imgName === 'string' && entry.imgName.length > 0,
+    );
+  } catch (_) {
+    return [];
+  }
 }
 
-async function downloadImage(
+async function downloadImageToSlot(
   context: common.Context,
   api: ImmichAPI,
-  assetId: string,
+  entry: WidgetEntry,
   formId: string,
-): Promise<ImageDownloadResult> {
-  console.error(`[WidgetUpdate] downloadImage assetId=${assetId} formId=${formId}`);
-  const buffer = await api.fetchImage(assetId);
-  console.error(`[WidgetUpdate] downloaded image bytes=${buffer.byteLength}`);
+  slot: number,
+): Promise<void> {
   const baseDir = context.getApplicationContext().cacheDir;
   const cacheDir = `${baseDir}/widget`;
   try {
@@ -230,29 +381,349 @@ async function downloadImage(
   } catch (_) {
     // ignore if exists
   }
-  const filePath = `${cacheDir}/${imageFilename(formId)}`;
+  console.error(`[WidgetUpdate] downloadImage slot=${slot} assetId=${entry.assetId} formId=${formId}`);
+  const buffer = await api.fetchImage(entry.assetId);
+  console.error(`[WidgetUpdate] downloaded image bytes=${buffer.byteLength} slot=${slot}`);
+  const filePath = `${cacheDir}/${imageFilenameForSlot(formId, slot)}`;
   const file = fs.openSync(filePath, fs.OpenMode.CREATE | fs.OpenMode.READ_WRITE);
   try {
     fs.truncateSync(file.fd, 0);
     fs.writeSync(file.fd, buffer);
     fs.truncateSync(file.fd, buffer.byteLength);
-  } catch (e) {
-    fs.closeSync(file);
-    throw e as Error;
+  } finally {
+    try {
+      fs.closeSync(file);
+    } catch (_) {
+      // ignore close error
+    }
   }
-  try {
-    const stat = fs.statSync(filePath);
-    console.error(`[WidgetUpdate] downloaded image fileSize=${stat.size}`);
-  } catch (error) {
-    console.error(`[WidgetUpdate] failed to stat image path=${filePath} error=${error}`);
-  }
-  const imgName = `${formId}_${Date.now()}`;
+}
+
+interface OpenFilesResult {
+  formImages: Record<string, number>;
+  files: Array<fs.File>;
+}
+
+function openEntryFiles(
+  context: common.Context,
+  entries: Array<WidgetImageEntry>,
+  formId: string,
+): OpenFilesResult {
   const formImages: Record<string, number> = {};
-  formImages[imgName] = file.fd;
+  const files: Array<fs.File> = [];
+  const baseDir = context.getApplicationContext().cacheDir;
+  const cacheDir = `${baseDir}/widget`;
+  for (const entry of entries) {
+    const slot = imageSlotFromName(formId, entry.imgName);
+    if (slot === null) {
+      continue;
+    }
+    const filePath = `${cacheDir}/${imageFilenameForSlot(formId, slot)}`;
+    try {
+      const file = fs.openSync(filePath, fs.OpenMode.READ_WRITE);
+      formImages[entry.imgName] = file.fd;
+      files.push(file);
+    } catch (error) {
+      console.error(`[WidgetUpdate] openEntryFiles failed imgName=${entry.imgName} error=${error}`);
+    }
+  }
+  return { formImages, files };
+}
+
+function imageSlotFromName(formId: string, imgName: string): number | null {
+  if (!formId || !imgName) {
+    return null;
+  }
+  const prefix = `widget_${formId}_`;
+  if (!imgName.startsWith(prefix)) {
+    return null;
+  }
+  const raw = imgName.substring(prefix.length);
+  const parsed = parseInt(raw, 10);
+  if (!Number.isFinite(parsed)) {
+    return null;
+  }
+  return parsed;
+}
+
+function findUnusedSlot(formId: string, entries: Array<WidgetImageEntry>): number | null {
+  for (let i = 0; i < MAX_WIDGET_IMAGES; i++) {
+    let used = false;
+    for (const entry of entries) {
+      const slot = imageSlotFromName(formId, entry.imgName);
+      if (slot === i) {
+        used = true;
+        break;
+      }
+    }
+    if (!used) {
+      return i;
+    }
+  }
+  return null;
+}
+
+async function fetchEntries(
+  context: common.Context,
+  api: ImmichAPI,
+  widgetType: WidgetType,
+  formId: string,
+  size: number,
+  includeCover: boolean,
+): Promise<Array<WidgetEntry>> {
+  if (widgetType === WidgetType.MEMORIES) {
+    return await fetchMemoryEntries(context, api, formId, size, includeCover);
+  }
+  return await fetchRandomEntries(context, api, formId, size, includeCover);
+}
+
+async function fetchRandomEntries(
+  context: common.Context,
+  api: ImmichAPI,
+  formId: string,
+  size: number,
+  includeCover: boolean,
+): Promise<Array<WidgetEntry>> {
+  const config = loadWidgetConfig(context, formId);
+  const requestSize = Math.max(1, Math.min(size, MAX_WIDGET_IMAGES));
+  const filters: SearchFilters = { type: 'IMAGE', size: requestSize };
+  let albumId = config.albumId;
+  let albumName = config.albumName;
+  let subtitle = config.showAlbumName ? albumName : '';
+  const shouldAutoSelect = albumId === DEFAULT_ALBUM_ID && !isWidgetAlbumOverride(context, formId);
+  let autoSelectedAlbum = false;
+  let coverAssetId = '';
+  if (shouldAutoSelect) {
+    try {
+      const albums = await api.fetchAlbums();
+      if (albums.length > 0) {
+        const first = albums[0];
+        albumId = first.id;
+        albumName = first.albumName;
+        subtitle = config.showAlbumName ? albumName : '';
+        const nextConfig: WidgetConfig = {
+          albumId,
+          albumName,
+          showAlbumName: config.showAlbumName,
+          refreshMinutes: config.refreshMinutes,
+          slideIntervalSeconds: config.slideIntervalSeconds,
+        };
+        saveWidgetConfig(context, formId, nextConfig);
+        markWidgetAlbumOverride(context, formId);
+        autoSelectedAlbum = true;
+        console.error(`[WidgetUpdate] auto select albumId=${albumId} albumName=${albumName}`);
+      }
+    } catch (error) {
+      console.error(`[WidgetUpdate] auto select album failed error=${error}`);
+    }
+  }
+  const shouldIncludeCover = includeCover && autoSelectedAlbum;
+  if (
+    shouldIncludeCover &&
+    albumId &&
+    albumId !== DEFAULT_ALBUM_ID &&
+    albumId !== FAVORITES_ALBUM_ID
+  ) {
+    try {
+      const albumInfo = await api.fetchAlbumInfo(albumId);
+      coverAssetId = albumInfo?.albumThumbnailAssetId ?? '';
+      if (coverAssetId) {
+        console.error(`[WidgetUpdate] resolved album cover assetId=${coverAssetId}`);
+      }
+    } catch (error) {
+      console.error(`[WidgetUpdate] fetch album info failed error=${error}`);
+    }
+  }
+  console.error(
+    `[WidgetUpdate] fetchRandomEntries formId=${formId} albumId=${albumId} albumName=${albumName} show=${config.showAlbumName}`,
+  );
+
+  if (albumId === FAVORITES_ALBUM_ID) {
+    filters.isFavorite = true;
+  } else if (albumId && albumId !== DEFAULT_ALBUM_ID) {
+    filters.albumIds = [albumId];
+  }
+
+  let assets = await api.fetchSearchResults(filters);
+  console.error(`[WidgetUpdate] fetchRandomEntries results count=${assets?.length ?? 0}`);
+  if (!assets || assets.length === 0) {
+    if (albumId && albumId !== DEFAULT_ALBUM_ID) {
+      assets = await api.fetchSearchResults({ type: 'IMAGE', size: requestSize });
+      console.error(`[WidgetUpdate] fallback fetchRandomEntries count=${assets?.length ?? 0}`);
+      subtitle = '';
+    }
+  }
+  const safeAssets = Array.isArray(assets) ? assets : [];
+  const entries: Array<WidgetEntry> = [];
+  if (coverAssetId) {
+    entries.push({
+      assetId: coverAssetId,
+      subtitle,
+      deeplink: assetDeeplink(coverAssetId),
+    });
+  }
+  for (const asset of safeAssets) {
+    if (entries.length >= requestSize) {
+      break;
+    }
+    if (coverAssetId && asset.id === coverAssetId) {
+      continue;
+    }
+    entries.push({
+      assetId: asset.id,
+      subtitle,
+      deeplink: assetDeeplink(asset.id),
+    });
+  }
+  if (entries.length === 0) {
+    throw new Error('No assets returned');
+  }
+  return entries;
+}
+
+async function fetchMemoryEntries(
+  context: common.Context,
+  api: ImmichAPI,
+  formId: string,
+  size: number,
+  includeCover: boolean,
+): Promise<Array<WidgetEntry>> {
+  const today = new Date();
+  const memories = await api.fetchMemory(today);
+  console.error(`[WidgetUpdate] fetchMemoryEntries count=${memories?.length ?? 0}`);
+
+  const requestSize = Math.max(1, Math.min(size, MAX_WIDGET_IMAGES));
+  const safeMemories = Array.isArray(memories) ? memories : [];
+  if (safeMemories.length === 0) {
+    return await fetchRandomEntries(context, api, formId, size, includeCover);
+  }
+
+  const shuffledMemories = safeMemories.slice();
+  for (let i = shuffledMemories.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    const tmp = shuffledMemories[i];
+    shuffledMemories[i] = shuffledMemories[j];
+    shuffledMemories[j] = tmp;
+  }
+
+  const entries: Array<WidgetEntry> = [];
+  const remainder: Array<WidgetEntry> = [];
+
+  for (const memory of shuffledMemories) {
+    const assets = Array.isArray(memory.assets) ? memory.assets : [];
+    if (assets.length === 0) {
+      continue;
+    }
+    const yearDiff = today.getFullYear() - memory.data.year;
+    const subtitle = `${yearDiff} ${yearDiff === 1 ? 'year' : 'years'} ago`;
+    const assetIndex = Math.floor(Math.random() * assets.length);
+    const primary = assets[assetIndex];
+    if (primary?.id) {
+      entries.push({
+        assetId: primary.id,
+        subtitle,
+        deeplink: assetDeeplink(primary.id),
+      });
+    }
+    for (let i = 0; i < assets.length; i++) {
+      if (i === assetIndex) {
+        continue;
+      }
+      const asset = assets[i];
+      if (asset && asset.id) {
+        remainder.push({
+          assetId: asset.id,
+          subtitle,
+          deeplink: assetDeeplink(asset.id),
+        });
+      }
+    }
+    if (entries.length >= requestSize) {
+      break;
+    }
+  }
+
+  if (entries.length < requestSize && remainder.length > 0) {
+    for (let i = remainder.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      const tmp = remainder[i];
+      remainder[i] = remainder[j];
+      remainder[j] = tmp;
+    }
+    for (const entry of remainder) {
+      if (entries.length >= requestSize) {
+        break;
+      }
+      entries.push(entry);
+    }
+  }
+
+  if (entries.length === 0) {
+    return await fetchRandomEntries(context, api, formId, size, includeCover);
+  }
+
+  return entries.slice(0, requestSize);
+}
+
+async function downloadImages(
+  context: common.Context,
+  api: ImmichAPI,
+  entries: Array<WidgetEntry>,
+  formId: string,
+): Promise<ImageDownloadResult> {
+  if (!entries || entries.length === 0) {
+    throw new Error('No entries to download');
+  }
+  const baseDir = context.getApplicationContext().cacheDir;
+  const cacheDir = `${baseDir}/widget`;
+  try {
+    fs.mkdirSync(cacheDir);
+  } catch (_) {
+    // ignore if exists
+  }
+
+  const formImages: Record<string, number> = {};
+  const files: Array<fs.File> = [];
+  const widgetEntries: Array<WidgetImageEntry> = [];
+  const targetCount = Math.min(entries.length, MAX_WIDGET_IMAGES);
+
+  for (let i = 0; i < targetCount; i++) {
+    const entry = entries[i];
+    console.error(`[WidgetUpdate] downloadImage assetId=${entry.assetId} formId=${formId} index=${i}`);
+    const buffer = await api.fetchImage(entry.assetId);
+    console.error(`[WidgetUpdate] downloaded image bytes=${buffer.byteLength} index=${i}`);
+    const filePath = `${cacheDir}/${imageFilenameForSlot(formId, i)}`;
+    const file = fs.openSync(filePath, fs.OpenMode.CREATE | fs.OpenMode.READ_WRITE);
+    try {
+      fs.truncateSync(file.fd, 0);
+      fs.writeSync(file.fd, buffer);
+      fs.truncateSync(file.fd, buffer.byteLength);
+    } catch (e) {
+      fs.closeSync(file);
+      throw e as Error;
+    }
+    formImages[imageNameForSlot(formId, i)] = file.fd;
+    files.push(file);
+    widgetEntries.push({
+      imgName: imageNameForSlot(formId, i),
+      text: entry.subtitle ?? '',
+      deeplink: entry.deeplink ?? DEFAULT_DEEPLINK,
+    });
+  }
+
   return {
-    imgName,
+    imgName: widgetEntries[0]?.imgName ?? '',
     formImages,
-    file,
-    filePath,
+    files,
+    entries: widgetEntries,
+    nextSlot: targetCount % MAX_WIDGET_IMAGES,
   };
+}
+
+function imageNameForSlot(formId: string, index: number): string {
+  return `widget_${formId}_${index}`;
+}
+
+function imageFilenameForSlot(formId: string, index: number): string {
+  return `widget_image_${formId}_${index}.jpg`;
 }
