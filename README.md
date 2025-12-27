@@ -82,13 +82,13 @@ GEOCODE_WITH_AMAP: 'true' // 启用高德 逆地理编码 个人开发者国内�
 
 <h1>未完成的功能：</h1>
 
-~~ 1. beta时间线数据库迁移同步：work_manager未适配 ~~ <br/>
-~~ 2.  照片同步功能以及后台上传下载功能：background_downloader未适配 ~~<br/>
-~~ 3. 大地图：[maplibre/flutter-maplibre-gl](https://github.com/maplibre/flutter-maplibre-gl) Huawei mapkit缺少热力图功能 ~~ <br/>
-~~ 4. wifi信息获取：network_info_plus已发现适配版 ~~<br/>
-~~ 5.  投屏功能：gcast谷歌投屏 ~~<br/>
-~~ 6. 桌面小组件 ~~<br/>
-~~ 7.  分享照片到APP上传功能：share_handler~~ <br/>
+~~1. beta时间线数据库迁移同步：work_manager未适配~~ <br/>
+~~2.  照片同步功能以及后台上传下载功能：background_downloader未适配~~<br/>
+~~3. 大地图：[maplibre/flutter-maplibre-gl](https://github.com/maplibre/flutter-maplibre-gl) Huawei mapkit缺少热力图功能~~ <br/>
+~~4. wifi信息获取：network_info_plus已发现适配版~~<br/>
+~~5.  投屏功能：gcast谷歌投屏~~<br/>
+~~6. 桌面小组件~~<br/>
+~~7.  分享照片到APP上传功能：share_handler~~ <br/>
 8. dynamic_color <br/>
 
 <h1>适配计划：</h1>
