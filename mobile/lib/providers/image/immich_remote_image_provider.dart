@@ -65,15 +65,15 @@ class ImmichRemoteImageProvider extends ImageProvider<ImmichRemoteImageProvider>
 
     // 2. 再用 preview：中倍数分辨率，用来替代直接从 thumbnail 跳原图那一下的“糊”
     final previewUrl = getThumbnailUrlForRemoteId(key.assetId, type: api.AssetMediaSize.preview);
-    final previewCodec = await ImageLoader.loadImageFromCache(
+    final previewCodec = ImageLoader.loadImageFromCache(
       previewUrl,
       cache: cache,
       decode: decode,
       chunkEvents: chunkEvents,
     );
-    yield previewCodec;
 
     if (!(is_image ?? true)) {
+      yield await previewCodec;
       await chunkEvents.close();
       return;
     }
@@ -82,8 +82,17 @@ class ImmichRemoteImageProvider extends ImageProvider<ImmichRemoteImageProvider>
     if (_useOriginal) {
       // Load the original image
       final url = getOriginalUrlForRemoteId(key.assetId, is_image: is_image);
-      final codec = await ImageLoader.loadImageFromCache(url, cache: cache, decode: decode, chunkEvents: chunkEvents);
-      yield codec;
+      final codec = ImageLoader.loadImageFromCache(url, cache: cache, decode: decode, chunkEvents: chunkEvents);
+
+      final previewTask = previewCodec.then((codec) => (codec: codec, isOriginal: false));
+      final originalTask = codec.then((codec) => (codec: codec, isOriginal: true));
+      final first = await Future.any([previewTask, originalTask]);
+      yield first.codec;
+      if (!first.isOriginal) {
+        yield await codec;
+      }
+    } else {
+      yield await previewCodec;
     }
     await chunkEvents.close();
   }
