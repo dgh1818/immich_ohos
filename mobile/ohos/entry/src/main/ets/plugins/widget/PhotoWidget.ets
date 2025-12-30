@@ -22,6 +22,7 @@ struct PhotoWidget {
   @LocalStorageProp('entriesJson') entriesJson: string = '[]';
   @Watch('onDataChange')
   @LocalStorageProp('imgName') imgName: string = '';
+  @LocalStorageProp('formImages') formImages: Record<string, number> = {};
   @LocalStorageProp('text') text: string = '';
   @LocalStorageProp('loaded') loaded: boolean = false;
   @LocalStorageProp('deeplink') deeplink: string = 'immich://';
@@ -78,16 +79,51 @@ struct PhotoWidget {
     if (parsed.length > 0) {
       return parsed;
     }
+    const formImageNames = this.resolveFormImageNames();
+    if (formImageNames.length > 0) {
+      return formImageNames.map((imgName) => this.buildEntry(imgName));
+    }
     if (this.imgName) {
-      return [
-        {
-          imgName: this.imgName,
-          text: this.text,
-          deeplink: this.deeplink,
-        },
-      ];
+      return [this.buildEntry(this.imgName)];
     }
     return [];
+  }
+
+  private buildEntry(imgName: string): WidgetImageEntry {
+    const entry: WidgetImageEntry = {
+      imgName,
+      text: this.text,
+      deeplink: this.deeplink,
+    };
+    return entry;
+  }
+
+  private resolveFormImageNames(): Array<string> {
+    const names = Object.keys(this.formImages);
+    if (names.length <= 1) {
+      return names;
+    }
+    return names.slice().sort((a, b) => {
+      const aIndex = this.parseImageIndex(a);
+      const bIndex = this.parseImageIndex(b);
+      if (aIndex !== null && bIndex !== null) {
+        return aIndex - bIndex;
+      }
+      return a.localeCompare(b);
+    });
+  }
+
+  private parseImageIndex(imgName: string): number | null {
+    const lastUnderscore = imgName.lastIndexOf('_');
+    if (lastUnderscore < 0) {
+      return null;
+    }
+    const raw = imgName.substring(lastUnderscore + 1);
+    const parsed = parseInt(raw, 10);
+    if (!Number.isFinite(parsed)) {
+      return null;
+    }
+    return parsed;
   }
 
   private resolvePreloadEntries(): Array<WidgetImageEntry> {

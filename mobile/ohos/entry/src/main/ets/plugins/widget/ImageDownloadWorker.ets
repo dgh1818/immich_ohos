@@ -56,6 +56,9 @@ export async function updateWidgetForm(
   const widgetConfig = loadWidgetConfig(context, formId);
   const slideIntervalSeconds = widgetConfig.slideIntervalSeconds;
   const config = loadServerConfig(context);
+  if (config) {
+    await applyCachedFormData(context, formId, slideIntervalSeconds);
+  }
   if (!config) {
     console.error('[WidgetUpdate] no server config -> LOG_IN');
     const formImages: Record<string, number> = {};
@@ -118,6 +121,7 @@ export async function updateWidgetForm(
     saveWidgetIndex(context, formId, activeIndex);
     saveWidgetSlot(context, formId, imageResult.nextSlot);
     await updateForm(formId, data);
+    cleanupStaleSlots(context, formId, storedEntries, imageResult.entries);
   } catch (error) {
     console.error(`[WidgetUpdate] update failed error=${error}`);
     const formImages: Record<string, number> = {};
@@ -248,6 +252,7 @@ export async function loadMoreWidgetImages(
     saveWidgetEntries(context, formId, entriesJson);
     saveWidgetIndex(context, formId, activeIndex);
     await updateForm(formId, data);
+    cleanupStaleSlots(context, formId, storedEntries, merged);
   } catch (error) {
     console.error(`[WidgetUpdate] loadMoreWidgetImages failed error=${error}`);
   } finally {
@@ -284,6 +289,56 @@ function buildFormData(
     state,
   };
   return data;
+}
+
+async function applyCachedFormData(
+  context: common.Context,
+  formId: string,
+  slideIntervalSeconds: number,
+): Promise<boolean> {
+  const storedEntries = parseEntriesJson(loadWidgetEntries(context, formId));
+  if (storedEntries.length === 0) {
+    return false;
+  }
+
+  const openResult = openEntryFiles(context, storedEntries, formId);
+  if (Object.keys(openResult.formImages).length === 0) {
+    for (const file of openResult.files) {
+      try {
+        fs.closeSync(file);
+      } catch (_) {
+        // ignore close error
+      }
+    }
+    return false;
+  }
+
+  const storedIndex = loadWidgetIndex(context, formId);
+  const activeIndex = clampIndex(storedIndex, storedEntries.length);
+  const primary = storedEntries[0];
+  const entriesJson = JSON.stringify(storedEntries);
+  const data = buildFormData(
+    primary?.text ?? '',
+    primary?.deeplink ?? DEFAULT_DEEPLINK,
+    WidgetState.SUCCESS,
+    primary?.imgName ?? '',
+    openResult.formImages,
+    true,
+    entriesJson,
+    activeIndex,
+    slideIntervalSeconds,
+  );
+  await updateForm(formId, data);
+
+  for (const file of openResult.files) {
+    try {
+      fs.closeSync(file);
+    } catch (_) {
+      // ignore close error
+    }
+  }
+
+  return true;
 }
 
 async function updateForm(formId: string, data: WidgetFormData): Promise<void> {
@@ -374,29 +429,10 @@ async function downloadImageToSlot(
   formId: string,
   slot: number,
 ): Promise<void> {
-  const baseDir = context.getApplicationContext().cacheDir;
-  const cacheDir = `${baseDir}/widget`;
-  try {
-    fs.mkdirSync(cacheDir);
-  } catch (_) {
-    // ignore if exists
-  }
   console.error(`[WidgetUpdate] downloadImage slot=${slot} assetId=${entry.assetId} formId=${formId}`);
   const buffer = await api.fetchImage(entry.assetId);
   console.error(`[WidgetUpdate] downloaded image bytes=${buffer.byteLength} slot=${slot}`);
-  const filePath = `${cacheDir}/${imageFilenameForSlot(formId, slot)}`;
-  const file = fs.openSync(filePath, fs.OpenMode.CREATE | fs.OpenMode.READ_WRITE);
-  try {
-    fs.truncateSync(file.fd, 0);
-    fs.writeSync(file.fd, buffer);
-    fs.truncateSync(file.fd, buffer.byteLength);
-  } finally {
-    try {
-      fs.closeSync(file);
-    } catch (_) {
-      // ignore close error
-    }
-  }
+  writeBufferToSlot(context, formId, slot, buffer);
 }
 
 interface OpenFilesResult {
@@ -444,6 +480,55 @@ function imageSlotFromName(formId: string, imgName: string): number | null {
     return null;
   }
   return parsed;
+}
+
+function cleanupStaleSlots(
+  context: common.Context,
+  formId: string,
+  oldEntries: Array<WidgetImageEntry>,
+  newEntries: Array<WidgetImageEntry>,
+): void {
+  const oldSlots = collectSlots(formId, oldEntries);
+  if (oldSlots.size === 0) {
+    return;
+  }
+  const newSlots = collectSlots(formId, newEntries);
+  const baseDir = context.getApplicationContext().cacheDir;
+  const cacheDir = `${baseDir}/widget`;
+
+  for (const slot of oldSlots) {
+    if (newSlots.has(slot)) {
+      continue;
+    }
+    const filePath = `${cacheDir}/${imageFilenameForSlot(formId, slot)}`;
+    const tempPath = `${cacheDir}/${imageTempFilenameForSlot(formId, slot)}`;
+    safeUnlink(filePath);
+    safeUnlink(tempPath);
+  }
+}
+
+function collectSlots(formId: string, entries: Array<WidgetImageEntry>): Set<number> {
+  const slots = new Set<number>();
+  for (const entry of entries) {
+    const slot = imageSlotFromName(formId, entry.imgName);
+    if (slot !== null) {
+      slots.add(slot);
+    }
+  }
+  return slots;
+}
+
+function safeUnlink(path: string): void {
+  if (!path) {
+    return;
+  }
+  try {
+    if (fs.accessSync(path)) {
+      fs.unlinkSync(path);
+    }
+  } catch (_) {
+    // ignore delete error
+  }
 }
 
 function findUnusedSlot(formId: string, entries: Array<WidgetImageEntry>): number | null {
@@ -555,7 +640,7 @@ async function fetchRandomEntries(
   }
   const safeAssets = Array.isArray(assets) ? assets : [];
   const entries: Array<WidgetEntry> = [];
-  if (coverAssetId) {
+  if (coverAssetId && safeAssets.some((asset) => asset.id === coverAssetId)) {
     entries.push({
       assetId: coverAssetId,
       subtitle,
@@ -674,14 +759,6 @@ async function downloadImages(
   if (!entries || entries.length === 0) {
     throw new Error('No entries to download');
   }
-  const baseDir = context.getApplicationContext().cacheDir;
-  const cacheDir = `${baseDir}/widget`;
-  try {
-    fs.mkdirSync(cacheDir);
-  } catch (_) {
-    // ignore if exists
-  }
-
   const formImages: Record<string, number> = {};
   const files: Array<fs.File> = [];
   const widgetEntries: Array<WidgetImageEntry> = [];
@@ -692,16 +769,8 @@ async function downloadImages(
     console.error(`[WidgetUpdate] downloadImage assetId=${entry.assetId} formId=${formId} index=${i}`);
     const buffer = await api.fetchImage(entry.assetId);
     console.error(`[WidgetUpdate] downloaded image bytes=${buffer.byteLength} index=${i}`);
-    const filePath = `${cacheDir}/${imageFilenameForSlot(formId, i)}`;
-    const file = fs.openSync(filePath, fs.OpenMode.CREATE | fs.OpenMode.READ_WRITE);
-    try {
-      fs.truncateSync(file.fd, 0);
-      fs.writeSync(file.fd, buffer);
-      fs.truncateSync(file.fd, buffer.byteLength);
-    } catch (e) {
-      fs.closeSync(file);
-      throw e as Error;
-    }
+    const filePath = writeBufferToSlot(context, formId, i, buffer);
+    const file = fs.openSync(filePath, fs.OpenMode.READ_WRITE);
     formImages[imageNameForSlot(formId, i)] = file.fd;
     files.push(file);
     widgetEntries.push({
@@ -720,10 +789,59 @@ async function downloadImages(
   };
 }
 
+function writeBufferToSlot(
+  context: common.Context,
+  formId: string,
+  slot: number,
+  buffer: ArrayBuffer,
+): string {
+  const baseDir = context.getApplicationContext().cacheDir;
+  const cacheDir = `${baseDir}/widget`;
+  try {
+    fs.mkdirSync(cacheDir);
+  } catch (_) {
+    // ignore if exists
+  }
+
+  const filePath = `${cacheDir}/${imageFilenameForSlot(formId, slot)}`;
+  const tempPath = `${cacheDir}/${imageTempFilenameForSlot(formId, slot)}`;
+  const file = fs.openSync(tempPath, fs.OpenMode.CREATE | fs.OpenMode.READ_WRITE);
+  try {
+    fs.truncateSync(file.fd, 0);
+    fs.writeSync(file.fd, buffer);
+    fs.truncateSync(file.fd, buffer.byteLength);
+  } finally {
+    try {
+      fs.closeSync(file);
+    } catch (_) {
+      // ignore close error
+    }
+  }
+
+  try {
+    fs.renameSync(tempPath, filePath);
+  } catch (_) {
+    try {
+      if (fs.accessSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+    } catch (_) {
+      // ignore delete error
+    }
+    fs.renameSync(tempPath, filePath);
+  }
+
+  return filePath;
+}
+
 function imageNameForSlot(formId: string, index: number): string {
   return `widget_${formId}_${index}`;
 }
 
 function imageFilenameForSlot(formId: string, index: number): string {
   return `widget_image_${formId}_${index}.jpg`;
+}
+
+function imageTempFilenameForSlot(formId: string, index: number): string {
+  return `widget_image_${formId}_${index}.tmp`;
 }
