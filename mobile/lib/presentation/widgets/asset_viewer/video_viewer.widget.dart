@@ -461,7 +461,7 @@ import 'package:immich_mobile/widgets/common/delayed_loading_indicator.dart';
 
 import 'package:immich_mobile/providers/asset_viewer/is_motion_video_playing.provider.dart';
 import 'package:logging/logging.dart';
-import 'package:native_video_player/native_video_player.dart';
+//import 'package:native_video_player/native_video_player.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 import 'package:immich_mobile/presentation/widgets/asset_viewer/video_viewer_controls.widget.dart';
 

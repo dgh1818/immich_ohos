@@ -48,9 +48,19 @@ class VideoViewerControls extends HookConsumerWidget {
       ref.read(assetViewerProvider.notifier).setControls(true);
     }
 
-    // When we change position, show or hide timer
-    ref.listen(videoPlayerControlsProvider.select((v) => v.position), (previous, next) {
+    void toggleControls() {
+      if (showControls) {
+        ref.read(assetViewerProvider.notifier).setControls(false);
+        return;
+      }
       showControlsAndStartHideTimer();
+    }
+
+    // When we change position, only keep the timer alive if controls are already showing
+    ref.listen(videoPlayerControlsProvider.select((v) => v.position), (previous, next) {
+      if (showControls) {
+        hideTimer.reset();
+      }
     });
 
     /// Toggles between playing and pausing depending on the state of the video
@@ -86,7 +96,7 @@ class VideoViewerControls extends HookConsumerWidget {
 
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
-      onTap: showControlsAndStartHideTimer,
+      onTap: toggleControls,
       child: AbsorbPointer(
         absorbing: !showControls,
         child: Stack(

@@ -80,7 +80,7 @@ class AssetViewerStateNotifier extends Notifier<AssetViewerState> {
     if (opacity == state.backgroundOpacity) {
       return;
     }
-    state = state.copyWith(backgroundOpacity: opacity, showingControls: opacity == 255 ? true : state.showingControls);
+    state = state.copyWith(backgroundOpacity: opacity);
   }
 
   void setBottomSheet(bool showing) {
