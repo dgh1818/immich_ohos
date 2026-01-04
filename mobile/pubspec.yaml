@@ -2,7 +2,7 @@ name: immich_mobile
 description: Immich - selfhosted backup media file on mobile phone
 
 publish_to: 'none'
-version: 2.4.1+240016000
+version: 2.4.1+240020000
 
 environment:
   sdk: '>=3.8.0 <4.0.0'
@@ -84,10 +84,10 @@ dependencies:
   #ffi: ^2.1.4
   video_compress: ^3.1.0
 
-  native_video_player:
-    git:
-      url: https://github.com/immich-app/native_video_player
-      ref: '893894b'
+  # native_video_player:
+  #   git:
+  #     url: https://github.com/immich-app/native_video_player
+  #     ref: '893894b'
   video_player: ^2.9.2
   isar: ^3.1.0+1 #ok
   isar_flutter_libs: ^3.1.0+1 #ok
