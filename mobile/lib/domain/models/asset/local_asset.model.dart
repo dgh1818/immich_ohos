@@ -40,7 +40,13 @@ class LocalAsset extends BaseAsset {
   @override
   String get heroTag => '${id}_${remoteId ?? checksum}';
 
-  bool get hasCoordinates => latitude != null && longitude != null && latitude != 0 && longitude != 0;
+  bool get hasCoordinates =>
+      latitude != null &&
+      longitude != null &&
+      latitude != 0 &&
+      longitude != 0 &&
+      latitude != 199.9 &&
+      longitude != 199.9;
 
   @override
   String toString() {

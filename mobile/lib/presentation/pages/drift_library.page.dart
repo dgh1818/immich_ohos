@@ -32,6 +32,7 @@ class DriftLibraryPage extends ConsumerWidget {
           _ActionButtonGrid(),
           _CollectionCards(),
           _QuickAccessButtonList(),
+          SliverToBoxAdapter(child: SizedBox(height: 80)),
         ],
       ),
     );
@@ -235,9 +236,10 @@ class _PlacesCollectionCard extends StatelessWidget {
                   child: IgnorePointer(
                     child: MapThumbnail(
                       zoom: 8,
-                      centre: const LatLng(21.44950, -157.91959),
+                      centre: const LatLng(31.171944, 121.549722),
                       showAttribution: false,
                       themeMode: context.isDarkTheme ? ThemeMode.dark : ThemeMode.light,
+                      isZoomControlsEnabled: false,
                     ),
                   ),
                 ),

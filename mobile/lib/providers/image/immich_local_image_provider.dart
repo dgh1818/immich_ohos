@@ -60,6 +60,7 @@ class ImmichLocalImageProvider extends ImageProvider<ImmichLocalImageProvider> {
           }
           final buffer = await ui.ImmutableBuffer.fromFilePath(file.path);
           yield await decode(buffer);
+          unawaited(file.delete());
           break;
         case AssetType.video:
           final size = ThumbnailSize(width.ceil(), height.ceil());

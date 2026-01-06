@@ -39,13 +39,13 @@ class BackupSettings extends HookConsumerWidget {
 
     final backupSettings = [
       const ForegroundBackupSettings(),
-      const BackgroundBackupSettings(),
-      if (Platform.isIOS)
-        SettingsSwitchListTile(
-          valueNotifier: ignoreIcloudAssets,
-          title: 'ignore_icloud_photos'.tr(),
-          subtitle: 'ignore_icloud_photos_description'.tr(),
-        ),
+      const BackgroundBackupSettings(), //上架屏蔽
+      // if (Platform.isIOS || Platform.isOhos)
+      //   SettingsSwitchListTile(
+      //     valueNotifier: ignoreIcloudAssets,
+      //     title: 'ignore_icloud_photos'.tr(),
+      //     subtitle: 'ignore_icloud_photos_description'.tr(),
+      //   ),
       if (Platform.isAndroid && isAdvancedTroubleshooting.value)
         SettingsButtonListTile(
           icon: Icons.warning_rounded,

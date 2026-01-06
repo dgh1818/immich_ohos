@@ -28,6 +28,9 @@ import 'package:immich_mobile/widgets/asset_viewer/video_controls.dart';
 import 'package:immich_mobile/widgets/common/immich_image.dart';
 import 'package:immich_mobile/widgets/common/immich_toast.dart';
 
+import 'package:immich_mobile/utils/selection_handlers.dart';
+import 'dart:ui';
+
 class BottomGalleryBar extends ConsumerWidget {
   final ValueNotifier<int> assetIndex;
   final bool showStack;
@@ -175,7 +178,12 @@ class BottomGalleryBar extends ConsumerWidget {
         );
         return;
       }
-      ref.read(downloadStateProvider.notifier).shareAsset(asset, context);
+
+      final List<Asset> assetList = [asset];
+      // Share = Download + Send to OS specific share sheet
+      handleShareAssets(ref, context, assetList);
+
+      //ref.read(downloadStateProvider.notifier).shareAsset(asset, context);
     }
 
     void handleEdit() async {

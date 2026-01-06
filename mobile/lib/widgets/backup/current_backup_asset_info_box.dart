@@ -26,7 +26,7 @@ class CurrentUploadingAssetInfoBox extends StatelessWidget {
       ),
       subtitle: Column(
         children: [
-          if (Platform.isIOS) const IcloudDownloadProgressBar(),
+          if (Platform.isIOS || Platform.isOhos) const IcloudDownloadProgressBar(),
           const BackupUploadProgressBar(),
           const BackupUploadStats(),
           const BackupAssetInfoTable(),

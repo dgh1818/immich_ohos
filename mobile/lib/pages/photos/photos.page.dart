@@ -100,13 +100,16 @@ class PhotosPage extends HookConsumerWidget {
       }
     }
 
+    /*
     return Stack(
       children: [
         MultiselectGrid(
-          topWidget: (currentUser != null && currentUser.memoryEnabled) ? const MemoryLane() : const SizedBox(),
+          topWidget: (currentUser != null && currentUser.memoryEnabled)
+              ? const MemoryLane()
+              : const SizedBox(),
           renderListProvider: timelineUsers.length > 1
               ? multiUsersTimelineProvider(timelineUsers)
-              : singleUserTimelineProvider(currentUser?.id),
+              : singleUserTimelineProvider(currentUser?.isarId),
           buildLoadingIndicator: buildLoadingIndicator,
           onRefresh: refreshAssets,
           stackEnabled: true,
@@ -115,7 +118,9 @@ class PhotosPage extends HookConsumerWidget {
         ),
         AnimatedPositioned(
           duration: const Duration(milliseconds: 300),
-          top: ref.watch(multiselectProvider) ? -(kToolbarHeight + context.padding.top) : 0,
+          top: ref.watch(multiselectProvider)
+              ? -(kToolbarHeight + context.padding.top)
+              : 0,
           left: 0,
           right: 0,
           child: Container(
@@ -125,6 +130,43 @@ class PhotosPage extends HookConsumerWidget {
           ),
         ),
       ],
+    );
+*/
+
+    return Scaffold(
+      extendBodyBehindAppBar: true,
+      extendBody: true,
+      body: Stack(
+        children: [
+          // 1. 网格——去掉任何 top padding
+          MultiselectGrid(
+            //padding: EdgeInsets.zero,
+            topWidget: (currentUser != null && currentUser.memoryEnabled) ? const MemoryLane() : const SizedBox(),
+            renderListProvider: timelineUsers.length > 1
+                ? multiUsersTimelineProvider(timelineUsers)
+                : singleUserTimelineProvider(currentUser?.id),
+            buildLoadingIndicator: buildLoadingIndicator,
+            onRefresh: refreshAssets,
+            stackEnabled: true,
+            archiveEnabled: true,
+            editEnabled: true,
+            // … 其它参数
+          ),
+
+          // 2. 悬浮 AppBar
+          AnimatedPositioned(
+            duration: const Duration(milliseconds: 300),
+            top: ref.watch(multiselectProvider) ? -(kToolbarHeight + context.padding.top) : -context.padding.top / 2,
+            left: 0,
+            right: 0,
+            child: Container(
+              height: kToolbarHeight + context.padding.top,
+              color: Colors.transparent,
+              child: const ImmichAppBar(),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

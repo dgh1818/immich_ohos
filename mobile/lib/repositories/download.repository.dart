@@ -123,7 +123,7 @@ class DownloadRepository {
         taskId: livePhotoVideoId,
         url: getOriginalUrlForRemoteId(livePhotoVideoId),
         headers: headers,
-        filename: asset.name.toUpperCase().replaceAll(RegExp(r"\.(JPG|HEIC)$"), '.MOV'),
+        filename: asset.name.toUpperCase().replaceAll(RegExp(r"\.(JPG|HEIC)$"), '.MP4'),
         updates: Updates.statusAndProgress,
         group: kDownloadGroupLivePhoto,
         metaData: json.encode(_dummyMetadata),

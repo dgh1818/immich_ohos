@@ -39,7 +39,7 @@ import 'package:immich_mobile/pages/common/change_experience.page.dart';
 import 'package:immich_mobile/pages/common/create_album.page.dart';
 import 'package:immich_mobile/pages/common/gallery_viewer.page.dart';
 import 'package:immich_mobile/pages/common/headers_settings.page.dart';
-import 'package:immich_mobile/pages/common/native_video_viewer.page.dart';
+//import 'package:immich_mobile/pages/common/native_video_viewer.page.dart';
 import 'package:immich_mobile/pages/common/settings.page.dart';
 import 'package:immich_mobile/pages/common/splash_screen.page.dart';
 import 'package:immich_mobile/pages/common/tab_controller.page.dart';
@@ -191,6 +191,8 @@ class AppRouter extends RootStackRouter {
       page: GalleryViewerRoute.page,
       guards: [_authGuard, _galleryGuard],
       transitionsBuilder: CustomTransitionsBuilders.zoomedPage,
+      durationInMilliseconds: 450,
+      reverseDurationInMilliseconds: 350,
     ),
     AutoRoute(page: BackupControllerRoute.page, guards: [_authGuard, _duplicateGuard, _backupPermissionGuard]),
     AutoRoute(page: AllPlacesRoute.page, guards: [_authGuard, _duplicateGuard]),
@@ -282,7 +284,7 @@ class AppRouter extends RootStackRouter {
       guards: [_authGuard, _duplicateGuard],
       transitionsBuilder: TransitionsBuilders.slideLeft,
     ),
-    AutoRoute(page: NativeVideoViewerRoute.page, guards: [_authGuard, _duplicateGuard]),
+    // AutoRoute(page: NativeVideoViewerRoute.page, guards: [_authGuard, _duplicateGuard]),
     AutoRoute(page: ShareIntentRoute.page, guards: [_authGuard, _duplicateGuard]),
     AutoRoute(page: LockedRoute.page, guards: [_authGuard, _lockedGuard, _duplicateGuard]),
     AutoRoute(page: PinAuthRoute.page, guards: [_authGuard, _duplicateGuard]),

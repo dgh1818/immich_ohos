@@ -7,6 +7,8 @@ import 'package:pigeon/pigeon.dart';
     swiftOptions: SwiftOptions(includeErrorClass: false),
     kotlinOut: 'android/app/src/main/kotlin/app/alextran/immich/background/BackgroundWorker.g.kt',
     kotlinOptions: KotlinOptions(package: 'app.alextran.immich.background'),
+    arkTSOut: 'ohos/entry/src/main/ets/WorkSchedulerExtension/BackgroundWorker.g.ets',
+    arkTSOptions: ArkTSOptions(),
     dartOptions: DartOptions(),
     dartPackageName: 'immich_mobile',
   ),

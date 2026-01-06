@@ -242,7 +242,7 @@ class BackgroundWorkerBgService extends BackgroundWorkerFlutterApi {
           return;
         }
 
-        if (Platform.isIOS) {
+        if (Platform.isIOS || Platform.isOhos) {
           return _ref?.read(driftBackupProvider.notifier).handleBackupResume(currentUser.id);
         }
 

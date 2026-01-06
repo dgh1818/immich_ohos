@@ -99,11 +99,13 @@ class MapUtils {
       }
 
       Position currentUserLocation = await Geolocator.getCurrentPosition(
+        /*
         locationSettings: const LocationSettings(
           accuracy: LocationAccuracy.high,
           distanceFilter: 0,
           timeLimit: Duration(seconds: 5),
         ),
+        */
       );
       return (currentUserLocation, null);
     } catch (error, stack) {

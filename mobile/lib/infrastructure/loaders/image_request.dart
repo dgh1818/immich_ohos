@@ -37,15 +37,13 @@ abstract class ImageRequest {
 
   void _onCancelled();
 
-  Future<ui.FrameInfo?> _fromPlatformImage(Map<String, int> info) async {
-    final address = info['pointer'];
-    if (address == null) {
+  Future<ui.FrameInfo?> _fromPlatformImage(Map<String, Object> info) async {
+    if (info['pointer'] == null) {
       return null;
     }
 
-    final pointer = Pointer<Uint8>.fromAddress(address);
+    final address = info['pointer'] as Uint8List;
     if (_isCancelled) {
-      malloc.free(pointer);
       return null;
     }
 
@@ -53,13 +51,15 @@ abstract class ImageRequest {
     final int actualHeight;
     final int actualSize;
     final ui.ImmutableBuffer buffer;
+    final bool isHdr;
     try {
-      actualWidth = info['width']!;
-      actualHeight = info['height']!;
+      actualWidth = info['width']! as int;
+      actualHeight = info['height']! as int;
       actualSize = actualWidth * actualHeight * 4;
-      buffer = await ImmutableBuffer.fromUint8List(pointer.asTypedList(actualSize));
+      buffer = await ImmutableBuffer.fromUint8List(address);
+      isHdr = info['isHdr']! as bool;
     } finally {
-      malloc.free(pointer);
+      //malloc.free(pointer);
     }
 
     if (_isCancelled) {
@@ -71,7 +71,7 @@ abstract class ImageRequest {
       buffer,
       width: actualWidth,
       height: actualHeight,
-      pixelFormat: ui.PixelFormat.rgba8888,
+      pixelFormat: isHdr ? ui.PixelFormat.rgba1010102 : ui.PixelFormat.rgba8888,
     );
     final codec = await descriptor.instantiateCodec();
     if (_isCancelled) {

@@ -14,4 +14,8 @@ class ShareIntentService {
     shareHandlerRepository.onSharedMedia = onSharedMedia;
     shareHandlerRepository.init();
   }
+
+  Future<void> dispose() {
+    return shareHandlerRepository.dispose();
+  }
 }

@@ -28,6 +28,9 @@ import 'package:isar/isar.dart';
 import 'package:logging/logging.dart';
 import 'package:permission_handler/permission_handler.dart';
 
+import 'package:immich_mobile/providers/routes.provider.dart';
+import 'package:immich_mobile/routing/router.dart';
+
 enum AppLifeCycleEnum { active, inactive, paused, resumed, detached, hidden }
 
 class AppLifeCycleNotifier extends StateNotifier<AppLifeCycleEnum> {
@@ -139,6 +142,11 @@ class AppLifeCycleNotifier extends StateNotifier<AppLifeCycleEnum> {
   }
 
   Future<void> _handleBetaTimelineResume() async {
+    if (_shouldSkipBetaSyncForVideoPlayback()) {
+      _log.fine("Skip beta timeline sync on resume during video playback");
+      return;
+    }
+
     _ref.read(backupProvider.notifier).cancelBackup();
     unawaited(_ref.read(backgroundWorkerLockServiceProvider).lock());
 
@@ -171,6 +179,15 @@ class AppLifeCycleNotifier extends StateNotifier<AppLifeCycleEnum> {
     } catch (e, stackTrace) {
       _log.severe("Error during background sync", e, stackTrace);
     }
+  }
+
+  bool _shouldSkipBetaSyncForVideoPlayback() {
+    final currentRoute = _ref.read(currentRouteNameProvider);
+    final isViewerRoute = currentRoute == DriftVideoRoute.name;
+    if (!isViewerRoute) {
+      return false;
+    }
+    return true;
   }
 
   Future<void> _resumeBackup() async {

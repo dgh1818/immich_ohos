@@ -201,7 +201,7 @@ class ImmichAppBarDialog extends HookConsumerWidget {
             InkWell(
               onTap: () {
                 context.pop();
-                launchUrl(Uri.parse('https://github.com/immich-app/immich'), mode: LaunchMode.externalApplication);
+                launchUrl(Uri.parse('https://github.com/dgh1818/immich_ohos'), mode: LaunchMode.externalApplication);
               },
               child: Text("profile_drawer_github", style: context.textTheme.bodySmall).tr(),
             ),

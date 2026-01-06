@@ -60,7 +60,7 @@ class ImmichAssetGrid extends HookConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     var settings = ref.watch(appSettingsServiceProvider);
 
-    final perRow = useState(assetsPerRow ?? settings.getSetting(AppSettingsEnum.tilesPerRow)!);
+    final perRow = useState(assetsPerRow ?? settings.getSetting(AppSettingsEnum.tilesPerRow, context: context)!);
     final scaleFactor = useState(7.0 - perRow.value);
     final baseScaleFactor = useState(7.0 - perRow.value);
 

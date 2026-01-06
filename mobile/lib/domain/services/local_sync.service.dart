@@ -10,15 +10,17 @@ import 'package:immich_mobile/extensions/platform_extensions.dart';
 import 'package:immich_mobile/infrastructure/repositories/local_album.repository.dart';
 import 'package:immich_mobile/infrastructure/repositories/storage.repository.dart';
 import 'package:immich_mobile/infrastructure/repositories/trashed_local_asset.repository.dart';
-import 'package:immich_mobile/platform/native_sync_api.g.dart';
+import 'package:immich_mobile/platform/native_sync_api_ohos.g.dart';
 import 'package:immich_mobile/repositories/local_files_manager.repository.dart';
 import 'package:immich_mobile/utils/datetime_helpers.dart';
 import 'package:immich_mobile/utils/diff.dart';
 import 'package:logging/logging.dart';
+import 'package:platform/platform.dart';
+import 'package:flutter/foundation.dart';
 
 class LocalSyncService {
   final DriftLocalAlbumRepository _localAlbumRepository;
-  final NativeSyncApi _nativeSyncApi;
+  final NativeSyncApiOhos _nativeSyncApi;
   final DriftTrashedLocalAssetRepository _trashedLocalAssetRepository;
   final LocalFilesManagerRepository _localFilesManager;
   final StorageRepository _storageRepository;
@@ -29,7 +31,7 @@ class LocalSyncService {
     required DriftTrashedLocalAssetRepository trashedLocalAssetRepository,
     required LocalFilesManagerRepository localFilesManager,
     required StorageRepository storageRepository,
-    required NativeSyncApi nativeSyncApi,
+    required NativeSyncApiOhos nativeSyncApi,
   }) : _localAlbumRepository = localAlbumRepository,
        _trashedLocalAssetRepository = trashedLocalAssetRepository,
        _localFilesManager = localFilesManager,
@@ -73,6 +75,13 @@ class LocalSyncService {
       // On Android, we need to sync all albums since it is not possible to
       // detect album deletions from the native side
       if (CurrentPlatform.isAndroid) {
+        for (final album in dbAlbums) {
+          final deviceIds = await _nativeSyncApi.getAssetIdsForAlbum(album.id);
+          await _localAlbumRepository.syncDeletes(album.id, deviceIds);
+        }
+      }
+
+      if (defaultTargetPlatform == TargetPlatform.ohos) {
         for (final album in dbAlbums) {
           final deviceIds = await _nativeSyncApi.getAssetIdsForAlbum(album.id);
           await _localAlbumRepository.syncDeletes(album.id, deviceIds);

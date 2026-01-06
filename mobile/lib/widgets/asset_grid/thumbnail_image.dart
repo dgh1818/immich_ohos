@@ -173,7 +173,7 @@ class _StorageIcon extends StatelessWidget {
           Icons.cloud_off_outlined,
           color: Color.fromRGBO(255, 255, 255, 0.8),
           size: 16,
-          shadows: [Shadow(blurRadius: 5.0, color: Color.fromRGBO(0, 0, 0, 0.6), offset: Offset(0.0, 0.0))],
+          //shadows: [Shadow(blurRadius: 5.0, color: Color.fromRGBO(0, 0, 0, 0.6), offset: Offset(0.0, 0.0))],
         ),
       ),
       AssetState.remote => const Positioned(

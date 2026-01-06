@@ -34,7 +34,9 @@ class BackupVerification extends _$BackupVerification {
         return;
       }
       final connection = await Connectivity().checkConnectivity();
-      if (!connection.contains(ConnectivityResult.wifi)) {
+      final List<ConnectivityResult> allowedConnectionList = [ConnectivityResult.wifi];
+      if (!allowedConnectionList.contains(connection)) {
+        //编译错误修复 3.35 TO DO
         if (context.mounted) {
           ImmichToast.show(
             context: context,

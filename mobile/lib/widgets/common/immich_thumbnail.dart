@@ -5,10 +5,10 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:immich_mobile/providers/image/immich_local_thumbnail_provider.dart';
 import 'package:immich_mobile/providers/image/immich_remote_thumbnail_provider.dart';
 import 'package:immich_mobile/entities/asset.entity.dart';
-import 'package:immich_mobile/utils/hooks/blurhash_hook.dart';
+//import 'package:immich_mobile/utils/hooks/blurhash_hook.dart';
 import 'package:immich_mobile/utils/thumbnail_utils.dart';
 import 'package:immich_mobile/widgets/common/immich_image.dart';
-import 'package:immich_mobile/widgets/common/thumbhash_placeholder.dart';
+//import 'package:immich_mobile/widgets/common/thumbhash_placeholder.dart';
 import 'package:octo_image/octo_image.dart';
 import 'package:immich_mobile/providers/user.provider.dart';
 
@@ -33,8 +33,17 @@ class ImmichThumbnail extends HookConsumerWidget {
       return ImmichRemoteThumbnailProvider(assetId: assetId!);
     }
 
+    final ratio = (asset.width != null && asset.height != null && asset.height != 0)
+        ? asset.width! / asset.height!
+        : null;
+
     if (ImmichImage.useLocal(asset)) {
-      return ImmichLocalThumbnailProvider(asset: asset, height: thumbnailSize, width: thumbnailSize, userId: userId);
+      return ImmichLocalThumbnailProvider(
+        asset: asset,
+        height: 256,
+        width: (thumbnailSize * (ratio ?? 1.33)).toInt(),
+        userId: userId,
+      );
     } else {
       return ImmichRemoteThumbnailProvider(assetId: asset.remoteId!, height: thumbnailSize, width: thumbnailSize);
     }
@@ -42,7 +51,7 @@ class ImmichThumbnail extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    Uint8List? blurhash = useBlurHashRef(asset).value;
+    //Uint8List? blurhash = useBlurHashRef(asset).value;
     final userId = ref.watch(currentUserProvider)?.id;
 
     if (asset == null) {
@@ -58,12 +67,14 @@ class ImmichThumbnail extends HookConsumerWidget {
 
     final thumbnailProviderInstance = ImmichThumbnail.imageProvider(asset: asset, userId: userId);
 
+    /*
     customErrorBuilder(BuildContext ctx, Object error, StackTrace? stackTrace) {
       thumbnailProviderInstance.evict();
 
       final originalErrorWidgetBuilder = blurHashErrorBuilder(blurhash, fit: fit);
       return originalErrorWidgetBuilder(ctx, error, stackTrace);
     }
+*/
 
     return Semantics(
       label: assetAltText,
@@ -72,8 +83,8 @@ class ImmichThumbnail extends HookConsumerWidget {
         fadeInDuration: Duration.zero,
         fadeOutDuration: const Duration(milliseconds: 100),
         octoSet: OctoSet(
-          placeholderBuilder: blurHashPlaceholderBuilder(blurhash, fit: fit),
-          errorBuilder: customErrorBuilder,
+          // placeholderBuilder: blurHashPlaceholderBuilder(blurhash, fit: fit),
+          // errorBuilder: customErrorBuilder,
         ),
         image: thumbnailProviderInstance,
         width: width,

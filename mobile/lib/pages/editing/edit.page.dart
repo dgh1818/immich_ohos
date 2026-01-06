@@ -15,6 +15,9 @@ import 'package:immich_mobile/routing/router.dart';
 import 'package:immich_mobile/widgets/common/immich_toast.dart';
 import 'package:path/path.dart' as p;
 
+import 'package:image_gallery_saver/image_gallery_saver.dart';
+import 'package:flutter/foundation.dart';
+
 /// A stateless widget that provides functionality for editing an image.
 ///
 /// This widget allows users to edit an image provided either as an [Asset] or
@@ -51,18 +54,24 @@ class EditImagePage extends ConsumerWidget {
   Future<void> _saveEditedImage(BuildContext context, Asset asset, Image image, WidgetRef ref) async {
     try {
       final Uint8List imageData = await _imageToUint8List(image);
-      await ref
-          .read(fileMediaRepositoryProvider)
-          .saveImage(imageData, title: "${p.withoutExtension(asset.fileName)}_edited.jpg");
-      await ref.read(albumProvider.notifier).refreshDeviceAlbums();
+
+      if (defaultTargetPlatform == TargetPlatform.ohos) {
+        await ImageGallerySaver.saveImage(imageData, name: "${p.withoutExtension(asset.fileName)}_edited");
+      } else {
+        await ref
+            .read(fileMediaRepositoryProvider)
+            .saveImage(imageData, title: "${p.withoutExtension(asset.fileName)}_edited.jpg");
+        await ref.read(albumProvider.notifier).refreshDeviceAlbums();
+      }
+
       context.navigator.popUntil((route) => route.isFirst);
-      ImmichToast.show(durationInSecond: 3, context: context, msg: 'Image Saved!', gravity: ToastGravity.CENTER);
+      ImmichToast.show(durationInSecond: 3, context: context, msg: 'Image Saved!', gravity: ToastGravity.BOTTOM);
     } catch (e) {
       ImmichToast.show(
         durationInSecond: 6,
         context: context,
         msg: "error_saving_image".tr(namedArgs: {'error': e.toString()}),
-        gravity: ToastGravity.CENTER,
+        gravity: ToastGravity.BOTTOM,
       );
     }
   }

@@ -12,7 +12,10 @@ import 'package:immich_mobile/services/api.service.dart';
 import 'package:immich_mobile/services/share_intent_service.dart';
 import 'package:immich_mobile/services/upload.service.dart';
 import 'package:logging/logging.dart';
-import 'package:path/path.dart';
+
+import 'package:path/path.dart' as p;
+import 'package:photo_manager/photo_manager.dart';
+import 'dart:convert';
 
 final shareIntentUploadProvider = StateNotifierProvider<ShareIntentUploadStateNotifier, List<ShareIntentAttachment>>(
   ((ref) => ShareIntentUploadStateNotifier(
@@ -73,6 +76,14 @@ class ShareIntentUploadStateNotifier extends StateNotifier<List<ShareIntentAttac
     }
 
     final taskId = task.task.taskId;
+
+    if (task.status == TaskStatus.complete) {
+      final handled = await _handleLivePhotoCompletion(task, taskId);
+      if (handled) {
+        return;
+      }
+    }
+
     final uploadStatus = switch (task.status) {
       TaskStatus.complete => UploadStatus.complete,
       TaskStatus.failed => UploadStatus.failed,
@@ -86,7 +97,7 @@ class ShareIntentUploadStateNotifier extends StateNotifier<List<ShareIntentAttac
 
     state = [
       for (final attachment in state)
-        if (attachment.id == taskId.toInt()) attachment.copyWith(status: uploadStatus) else attachment,
+        if (attachment.path == taskId) attachment.copyWith(status: uploadStatus) else attachment,
     ];
 
     if (task.status == TaskStatus.failed) {
@@ -105,6 +116,79 @@ class ShareIntentUploadStateNotifier extends StateNotifier<List<ShareIntentAttac
     }
   }
 
+  Future<bool> _handleLivePhotoCompletion(TaskStatusUpdate task, String taskId) async {
+    try {
+      final metaData = task.task.metaData;
+      String? photoUri;
+      if (metaData.isNotEmpty) {
+        final map = json.decode(metaData) as Map<String, dynamic>;
+        if (map['shareLivePhoto'] == true) {
+          photoUri = map['sharePhotoUri'] as String?;
+          final filename = task.task.filename;
+          if (filename.isNotEmpty) {
+            final directory = task.task.directory;
+            final separator = directory.isEmpty || directory.endsWith('/') ? '' : '/';
+            final tempVideoPath = '$directory$separator$filename';
+            try {
+              final file = File(tempVideoPath);
+              if (await file.exists()) {
+                await file.delete();
+              }
+            } catch (error) {
+              _logger.warning('Failed to delete live photo temp file: $tempVideoPath, error: $error');
+            }
+          }
+        }
+      }
+      if (photoUri == null) {
+        return false;
+      }
+
+      final response = tryJsonDecode(task.responseBody);
+      final livePhotoVideoId = response?['id']?.toString();
+      if (livePhotoVideoId == null || livePhotoVideoId.isEmpty) {
+        state = [
+          for (final attachment in state)
+            if (attachment.path == taskId) attachment.copyWith(status: UploadStatus.failed) else attachment,
+        ];
+        return true;
+      }
+
+      final entity = await AssetEntity.fromId(photoUri);
+      final photoFile = File(photoUri);
+
+      final now = DateTime.now();
+      final fileCreatedAt = entity?.createDateTime ?? now;
+      final fileModifiedAt = entity?.modifiedDateTime ?? fileCreatedAt;
+      final photoTask = await _buildUploadTask(
+        taskId,
+        photoFile,
+        fileCreatedAt: fileCreatedAt,
+        fileModifiedAt: fileModifiedAt,
+        fields: {'livePhotoVideoId': livePhotoVideoId},
+        group: kManualLivePhotoGroup,
+        priority: 0,
+      );
+
+      state = [
+        for (final attachment in state)
+          if (attachment.path == taskId)
+            attachment.copyWith(status: UploadStatus.running, uploadProgress: 0.0)
+          else
+            attachment,
+      ];
+      await _uploadService.enqueueTasks([photoTask]);
+      return true;
+    } catch (error) {
+      _logger.warning("Live photo follow-up failed for asset: ${task.task.filename}, error: $error");
+      state = [
+        for (final attachment in state)
+          if (attachment.path == taskId) attachment.copyWith(status: UploadStatus.failed) else attachment,
+      ];
+      return true;
+    }
+  }
+
   void _taskProgressCallback(TaskProgressUpdate update) {
     // Ignore if the task is canceled or completed
     if (update.progress == downloadFailed || update.progress == downloadCompleted) {
@@ -114,33 +198,68 @@ class ShareIntentUploadStateNotifier extends StateNotifier<List<ShareIntentAttac
     final taskId = update.task.taskId;
     state = [
       for (final attachment in state)
-        if (attachment.id == taskId.toInt()) attachment.copyWith(uploadProgress: update.progress) else attachment,
+        if (attachment.path == taskId) attachment.copyWith(uploadProgress: update.progress) else attachment,
     ];
   }
 
   Future<void> upload(File file) async {
-    final task = await _buildUploadTask(hash(file.path).toString(), file);
+    final uri = file.path;
+    ShareIntentAttachment? attachment;
+    for (final item in state) {
+      if (item.path == uri) {
+        attachment = item;
+        break;
+      }
+    }
+    if (attachment == null) {
+      return;
+    }
 
+    AssetEntity? entity;
+    try {
+      entity = await AssetEntity.fromId(uri);
+    } catch (_) {
+      entity = null;
+    }
+
+    if (entity != null && attachment.isImage && entity.isLivePhoto) {
+      await _uploadLiveVideo(attachment, entity);
+      return;
+    }
+
+    final now = DateTime.now();
+    final fileCreatedAt = entity?.createDateTime ?? now;
+    final fileModifiedAt = entity?.modifiedDateTime ?? fileCreatedAt;
+    final task = await _buildUploadTask(uri, file, fileCreatedAt: fileCreatedAt, fileModifiedAt: fileModifiedAt);
     await _uploadService.enqueueTasks([task]);
   }
 
-  Future<UploadTask> _buildUploadTask(String id, File file, {Map<String, String>? fields}) async {
+  Future<UploadTask> _buildUploadTask(
+    String id,
+    File file, {
+    DateTime? fileCreatedAt,
+    DateTime? fileModifiedAt,
+    Map<String, String>? fields,
+    String? metaData,
+    String group = kManualUploadGroup,
+    int priority = 5,
+  }) async {
     final serverEndpoint = Store.get(StoreKey.serverEndpoint);
     final url = Uri.parse('$serverEndpoint/assets').toString();
     final headers = ApiService.getRequestHeaders();
     final deviceId = Store.get(StoreKey.deviceId);
 
-    final (baseDirectory, directory, filename) = await Task.split(filePath: file.path);
-    final stats = await file.stat();
-    final fileCreatedAt = stats.changed;
-    final fileModifiedAt = stats.modified;
+    final resolvedFilename = p.basename(file.path);
+    final resolvedDirectory = p.dirname(file.path);
+    final resolvedCreatedAt = fileCreatedAt ?? DateTime.now();
+    final resolvedModifiedAt = fileModifiedAt ?? resolvedCreatedAt;
 
     final fieldsMap = {
-      'filename': filename,
+      'filename': resolvedFilename,
       'deviceAssetId': id,
       'deviceId': deviceId,
-      'fileCreatedAt': fileCreatedAt.toUtc().toIso8601String(),
-      'fileModifiedAt': fileModifiedAt.toUtc().toIso8601String(),
+      'fileCreatedAt': resolvedCreatedAt.toUtc().toIso8601String(),
+      'fileModifiedAt': resolvedModifiedAt.toUtc().toIso8601String(),
       'isFavorite': 'false',
       'duration': '0',
       if (fields != null) ...fields,
@@ -151,13 +270,61 @@ class ShareIntentUploadStateNotifier extends StateNotifier<List<ShareIntentAttac
       httpRequestMethod: 'POST',
       url: url,
       headers: headers,
-      filename: filename,
+      filename: resolvedFilename,
       fields: fieldsMap,
-      baseDirectory: baseDirectory,
-      directory: directory,
       fileField: 'assetData',
-      group: kManualUploadGroup,
+      baseDirectory: BaseDirectory.root,
+      directory: resolvedDirectory,
+      group: group,
+      metaData: metaData ?? '',
+      priority: priority,
       updates: Updates.statusAndProgress,
     );
+  }
+
+  Future<void> _uploadLiveVideo(ShareIntentAttachment attachment, AssetEntity entity) async {
+    File? videoFile;
+    try {
+      videoFile = await entity.originFileWithSubtype;
+    } catch (_) {
+      videoFile = null;
+    }
+
+    final photoUriString = attachment.path;
+    final photoFile = File(photoUriString);
+
+    final now = DateTime.now();
+    final fileCreatedAt = entity?.createDateTime ?? now;
+    final fileModifiedAt = entity?.modifiedDateTime ?? fileCreatedAt;
+    if (videoFile == null) {
+      final task = await _buildUploadTask(
+        attachment.path,
+        photoFile,
+        fileCreatedAt: fileCreatedAt,
+        fileModifiedAt: fileModifiedAt,
+      );
+      await _uploadService.enqueueTasks([task]);
+      return;
+    }
+
+    final metadata = _buildLivePhotoMetadata(attachment.path, attachment.path);
+    final task = await _buildUploadTask(
+      attachment.path,
+      videoFile,
+      fileCreatedAt: fileCreatedAt,
+      fileModifiedAt: fileModifiedAt,
+      metaData: metadata,
+    );
+    await _uploadService.enqueueTasks([task]);
+  }
+
+  String _buildLivePhotoMetadata(String attachmentUri, String photoUri) {
+    return json.encode({
+      'localAssetId': attachmentUri,
+      'isLivePhotos': false,
+      'livePhotoVideoId': '',
+      'shareLivePhoto': true,
+      'sharePhotoUri': photoUri,
+    });
   }
 }

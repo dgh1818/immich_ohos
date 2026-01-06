@@ -15,6 +15,7 @@ import 'package:immich_mobile/providers/backup/error_backup_list.provider.dart';
 import 'package:immich_mobile/providers/backup/ios_background_settings.provider.dart';
 import 'package:immich_mobile/providers/backup/manual_upload.provider.dart';
 import 'package:immich_mobile/providers/websocket.provider.dart';
+import 'package:immich_mobile/providers/infrastructure/platform.provider.dart';
 import 'package:immich_mobile/routing/router.dart';
 import 'package:immich_mobile/widgets/backup/backup_info_card.dart';
 import 'package:immich_mobile/widgets/backup/current_backup_asset_info_box.dart';
@@ -167,6 +168,13 @@ class BackupControllerPage extends HookConsumerWidget {
     void startBackup() {
       ref.watch(errorBackupListProvider.notifier).empty();
       if (ref.watch(backupProvider).backupProgress != BackUpProgressEnum.inBackground) {
+        if (Platform.isOhos) {
+          try {
+            ref.read(nativeSyncApiProvider).startBackgroundTransfer();
+          } catch (_) {
+            // ignore failure, backup can continue without long task
+          }
+        }
         ref.watch(backupProvider.notifier).startBackupProcess();
       }
     }

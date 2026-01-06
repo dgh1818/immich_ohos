@@ -11,7 +11,7 @@ import 'package:immich_mobile/providers/image/immich_remote_thumbnail_provider.d
 /// so that a single large image does not evict all small images
 final class CustomImageCache implements ImageCache {
   final _thumbhash = ImageCache()..maximumSize = 0;
-  final _small = ImageCache();
+  final _small = ImageCache()..maximumSizeBytes = 500 * 1024 * 1024;
   final _large = ImageCache()..maximumSize = 5; // Maximum 5 images
 
   @override
@@ -24,7 +24,7 @@ final class CustomImageCache implements ImageCache {
   set maximumSize(int value) => _small.maximumSize = value;
 
   @override
-  set maximumSizeBytes(int value) => _small.maximumSize = value;
+  set maximumSizeBytes(int value) => _small.maximumSizeBytes = value;
 
   @override
   void clear() {
@@ -83,4 +83,8 @@ final class CustomImageCache implements ImageCache {
 
   @override
   ImageCacheStatus statusForKey(Object key) => _cacheForKey(key).statusForKey(key);
+
+  void clearLargeCache() {
+    _large.clear();
+  }
 }

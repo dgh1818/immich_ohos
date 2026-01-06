@@ -6,6 +6,10 @@ DateTime? tryFromSecondsSinceEpoch(int? secondsSinceEpoch, {bool isUtc = false})
     return null;
   }
 
+  if (secondsSinceEpoch == -1) {
+    return null;
+  }
+
   final milliSeconds = secondsSinceEpoch * 1000;
   if (milliSeconds < _minMillisecondsSinceEpoch || milliSeconds > _maxMillisecondsSinceEpoch) {
     return null;

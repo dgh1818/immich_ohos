@@ -30,6 +30,10 @@ import 'package:permission_handler/permission_handler.dart' as pm;
 import 'package:photo_manager/photo_manager.dart' show PMProgressHandler;
 import 'package:immich_mobile/utils/debug_print.dart';
 
+import 'package:image_picker/image_picker.dart';
+import 'package:path/path.dart';
+import 'package:flutter/foundation.dart';
+
 final backupServiceProvider = Provider(
   (ref) => BackupService(
     ref.watch(apiServiceProvider),
@@ -267,7 +271,8 @@ class BackupService {
         final isAvailableLocally = await asset.local!.isLocallyAvailable(isOrigin: true);
 
         // Handle getting files from iCloud
-        if (!isAvailableLocally && Platform.isIOS) {
+        if (!isAvailableLocally && (Platform.isIOS || Platform.isOhos)) {
+          //云端逻辑 仅ios
           // Skip iCloud assets if the user has disabled this feature
           if (isIgnoreIcloudAssets) {
             continue;
@@ -407,7 +412,7 @@ class BackupService {
         anyErrors = true;
         continue;
       } finally {
-        if (Platform.isIOS) {
+        if (Platform.isIOS || Platform.isOhos) {
           try {
             await file?.delete();
             await livePhotoFile?.delete();
@@ -423,6 +428,98 @@ class BackupService {
     }
 
     return !anyErrors;
+  }
+
+  Future<void> uploadImageDirectly(XFile image, XFile? liveFile) async {
+    final deviceId = Store.get(StoreKey.deviceId);
+    final endpoint = Store.get(StoreKey.serverEndpoint);
+    final accessToken = Store.get(StoreKey.accessToken);
+
+    // 1. 准备文件
+    final file = File(image.path);
+    late final File? livePhotoFile;
+    if (liveFile != null) {
+      livePhotoFile = File(liveFile.path);
+    } else {
+      livePhotoFile = null;
+    }
+
+    final stat = await file.stat();
+
+    // 2. 创建唯一标识 - 使用文件路径哈希
+    final deviceAssetId = hash(file.path).toString();
+
+    // 3. 获取元数据
+    final fileCreatedAt = stat.changed.year == 1970 ? stat.modified : stat.changed;
+    final fileModifiedAt = stat.modified;
+
+    // 4. 构建请求
+    final baseRequest = http.MultipartRequest('POST', Uri.parse('$endpoint/assets'));
+
+    // 5. 设置头信息
+    baseRequest.headers.addAll({
+      'Authorization': 'Bearer $accessToken',
+      'Accept': 'application/json',
+      'Transfer-Encoding': 'chunked',
+    });
+
+    // 6. 添加表单字段
+    baseRequest.fields.addAll({
+      'deviceAssetId': file.path,
+      'deviceId': deviceId,
+      'fileCreatedAt': fileCreatedAt.toUtc().toIso8601String(),
+      'fileModifiedAt': fileModifiedAt.toUtc().toIso8601String(),
+      'isFavorite': 'false',
+      'duration': '0',
+    });
+
+    if (liveFile != null && livePhotoFile != null) {
+      final livePhotoTitle = liveFile.name;
+      final livePhotoRawUploadData = http.MultipartFile(
+        "assetData",
+        livePhotoFile.openRead(),
+        livePhotoFile.lengthSync(),
+        filename: livePhotoTitle,
+      );
+      final baseRequest2 = http.MultipartRequest('POST', Uri.parse('$endpoint/assets'))
+        ..headers.addAll(baseRequest.headers)
+        ..fields.addAll(baseRequest.fields);
+
+      baseRequest2.files.add(livePhotoRawUploadData);
+
+      final response = await http.Response.fromStream(await baseRequest2.send());
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final json = jsonDecode(response.body);
+        final id = json.containsKey('id') ? json['id'] : null;
+        if (id != null) {
+          baseRequest.fields['livePhotoVideoId'] = id;
+        }
+        debugPrint('LIVE视频上传成功! 资产ID: ${json['id']}');
+      } else {
+        final error = jsonDecode(response.body);
+        throw Exception('上传失败: ${error['message']}');
+      }
+    }
+
+    // 7. 添加文件
+    baseRequest.files.add(http.MultipartFile('assetData', file.openRead(), file.lengthSync(), filename: image.name));
+
+    // 8. 发送请求
+    try {
+      final response = await http.Response.fromStream(await baseRequest.send());
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final json = jsonDecode(response.body);
+        debugPrint('上传成功! 资产ID: ${json['id']}');
+      } else {
+        final error = jsonDecode(response.body);
+        throw Exception('上传失败: ${error['message']}');
+      }
+    } catch (e) {
+      debugPrint('上传出错: $e');
+      rethrow;
+    }
   }
 
   Future<String?> uploadLivePhotoVideo(

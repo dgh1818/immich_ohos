@@ -1,3 +1,5 @@
+import 'dart:ui' as ui;
+
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:immich_mobile/extensions/build_context_extensions.dart';
@@ -12,6 +14,8 @@ class DriftMapPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    ui.SetHdr.setHdrMode(hdr: 0, is_image: true);
+
     return Scaffold(
       extendBodyBehindAppBar: true,
       body: Stack(

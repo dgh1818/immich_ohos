@@ -3,7 +3,10 @@ import 'package:flutter/material.dart';
 class CustomTransitionsBuilders {
   const CustomTransitionsBuilders._();
 
-  static const ZoomPageTransitionsBuilder zoomPageTransitionsBuilder = ZoomPageTransitionsBuilder();
+  static const ZoomPageTransitionsBuilder _zoomBuilder = ZoomPageTransitionsBuilder(
+    allowSnapshotting: false,
+    allowEnterRouteSnapshotting: false,
+  );
 
   static const RouteTransitionsBuilder zoomedPage = _zoomedPage;
 
@@ -13,17 +16,20 @@ class CustomTransitionsBuilders {
     Animation<double> secondaryAnimation,
     Widget child,
   ) {
-    return zoomPageTransitionsBuilder.buildTransitions(
-      // Empty PageRoute<> object, only used to pass allowSnapshotting to ZoomPageTransitionsBuilder
-      PageRouteBuilder(
-        allowSnapshotting: true,
-        fullscreenDialog: false,
-        pageBuilder: (context, animation, secondaryAnimation) => const SizedBox.shrink(),
+    // 用当前真实的 PageRoute
+    final route = ModalRoute.of(context);
+
+    if (route is PageRoute) {
+      return _zoomBuilder.buildTransitions(route, context, animation, secondaryAnimation, child);
+    }
+
+    // 兜底：拿不到 PageRoute 时，简单做个缩放+渐隐
+    return FadeTransition(
+      opacity: animation,
+      child: ScaleTransition(
+        scale: Tween<double>(begin: 0.5, end: 1.0).chain(CurveTween(curve: Curves.easeOutCubic)).animate(animation),
+        child: child,
       ),
-      context,
-      animation,
-      secondaryAnimation,
-      child,
     );
   }
 }

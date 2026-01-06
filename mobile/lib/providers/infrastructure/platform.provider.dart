@@ -3,8 +3,8 @@ import 'package:immich_mobile/domain/services/background_worker.service.dart';
 import 'package:immich_mobile/platform/background_worker_api.g.dart';
 import 'package:immich_mobile/platform/background_worker_lock_api.g.dart';
 import 'package:immich_mobile/platform/connectivity_api.g.dart';
-import 'package:immich_mobile/platform/native_sync_api.g.dart';
-import 'package:immich_mobile/platform/thumbnail_api.g.dart';
+import 'package:immich_mobile/platform/native_sync_api_ohos.g.dart';
+import 'package:immich_mobile/platform/thumbnail_api_ohos.g.dart';
 
 final backgroundWorkerFgServiceProvider = Provider((_) => BackgroundWorkerFgService(BackgroundWorkerFgHostApi()));
 
@@ -12,7 +12,7 @@ final backgroundWorkerLockServiceProvider = Provider<BackgroundWorkerLockService
   (_) => BackgroundWorkerLockService(BackgroundWorkerLockApi()),
 );
 
-final nativeSyncApiProvider = Provider<NativeSyncApi>((_) => NativeSyncApi());
+final nativeSyncApiProvider = Provider<NativeSyncApiOhos>((_) => NativeSyncApiOhos());
 
 final connectivityApiProvider = Provider<ConnectivityApi>((_) => ConnectivityApi());
 

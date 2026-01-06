@@ -119,7 +119,7 @@ ImageProvider getFullImageProvider(BaseAsset asset, {Size size = const Size(1080
     } else {
       throw ArgumentError("Unsupported asset type: ${asset.runtimeType}");
     }
-    provider = RemoteFullImageProvider(assetId: assetId);
+    provider = RemoteFullImageProvider(assetId: assetId, is_image: asset.isImage);
   }
 
   return provider;

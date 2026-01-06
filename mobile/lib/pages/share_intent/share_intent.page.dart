@@ -11,6 +11,9 @@ import 'package:immich_mobile/providers/asset_viewer/share_intent_upload.provide
 import 'package:immich_mobile/routing/router.dart';
 import 'package:immich_mobile/utils/url_helper.dart';
 
+import 'package:immich_mobile/domain/models/asset/base_asset.model.dart';
+import 'package:immich_mobile/presentation/widgets/images/local_image_provider.dart';
+
 @RoutePage()
 class ShareIntentPage extends HookConsumerWidget {
   const ShareIntentPage({super.key, required this.attachments});
@@ -90,13 +93,7 @@ class ShareIntentPage extends HookConsumerWidget {
                 children: [
                   ClipRRect(
                     borderRadius: const BorderRadius.all(Radius.circular(16)),
-                    child: attachment.isImage
-                        ? Image.file(attachment.file, width: 64, height: 64, fit: BoxFit.cover)
-                        : const SizedBox(
-                            width: 64,
-                            height: 64,
-                            child: Center(child: Icon(Icons.videocam, color: Colors.white)),
-                          ),
+                    child: ShareIntentThumbnail(attachment: attachment, size: 64),
                   ),
                   if (attachment.isImage)
                     const Positioned(
@@ -136,6 +133,37 @@ class ShareIntentPage extends HookConsumerWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class ShareIntentThumbnail extends StatelessWidget {
+  const ShareIntentThumbnail({super.key, required this.attachment, this.size = 64});
+
+  final ShareIntentAttachment attachment;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final assetType = attachment.isVideo ? AssetType.video : AssetType.image;
+    return Image(
+      image: LocalThumbProvider(id: attachment.path, assetType: assetType, size: Size(size, size)),
+      width: size,
+      height: size,
+      fit: BoxFit.cover,
+      errorBuilder: (_, __, ___) => _placeholder(context),
+    );
+  }
+
+  Widget _placeholder(BuildContext context) {
+    final icon = attachment.isVideo ? Icons.videocam : Icons.image;
+    return SizedBox(
+      width: size,
+      height: size,
+      child: ColoredBox(
+        color: context.colorScheme.surfaceContainerHighest,
+        child: Center(child: Icon(icon, color: context.colorScheme.onSurface.withAlpha(160))),
       ),
     );
   }

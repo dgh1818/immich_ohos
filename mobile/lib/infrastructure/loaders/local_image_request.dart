@@ -16,7 +16,7 @@ class LocalImageRequest extends ImageRequest {
       return null;
     }
 
-    final Map<String, int> info = await thumbnailApi.requestImage(
+    final Map<String, Object> info = await thumbnailApi.requestImage(
       localId,
       requestId: requestId,
       width: width,
@@ -31,5 +31,16 @@ class LocalImageRequest extends ImageRequest {
   @override
   Future<void> _onCancelled() {
     return thumbnailApi.cancelImageRequest(requestId);
+  }
+
+  Future<bool> getHdr() async {
+    final Map<String, bool> info = await thumbnailApi.getHdr(localId);
+
+    if (info['isHdr'] != null) {
+      final isHdr = info['isHdr'];
+      return isHdr!;
+    } else {
+      return false;
+    }
   }
 }

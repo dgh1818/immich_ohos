@@ -49,7 +49,8 @@ class ImmichToast {
           ],
         ),
       ),
-      positionedToastBuilder: (context, child, gravity) {
+      positionedToastBuilder: (context, child) {
+        //To do Ohos 自动旋转 3.35?
         return Positioned(
           top: gravity == ToastGravity.TOP ? 150 : null,
           bottom: gravity == ToastGravity.BOTTOM ? 150 : null,

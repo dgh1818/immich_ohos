@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:background_downloader/background_downloader.dart';
@@ -13,20 +14,30 @@ import 'package:immich_mobile/repositories/file_media.repository.dart';
 import 'package:immich_mobile/services/api.service.dart';
 import 'package:logging/logging.dart';
 
+import 'package:path/path.dart' as p;
+import 'package:image_gallery_saver/image_gallery_saver.dart';
+import 'package:immich_mobile/services/asset.service.dart';
+import 'package:video_compress/video_compress.dart';
+
 final downloadServiceProvider = Provider(
-  (ref) => DownloadService(ref.watch(fileMediaRepositoryProvider), ref.watch(downloadRepositoryProvider)),
+  (ref) => DownloadService(
+    ref.watch(fileMediaRepositoryProvider),
+    ref.watch(downloadRepositoryProvider),
+    ref.watch(assetServiceProvider),
+  ),
 );
 
 class DownloadService {
   final DownloadRepository _downloadRepository;
   final FileMediaRepository _fileMediaRepository;
+  final AssetService _assetService;
   final Logger _log = Logger("DownloadService");
   void Function(TaskStatusUpdate)? onImageDownloadStatus;
   void Function(TaskStatusUpdate)? onVideoDownloadStatus;
   void Function(TaskStatusUpdate)? onLivePhotoDownloadStatus;
   void Function(TaskProgressUpdate)? onTaskProgress;
 
-  DownloadService(this._fileMediaRepository, this._downloadRepository) {
+  DownloadService(this._fileMediaRepository, this._downloadRepository, this._assetService) {
     _downloadRepository.onImageDownloadStatus = _onImageDownloadCallback;
     _downloadRepository.onVideoDownloadStatus = _onVideoDownloadCallback;
     _downloadRepository.onLivePhotoDownloadStatus = _onLivePhotoDownloadCallback;
@@ -51,15 +62,25 @@ class DownloadService {
 
   Future<bool> saveImageWithPath(Task task) async {
     final filePath = await task.filePath();
-    final title = task.filename;
+    final title = _titleWithoutExtension(task.filename);
     final relativePath = Platform.isAndroid ? 'DCIM/Immich' : null;
     try {
-      final Asset? resultAsset = await _fileMediaRepository.saveImageWithFile(
-        filePath,
-        title: title,
-        relativePath: relativePath,
-      );
-      return resultAsset != null;
+      if (Platform.isOhos) {
+        final tempFile = File(filePath);
+        if (tempFile.existsSync() == false) {
+          return false;
+        }
+        final resultAsset = await ImageGallerySaver.saveFile(filePath, name: title, isReturnPathOfIOS: true);
+        return resultAsset != null;
+      } else {
+        final Asset? resultAsset = await _fileMediaRepository.saveImageWithFile(
+          //
+          filePath,
+          title: title,
+          relativePath: relativePath,
+        );
+        return resultAsset != null;
+      }
     } catch (error, stack) {
       _log.severe("Error saving image", error, stack);
       return false;
@@ -72,12 +93,19 @@ class DownloadService {
 
   Future<bool> saveVideo(Task task) async {
     final filePath = await task.filePath();
-    final title = task.filename;
+    final title = _titleWithoutExtension(task.filename);
     final relativePath = Platform.isAndroid ? 'DCIM/Immich' : null;
     final file = File(filePath);
     try {
-      final Asset? resultAsset = await _fileMediaRepository.saveVideo(file, title: title, relativePath: relativePath);
-      return resultAsset != null;
+      if (Platform.isOhos) {
+        final tempFile = File(filePath);
+        final resultAsset = await ImageGallerySaver.saveFile(tempFile.path, name: title, isReturnPathOfIOS: true);
+        unawaited(tempFile.delete());
+        return resultAsset != null;
+      } else {
+        final Asset? resultAsset = await _fileMediaRepository.saveVideo(file, title: title, relativePath: relativePath);
+        return resultAsset != null;
+      }
     } catch (error, stack) {
       _log.severe("Error saving video", error, stack);
       return false;
@@ -98,21 +126,45 @@ class DownloadService {
     final videoRecord = _findTaskRecord(records, livePhotosId, LivePhotosPart.video);
     final imageFilePath = await imageRecord.task.filePath();
     final videoFilePath = await videoRecord.task.filePath();
+    final title = _titleWithoutExtension(task.filename);
+    String actualVideoPath = videoFilePath;
+    File? convertedVideoFile;
+
+    if (videoFilePath.toLowerCase().endsWith('.mov')) {
+      try {
+        final info = await VideoCompress.compressVideo(
+          videoFilePath,
+          quality: VideoQuality.HighestQuality,
+          includeAudio: true,
+          deleteOrigin: false,
+        );
+        if (info != null && info.path != null && info.path!.isNotEmpty) {
+          actualVideoPath = info.path!;
+          convertedVideoFile = File(actualVideoPath);
+          _log.fine("Converted live photo video to MP4: $actualVideoPath");
+        } else {
+          _log.warning("MOV to MP4 conversion returned null for live photo video $videoFilePath");
+        }
+      } catch (e, s) {
+        _log.warning("Failed to convert live photo video $videoFilePath to MP4", e, s);
+      }
+    }
 
     try {
       final result = await _fileMediaRepository.saveLivePhoto(
         image: File(imageFilePath),
-        video: File(videoFilePath),
-        title: task.filename,
+        video: File(actualVideoPath),
+        title: title,
       );
 
       return result != null;
     } on PlatformException catch (error, stack) {
+      _log.severe("Error saving live photo", error, stack);
       // Handle saving MotionPhotos on iOS
-      if (error.code == 'PHPhotosErrorDomain (-1)') {
-        final result = await _fileMediaRepository.saveImageWithFile(imageFilePath, title: task.filename);
-        return result != null;
-      }
+      //if (error.code == 'PHPhotosErrorDomain (-1)') {
+      final result = await _fileMediaRepository.saveImageWithFile(imageFilePath, title: task.filename);
+      return result != null;
+      //}
       _log.severe("Error saving live photo", error, stack);
       return false;
     } catch (error, stack) {
@@ -128,26 +180,47 @@ class DownloadService {
       if (await videoFile.exists()) {
         await videoFile.delete();
       }
+      if (convertedVideoFile != null && convertedVideoFile.path != videoFilePath && await convertedVideoFile.exists()) {
+        await convertedVideoFile.delete();
+      }
 
       await _downloadRepository.deleteRecordsWithIds([imageRecord.task.taskId, videoRecord.task.taskId]);
     }
   }
+
+  String _titleWithoutExtension(String name) => p.basenameWithoutExtension(name);
 
   Future<bool> cancelDownload(String id) async {
     return await FileDownloader().cancelTaskWithId(id);
   }
 
   Future<List<bool>> downloadAll(List<Asset> assets) async {
-    return await _downloadRepository.downloadAll(assets.expand(_createDownloadTasks).toList());
+    final tasks = <DownloadTask>[];
+    for (final asset in assets) {
+      tasks.addAll(await _createDownloadTasks(asset));
+    }
+    return await _downloadRepository.downloadAll(tasks);
   }
 
   Future<void> download(Asset asset) async {
-    final tasks = _createDownloadTasks(asset);
+    final tasks = await _createDownloadTasks(asset);
     await _downloadRepository.downloadAll(tasks);
   }
 
-  List<DownloadTask> _createDownloadTasks(Asset asset) {
-    if (asset.isImage && asset.livePhotoVideoId != null && Platform.isIOS) {
+  Future<List<DownloadTask>> _createDownloadTasks(Asset asset) async {
+    if (asset.isImage && asset.livePhotoVideoId != null && (Platform.isIOS || Platform.isOhos)) {
+      String videoFileName;
+      final videoAsset = await _assetService.getAssetByRemoteId(asset.livePhotoVideoId!);
+      if (videoAsset != null && videoAsset.fileName.isNotEmpty) {
+        final videoExt = p.extension(videoAsset.fileName);
+        if (videoExt.isNotEmpty) {
+          videoFileName = asset.fileName.toUpperCase().replaceAll(RegExp(r"\.(JPG|HEIC)$"), videoExt.toUpperCase());
+        } else {
+          videoFileName = videoAsset.fileName.toUpperCase();
+        }
+      } else {
+        videoFileName = asset.fileName.toUpperCase().replaceAll(RegExp(r"\.(JPG|HEIC)$"), '.MP4');
+      }
       return [
         _buildDownloadTask(
           asset.remoteId!,
@@ -157,7 +230,7 @@ class DownloadService {
         ),
         _buildDownloadTask(
           asset.livePhotoVideoId!,
-          asset.fileName.toUpperCase().replaceAll(RegExp(r"\.(JPG|HEIC)$"), '.MOV'),
+          videoFileName,
           group: kDownloadGroupLivePhoto,
           metadata: LivePhotosMetadata(part: LivePhotosPart.video, id: asset.remoteId!).toJson(),
         ),

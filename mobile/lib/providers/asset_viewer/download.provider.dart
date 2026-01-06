@@ -62,7 +62,10 @@ class DownloadStateNotifier extends StateNotifier<DownloadState> {
           return;
         }
         final livePhotosId = LivePhotosMetadata.fromJson(update.task.metaData).id;
-        _downloadService.saveLivePhotos(update.task, livePhotosId);
+        if (LivePhotosMetadata.fromJson(update.task.metaData).part == LivePhotosPart.video) {
+          _downloadService.saveLivePhotos(update.task, livePhotosId);
+        }
+
         _onDownloadComplete(update.task.taskId);
         break;
 

@@ -33,6 +33,13 @@ import 'package:immich_mobile/widgets/map/map_theme_override.dart';
 import 'package:immich_mobile/widgets/map/positioned_asset_marker_icon.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 
+import 'package:logging/logging.dart';
+import 'package:coordtransform_dart/coordtransform_dart.dart';
+import 'package:flutter/services.dart';
+import 'dart:ui' as ui;
+import 'package:immich_mobile/main.dart';
+import 'package:flutter/foundation.dart';
+
 @RoutePage()
 class MapPage extends HookConsumerWidget {
   const MapPage({super.key, this.initialLocation});
@@ -53,6 +60,34 @@ class MapPage extends HookConsumerWidget {
     final selectedAssets = useValueNotifier<Set<Asset>>({});
     const mapZoomToAssetLevel = 12.0;
 
+    final routeAware = useMemoized(() => _MyRouteAware());
+
+    useEffect(() {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final modalRoute = ModalRoute.of(context);
+        if (modalRoute is PageRoute) {
+          routeObserver.subscribe(routeAware, modalRoute);
+        }
+      });
+
+      return () {
+        routeObserver.unsubscribe(routeAware);
+      };
+    }, [context]);
+
+    LatLngBounds _toWgs84Bounds(LatLngBounds bounds) {
+      if (defaultTargetPlatform != TargetPlatform.ohos) {
+        return bounds;
+      }
+
+      final sw = bounds.southwest;
+      final ne = bounds.northeast;
+      final swWgs = CoordinateTransformUtil.gcj02ToWgs84(sw.longitude, sw.latitude);
+      final neWgs = CoordinateTransformUtil.gcj02ToWgs84(ne.longitude, ne.latitude);
+
+      return LatLngBounds(southwest: LatLng(swWgs[1], swWgs[0]), northeast: LatLng(neWgs[1], neWgs[0]));
+    }
+
     // updates the markersInBounds value with the map markers that are visible in the current
     // map camera bounds
     Future<void> updateAssetsInBounds() async {
@@ -61,10 +96,16 @@ class MapPage extends HookConsumerWidget {
         return;
       }
 
-      final bounds = await mapController.value!.getVisibleRegion();
-      final inBounds = markers.value
-          .where((m) => bounds.contains(LatLng(m.latLng.latitude, m.latLng.longitude)))
-          .toList();
+      final bounds = _toWgs84Bounds(await mapController.value!.getVisibleRegion());
+      final inBounds = markers.value.where((m) {
+        // marker 原始是 WGS84
+        final wgs = m.latLng;
+
+        // 转成 GCJ-02 后再判断
+        final gcj = CoordinateTransformUtil.wgs84ToGcj02(wgs.longitude, wgs.latitude);
+        final p = LatLng(gcj[1], gcj[0]); // [lon, lat] -> LatLng(lat, lon)
+        return bounds.contains(p);
+      }).toList();
       // Notify bottom sheet to update asset grid only when there are new assets
       if (markersInBounds.value.length != inBounds.length) {
         bottomSheetStreamController.add(MapAssetsInBoundsUpdated(inBounds.map((e) => e.assetRemoteId).toList()));
@@ -75,6 +116,17 @@ class MapPage extends HookConsumerWidget {
     // removes all sources and layers and re-adds them with the updated markers
     Future<void> reloadLayers() async {
       if (mapController.value != null) {
+        ByteData mapMarkData = await rootBundle.load("assets/location-pin.png");
+        if (initialLocation != null) {
+          final outLngLat = CoordinateTransformUtil.wgs84ToGcj02(initialLocation!.longitude, initialLocation!.latitude);
+          final LatLng centreProcessed = LatLng(outLngLat[1], outLngLat[0]);
+
+          if (defaultTargetPlatform == TargetPlatform.ohos) {
+            await mapController.value?.addMarkerAtLatLng_Ohos(centreProcessed, mapMarkData, 0.15);
+            await mapController.value?.addHeatmapDataOhos(markers.value);
+          }
+        }
+
         layerDebouncer.run(() => mapController.value!.reloadAllLayersForMarkers(markers.value));
       }
     }
@@ -112,7 +164,9 @@ class MapPage extends HookConsumerWidget {
 
     // updates the selected markers position based on the current map camera
     Future<void> updateAssetMarkerPosition(MapMarker marker, {bool shouldAnimate = true}) async {
-      final assetPoint = await mapController.value!.toScreenLocation(marker.latLng);
+      final outLngLat = CoordinateTransformUtil.wgs84ToGcj02(marker.latLng.longitude, marker.latLng.latitude);
+      final LatLng centreProcessed = LatLng(outLngLat[1], outLngLat[0]);
+      final assetPoint = await mapController.value!.toScreenLocation(centreProcessed);
       selectedMarker.value = _AssetMarkerMeta(point: assetPoint, marker: marker, shouldAnimate: shouldAnimate);
       (assetPoint, marker, shouldAnimate);
     }
@@ -272,8 +326,8 @@ class MapPage extends HookConsumerWidget {
                           onMarkerTapped: onMarkerTapped,
                         ),
                         Positioned(
-                          right: 0,
-                          bottom: context.padding.bottom + 16,
+                          right: 3,
+                          bottom: 10,
                           child: ElevatedButton(
                             onPressed: onZoomToLocation,
                             style: ElevatedButton.styleFrom(shape: const CircleBorder()),
@@ -362,6 +416,7 @@ class _MapWithMarker extends StatelessWidget {
                 myLocationEnabled: false,
                 attributionButtonPosition: AttributionButtonPosition.topRight,
                 rotateGesturesEnabled: false,
+                zoomGesturesEnabled: true,
               ),
             ),
             ValueListenableBuilder(
@@ -380,4 +435,27 @@ class _MapWithMarker extends StatelessWidget {
       ),
     );
   }
+}
+
+class _MyRouteAware extends RouteAware {
+  //@override
+  // void didPopNext() {
+  //   super.didPopNext();
+  //   ui.SetHdr.setHdrMode(hdr: 0, is_image: true);
+  // }
+  // void didPush() { }
+
+  // @override
+  // void didPop() {
+  //   ui.SetHdr.setHdrMode(hdr: 0, is_image: true);
+  //   super.didPop();
+  // }
+
+  @override
+  didPush() {
+    ui.SetHdr.setHdrMode(hdr: 0, is_image: true);
+    super.didPushNext();
+  }
+
+  // void didPushNext() { }
 }

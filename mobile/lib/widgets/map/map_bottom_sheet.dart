@@ -69,7 +69,8 @@ class MapBottomSheet extends HookConsumerWidget {
               selectedAssets: selectedAssets,
               onAssetsSelected: onAssetsSelected,
               // Do not bother with the event if the bottom sheet is not user scrolled
-              onGridAssetChanged: (assetId) => isBottomSheetOpened.value ? onGridAssetChanged?.call(assetId) : null,
+              onGridAssetChanged: (assetId) => onGridAssetChanged?.call(assetId), //Fix 手机端marker不显示的问题
+              //onGridAssetChanged: (assetId) => isBottomSheetOpened.value ? onGridAssetChanged?.call(assetId) : null,
               onZoomToAsset: onZoomToAsset,
             ),
           ),
@@ -78,8 +79,8 @@ class MapBottomSheet extends HookConsumerWidget {
           valueListenable: bottomSheetOffset,
           builder: (context, value, child) {
             return Positioned(
-              right: 0,
-              bottom: context.height * (value + 0.02),
+              right: 3,
+              bottom: context.height * (value + 0.02) + 40,
               child: AnimatedOpacity(
                 opacity: value < 0.8 ? 1 : 0,
                 duration: const Duration(milliseconds: 150),

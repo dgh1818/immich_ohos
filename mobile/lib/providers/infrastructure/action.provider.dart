@@ -71,8 +71,10 @@ class ActionNotifier extends Notifier<void> {
 
   void _downloadLivePhotoCallback(TaskStatusUpdate update) async {
     if (update.status == TaskStatus.complete) {
-      final livePhotosId = LivePhotosMetadata.fromJson(update.task.metaData).id;
-      unawaited(_downloadService.saveLivePhotos(update.task, livePhotosId));
+      if (LivePhotosMetadata.fromJson(update.task.metaData).part == LivePhotosPart.video) {
+        final livePhotosId = LivePhotosMetadata.fromJson(update.task.metaData).id;
+        unawaited(_downloadService.saveLivePhotos(update.task, livePhotosId));
+      }
     }
   }
 

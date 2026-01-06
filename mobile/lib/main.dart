@@ -46,6 +46,11 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:logging/logging.dart';
 import 'package:timezone/data/latest.dart';
 
+import 'package:path_provider/path_provider.dart';
+import 'package:permission_handler/permission_handler.dart';
+
+final RouteObserver<ModalRoute> routeObserver = RouteObserver<ModalRoute>();
+
 void main() async {
   ImmichWidgetsBinding();
   unawaited(BackgroundWorkerLockService(BackgroundWorkerLockApi()).lock());
@@ -55,6 +60,10 @@ void main() async {
   // Warm-up isolate pool for worker manager
   await workerManagerPatch.init(dynamicSpawning: true, isolatesCount: max(Platform.numberOfProcessors - 1, 5));
   await migrateDatabaseIfNeeded(isar, drift);
+
+  await _cleanupTempCache();
+  await Permission.notification.request();
+
   HttpSSLOptions.apply();
 
   runApp(
@@ -121,6 +130,29 @@ Future<void> initApp() async {
   });
 }
 
+Future<void> _cleanupTempCache() async {
+  if (!(Platform.isIOS || defaultTargetPlatform == TargetPlatform.ohos)) {
+    return;
+  }
+
+  try {
+    final tempDir = await getTemporaryDirectory();
+    final targets = [Directory('${tempDir.path}/originalPhoto'), Directory('${tempDir.path}/movingPhoto')];
+
+    for (final dir in targets) {
+      if (await dir.exists()) {
+        try {
+          await dir.delete(recursive: true);
+        } catch (e) {
+          debugPrint("Failed to delete temp dir ${dir.path}: $e");
+        }
+      }
+    }
+  } catch (e) {
+    debugPrint("Failed to cleanup temp cache: $e");
+  }
+}
+
 class ImmichApp extends ConsumerStatefulWidget {
   const ImmichApp({super.key});
 
@@ -170,6 +202,12 @@ class ImmichAppState extends ConsumerState<ImmichApp> with WidgetsBindingObserve
         overlayStyle = context.isDarkTheme ? SystemUiOverlayStyle.dark : SystemUiOverlayStyle.light;
       }
     }
+
+    if (defaultTargetPlatform == TargetPlatform.ohos) {
+      // Android 8 does not support transparent app bars
+      overlayStyle = context.isDarkTheme ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark;
+    }
+
     SystemChrome.setSystemUIOverlayStyle(overlayStyle);
     await ref.read(localNotificationService).setup();
   }
@@ -222,7 +260,7 @@ class ImmichAppState extends ConsumerState<ImmichApp> with WidgetsBindingObserve
               );
         }
       } else {
-        ref.read(backgroundWorkerFgServiceProvider).disable();
+        //ref.read(backgroundWorkerFgServiceProvider).disable();  //TO DO
         ref.read(backgroundServiceProvider).resumeServiceIfEnabled();
       }
     });
@@ -254,7 +292,7 @@ class ImmichAppState extends ConsumerState<ImmichApp> with WidgetsBindingObserve
         theme: getThemeData(colorScheme: immichTheme.light, locale: context.locale),
         routerConfig: router.config(
           deepLinkBuilder: _deepLinkBuilder,
-          navigatorObservers: () => [AppNavigationObserver(ref: ref)],
+          navigatorObservers: () => [AppNavigationObserver(ref: ref), routeObserver],
         ),
       ),
     );

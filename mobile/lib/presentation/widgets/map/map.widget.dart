@@ -20,6 +20,11 @@ import 'package:immich_mobile/widgets/common/immich_toast.dart';
 import 'package:immich_mobile/widgets/map/map_theme_override.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 
+import 'package:flutter/services.dart';
+import 'package:immich_mobile/providers/infrastructure/map.provider.dart';
+import 'package:flutter/foundation.dart';
+import 'package:coordtransform_dart/coordtransform_dart.dart';
+
 class CustomSourceProperties implements SourceProperties {
   final Map<String, dynamic> data;
   const CustomSourceProperties({required this.data});
@@ -69,10 +74,10 @@ class _DriftMapState extends ConsumerState<DriftMap> {
       return;
     }
 
-    await controller.addSource(
-      MapUtils.defaultSourceId,
-      const CustomSourceProperties(data: {'type': 'FeatureCollection', 'features': []}),
-    );
+    // await controller.addSource(
+    //   MapUtils.defaultSourceId,
+    //   const CustomSourceProperties(data: {'type': 'FeatureCollection', 'features': []}),
+    // );
 
     if (Platform.isAndroid) {
       await controller.addCircleLayer(
@@ -98,6 +103,16 @@ class _DriftMapState extends ConsumerState<DriftMap> {
       );
     }
 
+    if (defaultTargetPlatform == TargetPlatform.ohos && widget.initialLocation != null) {
+      final out = CoordinateTransformUtil.wgs84ToGcj02(
+        widget.initialLocation!.longitude,
+        widget.initialLocation!.latitude,
+      );
+      final LatLng centreProcessed = LatLng(out[1], out[0]);
+      final ByteData mapMarkData = await rootBundle.load("assets/location-pin.png");
+      await controller.addMarkerAtLatLng_Ohos(centreProcessed, mapMarkData, 0.15);
+    }
+
     _debouncer.run(setBounds);
     controller.addListener(onMapMoved);
   }
@@ -108,6 +123,19 @@ class _DriftMapState extends ConsumerState<DriftMap> {
     }
 
     _debouncer.run(setBounds);
+  }
+
+  LatLngBounds _toWgs84Bounds(LatLngBounds bounds) {
+    if (defaultTargetPlatform != TargetPlatform.ohos) {
+      return bounds;
+    }
+
+    final sw = bounds.southwest;
+    final ne = bounds.northeast;
+    final swWgs = CoordinateTransformUtil.gcj02ToWgs84(sw.longitude, sw.latitude);
+    final neWgs = CoordinateTransformUtil.gcj02ToWgs84(ne.longitude, ne.latitude);
+
+    return LatLngBounds(southwest: LatLng(swWgs[1], swWgs[0]), northeast: LatLng(neWgs[1], neWgs[0]));
   }
 
   Future<void> setBounds() async {
@@ -124,11 +152,30 @@ class _DriftMapState extends ConsumerState<DriftMap> {
       return;
     }
 
-    final bounds = await controller.getVisibleRegion();
+    final bounds = _toWgs84Bounds(await controller.getVisibleRegion());
     unawaited(
       _reloadMutex.run(() async {
         if (mounted && ref.read(mapStateProvider.notifier).setBounds(bounds)) {
           final markers = await ref.read(mapMarkerProvider(bounds).future);
+
+          final mapService = ref.watch(mapServiceProvider);
+          final markersData = await mapService.getMarkers(bounds);
+
+          final List<LatLng> totalData = [];
+
+          for (final marker in markersData) {
+            final coordinateProcessed = CoordinateTransformUtil.wgs84ToGcj02(
+              marker.location.longitude,
+              marker.location.latitude,
+            );
+            totalData.add(LatLng(coordinateProcessed[1], coordinateProcessed[0]));
+            // 使用 marker 的属性或方法
+          }
+
+          if (defaultTargetPlatform == TargetPlatform.ohos) {
+            await mapController?.addHeatmapData_Ohos(totalData);
+          }
+
           await reloadMarkers(markers);
         }
       }),
@@ -141,7 +188,7 @@ class _DriftMapState extends ConsumerState<DriftMap> {
       return;
     }
 
-    await controller.setGeoJsonSource(MapUtils.defaultSourceId, markers);
+    //await controller.setGeoJsonSource(MapUtils.defaultSourceId, markers);
   }
 
   Future<void> onZoomToLocation() async {
@@ -191,12 +238,19 @@ class _Map extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final initialLocation = this.initialLocation;
+    LatLng? processedInitialLocation = initialLocation;
+
+    if (defaultTargetPlatform == TargetPlatform.ohos && initialLocation != null) {
+      final out = CoordinateTransformUtil.wgs84ToGcj02(initialLocation.longitude, initialLocation.latitude);
+      processedInitialLocation = LatLng(out[1], out[0]);
+    }
+
     return MapThemeOverride(
       mapBuilder: (style) => style.widgetWhen(
         onData: (style) => MapLibreMap(
-          initialCameraPosition: initialLocation == null
+          initialCameraPosition: processedInitialLocation == null
               ? const CameraPosition(target: LatLng(0, 0), zoom: 0)
-              : CameraPosition(target: initialLocation, zoom: MapUtils.mapZoomToAssetLevel),
+              : CameraPosition(target: processedInitialLocation, zoom: MapUtils.mapZoomToAssetLevel),
           compassEnabled: false,
           rotateGesturesEnabled: false,
           styleString: style,

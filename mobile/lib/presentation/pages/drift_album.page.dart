@@ -45,6 +45,7 @@ class _DriftAlbumsPageState extends ConsumerState<DriftAlbumsPage> {
               context.router.push(RemoteAlbumRoute(album: album));
             },
           ),
+          const SliverToBoxAdapter(child: SizedBox(height: 80)),
         ],
       ),
     );

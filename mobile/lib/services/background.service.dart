@@ -123,7 +123,7 @@ class BackgroundService {
   /// Returns `true` if battery optimizations are disabled
   Future<bool> isIgnoringBatteryOptimizations() async {
     // iOS does not need battery optimizations enabled
-    if (Platform.isIOS) {
+    if (Platform.isIOS || Platform.isOhos) {
       return true;
     }
     try {
@@ -442,7 +442,7 @@ class BackgroundService {
     );
 
     _cancellationToken = CancellationToken();
-    final pmProgressHandler = Platform.isIOS ? PMProgressHandler() : null;
+    final pmProgressHandler = (Platform.isIOS || Platform.isOhos) ? PMProgressHandler() : null;
 
     final bool ok = await backupService.backupAsset(
       toUpload,

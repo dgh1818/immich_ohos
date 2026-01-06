@@ -14,14 +14,14 @@ import 'package:immich_mobile/extensions/build_context_extensions.dart';
 import 'package:immich_mobile/extensions/scroll_extensions.dart';
 import 'package:immich_mobile/pages/common/download_panel.dart';
 import 'package:immich_mobile/pages/common/gallery_stacked_children.dart';
-import 'package:immich_mobile/pages/common/native_video_viewer.page.dart';
+// import 'package:immich_mobile/pages/common/native_video_viewer.page.dart';
 import 'package:immich_mobile/providers/app_settings.provider.dart';
 import 'package:immich_mobile/providers/asset_viewer/asset_stack.provider.dart';
 import 'package:immich_mobile/providers/asset_viewer/current_asset.provider.dart';
 import 'package:immich_mobile/providers/asset_viewer/is_motion_video_playing.provider.dart';
 import 'package:immich_mobile/providers/asset_viewer/show_controls.provider.dart';
 import 'package:immich_mobile/providers/asset_viewer/video_player_value_provider.dart';
-import 'package:immich_mobile/providers/cast.provider.dart';
+//import 'package:immich_mobile/providers/cast.provider.dart';
 import 'package:immich_mobile/providers/haptic_feedback.provider.dart';
 import 'package:immich_mobile/services/app_settings.service.dart';
 import 'package:immich_mobile/widgets/asset_grid/asset_grid_data_structure.dart';
@@ -35,6 +35,14 @@ import 'package:immich_mobile/widgets/photo_view/photo_view_gallery.dart';
 import 'package:immich_mobile/widgets/photo_view/src/photo_view_computed_scale.dart';
 import 'package:immich_mobile/widgets/photo_view/src/photo_view_scale_state.dart';
 import 'package:immich_mobile/widgets/photo_view/src/utils/photo_view_hero_attributes.dart';
+
+import 'package:immich_mobile/providers/asset_viewer/video_player_controller_provider.dart';
+import 'package:immich_mobile/main.dart';
+import 'package:immich_mobile/pages/common/video_viewer.page.dart';
+import 'package:immich_mobile/utils/cache/custom_image_cache.dart';
+
+int imageHdrState = -1;
+int lastPlayingState = 0;
 
 @RoutePage()
 // ignore: must_be_immutable
@@ -64,7 +72,7 @@ class GalleryViewerPage extends HookConsumerWidget {
     final currentIndex = useValueNotifier(initialIndex);
     final loadAsset = renderList.loadAsset;
     final isPlayingMotionVideo = ref.watch(isPlayingMotionVideoProvider);
-    final isCasting = ref.watch(castProvider.select((c) => c.isCasting));
+    //final isCasting = ref.watch(castProvider.select((c) => c.isCasting));
 
     final videoPlayerKeys = useRef<Map<int, GlobalKey>>({});
 
@@ -72,6 +80,32 @@ class GalleryViewerPage extends HookConsumerWidget {
       videoPlayerKeys.value.putIfAbsent(id, () => GlobalKey());
       return videoPlayerKeys.value[id]!;
     }
+
+    final shouldLoopVideo = useState(AppSettingsEnum.loopVideo.defaultValue);
+
+    final routeAware = useMemoized(() => _MyRouteAware());
+    final imageListener = useRef<ImageStreamListener?>(null);
+    final currentImageProvider = useRef<ImageProvider?>(null);
+    final timers = useRef<List<Timer>>([]);
+    final cancelAllTimers = useCallback(() {
+      for (final timer in timers.value) {
+        if (timer.isActive) timer.cancel();
+      }
+      timers.value.clear();
+    }, []);
+
+    useEffect(() {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final modalRoute = ModalRoute.of(context);
+        if (modalRoute is PageRoute) {
+          routeObserver.subscribe(routeAware, modalRoute);
+        }
+      });
+
+      return () {
+        routeObserver.unsubscribe(routeAware);
+      };
+    }, [context]);
 
     Future<void> precacheNextImage(int index) async {
       if (!context.mounted) {
@@ -99,6 +133,31 @@ class GalleryViewerPage extends HookConsumerWidget {
       }
     }
 
+    void getImageColorSpace(ImageProvider provider, BuildContext context) async {
+      if (imageListener.value != null && currentImageProvider.value != null) {
+        currentImageProvider.value!.resolve(ImageConfiguration.empty).removeListener(imageListener.value!);
+      }
+
+      ImageStream stream = provider.resolve(ImageConfiguration.empty);
+
+      imageListener.value = ImageStreamListener((ImageInfo info, bool synchronousCall) {
+        if (info.image.colorSpace == ui.ColorSpace.extendedSRGB) {
+          ui.SetHdr.setHdrMode(hdr: 1, is_image: true);
+          imageHdrState = 1;
+        } else {
+          ui.SetHdr.setHdrMode(hdr: 0, is_image: true);
+          imageHdrState = 0;
+        }
+      }, onError: (_, __) {});
+
+      currentImageProvider.value = provider;
+      stream.addListener(imageListener.value!);
+    }
+
+    void setDisplayMode(ImageProvider provider, BuildContext context) async {
+      getImageColorSpace(provider, context);
+    }
+
     useEffect(() {
       if (ref.read(showControlsProvider)) {
         SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
@@ -114,6 +173,7 @@ class GalleryViewerPage extends HookConsumerWidget {
       return null;
     }, const []);
 
+    /*
     useEffect(() {
       final asset = loadAsset(currentIndex.value);
 
@@ -139,6 +199,7 @@ class GalleryViewerPage extends HookConsumerWidget {
       }
       return null;
     }, [ref.watch(castProvider).isCasting]);
+*/
 
     void showInfo() {
       final asset = ref.read(currentAssetProvider);
@@ -201,17 +262,51 @@ class GalleryViewerPage extends HookConsumerWidget {
       }
     }
 
-    ref.listen(showControlsProvider, (_, show) {
-      if (show || Platform.isIOS) {
-        SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
-        return;
+    useEffect(() {
+      final a = loadAsset(currentIndex.value);
+      final ImageProvider provider = ImmichImage.imageProvider(asset: a);
+      ui.SetHdr.enableHdr(enable_hdr: true);
+      if (a.isImage) {
+        ui.SetHdr.setHdrMode(hdr: 0, is_image: true);
+        setDisplayMode(provider, context);
+      } else {
+        ui.SetHdr.setHdrMode(hdr: 0, is_image: true);
+        ui.SetHdr.setHdrMode(hdr: -1, is_image: false);
       }
 
-      // This prevents the bottom bar from "dropping" while the controls are being hidden
-      Timer(const Duration(milliseconds: 100), () {
-        SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersive);
-      });
-    });
+      if (ref.read(showControlsProvider)) {
+        SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+      } else {
+        SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+        //SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersive);
+      }
+      //isPlayingVideo.value = false;
+      return () {
+        if (imageListener.value != null && currentImageProvider.value != null) {
+          currentImageProvider.value!.resolve(ImageConfiguration.empty).removeListener(imageListener.value!);
+        }
+        if (imageCache is CustomImageCache) {
+          (imageCache as CustomImageCache).clearLargeCache();
+        }
+
+        //controller.dispose();
+        currentImageProvider.value = null;
+        imageListener.value = null;
+        cancelAllTimers();
+      };
+    }, []);
+
+    useEffect(() {
+      // No need to await this
+      unawaited(
+        // Delay this a bit so we can finish loading the page
+        Future.delayed(const Duration(milliseconds: 400)).then(
+          // Precache the next image
+          (_) => precacheNextImage(currentIndex.value + 1),
+        ),
+      );
+      return null;
+    }, []);
 
     PhotoViewGalleryPageOptions buildImage(Asset asset) {
       return PhotoViewGalleryPageOptions(
@@ -226,7 +321,10 @@ class GalleryViewerPage extends HookConsumerWidget {
         },
         onLongPressStart: asset.isMotionPhoto
             ? (_, __, ___) {
+                ui.SetHdr.setHdrMode(hdr: 0, is_image: true);
                 ref.read(isPlayingMotionVideoProvider.notifier).playing = true;
+                ui.SetHdr.setHdrMode(hdr: -1, is_image: false);
+                lastPlayingState = 1;
               }
             : null,
         imageProvider: ImmichImage.imageProvider(asset: asset),
@@ -252,12 +350,33 @@ class GalleryViewerPage extends HookConsumerWidget {
         child: SizedBox(
           width: context.width,
           height: context.height,
-          child: NativeVideoViewerPage(
+          // child: NativeVideoViewerPage(
+          //   key: getVideoPlayerKey(asset.id),
+          //   asset: asset,
+          //   image: Image(
+          //     key: ValueKey(asset),
+          //     image: ImmichImage.imageProvider(
+          //       asset: asset,
+          //       width: context.width,
+          //       height: context.height,
+          //     ),
+          //     fit: BoxFit.contain,
+          //     height: context.height,
+          //     width: context.width,
+          //     alignment: Alignment.center,
+          //   ),
+          // ),
+          child: VideoViewerPage(
             key: getVideoPlayerKey(asset.id),
             asset: asset,
-            image: Image(
-              key: ValueKey(asset),
-              image: ImmichImage.imageProvider(asset: asset, width: context.width, height: context.height),
+            isMotionVideo: asset.livePhotoVideoId != null,
+            loopVideo: asset.livePhotoVideoId != null ? false : shouldLoopVideo.value,
+            placeholder: Image(
+              image: ImmichImage.imageProvider(
+                asset: asset,
+                width: context.width.toDouble(),
+                height: context.height.toDouble(),
+              ),
               fit: BoxFit.contain,
               height: context.height,
               width: context.width,
@@ -280,73 +399,132 @@ class GalleryViewerPage extends HookConsumerWidget {
       }
 
       if (newAsset.isImage && !isPlayingMotionVideo) {
+        if (lastPlayingState == 1) {
+          if (imageHdrState == 1) {
+            ui.SetHdr.setHdrMode(hdr: 1, is_image: true);
+          }
+          if (imageHdrState == 0) {
+            ui.SetHdr.setHdrMode(hdr: 0, is_image: true);
+          }
+        }
+        lastPlayingState = 0;
         return buildImage(newAsset);
       }
       return buildVideo(context, newAsset);
     }
 
+    void stopMotionPlayback() {
+      final current = ref.read(currentAssetProvider);
+      if (current?.isMotionPhoto == true && ref.read(isPlayingMotionVideoProvider)) {
+        ref.read(isPlayingMotionVideoProvider.notifier).playing = false;
+        //ui.SetHdr.setHdrMode(hdr: 0, is_image: true);
+        lastPlayingState = 0;
+        final controller = ref.read(videoPlayerControllerProvider(asset: current!)).value;
+        controller?.pause();
+
+        setDisplayMode(ImmichImage.imageProvider(asset: current), context);
+      }
+    }
+
     return PopScope(
       // Change immersive mode back to normal "edgeToEdge" mode
-      onPopInvokedWithResult: (didPop, _) => SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge),
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) {
+          SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+        }
+        cancelAllTimers();
+      },
       child: Scaffold(
         backgroundColor: Colors.black,
-        body: Stack(
-          children: [
-            PhotoViewGallery.builder(
-              key: const ValueKey('gallery'),
-              scaleStateChangedCallback: (state) {
-                final asset = ref.read(currentAssetProvider);
-                if (asset == null) {
-                  return;
-                }
+        body: Listener(
+          onPointerUp: (_) => stopMotionPlayback(),
+          child: Stack(
+            children: [
+              PhotoViewGallery.builder(
+                key: const ValueKey('gallery'),
+                scaleStateChangedCallback: (state) {
+                  final asset = ref.read(currentAssetProvider);
+                  if (asset == null) {
+                    return;
+                  }
 
-                if (asset.isImage && !ref.read(isPlayingMotionVideoProvider)) {
-                  isZoomed.value = state != PhotoViewScaleState.initial;
-                  ref.read(showControlsProvider.notifier).show = !isZoomed.value;
-                }
-              },
-              gaplessPlayback: true,
-              loadingBuilder: (context, event, index) {
-                final asset = loadAsset(index);
-                return ClipRect(
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      BackdropFilter(filter: ui.ImageFilter.blur(sigmaX: 10, sigmaY: 10)),
-                      ImmichThumbnail(key: ValueKey(asset), asset: asset, fit: BoxFit.contain),
-                    ],
-                  ),
-                );
-              },
-              pageController: controller,
-              scrollPhysics: isZoomed.value
-                  ? const NeverScrollableScrollPhysics() // Don't allow paging while scrolled in
-                  : (Platform.isIOS
-                        ? const FastScrollPhysics() // Use bouncing physics for iOS
-                        : const FastClampingScrollPhysics() // Use heavy physics for Android
-                          ),
-              itemCount: totalAssets.value,
-              scrollDirection: Axis.horizontal,
-              onPageChanged: (value, _) {
-                final next = currentIndex.value < value ? value + 1 : value - 1;
+                  //if (asset.isImage && !ref.read(isPlayingMotionVideoProvider)) {
+                  if (asset.isImage && !isPlayingMotionVideo) {
+                    if (lastPlayingState == 1) {
+                      if (imageHdrState == 1) {
+                        ui.SetHdr.setHdrMode(hdr: 1, is_image: true);
+                      }
+                      if (imageHdrState == 0) {
+                        ui.SetHdr.setHdrMode(hdr: 0, is_image: true);
+                      }
+                    }
+                    lastPlayingState = 0;
+                    isZoomed.value = state != PhotoViewScaleState.initial;
+                    ref.read(showControlsProvider.notifier).show = !isZoomed.value;
+                  }
+                },
+                gaplessPlayback: true,
+                loadingBuilder: (context, event, index) {
+                  final asset = loadAsset(index);
+                  return ClipRect(
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        BackdropFilter(filter: ui.ImageFilter.blur(sigmaX: 10, sigmaY: 10)),
+                        ImmichThumbnail(key: ValueKey(asset), asset: asset, fit: BoxFit.contain),
+                      ],
+                    ),
+                  );
+                },
+                pageController: controller,
+                scrollPhysics: isZoomed.value
+                    ? const NeverScrollableScrollPhysics() // Don't allow paging while scrolled in
+                    : (Platform.isIOS
+                          ? const FastScrollPhysics() // Use bouncing physics for iOS
+                          : const FastScrollPhysics() // Use heavy physics for Android
+                            ),
+                itemCount: totalAssets.value,
+                scrollDirection: Axis.horizontal,
+                onPageChanged: (value, _) {
+                  ref.read(isPlayingMotionVideoProvider.notifier).playing = false;
 
-                ref.read(hapticFeedbackProvider.notifier).selectionClick();
+                  final next = currentIndex.value < value ? value + 1 : value - 1;
 
-                final newAsset = loadAsset(value);
+                  ref.read(hapticFeedbackProvider.notifier).selectionClick();
 
-                currentIndex.value = value;
-                stackIndex.value = 0;
+                  final newAsset = loadAsset(value);
 
-                ref.read(currentAssetProvider.notifier).set(newAsset);
-                if (newAsset.isVideo || newAsset.isMotionPhoto) {
-                  ref.read(videoPlaybackValueProvider.notifier).reset();
-                }
+                  currentIndex.value = value;
+                  stackIndex.value = 0;
 
-                // Wait for page change animation to finish, then precache the next image
-                Timer(const Duration(milliseconds: 400), () {
-                  precacheNextImage(next);
-                });
+                  ref.read(currentAssetProvider.notifier).set(newAsset);
+                  if (newAsset.isVideo || newAsset.isMotionPhoto) {
+                    ref.read(videoPlaybackValueProvider.notifier).reset();
+                  }
 
+                  final a = loadAsset(currentIndex.value);
+                  final ImageProvider provider = ImmichImage.imageProvider(asset: a);
+
+                  if (a.isImage) {
+                    lastPlayingState = 0;
+                    imageHdrState = -1;
+                    setDisplayMode(provider, context);
+                  } else {
+                    ui.SetHdr.setHdrMode(hdr: 0, is_image: true);
+                  }
+
+                  // Then precache the next image
+
+                  // Wait for page change animation to finish, then precache the next image
+                  timers.value.add(
+                    Timer(const Duration(milliseconds: 400), () {
+                      if (!a.isImage) {
+                        ui.SetHdr.setHdrMode(hdr: -1, is_image: false);
+                      }
+                      precacheNextImage(next);
+                    }),
+                  );
+                  /*
                 context.scaffoldMessenger.hideCurrentSnackBar();
 
                 // send image to casting if the server has it
@@ -355,49 +533,51 @@ class GalleryViewerPage extends HookConsumerWidget {
                 } else {
                   context.scaffoldMessenger.clearSnackBars();
 
-                  if (isCasting) {
-                    ref.read(castProvider.notifier).stop();
-                    context.scaffoldMessenger.showSnackBar(
-                      SnackBar(
-                        duration: const Duration(seconds: 2),
-                        content: Text(
-                          "local_asset_cast_failed".tr(),
-                          style: context.textTheme.bodyLarge?.copyWith(color: context.primaryColor),
-                        ),
+                if (isCasting) {
+                  ref.read(castProvider.notifier).stop();
+                  context.scaffoldMessenger.showSnackBar(
+                    SnackBar(
+                      duration: const Duration(seconds: 2),
+                      content: Text(
+                        "local_asset_cast_failed".tr(),
+                        style: context.textTheme.bodyLarge?.copyWith(color: context.primaryColor),
                       ),
-                    );
-                  }
+                    ),
+                  );
                 }
-              },
-              builder: buildAsset,
-            ),
-            Positioned(
-              top: 0,
-              left: 0,
-              right: 0,
-              child: GalleryAppBar(key: const ValueKey('app-bar'), showInfo: showInfo),
-            ),
-            Positioned(
-              bottom: 0,
-              left: 0,
-              right: 0,
-              child: Column(
-                children: [
-                  GalleryStackedChildren(stackIndex),
-                  BottomGalleryBar(
-                    key: const ValueKey('bottom-bar'),
-                    renderList: renderList,
-                    totalAssets: totalAssets,
-                    controller: controller,
-                    showStack: showStack,
-                    stackIndex: stackIndex,
-                    assetIndex: currentIndex,
-                  ),
-                ],
+                }
+*/
+                },
+                builder: buildAsset,
               ),
-            ),
-            const DownloadPanel(),
-          ],
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                child: GalleryAppBar(key: const ValueKey('app-bar'), showInfo: showInfo),
+              ),
+              Positioned(
+                bottom: 0,
+                left: 0,
+                right: 0,
+                child: Column(
+                  children: [
+                    GalleryStackedChildren(stackIndex),
+                    BottomGalleryBar(
+                      key: const ValueKey('bottom-bar'),
+                      renderList: renderList,
+                      totalAssets: totalAssets,
+                      controller: controller,
+                      showStack: showStack,
+                      stackIndex: stackIndex,
+                      assetIndex: currentIndex,
+                    ),
+                  ],
+                ),
+              ),
+              const DownloadPanel(),
+            ],
+          ),
         ),
       ),
     );
@@ -410,4 +590,21 @@ class GalleryViewerPage extends HookConsumerWidget {
       transitionOnUserGestures: true,
     );
   }
+}
+
+class _MyRouteAware extends RouteAware {
+  //@override
+  // void didPopNext() {
+  //   super.didPopNext();
+  //   ui.SetHdr.setHdrMode(hdr: 0, is_image: true);
+  // }
+  // void didPush() { }
+
+  @override
+  void didPop() {
+    ui.SetHdr.setHdrMode(hdr: 0, is_image: true);
+    super.didPop();
+  }
+
+  // void didPushNext() { }
 }

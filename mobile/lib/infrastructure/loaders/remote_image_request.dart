@@ -18,10 +18,11 @@ class RemoteImageRequest extends ImageRequest {
 
     // TODO: the cache manager makes everything sequential with its DB calls and its operations cannot be cancelled,
     //  so it ends up being a bottleneck.  We only prefer fetching from it when it can skip the DB call.
-    final cachedFileImage = await _loadCachedFile(uri, decode, scale, inMemoryOnly: true);
-    if (cachedFileImage != null) {
-      return cachedFileImage;
-    }
+    // 会造成视频播放前几秒卡顿，因此屏蔽
+    // final cachedFileImage = await _loadCachedFile(uri, decode, scale, inMemoryOnly: true);
+    // if (cachedFileImage != null) {
+    //   return cachedFileImage;
+    // }
 
     try {
       final buffer = await _downloadImage(uri);
@@ -35,10 +36,10 @@ class RemoteImageRequest extends ImageRequest {
         return null;
       }
 
-      final cachedFileImage = await _loadCachedFile(uri, decode, scale, inMemoryOnly: false);
-      if (cachedFileImage != null) {
-        return cachedFileImage;
-      }
+      // final cachedFileImage = await _loadCachedFile(uri, decode, scale, inMemoryOnly: false);
+      // if (cachedFileImage != null) {
+      //   return cachedFileImage;
+      // }
 
       rethrow;
     } finally {
@@ -68,7 +69,7 @@ class RemoteImageRequest extends ImageRequest {
     final cacheManager = this.cacheManager;
     final streamController = StreamController<List<int>>(sync: true);
     final Stream<List<int>> stream;
-    unawaited(cacheManager?.putStreamedFile(url, streamController.stream));
+    //unawaited(cacheManager?.putStreamedFile(url, streamController.stream));
     stream = response.map((chunk) {
       if (_isCancelled) {
         throw StateError('Cancelled request');

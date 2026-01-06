@@ -234,6 +234,7 @@ class ImmichAssetGridViewState extends ConsumerState<ImmichAssetGridView> {
           (ModalRoute.of(context)?.settings.name == AlbumViewerRoute.name);
     }
 
+    const dragScrollbarBottomPadding = 150.0;
     final listWidget = ScrollablePositionedList.builder(
       padding: EdgeInsets.only(top: appBarOffset() ? 60 : 0, bottom: 220),
       itemBuilder: _itemBuilder,
@@ -244,6 +245,7 @@ class ImmichAssetGridViewState extends ConsumerState<ImmichAssetGridView> {
       itemCount: widget.renderList.elements.length + (widget.topWidget != null ? 1 : 0),
       addRepaintBoundaries: true,
       shrinkWrap: widget.shrinkWrap,
+      minCacheExtent: context.height * 6,
     );
 
     final child = (useDragScrolling && ModalRoute.of(context) != null)
@@ -255,8 +257,11 @@ class ImmichAssetGridViewState extends ConsumerState<ImmichAssetGridView> {
                 ? context.colorScheme.primary.darken(amount: .5)
                 : context.colorScheme.primary,
             labelTextBuilder: widget.showLabel ? _labelBuilder : null,
-            padding: appBarOffset() ? const EdgeInsets.only(top: 60) : const EdgeInsets.only(),
-            heightOffset: appBarOffset() ? 60 : 0,
+            padding: EdgeInsets.only(
+              top: appBarOffset() ? 60 : 0,
+              bottom: dragScrollbarBottomPadding,
+            ),
+            heightOffset: (appBarOffset() ? 60 : 0) + dragScrollbarBottomPadding,
             labelConstraints: const BoxConstraints(maxHeight: 28),
             scrollbarAnimationDuration: const Duration(milliseconds: 300),
             scrollbarTimeToFade: const Duration(milliseconds: 1000),

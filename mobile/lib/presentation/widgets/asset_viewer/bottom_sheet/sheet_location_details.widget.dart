@@ -20,6 +20,7 @@ class SheetLocationDetails extends ConsumerStatefulWidget {
 
 class _SheetLocationDetailsState extends ConsumerState<SheetLocationDetails> {
   MapLibreMapController? _mapController;
+  String reverseText = '';
 
   String? _getLocationName(ExifInfo? exifInfo) {
     if (exifInfo == null) {
@@ -37,6 +38,12 @@ class _SheetLocationDetailsState extends ConsumerState<SheetLocationDetails> {
 
   void _onMapCreated(MapLibreMapController controller) {
     _mapController = controller;
+  }
+
+  void _onReverseGeocoded(String text) {
+    setState(() {
+      reverseText = text.trim();
+    });
   }
 
   void _onExifChanged(AsyncValue<ExifInfo?>? previous, AsyncValue<ExifInfo?> current) {
@@ -69,7 +76,7 @@ class _SheetLocationDetailsState extends ConsumerState<SheetLocationDetails> {
     }
 
     final remoteId = asset is LocalAsset ? asset.remoteId : (asset as RemoteAsset).id;
-    final locationName = _getLocationName(exifInfo);
+    final locationName = reverseText.isNotEmpty ? reverseText : _getLocationName(exifInfo);
     final coordinates = "${exifInfo?.latitude?.toStringAsFixed(4)}, ${exifInfo?.longitude?.toStringAsFixed(4)}";
 
     return Padding(
@@ -92,7 +99,7 @@ class _SheetLocationDetailsState extends ConsumerState<SheetLocationDetails> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  ExifMap(exifInfo: exifInfo!, markerId: remoteId, onMapCreated: _onMapCreated),
+                  ExifMap(exifInfo: exifInfo!, markerId: remoteId, onMapCreated: _onMapCreated, onReverseGeocoded: _onReverseGeocoded,),
                   const SizedBox(height: 16),
                   if (locationName != null)
                     Padding(

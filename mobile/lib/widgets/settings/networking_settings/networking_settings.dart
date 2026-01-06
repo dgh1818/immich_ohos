@@ -12,6 +12,8 @@ import 'package:immich_mobile/widgets/settings/networking_settings/external_netw
 import 'package:immich_mobile/widgets/settings/networking_settings/local_network_preference.dart';
 import 'package:immich_mobile/widgets/settings/settings_switch_list_tile.dart';
 
+import 'package:flutter/foundation.dart';
+
 class NetworkingSettings extends HookConsumerWidget {
   const NetworkingSettings({super.key});
 
@@ -79,6 +81,10 @@ class NetworkingSettings extends HookConsumerWidget {
 
     useEffect(() {
       if (featureEnabled.value == true) {
+        if (defaultTargetPlatform == TargetPlatform.ohos) {
+          return null;
+        }
+
         checkWifiReadPermission();
       }
       return null;

@@ -21,6 +21,11 @@ import 'package:maplibre_gl/maplibre_gl.dart';
 class PlacesCollectionPage extends HookConsumerWidget {
   const PlacesCollectionPage({super.key, this.currentLocation});
   final LatLng? currentLocation;
+
+  bool containsChinese(String s) {
+    return s.runes.any((r) => r >= 0x4E00 && r <= 0x9FFF);
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final places = ref.watch(getAllPlacesProvider);
@@ -59,11 +64,12 @@ class PlacesCollectionPage extends HookConsumerWidget {
                 height: 200,
                 width: context.width,
                 child: MapThumbnail(
-                  onTap: (_, __) => context.pushRoute(MapRoute(initialLocation: currentLocation)),
+                  onTap: (_, __) => context.pushRoute(MapRoute(initialLocation: const LatLng(31.171944, 121.549722))),
                   zoom: 8,
-                  centre: currentLocation ?? const LatLng(21.44950, -157.91959),
+                  centre: currentLocation ?? const LatLng(31.171944, 121.549722),
                   showAttribution: false,
                   themeMode: context.isDarkTheme ? ThemeMode.dark : ThemeMode.light,
+                  isZoomControlsEnabled: false,
                 ),
               ),
             ),
@@ -74,6 +80,16 @@ class PlacesCollectionPage extends HookConsumerWidget {
                   return place.label.toLowerCase().contains(search.value!.toLowerCase());
                 }).toList();
               }
+
+              places.sort((a, b) {
+                final hasChineseA = containsChinese(a.label);
+                final hasChineseB = containsChinese(b.label);
+
+                if (hasChineseA && !hasChineseB) return -1;
+                if (!hasChineseA && hasChineseB) return 1;
+                return a.label.compareTo(b.label); // 同类再按字典序
+              });
+
               return ListView.builder(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),

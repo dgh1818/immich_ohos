@@ -25,7 +25,7 @@ class VideoViewerControls extends HookConsumerWidget {
     }
     final VideoPlaybackState state = ref.watch(videoPlaybackValueProvider.select((value) => value.state));
 
-    final cast = ref.watch(castProvider);
+    //final cast = ref.watch(castProvider);
 
     // A timer to hide the controls
     final hideTimer = useTimer(hideTimerDuration, () {
@@ -39,7 +39,7 @@ class VideoViewerControls extends HookConsumerWidget {
         ref.read(assetViewerProvider.notifier).setControls(false);
       }
     });
-    final showBuffering = state == VideoPlaybackState.buffering && !cast.isCasting;
+    final showBuffering = state == VideoPlaybackState.buffering;
 
     /// Shows the controls and starts the timer to hide them
     void showControlsAndStartHideTimer() {
@@ -47,15 +47,26 @@ class VideoViewerControls extends HookConsumerWidget {
       ref.read(assetViewerProvider.notifier).setControls(true);
     }
 
-    // When we change position, show or hide timer
-    ref.listen(videoPlayerControlsProvider.select((v) => v.position), (previous, next) {
+    void toggleControls() {
+      if (showControls) {
+        ref.read(assetViewerProvider.notifier).setControls(false);
+        return;
+      }
       showControlsAndStartHideTimer();
+    }
+
+    // When we change position, only keep the timer alive if controls are already showing
+    ref.listen(videoPlayerControlsProvider.select((v) => v.position), (previous, next) {
+      if (showControls) {
+        hideTimer.reset();
+      }
     });
 
     /// Toggles between playing and pausing depending on the state of the video
     void togglePlay() {
       showControlsAndStartHideTimer();
 
+      /*
       if (cast.isCasting) {
         if (cast.castState == CastState.playing) {
           ref.read(castProvider.notifier).pause();
@@ -71,6 +82,7 @@ class VideoViewerControls extends HookConsumerWidget {
         }
         return;
       }
+*/
 
       if (state == VideoPlaybackState.playing) {
         ref.read(videoPlayerControlsProvider.notifier).pause();
@@ -83,7 +95,7 @@ class VideoViewerControls extends HookConsumerWidget {
 
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
-      onTap: showControlsAndStartHideTimer,
+      onTap: toggleControls,
       child: AbsorbPointer(
         absorbing: !showControls,
         child: Stack(
@@ -98,7 +110,8 @@ class VideoViewerControls extends HookConsumerWidget {
                   iconColor: Colors.white,
                   isFinished: state == VideoPlaybackState.completed,
                   isPlaying:
-                      state == VideoPlaybackState.playing || (cast.isCasting && cast.castState == CastState.playing),
+                      //state == VideoPlaybackState.playing || (cast.isCasting && cast.castState == CastState.playing),
+                      state == VideoPlaybackState.playing,
                   show: assetIsVideo && showControls,
                   onPressed: togglePlay,
                 ),

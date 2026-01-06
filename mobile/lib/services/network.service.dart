@@ -2,6 +2,8 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:immich_mobile/repositories/network.repository.dart';
 import 'package:immich_mobile/repositories/permission.repository.dart';
 
+import 'package:flutter/foundation.dart';
+
 final networkServiceProvider = Provider((ref) {
   return NetworkService(ref.watch(networkRepositoryProvider), ref.watch(permissionRepositoryProvider));
 });
@@ -29,6 +31,10 @@ class NetworkService {
   }
 
   Future<String?> getWifiName() async {
+    if (defaultTargetPlatform == TargetPlatform.ohos) {
+      return await _repository.getWifiName(); //ohos don't need request
+    }
+
     final canRead = await getLocationWhenInUserPermission();
     if (!canRead) {
       return null;

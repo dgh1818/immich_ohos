@@ -63,7 +63,8 @@ class RemoteFullImageProvider extends CancellableImageProvider<RemoteFullImagePr
   static final cacheManager = RemoteThumbnailCacheManager();
   final String assetId;
 
-  RemoteFullImageProvider({required this.assetId});
+  final bool? is_image;
+  RemoteFullImageProvider({required this.assetId, this.is_image});
 
   @override
   Future<RemoteFullImageProvider> obtainKey(ImageConfiguration configuration) {
@@ -97,16 +98,66 @@ class RemoteFullImageProvider extends CancellableImageProvider<RemoteFullImagePr
       headers: headers,
       cacheManager: cacheManager,
     );
-    yield* loadRequest(request, decode);
+    final previewImage = request.load(decode);
+
+    if (is_image != null) {
+      if (!is_image!) {
+        final image = await previewImage;
+        this.request = null;
+        if (image == null || isCancelled) {
+          unawaited(evict());
+          return;
+        }
+        if (image != null) {
+          yield image;
+        }
+        return;
+      }
+    }
 
     if (isCancelled) {
+      this.request = null;
       unawaited(evict());
       return;
     }
 
     if (AppSetting.get(Setting.loadOriginal)) {
       final request = this.request = RemoteImageRequest(uri: getOriginalUrlForRemoteId(key.assetId), headers: headers);
-      yield* loadRequest(request, decode);
+      final originalImage = request.load(decode);
+
+      final previewTask = previewImage.then((image) => (image: image, isOriginal: false));
+      final originalTask = originalImage.then((image) => (image: image, isOriginal: true));
+      final first = await Future.any([previewTask, originalTask]);
+      if (first.image != null && !isCancelled) {
+        yield first.image!;
+      }
+      if (!first.isOriginal) {
+        final image = await originalImage;
+        this.request = null;
+        if (image == null || isCancelled) {
+          unawaited(evict());
+          return;
+        }
+        if (image != null) {
+          yield image;
+        }
+        return;
+      }
+      this.request = null;
+      if (first.image == null || isCancelled) {
+        unawaited(evict());
+      }
+      return;
+    }
+
+    final image = await previewImage;
+    this.request = null;
+    if (image == null || isCancelled) {
+      unawaited(evict());
+      return;
+    }
+    if (image != null) {
+      yield image;
     }
   }
 

@@ -36,8 +36,8 @@ class Timeline extends StatelessWidget {
     this.topSliverWidgetHeight,
     this.showStorageIndicator = false,
     this.withStack = false,
-    this.appBar = const ImmichSliverAppBar(floating: true, pinned: false, snap: false),
-    this.bottomSheet = const GeneralBottomSheet(minChildSize: 0.23),
+    this.appBar = const ImmichSliverAppBar(floating: true, pinned: true, snap: false),
+    this.bottomSheet = const GeneralBottomSheet(minChildSize: 0.18),
     this.groupBy,
     this.withScrubber = true,
     this.snapToMonth = true,
@@ -59,7 +59,7 @@ class Timeline extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       resizeToAvoidBottomInset: false,
-      floatingActionButton: const DownloadStatusFloatingButton(),
+      floatingActionButton: const Padding(padding: EdgeInsets.only(bottom: 60), child: DownloadStatusFloatingButton()),
       body: LayoutBuilder(
         builder: (_, constraints) => ProviderScope(
           overrides: [
@@ -325,15 +325,15 @@ class _SliverTimelineState extends ConsumerState<_SliverTimeline> {
 
           const scrubberBottomPadding = 100.0;
           const bottomSheetOpenModifier = 120.0;
-          final bottomPadding =
-              context.padding.bottom +
-              (widget.appBar == null ? 0 : scrubberBottomPadding) +
-              (isMultiSelectEnabled ? bottomSheetOpenModifier : 0);
+          final bottomPadding = 150.0;
+          // context.padding.bottom +
+          // (widget.appBar == null ? 0 : scrubberBottomPadding) +
+          // (isMultiSelectEnabled ? bottomSheetOpenModifier : 0);
 
           final grid = CustomScrollView(
             primary: true,
             physics: _scrollPhysics,
-            cacheExtent: maxHeight * 2,
+            cacheExtent: maxHeight * 6,
             slivers: [
               if (isSelectionMode) const SelectionSliverAppBar() else if (widget.appBar != null) widget.appBar!,
               if (widget.topSliverWidget != null) widget.topSliverWidget!,

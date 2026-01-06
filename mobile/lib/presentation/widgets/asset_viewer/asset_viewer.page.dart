@@ -27,7 +27,7 @@ import 'package:immich_mobile/presentation/widgets/images/thumbnail.widget.dart'
 import 'package:immich_mobile/providers/asset_viewer/is_motion_video_playing.provider.dart';
 import 'package:immich_mobile/providers/asset_viewer/video_player_controls_provider.dart';
 import 'package:immich_mobile/providers/asset_viewer/video_player_value_provider.dart';
-import 'package:immich_mobile/providers/cast.provider.dart';
+//import 'package:immich_mobile/providers/cast.provider.dart';
 import 'package:immich_mobile/providers/infrastructure/asset_viewer/current_asset.provider.dart';
 import 'package:immich_mobile/providers/infrastructure/current_album.provider.dart';
 import 'package:immich_mobile/providers/infrastructure/readonly_mode.provider.dart';
@@ -35,6 +35,12 @@ import 'package:immich_mobile/providers/infrastructure/timeline.provider.dart';
 import 'package:immich_mobile/widgets/common/immich_loading_indicator.dart';
 import 'package:immich_mobile/widgets/photo_view/photo_view.dart';
 import 'package:immich_mobile/widgets/photo_view/photo_view_gallery.dart';
+
+import 'dart:ui' as ui;
+import 'package:immich_mobile/infrastructure/loaders/image_request.dart';
+import 'package:immich_mobile/main.dart';
+import 'package:immich_mobile/domain/models/setting.model.dart';
+import 'package:immich_mobile/domain/services/setting.service.dart';
 
 @RoutePage()
 class AssetViewerPage extends StatelessWidget {
@@ -108,6 +114,10 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
   PhotoViewControllerBase? viewController;
   StreamSubscription? reloadSubscription;
 
+  ImageProvider? currentImageProvider; // 替代 useRef
+  late final _MyRouteAware routeAware; // 替代 useMemoized
+  ImageStreamListener? imageListener;
+
   late final int heroOffset;
   late PhotoViewControllerValue initialPhotoViewState;
   bool? hasDraggedDown;
@@ -124,6 +134,11 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
   BuildContext? scaffoldContext;
   Map<String, GlobalKey> videoPlayerKeys = {};
 
+  Animation<double>? _routeAnimation;
+  double routeFade = 1.0;
+  int imageHdrState = -1;
+  int lastPlayingState = 0;
+
   // Delayed operations that should be cancelled on disposal
   final List<Timer> _delayedOperations = [];
 
@@ -133,13 +148,45 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
   KeepAliveLink? _stackChildrenKeepAlive;
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final route = ModalRoute.of(context);
+    final animation = route?.animation;
+    if (_routeAnimation == animation) return;
+    _routeAnimation?.removeListener(_onRouteAnimationChanged);
+    _routeAnimation = animation;
+    _routeAnimation?.addListener(_onRouteAnimationChanged);
+  }
+
+  void _onRouteAnimationChanged() {
+    final value = _routeAnimation?.value ?? 1.0;
+    if (value != routeFade) {
+      setState(() {
+        routeFade = value;
+      });
+    }
+  }
+
+  @override
   void initState() {
     super.initState();
     assert(ref.read(currentAssetNotifier) != null, "Current asset should not be null when opening the AssetViewer");
     pageController = PageController(initialPage: widget.initialIndex);
     totalAssets = ref.read(timelineServiceProvider).totalAssets;
     bottomSheetController = DraggableScrollableController();
-    WidgetsBinding.instance.addPostFrameCallback(_onAssetInit);
+
+    routeAware = _MyRouteAware();
+    ui.SetHdr.enableHdr(enable_hdr: true);
+
+    WidgetsBinding.instance.addPostFrameCallback((_onAssetInit) {
+      _onAssetChanged(widget.initialIndex);
+
+      final modalRoute = ModalRoute.of(context);
+      if (modalRoute is PageRoute) {
+        routeObserver.subscribe(routeAware, modalRoute);
+      }
+    });
+
     reloadSubscription = EventStream.shared.listen(_onEvent);
     heroOffset = widget.heroOffset ?? TabsRouterScope.of(context)?.controller.activeIndex ?? 0;
     final asset = ref.read(currentAssetNotifier);
@@ -158,6 +205,11 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
     _nextPreCacheStream?.removeListener(_dummyListener);
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     _stackChildrenKeepAlive?.close();
+
+    routeObserver.unsubscribe(routeAware);
+    _routeAnimation?.removeListener(_onRouteAnimationChanged);
+    removeImageListener();
+
     super.dispose();
   }
 
@@ -165,7 +217,9 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
 
   Color get backgroundColor {
     final opacity = ref.read(assetViewerProvider.select((s) => s.backgroundOpacity));
-    return Colors.black.withAlpha(opacity);
+
+    final scaledOpacity = (opacity * routeFade).clamp(0, 255).round();
+    return Colors.black.withAlpha(scaledOpacity);
   }
 
   void _cancelTimers() {
@@ -183,10 +237,67 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
     return provider.resolve(ImageConfiguration.empty)..addListener(_dummyListener);
   }
 
-  void _precacheAssets(int index) {
+  void removeImageListener() {
+    if (imageListener != null && currentImageProvider != null) {
+      try {
+        currentImageProvider!.resolve(ImageConfiguration.empty).removeListener(imageListener!);
+      } catch (e) {
+        // 忽略可能的异常
+      } finally {
+        imageListener = null;
+        currentImageProvider = null;
+      }
+    }
+  }
+
+  void getImageColorSpace(ImageProvider provider, BuildContext context) async {
+    if (imageListener != null && currentImageProvider != null) {
+      currentImageProvider!.resolve(ImageConfiguration.empty).removeListener(imageListener!);
+    }
+
+    ImageStream stream = provider.resolve(ImageConfiguration.empty);
+
+    imageListener = ImageStreamListener((ImageInfo info, bool synchronousCall) {
+      if (info.image.colorSpace == ui.ColorSpace.extendedSRGB) {
+        ui.SetHdr.setHdrMode(hdr: 1, is_image: true);
+        imageHdrState = 1;
+      } else {
+        ui.SetHdr.setHdrMode(hdr: 0, is_image: true);
+        imageHdrState = -1;
+      }
+    }, onError: (_, __) {});
+
+    currentImageProvider = provider;
+    stream.addListener(imageListener!);
+  }
+
+  void setDisplayMode(ImageProvider provider, BuildContext context) async {
+    getImageColorSpace(provider, context);
+  }
+
+  void _precacheAssets(int index) async {
     final timelineService = ref.read(timelineServiceProvider);
     unawaited(timelineService.preCacheAssets(index));
     _cancelTimers();
+    final asset = await timelineService.getAssetAsync(index);
+
+    imageHdrState = -1;
+
+    if (asset == null) {
+      return;
+    }
+
+    if (asset.isImage) {
+      final provider = getFullImageProvider(asset);
+      setDisplayMode(provider, context);
+    } else {
+      ui.SetHdr.setHdrMode(hdr: 0, is_image: true);
+    }
+
+    if (!asset.isImage) {
+      ui.SetHdr.setHdrMode(hdr: -1, is_image: false);
+    }
+
     // This will trigger the pre-caching of adjacent assets ensuring
     // that they are ready when the user navigates to them.
     final timer = Timer(Durations.medium4, () async {
@@ -203,12 +314,15 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
       _prevPreCacheStream = prevAsset != null ? _precacheImage(prevAsset) : null;
       _nextPreCacheStream = nextAsset != null ? _precacheImage(nextAsset) : null;
     });
+
+    ref.read(assetViewerProvider.notifier).setAsset(asset);
+
     _delayedOperations.add(timer);
   }
 
   void _onAssetInit(Duration _) {
     _precacheAssets(widget.initialIndex);
-    _handleCasting();
+    //_handleCasting();
   }
 
   void _onAssetChanged(int index) async {
@@ -220,11 +334,12 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
 
     widget.changeAsset(ref, asset);
     _precacheAssets(index);
-    _handleCasting();
+    //_handleCasting();
     _stackChildrenKeepAlive?.close();
     _stackChildrenKeepAlive = ref.read(stackChildrenNotifier(asset).notifier).ref.keepAlive();
   }
 
+  /*
   void _handleCasting() {
     if (!ref.read(castProvider).isCasting) return;
     final asset = ref.read(currentAssetNotifier);
@@ -254,6 +369,7 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
       }
     }
   }
+*/
 
   void _onPageBuild(PhotoViewControllerBase controller) {
     viewController ??= controller;
@@ -530,7 +646,24 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
   }
 
   void _onLongPress(_, __, ___) {
+    ui.SetHdr.setHdrMode(hdr: 0, is_image: true);
+    ui.SetHdr.setHdrMode(hdr: -1, is_image: false);
     ref.read(isPlayingMotionVideoProvider.notifier).playing = true;
+    lastPlayingState = 1;
+  }
+
+  void _stopMotionPlayback() {
+    final asset = ref.read(currentAssetNotifier);
+    if (asset?.isMotionPhoto == true && ref.read(isPlayingMotionVideoProvider)) {
+      ref.read(isPlayingMotionVideoProvider.notifier).playing = false;
+      //ui.SetHdr.setHdrMode(hdr: 0, is_image: true);
+      lastPlayingState = 0;
+      ref.read(videoPlayerControlsProvider.notifier).pause();
+
+      if (asset != null) {
+        setDisplayMode(getFullImageProvider(asset), context);
+      }
+    }
   }
 
   PhotoViewGalleryPageOptions _assetBuilder(BuildContext ctx, int index) {
@@ -559,6 +692,17 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
 
     final isPlayingMotionVideo = ref.read(isPlayingMotionVideoProvider);
     if (displayAsset.isImage && !isPlayingMotionVideo) {
+      if (lastPlayingState == 1) {
+        if (imageHdrState == 1) {
+          ui.SetHdr.setHdrMode(hdr: 1, is_image: true);
+        }
+        if (imageHdrState == 0) {
+          ui.SetHdr.setHdrMode(hdr: 0, is_image: true);
+        }
+      }
+
+      lastPlayingState = 0;
+
       return _imageBuilder(ctx, displayAsset);
     }
 
@@ -606,7 +750,7 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
       child: SizedBox(
         width: ctx.width,
         height: ctx.height,
-        child: NativeVideoViewer(
+        child: VideoViewer(
           key: _getVideoPlayerKey(asset.heroTag),
           asset: asset,
           image: Image(
@@ -628,6 +772,8 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
 
   @override
   Widget build(BuildContext context) {
+    // Track route animation value to fade background during pop transitions
+    routeFade = ModalRoute.of(context)?.animation?.value ?? 1.0;
     // Rebuild the widget when the asset viewer state changes
     // Using multiple selectors to avoid unnecessary rebuilds for other state changes
     ref.watch(assetViewerProvider.select((s) => s.showingBottomSheet));
@@ -636,7 +782,8 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
     ref.watch(isPlayingMotionVideoProvider);
     final showingControls = ref.watch(assetViewerProvider.select((s) => s.showingControls));
 
-    // Listen for casting changes and send initial asset to the cast provider
+    /*
+    Listen for casting changes and send initial asset to the cast provider
     ref.listen(castProvider.select((value) => value.isCasting), (_, isCasting) async {
       if (!isCasting) return;
 
@@ -656,6 +803,7 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
         unawaited(SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky));
       }
     });
+*/
 
     // Currently it is not possible to scroll the asset when the bottom sheet is open all the way.
     // Issue: https://github.com/flutter/flutter/issues/109037
@@ -672,25 +820,28 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
           child: AnimatedOpacity(
             opacity: showingControls ? 1.0 : 0.0,
             duration: Durations.short2,
-            child: const DownloadStatusFloatingButton(),
+            child: const Padding(padding: EdgeInsets.only(bottom: 60), child: DownloadStatusFloatingButton()),
           ),
         ),
         body: Stack(
           children: [
-            PhotoViewGallery.builder(
-              gaplessPlayback: true,
-              loadingBuilder: _placeholderBuilder,
-              pageController: pageController,
-              scrollPhysics: CurrentPlatform.isIOS
-                  ? const FastScrollPhysics() // Use bouncing physics for iOS
-                  : const FastClampingScrollPhysics(), // Use heavy physics for Android
-              itemCount: totalAssets,
-              onPageChanged: _onPageChanged,
-              onPageBuild: _onPageBuild,
-              scaleStateChangedCallback: _onScaleStateChanged,
-              builder: _assetBuilder,
-              backgroundDecoration: BoxDecoration(color: backgroundColor),
-              enablePanAlways: true,
+            Listener(
+              onPointerUp: (_) => _stopMotionPlayback(),
+              child: PhotoViewGallery.builder(
+                gaplessPlayback: true,
+                loadingBuilder: _placeholderBuilder,
+                pageController: pageController,
+                scrollPhysics: CurrentPlatform.isIOS
+                    ? const FastScrollPhysics() // Use bouncing physics for iOS
+                    : const FastClampingScrollPhysics(), // Use heavy physics for Android
+                itemCount: totalAssets,
+                onPageChanged: _onPageChanged,
+                onPageBuild: _onPageBuild,
+                scaleStateChangedCallback: _onScaleStateChanged,
+                builder: _assetBuilder,
+                backgroundDecoration: BoxDecoration(color: backgroundColor),
+                enablePanAlways: true,
+              ),
             ),
             if (!showingBottomSheet)
               const Positioned(
@@ -708,5 +859,13 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
         ),
       ),
     );
+  }
+}
+
+class _MyRouteAware extends RouteAware {
+  @override
+  void didPop() {
+    ui.SetHdr.setHdrMode(hdr: 0, is_image: true);
+    super.didPop();
   }
 }

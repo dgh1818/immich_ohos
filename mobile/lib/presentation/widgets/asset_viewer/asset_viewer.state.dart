@@ -12,7 +12,7 @@ class AssetViewerState {
   const AssetViewerState({
     this.backgroundOpacity = 255,
     this.showingBottomSheet = false,
-    this.showingControls = true,
+    this.showingControls = false,
     this.currentAsset,
     this.stackIndex = 0,
   });
@@ -80,7 +80,7 @@ class AssetViewerStateNotifier extends Notifier<AssetViewerState> {
     if (opacity == state.backgroundOpacity) {
       return;
     }
-    state = state.copyWith(backgroundOpacity: opacity, showingControls: opacity == 255 ? true : state.showingControls);
+    state = state.copyWith(backgroundOpacity: opacity);
   }
 
   void setBottomSheet(bool showing) {
