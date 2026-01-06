@@ -2,30 +2,32 @@ name: immich_mobile
 description: Immich - selfhosted backup media file on mobile phone
 
 publish_to: 'none'
-version: 2.4.1+3030
+version: 2.4.1+240020000
 
 environment:
   sdk: '>=3.8.0 <4.0.0'
-  flutter: 3.35.7
+  flutter: 3.32.4-ohos-0.0.1
+
+isar_version: &isar_version 3.1.0+1
 
 dependencies:
   async: ^2.13.0
   auto_route: ^9.2.0
-  background_downloader: ^9.3.0
+  background_downloader: ^9.3.0 #ohos待适配
   cached_network_image: ^3.4.1
   cancellation_token_http: ^2.1.0
-  cast: ^2.1.0
+  #cast: ^2.1.0
   collection: ^1.19.1
   connectivity_plus: ^6.1.3
   crop_image: ^1.0.16
   crypto: ^3.0.6
   device_info_plus: ^12.2.0
   # DB
-  drift: ^2.26.0
-  drift_flutter: ^0.2.6
-  dynamic_color: ^1.8.1
+  drift: ^2.28.0
+  drift_flutter: 0.2.4
+  dynamic_color: ^1.8.1  #ohos待适配
   easy_localization: ^3.0.8
-  ffi: ^2.1.4
+  #ffi: ^2.1.4
   file_picker: ^8.0.0+1
   flutter:
     sdk: flutter
@@ -46,36 +48,30 @@ dependencies:
   immich_ui:
     path: './packages/ui'
   intl: ^0.20.2
-  isar:
-    git:
-      url: https://github.com/immich-app/isar
-      ref: 'bb1dca40fe87a001122e5d43bc6254718cb49f3a'
-      path: packages/isar/
   isar_community_flutter_libs: 3.3.0-dev.3
   local_auth: ^2.3.0
   logging: ^1.3.0
   maplibre_gl: ^0.22.0
-
-  native_video_player:
-    git:
-      url: https://github.com/immich-app/native_video_player
-      ref: 'e132bc3'
-  network_info_plus: ^6.1.3
+  network_info_plus: ^6.1.3  #ohos待适配
   octo_image: ^2.1.0
   openapi:
     path: openapi
   package_info_plus: ^8.3.0
   path: ^1.9.1
   path_provider: ^2.1.5
-  path_provider_foundation: ^2.4.3
+  path_provider_foundation: ^2.4.1
   permission_handler: ^11.4.0
   photo_manager: ^3.7.1
   pinput: ^5.0.2
   punycode: ^1.0.0
   riverpod_annotation: ^2.6.1
-  scroll_date_picker: ^3.8.0
+  #scroll_date_picker: ^3.8.0
   scrollable_positioned_list: ^0.3.8
-  share_handler: ^0.0.25
+  #share_handler: ^0.0.25
+  receive_sharing_intent:
+    git:
+      url: https://gitcode.com/openharmony-sig/fluttertpc_receive_sharing_intent.git
+      ref: br_v1.8.1_ohos
   share_plus: ^10.1.4
   sliver_tools: ^0.2.12
   socket_io_client: ^2.0.3+1
@@ -84,8 +80,232 @@ dependencies:
   timezone: ^0.9.4
   url_launcher: ^6.3.2
   uuid: ^4.5.1
-  wakelock_plus: ^1.3.0
-  worker_manager: ^7.2.7
+  wakelock_plus: ^1.2.10
+  worker_manager: ^7.2.3
+  scroll_date_picker: ^3.8.0
+  #ffi: ^2.1.4
+  video_compress: ^3.1.0
+
+  # native_video_player:
+  #   git:
+  #     url: https://github.com/immich-app/native_video_player
+  #     ref: '893894b'
+  video_player: ^2.9.2
+  isar: ^3.1.0+1 #ok
+  isar_flutter_libs: ^3.1.0+1 #ok
+  # DB
+
+  #drift_sqflite: ^2.0.1   #sqflite
+  pigeon: ^25.3.1
+  image_gallery_saver: ^2.0.3
+  huawei_cast: ^1.0.0
+  coordtransform_dart: ^1.0.4
+
+dependency_overrides:
+  local_auth: 
+    # # git:
+    # #   url: 'https://gitcode.com/openharmony-sig/flutter_packages.git'
+    # path: ../../package_flutter/local_auth/local_auth
+    git:
+      url: 'https://github.com/dgh1818/local_auth_ohos.git'
+      path: './local_auth'
+      ref: master
+  video_compress: 
+    git:
+      url: 'https://gitcode.com/openharmony-sig/fluttertpc_video_compress.git'
+      path: ./
+  pinput:
+    git:
+      url: 'https://github.com/dgh1818/Flutter_Pinput_ohos'
+      path: './'
+      #ref: br_local_auth-v2.3.0_ohos
+  background_downloader:
+    path: ../../package_flutter/background_downloader_ohos
+  huawei_cast:
+    #url: 'https://github.com/dgh1818/huawei_cast_flutter'
+    path: ../../package_flutter/huawei_cast
+    #ref: br_local_auth-v2.3.0_ohos
+  image_gallery_saver:
+     git:
+      url: 'https://gitcode.com/openharmony-sig/flutter_image_gallery_saver.git'
+      path: './'
+  network_info_plus:
+     git:
+      url: 'https://github.com/dgh1818/plus_plugins.git'
+      path: 'packages/network_info_plus/network_info_plus'
+  pigeon:
+    git:
+      url: 'https://gitcode.com/openharmony-sig/flutter_packages.git'
+      path: 'packages/pigeon'
+      ref: br_pigeon-v25.3.2_ohos
+  # sqflite:
+  #   git:
+  #     url: "https://gitcode.com/dgh18/flutter_sqflite.git"
+  #     path: "sqflite"
+  #     ref: br_v2.4.1_ohos
+  # sqflite_common:
+  #   git:
+  #     url: "https://gitcode.com/dgh18/flutter_sqflite.git"
+  #     path: "sqflite_common"
+  #     ref: br_v2.4.1_ohos
+  # sqflite_common_ffi:
+  #   git:
+  #     url: "https://gitcode.com/dgh18/flutter_sqflite.git"
+  #     path: "sqflite_common_ffi"
+  #     ref: br_v2.4.1_ohos
+  # sqflite_common_ffi_web:
+  #   git:
+  #     url: "https://gitcode.com/dgh18/flutter_sqflite.git"
+  #     path: "packages_web/sqflite_common_ffi_web"
+  #     ref: br_v2.4.1_ohos
+  sqlite3:
+    path: ../../package_flutter/sqlite3-ohos/sqlite3
+  sqlite3_flutter_libs:
+    path: ../../package_flutter/sqlite3-ohos/sqlite3_flutter_libs
+
+  flutter_secure_storage:
+    git:
+      url: "https://gitcode.com/dgh18/fluttertpc_flutter_secure_storage.git"
+      path: "flutter_secure_storage"
+      ref: 92f7dbca19a95911a14b012e291b6a995a0f7f78
+
+  #analyzer: ^6.2.0
+  #meta: ^1.11.0
+  #analyzer_plugin: ^0.11.3
+  path_provider:
+    git:
+      url: https://gitcode.com/openharmony-sig/flutter_packages.git
+      path: 'packages/path_provider/path_provider'
+      #ref: br_path_provider-v2.1.5_ohos
+  package_info_plus:
+    git:
+      url: https://gitcode.com/openharmony-sig/flutter_plus_plugins.git
+      path: packages/package_info_plus/package_info_plus
+      ref: c361adfe56bd39e43521929c88aef80e096b1243
+      # ref: a1347adcca3a46346a6ddd127cebcec9970cad6c
+  permission_handler:
+    git:
+      url: https://gitcode.com/openharmony-sig/flutter_permission_handler.git
+      path: permission_handler
+      #ref: 14bec9c520874b8bb3392f85bf7364b9a966c2de
+  device_info_plus:
+    git:
+      url: https://gitcode.com/openharmony-sig/flutter_plus_plugins.git
+      path: packages/device_info_plus/device_info_plus
+      #ref: br_device_info_plus-v11.1.0_ohos
+  connectivity_plus:
+    git:
+      url: https://gitcode.com/openharmony-sig/flutter_plus_plugins.git
+      path: packages/connectivity_plus/connectivity_plus
+      ref: br_connectivity_plus-v6.1.0_ohos
+  fluttertoast:
+    git:
+      url: https://gitcode.com/openharmony-sig/flutter_fluttertoast.git
+      path: ./
+      ref: br_8.2.8_ohos
+  video_player:
+    git:
+      url: https://gitcode.com/openharmony-sig/flutter_packages.git
+      path: 'packages/video_player/video_player'
+      #ref: br_video_player-v2.10.0_ohos
+      ref: br_video_player-v2.9.2_ohos
+  video_player_android: 
+    git:
+      url: https://gitcode.com/openharmony-sig/flutter_packages.git
+      path: 'packages/video_player/video_player_android'
+      ref: br_video_player-v2.9.2_ohos
+      #ref: br_video_player-v2.10.0_ohos
+  geolocator:
+    git:
+      url: https://gitcode.com/dgh18/fluttertpc_geolocator.git
+      path: 'geolocator'
+      ref: master
+      #ref: br_geolocator_v13.0.0_ohos
+  flutter_udid:
+    git:
+      url: https://gitcode.com/dgh18/fluttertpc_flutter_udid.git
+      path: ./
+      ref: master
+  url_launcher:
+    git:
+      url: https://gitcode.com/openharmony-sig/flutter_packages.git
+      path: 'packages/url_launcher/url_launcher'
+      #ref: br_url_launcher-v6.3.0_ohos
+  path_provider_platform_interface:
+    git:
+      url: https://gitcode.com/openharmony-sig/flutter_packages.git
+      path: 'packages/path_provider/path_provider_platform_interface'
+      #ref: 8c61f19e816168efc212cca5c4fbf9ac183ee90e
+  wakelock_plus:
+    git:
+      url: https://gitcode.com/openharmony-sig/fluttertpc_wakelock_plus.git
+      path: 'wakelock_plus'
+      ref: br_v1.3.2_ohos
+  flutter_local_notifications:
+    git:
+      url: https://gitcode.com/openharmony-sig/fluttertpc_flutter_local_notifications.git
+      path: 'flutter_local_notifications'
+      #ref: master
+  image_picker:
+    path: ../../package_flutter/image_picker/image_picker
+    # git:
+    #   url: https://gitcode.com/openharmony-sig/flutter_packages.git
+    #   path: 'packages/image_picker/image_picker'
+    #https://github.com/dgh1818/image_picker_ohos
+      
+      #ref: br_image_picker-v1.1.2_ohos
+  isar:
+    git:
+      url: https://gitee.com/du_guang/isar.git
+      path: 'packages/isar'
+      ref: dev3.1.0+1
+  isar_flutter_libs:
+    git:
+      url: https://gitee.com/du_guang/isar.git
+      path: 'packages/isar_flutter_libs'
+      ref: dev3.1.0+1
+
+  easy_localization:
+    git:
+      url: https://gitee.com/du_guang/easy_localization_ohos.git
+      ref: master
+      path: ./
+  chewie:
+    git:
+      url: https://gitcode.com/openharmony-sig/fluttertpc_chewie.git
+      #url: https://github.com/dgh1818/chewie_ohos.git
+      path: './'
+      #ref: update_one
+      #ref: ohos_dev
+      ref: br_v1.11.3_ohos
+  photo_manager:
+    path: ./flutter_photo_manager
+  coordtransform_dart:
+    git:
+      url: https://github.com/dgh1818/coordtransform_dart.git
+      ref: master
+      path: ./
+  photo_manager_image_provider:
+    path: ./photo_manager_image_provider
+
+  maplibre_gl:
+    path: ../../package_flutter/flutter-maplibre-gl-ohos/maplibre_gl
+  maplibre_gl_platform_interface:
+    path: ../../package_flutter/flutter-maplibre-gl-ohos/maplibre_gl_platform_interface
+  maplibre_gl_web:
+    path: ../../package_flutter/flutter-maplibre-gl-ohos/maplibre_gl_web
+  share_plus:
+    git:
+      url: 'https://gitcode.com/openharmony-sig/flutter_plus_plugins.git'
+      path: 'packages/share_plus/share_plus'
+      ref: master
+  intl: 0.20.2
+  uuid: ^4.4.2
+
+  wakelock_plus_platform_interface: 1.2.1
+  analyzer_plugin: 0.13.0
+  source_gen: ^2.0.0
+  #dart_style: 3.0.1
 
 dev_dependencies:
   auto_route_generator: ^9.0.0
@@ -102,30 +322,37 @@ dev_dependencies:
     sdk: flutter
   immich_mobile_immich_lint:
     path: './immich_lint'
-  integration_test:
-    sdk: flutter
+  #isar_generator: 3.1.0+1
   isar_generator:
     git:
       url: https://github.com/immich-app/isar
       ref: 'bb1dca40fe87a001122e5d43bc6254718cb49f3a'
       path: packages/isar_generator/
   mocktail: ^1.0.4
-  # Type safe platform code
-  pigeon: ^26.0.2
-  riverpod_generator: ^2.6.1
-  riverpod_lint: ^2.6.1
 
-dependency_overrides:
-  drift:
+dev_dependency_overrides:
+  isar_generator:
     git:
-      url: https://github.com/immich-app/drift
-      ref: '53ef7e9f19fe8f68416251760b4b99fe43f1c575'
-      path: drift/
+      url: https://github.com/immich-app/isar
+      ref: v3
+      path: 'packages/isar_generator'
+  # Type safe platform code
+  pigeon: ^25.3.1
+  # riverpod_generator: ^2.6.1
+  # riverpod_lint: ^2.6.1
+
+# dependency_overrides:
+#   drift:
+#     git:
+#       url: https://github.com/immich-app/drift
+#       ref: '53ef7e9f19fe8f68416251760b4b99fe43f1c575'
+#       path: drift/
 
 flutter:
   uses-material-design: true
   assets:
     - assets/
+    - assets/icons/notification_icon.png
   fonts:
     - family: Inconsolata
       fonts:
