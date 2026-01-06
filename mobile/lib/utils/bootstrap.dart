@@ -25,6 +25,8 @@ import 'package:immich_mobile/infrastructure/repositories/store.repository.dart'
 import 'package:isar/isar.dart';
 import 'package:path_provider/path_provider.dart';
 
+import 'package:isar_flutter_libs/isar_flutter_libs.dart';
+
 void configureFileDownloaderNotifications() {
   FileDownloader().configureNotificationForGroup(
     kDownloadGroupImage,
@@ -42,6 +44,13 @@ void configureFileDownloaderNotifications() {
 
   FileDownloader().configureNotificationForGroup(
     kManualUploadGroup,
+    running: TaskNotification('uploading_media'.t(), 'backup_background_service_in_progress_notification'.t()),
+    complete: TaskNotification('upload_finished'.t(), 'backup_background_service_complete_notification'.t()),
+    groupNotificationId: kManualUploadGroup,
+  );
+
+  FileDownloader().configureNotificationForGroup(
+    kManualLivePhotoGroup,
     running: TaskNotification('uploading_media'.t(), 'backup_background_service_in_progress_notification'.t()),
     complete: TaskNotification('upload_finished'.t(), 'backup_background_service_complete_notification'.t()),
     groupNotificationId: kManualUploadGroup,
@@ -79,6 +88,7 @@ abstract final class Bootstrap {
         ETagSchema,
         if (Platform.isAndroid) AndroidDeviceAssetSchema,
         if (Platform.isIOS) IOSDeviceAssetSchema,
+        if (defaultTargetPlatform == TargetPlatform.ohos) IOSDeviceAssetSchema,
         DeviceAssetEntitySchema,
       ],
       directory: dir.path,
