@@ -85,11 +85,10 @@ export class MetadataRepository {
     numericTags: [...DefaultReadTaskOptions.numericTags, 'FocalLength', 'FileSize'],
     /* eslint unicorn/no-array-callback-reference: off, unicorn/no-array-method-this-argument: off */
     geoTz: (lat, lon) => geotz.find(lat, lon)[0],
-    geolocation: true,
+    geolocation: false,
     // Enable exiftool LFS to parse metadata for files larger than 2GB.
-    readArgs: ['-api', 'largefilesupport=1'],
+    readArgs: ['-fast', '-api', 'largefilesupport=1'],
     writeArgs: ['-api', 'largefilesupport=1', '-overwrite_original'],
-    taskTimeoutMillis: 2 * 60 * 1000,
   });
 
   constructor(private logger: LoggingRepository) {
@@ -105,8 +104,7 @@ export class MetadataRepository {
   }
 
   readTags(path: string): Promise<ImmichTags> {
-    const args = mimeTypes.isVideo(path) ? ['-ee'] : [];
-    return this.exiftool.read(path, args).catch((error) => {
+    return this.exiftool.read(path).catch((error) => {
       this.logger.warn(`Error reading exif data (${path}): ${error}\n${error?.stack}`);
       return {};
     }) as Promise<ImmichTags>;

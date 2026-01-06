@@ -3,7 +3,7 @@ import { ContainerDirectoryItem, ExifDateTime, Tags } from 'exiftool-vendored';
 import { Insertable } from 'kysely';
 import _ from 'lodash';
 import { DateTime, Duration } from 'luxon';
-import { Stats } from 'node:fs';
+import { Stats, promises as fs } from 'node:fs';
 import { constants } from 'node:fs/promises';
 import { join, parse } from 'node:path';
 import { JOBS_ASSET_PAGINATION_SIZE } from 'src/constants';
@@ -196,6 +196,37 @@ export class MetadataService extends BaseService {
     await this.eventRepository.emit('AssetHide', { assetId: motionAsset.id, userId: motionAsset.ownerId });
   }
 
+  private async linkOhosLivePhotos(
+    asset: { id: string; type: AssetType; originalPath :string, originalFileName:string,ownerId: string; libraryId: string | null; },
+    exifInfo: Insertable<AssetExifTable>,
+  ): Promise<void> {
+    const otherType = asset.type === AssetType.Video ? AssetType.Image : AssetType.Video;
+    const match = await this.assetRepository.findOhosLivePhotoMatch({
+      path: otherType === AssetType.Video?`${parse(asset.originalPath).dir}/${parse(asset.originalFileName).name}.mp4`:`${parse(asset.originalPath).dir}/${parse(asset.originalFileName).name}.jpg`,
+      name: otherType === AssetType.Video?`${parse(asset.originalFileName).name}.mp4`:`${parse(asset.originalFileName).name}.jpg`,
+      ownerId: asset.ownerId,
+      libraryId: asset.libraryId,
+      otherAssetId: asset.id,
+      type: otherType,
+    });
+
+    if (!match) {
+      this.logger.log(`error: not find match`);
+      return;
+    }
+
+    this.logger.log(`success:  find match`);
+
+    const [photoAsset, motionAsset] = asset.type === AssetType.Image ? [asset, match] : [match, asset];
+    await Promise.all([
+      this.assetRepository.update({ id: photoAsset.id, livePhotoVideoId: motionAsset.id }),
+      this.assetRepository.update({ id: motionAsset.id, visibility: AssetVisibility.Hidden }),
+      this.albumRepository.removeAssetsFromAll([motionAsset.id]),
+    ]);
+
+    await this.eventRepository.emit('AssetHide', { assetId: motionAsset.id, userId: motionAsset.ownerId });
+  }
+
   @OnJob({ name: JobName.AssetExtractMetadataQueueAll, queue: QueueName.MetadataExtraction })
   async handleQueueMetadataExtraction(job: JobOf<JobName.AssetExtractMetadataQueueAll>): Promise<JobStatus> {
     const { force } = job;
@@ -301,7 +332,9 @@ export class MetadataService extends BaseService {
       this.applyTagList(asset, exifTags),
     ];
 
-    if (this.isMotionPhoto(asset, exifTags)) {
+    const { hasOhosLivePhoto, ohosFileSize, ohosVideoOffset } = await this.checkOhosLivePhoto(asset.originalPath);
+
+    if (this.isMotionPhoto(asset, exifTags) || hasOhosLivePhoto==1) {
       promises.push(this.applyMotionPhotos(asset, exifTags, dates, stats));
     }
 
@@ -312,6 +345,11 @@ export class MetadataService extends BaseService {
     await Promise.all(promises);
     if (exifData.livePhotoCID) {
       await this.linkLivePhotos(asset, exifData);
+    }
+
+    if (hasOhosLivePhoto == 2 ) {
+      this.logger.log(`Is Ohos Next livephoto (${asset.id})`);
+      await this.linkOhosLivePhotos(asset,exifData);
     }
 
     await this.assetRepository.upsertJobStatus({ assetId: asset.id, metadataExtractedAt: new Date() });
@@ -558,6 +596,7 @@ export class MetadataService extends BaseService {
     const directory = Array.isArray(tags.ContainerDirectory)
       ? (tags.ContainerDirectory as ContainerDirectoryItem[])
       : null;
+    const { hasOhosLivePhoto, ohosFileSize, ohosVideoOffset } = await this.checkOhosLivePhoto(asset.originalPath);
 
     let length = 0;
     let padding = 0;
@@ -576,7 +615,12 @@ export class MetadataService extends BaseService {
       length = videoOffset;
     }
 
-    if (!length && !hasEmbeddedVideoFile && !hasMotionPhotoVideo) {
+    if (hasOhosLivePhoto == 1) {
+      length = ohosVideoOffset;
+      this.logger.log(`Is Ohos JPEG-encoded livephoto (${asset.id})`)      ;
+    }
+
+    if (!length && !hasEmbeddedVideoFile && !hasMotionPhotoVideo && !hasOhosLivePhoto) {
       return;
     }
 
@@ -593,6 +637,10 @@ export class MetadataService extends BaseService {
       //     JPEG-encoded; HEIC also contains these tags, so this conditional must come second
       else if (hasEmbeddedVideoFile) {
         video = await this.metadataRepository.extractBinaryTag(asset.originalPath, 'EmbeddedVideoFile');
+      }
+      //     Ohos LivePhoto video extraction; JPEG-encoded
+      else if (hasOhosLivePhoto == 1) {
+        video = await this.processOhosLivePhoto(asset.originalPath, ohosFileSize, ohosVideoOffset);
       }
       // Default video extraction
       else {
@@ -991,5 +1039,157 @@ export class MetadataService extends BaseService {
     }
 
     return tags;
+  }
+
+  private async processOhosLivePhoto(filePath: string, fileSize: number, offset: number): Promise<Buffer> {
+    if (offset < 0) {
+      throw new Error(`Invalid Ohoslivephoto metadata`);
+    }
+
+    let OhosVideoEndOffset = 40;
+    const end = fileSize - OhosVideoEndOffset;
+    const start = end - offset;
+
+    if (start < 0 || start >= end) {
+      throw new Error(`Invalid data range: start=${start}, end=${end}`);
+    }
+
+    let video: Buffer;
+    const videoLength = end - start + 1;
+    const fd = await fs.open(filePath, 'r');
+
+    try {
+      video = Buffer.alloc(end - start + 1);
+      await fd.read(video, 0, videoLength, start);
+    } finally {
+      await fd.close();
+    }
+
+    return video;
+  }
+
+  private async checkOhosLivePhoto(
+    filePath: string,
+  ): Promise<{ hasOhosLivePhoto: number; ohosFileSize: number; ohosVideoOffset: number }> {
+    const stats = await fs.stat(filePath);
+    const ohosFileSize = stats.size;
+    let ohosLiveMetaDataOFFSET = 20;
+    let ohosVideoEndOffset = 40;
+    let hasOhosLivePhoto = 0;
+    let metadataBuffer = Buffer.alloc(ohosLiveMetaDataOFFSET);
+    let ohosVideoOffset = -1;
+
+    const minSize = ohosVideoEndOffset + 1;
+    if (ohosFileSize < minSize) {
+      return { hasOhosLivePhoto, ohosFileSize, ohosVideoOffset };
+    }
+
+    const fd = await fs.open(filePath, 'r');
+    try {
+      await fd.read(metadataBuffer, 0, ohosLiveMetaDataOFFSET, ohosFileSize - ohosLiveMetaDataOFFSET);
+    } finally {
+      await fd.close();
+    }
+
+    let liveStr = '';
+    for (let i = 0; i < 5; i++) {
+      const byte = metadataBuffer.readUInt8(i);
+      liveStr += String.fromCharCode(byte);
+    }
+    if (liveStr == 'LIVE_') {
+      hasOhosLivePhoto = 1;
+    }
+
+    let numberStr = '';
+    if (hasOhosLivePhoto) {
+      const startPos = 5;
+      for (let i = startPos; i < metadataBuffer.length; i++) {
+        const byte = metadataBuffer.readUInt8(i);
+        if (byte === 0x20) continue; // Skip spaces
+        if (byte >= 0x30 && byte <= 0x39) {
+          numberStr += String.fromCharCode(byte);
+        } else {
+          break;
+        }
+      }
+      const ohosVideoOffset = parseInt(numberStr, 10);
+      this.logger.log(`numberStr is ${numberStr} `);
+
+      if (isNaN(ohosVideoOffset)) {
+        hasOhosLivePhoto = 0;
+        return { hasOhosLivePhoto, ohosFileSize, ohosVideoOffset };
+      } else {
+        return { hasOhosLivePhoto, ohosFileSize, ohosVideoOffset };
+      }
+    }
+
+    let startPos:number = 0;
+    const tailLen_2 = 20000;
+
+    if(!hasOhosLivePhoto) {
+      startPos = Math.max(0, ohosFileSize - tailLen_2);;
+    }
+
+    if (startPos < 0) {
+      hasOhosLivePhoto = 0;
+      this.logger.log(`startPos is ${startPos} `);
+      return { hasOhosLivePhoto, ohosFileSize, ohosVideoOffset };
+    }
+
+    const buffer = Buffer.alloc(tailLen_2);
+    const fd_2 = await fs.open(filePath, 'r');
+    
+    
+
+     try {
+      const { bytesRead } = await fd_2.read(buffer, 0, tailLen_2, startPos);
+      const hay = buffer.slice(0, bytesRead); // 只取有效字节
+      const needle = Buffer.from('MovingPhotoMeta', 'utf8');
+      const foundIndex = hay.indexOf(needle);
+      const isMatch = foundIndex !== -1;
+      hasOhosLivePhoto = isMatch ? 2 : 0;
+      if(isMatch) {
+        hasOhosLivePhoto = 2;
+        return { hasOhosLivePhoto, ohosFileSize, ohosVideoOffset };
+      }
+    } finally {
+      await fd_2.close();
+    }
+
+    // try {
+    //   const { bytesRead } = await fd_2.read(buffer, 0, 15, startPos);
+    // } finally {
+    //   await fd_2.close();
+    // }
+
+    // const foundString = buffer.toString('utf8');
+    // //this.logger.log(`foundString is ${foundString}`);
+    // const isMatch = foundString === 'MovingPhotoMeta';
+    // if(isMatch) {
+    //   hasOhosLivePhoto = 2;
+    //   return { hasOhosLivePhoto, ohosFileSize, ohosVideoOffset };
+    // }
+
+    //-------------------HM0S NEXT 5.1-------------------------
+
+
+    const tailLen = 400;
+    const startPos4 = Math.max(0, ohosFileSize - tailLen);
+
+    const buffer4 = Buffer.alloc(tailLen);
+    const fd4 = await fs.open(filePath, 'r');
+    try {
+      const { bytesRead } = await fd4.read(buffer4, 0, tailLen, startPos4);
+      const hay = buffer4.slice(0, bytesRead); // 只取有效字节
+      const needle = Buffer.from('mdtacom.openharmony.covertime', 'utf8');
+      const foundIndex = hay.indexOf(needle);
+      const isMatch = foundIndex !== -1;
+      hasOhosLivePhoto = isMatch ? 2 : 0;
+      return { hasOhosLivePhoto, ohosFileSize, ohosVideoOffset };
+    } finally {
+      await fd4.close();
+    }
+
+    return { hasOhosLivePhoto, ohosFileSize, ohosVideoOffset };
   }
 }

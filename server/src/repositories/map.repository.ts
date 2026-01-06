@@ -138,8 +138,127 @@ export class MapRepository {
       .execute();
   }
 
+  async reverseGeocodeWithPetalmap(point: GeoPoint): Promise<ReverseGeocodeResult> {
+    this.logger.debug(`Request: ${point.latitude},${point.longitude}`);
+
+    // read key list from env,AMAP_GEOCODE_KEYS, then random select one key
+    const keys = process.env.PETALMAP_GEOCODE_KEYS?.split(',') ?? [];
+    const key = keys[Math.floor(Math.random() * keys.length)];
+    const url = `https://siteapi.cloud.huawei.com/mapApi/v1/siteService/reverseGeocode`;
+
+    const headers = {
+      'Content-Type': 'application/json;charset=utf-8',
+      Authorization: `Bearer ${key}`, // 如果 API 要求 token 放在 Authorization
+      // 你可以按实际情况加入更多 header，比如 cookie 或自定义头
+    };
+
+    const body = JSON.stringify({
+      location: {
+        lng: point.longitude,
+        lat: point.latitude,
+      },
+      language: 'zh-CN',
+      radius: 10,
+    });
+
+    const response = await fetch(`${url}`, {
+      method: 'POST',
+      headers: headers,
+      body: body,
+    });
+
+    if (!response.ok) {
+      this.logger.error(`Request failed with status ${response.status}`);
+      return { country: null, state: null, city: null };
+    }
+
+    const data = await response.json();
+
+    if (!data?.sites?.[0]){
+      this.logger.error(`no site found`);
+      return { country: null, state: null, city: null };
+    }
+    const country = data.sites[0].address.country;
+    const state = data.sites[0].address.adminArea;
+    let city = data.sites[0].address.city;
+    if (city == '' || city == null) {
+      city = data.sites[0].address.adminArea;
+    }
+
+    let district = data.sites[0].address.tertiaryAdminArea;
+    let town = data.sites[0].address.subLocality;
+    let address = data.sites[0].formatAddress;
+
+    if (district == '') {
+      district = null;
+    }
+    if (town == '') {
+      town = null;
+    }
+    this.logger.log(`country: ${country}`);
+    this.logger.log(`address: ${address}`);
+    this.logger.log(`tertiaryAdminArea: ${district}`);
+    this.logger.log(`subLocality: ${town}`);
+    if (country == '中国') {
+      if (state == city) {
+        city = district;
+        //district = town;
+      }
+    }
+
+    return { country, state, city };
+  }
+
+  async reverseGeocodeWithAmap(point: GeoPoint): Promise<ReverseGeocodeResult> {
+    this.logger.debug(`Request: ${point.latitude},${point.longitude}`);
+
+    // read key list from env,AMAP_GEOCODE_KEYS, then random select one key
+    const keys = process.env.AMAP_GEOCODE_KEYS?.split(',') ?? [];
+    const key = keys[Math.floor(Math.random() * keys.length)];
+    //const url = `https://locationapi.cloud.huawei.com`;
+    const url = `https://restapi.amap.com/v3/geocode/regeo`;
+
+    const params = {
+      key: key,
+      location: `${point.longitude},${point.latitude}`,
+      radius: '1000',
+      extensions: 'base',
+      roadlevel: '0',
+    };
+
+    const response = await fetch(`${url}?${new URLSearchParams(params)}`);
+    if (!response.ok) {
+      this.logger.error(`Request failed with status ${response.status}`);
+      return { country: null, state: null, city: null };
+    }
+
+    const data = await response.json();
+    const country = data.regeocode.addressComponent.country;
+    const state = data.regeocode.addressComponent.province;
+    let city = data.regeocode.addressComponent.city;
+    if (city == '' || city == null) {
+      city = data.regeocode.addressComponent.province;
+    }
+    const district = data.regeocode.addressComponent.district;
+
+    const address = data.regeocode.formatted_address;
+    this.logger.log(`address: ${address}`);
+
+    return { country, state, city };
+  }
+
   async reverseGeocode(point: GeoPoint): Promise<ReverseGeocodeResult> {
     this.logger.debug(`Request: ${point.latitude},${point.longitude}`);
+
+    if (process.env.GEOCODE_WITH_AMAP === 'true') {
+      this.logger.log('Using Amap for reverse geocoding');
+      return this.reverseGeocodeWithAmap(point);
+    }
+
+    if (process.env.GEOCODE_WITH_PETALMAP === 'true') {
+      this.logger.log('Using PetalMAP for reverse geocoding');
+      return this.reverseGeocodeWithPetalmap(point);
+    }
 
     const response = await this.db
       .selectFrom('geodata_places')
