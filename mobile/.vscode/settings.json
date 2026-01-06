@@ -1,8 +1,10 @@
 {
-  "dart.flutterSdkPath": ".fvm/versions/custom_3.32.4",
+  "dart.flutterSdkPath": ".fvm/versions/custom_3.35.7",
   "dart.lineLength": 120,
   "[dart]": {
-    "editor.rulers": [120]
+    "editor.rulers": [
+      120
+    ]
   },
   "search.exclude": {
     "**/.fvm": true

@@ -29,9 +29,9 @@ vite.config.js.timestamp-*
 .devcontainer/library
 .devcontainer/.env*
 
-# ignore any directory named cache
-cache/
-.cache/
+# # ignore any directory named cache
+# cache/
+# .cache/
 
 # ignore any directory named cache
 intermediates/
