@@ -1,0 +1,52 @@
+{
+  "string": [
+    {
+      "name": "module_desc",
+      "value": "module description"
+    },
+    {
+      "name": "EntryAbility_desc",
+      "value": "description"
+    },
+    {
+      "name": "EntryAbility_label",
+      "value": "Immich"
+    },
+    {
+      "name": "backup_desc",
+      "value": "备份媒体和保存动态照片使用"
+    },
+    {
+      "name": "secure_desc",
+      "value": "锁定文件夹使用"
+    },
+    {
+      "name": "WIFI_INFO_desc",
+      "value": "切换服务器使用"
+    },
+    {
+      "name": "video_play",
+      "value": "play video"
+    },
+    {
+      "name": "location_desc",
+      "value": "修改照片位置选取当前位置时需要定位权限"
+    },
+    {
+      "name": "memory_card",
+      "value": "时刻推荐"
+    },
+    {
+      "name": "album_card",
+      "value": "自定义相册照片"
+    },
+    {
+      "name": "memory_card_desc",
+      "value": "添加至桌面，重温珍贵回忆"
+    },
+    {
+      "name": "album_card_desc",
+      "value": "相册与照片，随心选择"
+    }
+  ]
+}

@@ -1,0 +1,48 @@
+{
+  "modelVersion": "6.0.0",
+  "name": "Immich",
+  "version": "1.0.0",
+  "description": "Please describe the basic information.",
+  "main": "",
+  "author": "",
+  "license": "",
+  "dependencies": {
+    "@ohos/flutter_ohos": "file:./har/flutter.har"
+  },
+  "devDependencies": {
+    "@ohos/hypium": "1.0.6"
+  },
+  "overrides": {
+    "integration_test": "file:./har/integration_test.har",
+    "photo_manager": "file:./har/photo_manager.har",
+    "background_downloader": "file:./har/background_downloader.har",
+    "maplibre_gl": "file:./har/maplibre_gl.har",
+    "huawei_cast": "file:./har/huawei_cast.har",
+    "fluttertoast": "file:./har/fluttertoast.har",
+    "image_gallery_saver": "file:./har/image_gallery_saver.har",
+    "local_auth_ohos": "file:./har/local_auth_ohos.har",
+    "path_provider_ohos": "file:./har/path_provider_ohos.har",
+    "url_launcher_ohos": "file:./har/url_launcher_ohos.har",
+    "video_player_ohos": "file:./har/video_player_ohos.har",
+    "permission_handler_ohos": "file:./har/permission_handler_ohos.har",
+    "device_info_plus": "file:./har/device_info_plus.har",
+    "share_plus": "file:./har/share_plus.har",
+    "connectivity_plus": "file:./har/connectivity_plus.har",
+    "package_info_plus": "file:./har/package_info_plus.har",
+    "sqflite_ohos": "file:./har/sqflite_ohos.har",
+    "flutter_local_notifications": "file:./har/flutter_local_notifications.har",
+    "flutter_secure_storage_ohos": "file:./har/flutter_secure_storage_ohos.har",
+    "flutter_udid": "file:./har/flutter_udid.har",
+    "flutter_geolocator_ohos": "file:./har/flutter_geolocator_ohos.har",
+    "image_picker_ohos": "file:./har/image_picker_ohos.har",
+    "isar_flutter_libs": "file:./har/isar_flutter_libs.har",
+    "shared_preferences_ohos": "file:./har/shared_preferences_ohos.har",
+    "network_info_plus_ohos": "file:./har/network_info_plus_ohos.har",
+    "@ohos/flutter_module": "file:./entry",
+    "@ohos/flutter_ohos": "file:./har/flutter.har",
+    "wakelock_plus": "file:./har/wakelock_plus.har",
+    "sqlite3_flutter_libs": "file:./har/sqlite3_flutter_libs.har",
+    "video_compress": "file:./har/video_compress.har",
+    "receive_sharing_intent": "file:./har/receive_sharing_intent.har"
+  }
+}

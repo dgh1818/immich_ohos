@@ -1,0 +1,18 @@
+{
+  "forms": [
+    {
+      "name": "ImmichRandom",
+      "displayName": "$string:album_card",
+      "description": "$string:album_card_desc",
+      "src": "./ets/plugins/widget/PhotoWidget.ets",
+      "uiSyntax": "arkts",
+      "colorMode": "auto",
+      "isDefault": true,
+      "updateEnabled": true,
+      "updateDuration": 20,
+      "formConfigAbility": "ability://RandomConfigureAbility",
+      "supportDimensions": ["2*2", "2*4", "4*4"],
+      "defaultDimension": "2*2"
+    }
+  ]
+}

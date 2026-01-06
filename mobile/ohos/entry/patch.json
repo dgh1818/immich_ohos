@@ -1,0 +1,11 @@
+{
+  "app": {
+    "bundleName": "com.dgh18.immich",
+    "patchVersionCode": 2000002,
+    "versionCode": 141
+  },
+  "module": {
+    "name": "entry",
+    "type": "hotreload"
+  }
+}
