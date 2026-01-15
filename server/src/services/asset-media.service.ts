@@ -501,6 +501,16 @@ export class AssetMediaService extends BaseService {
       return null;
     }
 
+    const firstE0 = source.indexOf(Buffer.from([0xff, 0xd8, 0xff, 0xe0]));
+    const secondE5 = firstE0 >= 0 ? source.indexOf(Buffer.from([0xff, 0xd8, 0xff, 0xe5]), firstE0 + 1) : -1;
+    const secondEoi = secondE5 >= 0 ? source.indexOf(Buffer.from([0xff, 0xd9]), secondE5 + 2) : -1;
+    const dumpAt = (offset: number, length: number) =>
+      offset >= 0 ? source.subarray(offset, Math.min(offset + length, source.length)).toString('hex') : 'n/a';
+    this.logger.error(
+      `Legacy gainmap markers for ${asset.id}: firstE0=${firstE0}(${dumpAt(firstE0, 8)}) ` +
+        `secondE5=${secondE5}(${dumpAt(secondE5, 8)}) secondEoi=${secondEoi}(${dumpAt(secondEoi, 4)})`,
+    );
+
     const legacyGainmap = extractLegacyGainmap(source, { make: asset.exifInfo?.make ?? null });
     this.logger.error(
       `Legacy gainmap detect for ${asset.id}: ${legacyGainmap ? legacyGainmap.type : 'none'}`,
