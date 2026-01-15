@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
-import { extname } from 'node:path';
+import { dirname, extname, join } from 'node:path';
 import sanitize from 'sanitize-filename';
 import { StorageCore } from 'src/cores/storage.core';
 import { Asset, AssetFile, Exif } from 'src/database';
@@ -201,13 +201,14 @@ export class AssetMediaService extends BaseService {
 
     const asset = await this.findOrFail(id);
 
-    const cuvaPath = await this.getCuvaIsoPath(asset);
-    if (cuvaPath) {
+    const cuvaFile = await this.getCuvaIsoPath(asset);
+    if (cuvaFile) {
       return new ImmichFileResponse({
-        path: cuvaPath,
+        path: cuvaFile.path,
         fileName: asset.originalFileName,
-        contentType: mimeTypes.lookup(cuvaPath),
+        contentType: mimeTypes.lookup(cuvaFile.path),
         cacheControl: CacheControl.PrivateWithCache,
+        cleanup: cuvaFile.cleanup,
       });
     }
 
@@ -479,7 +480,7 @@ export class AssetMediaService extends BaseService {
 
   private async getCuvaIsoPath(
     asset: Asset & { files?: AssetFile[]; exifInfo?: Exif | null },
-  ): Promise<string | null> {
+  ): Promise<{ path: string; cleanup: () => Promise<void> } | null> {
     if (mimeTypes.lookup(asset.originalPath) !== 'image/jpeg') {
       return null;
     }
@@ -489,13 +490,7 @@ export class AssetMediaService extends BaseService {
     }
 
     const fullsizePath = StorageCore.getImagePath(asset, AssetPathType.FullSize, ImageFormat.Jpeg);
-    if (await this.storageRepository.checkFileExists(fullsizePath)) {
-      const { fullsizeFile } = getAssetFiles(asset.files ?? []);
-      if (!fullsizeFile || fullsizeFile.path !== fullsizePath) {
-        await this.assetRepository.upsertFile({ assetId: asset.id, type: AssetFileType.FullSize, path: fullsizePath });
-      }
-      return fullsizePath;
-    }
+    const tempPath = join(dirname(fullsizePath), `${this.cryptoRepository.randomUUID()}.jpeg`);
 
     let source: Buffer;
     try {
@@ -534,11 +529,10 @@ export class AssetMediaService extends BaseService {
     }
 
     try {
-      this.storageCore.ensureFolders(fullsizePath);
+      this.storageCore.ensureFolders(tempPath);
       const isoBuffer = encodeIsoGainmapJpeg(legacyGainmap.sdrImage, legacyGainmap.gainmapImage, source);
-      await this.storageRepository.createOrOverwriteFile(fullsizePath, isoBuffer);
-      await this.assetRepository.upsertFile({ assetId: asset.id, type: AssetFileType.FullSize, path: fullsizePath });
-      return fullsizePath;
+      await this.storageRepository.createOrOverwriteFile(tempPath, isoBuffer);
+      return { path: tempPath, cleanup: () => this.storageRepository.unlink(tempPath) };
     } catch (error: any) {
       this.logger.warn(`Failed to encode CUVA gainmap for ${asset.id}: ${error?.message ?? error}`);
       return null;

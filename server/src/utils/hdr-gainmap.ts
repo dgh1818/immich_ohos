@@ -195,79 +195,95 @@ function buildSegment(segment: Segment): Buffer {
 function segmentsLength(segments: Segment[]): number {
   return segments.reduce((total, segment) => total + 4 + segment.payload.length, 0);
 }
+
+function findTopLevelJpegEnd(data: Buffer, start: number): number {
+  if (start < 0 || start + 1 >= data.length) {
+    return -1;
+  }
+  if (data[start] !== 0xff || data[start + 1] !== SOI) {
+    return -1;
+  }
+
+  let pos = start + 2;
+  while (pos < data.length - 1) {
+    if (data[pos] !== 0xff) {
+      pos++;
+      continue;
+    }
+    while (pos < data.length && data[pos] === 0xff) {
+      pos++;
+    }
+    if (pos >= data.length) {
+      break;
+    }
+    const marker = data[pos++];
+    if (marker === EOI) {
+      return pos - 1;
+    }
+    if (marker === SOS) {
+      if (pos + 1 >= data.length) {
+        return -1;
+      }
+      const length = (data[pos] << 8) | data[pos + 1];
+      if (length < 2) {
+        return -1;
+      }
+      pos += length;
+      const eoiIndex = data.indexOf(Buffer.from([0xff, 0xd9]), pos);
+      return eoiIndex === -1 ? -1 : eoiIndex + 1;
+    }
+    if (marker === SOI || marker === 0x01 || (marker >= 0xd0 && marker <= 0xd7)) {
+      continue;
+    }
+    if (pos + 1 >= data.length) {
+      return -1;
+    }
+    const length = (data[pos] << 8) | data[pos + 1];
+    if (length < 2) {
+      return -1;
+    }
+    pos += length;
+  }
+  return -1;
+}
+
 function findLegacyGainmapOffsets(data: Buffer, make?: string | null): LegacyGainmapOffsets | null {
   const len = data.length;
   if (len < 4) {
     return null;
   }
 
-  let firstStart = -1;
-  let thumbnailStart = -1;
-  for (let i = 0; i < len - 3; i++) {
-    if (data[i] === 0xff && data[i + 1] === SOI && data[i + 2] === 0xff && data[i + 3] === 0xe0) {
-      firstStart = i;
-      thumbnailStart = i + 2;
-      break;
-    }
-  }
-
+  const firstStart = data.indexOf(Buffer.from([0xff, SOI]));
   if (firstStart < 0) {
     return null;
   }
 
-  let thumbnailEnd = -1;
-  let mainImageStart = -1;
-  for (let i = firstStart + 5; i < len - 1; i++) {
-    if (data[i] === 0xff && data[i + 1] === 0xe0) {
-      thumbnailEnd = i - 1;
-      mainImageStart = i;
-      break;
-    }
+  const firstEnd = findTopLevelJpegEnd(data, firstStart);
+  if (firstEnd < 0) {
+    return null;
+  }
+
+  const secondStart = data.indexOf(Buffer.from([0xff, SOI]), firstEnd + 1);
+  if (secondStart < 0) {
+    return null;
+  }
+
+  const secondEnd = findTopLevelJpegEnd(data, secondStart);
+  if (secondEnd < 0) {
+    return null;
   }
 
   let type: LegacyHdrGainmapType | null = null;
-  let secondStart = -1;
-  let firstEnd = -1;
-  let mainImageEnd = -1;
-
-  for (let i = firstStart; i < len - 3; i++) {
-    if (data[i] === 0xff && data[i + 1] === SOI && data[i + 2] === 0xff && data[i + 3] === 0xe2) {
-      mainImageEnd = i - 3;
-      firstEnd = i - 1;
-      secondStart = i;
+  if (secondStart + 3 < len && data[secondStart + 2] === 0xff) {
+    const marker = data[secondStart + 3];
+    if (marker === 0xe2) {
       type = 'huawei-iso';
-      break;
-    }
-  }
-
-  if (secondStart === -1) {
-    for (let i = firstStart + 1; i < len - 3; i++) {
-      if (data[i] === 0xff && data[i + 1] === SOI && data[i + 2] === 0xff && data[i + 3] === 0xe5) {
-        secondStart = i;
-        break;
-      }
-    }
-
-    if (secondStart !== -1) {
-      mainImageEnd = secondStart - 3;
-      firstEnd = secondStart - 1;
+    } else if (marker === 0xe5) {
       type = 'cuva';
     }
   }
 
-  if (secondStart === -1 || type === null) {
-    return null;
-  }
-
-  let secondEnd = -1;
-  for (let i = secondStart; i < len - 1; i++) {
-    if (data[i] === 0xff && data[i + 1] === EOI) {
-      secondEnd = i + 1;
-      break;
-    }
-  }
-
-  if (firstEnd < 0 || secondEnd < 0) {
+  if (type === null) {
     return null;
   }
 
@@ -277,10 +293,10 @@ function findLegacyGainmapOffsets(data: Buffer, make?: string | null): LegacyGai
     firstEnd,
     secondStart,
     secondEnd,
-    thumbnailStart,
-    thumbnailEnd,
-    mainImageStart,
-    mainImageEnd,
+    thumbnailStart: -1,
+    thumbnailEnd: -1,
+    mainImageStart: firstStart,
+    mainImageEnd: firstEnd,
   };
 }
 
