@@ -251,9 +251,6 @@ function findLegacyGainmapOffsets(data: Buffer, make?: string | null): LegacyGai
   }
 
   if (secondStart === -1) {
-    if (!isHuaweiMake(make)) {
-      return null;
-    }
     for (let i = firstStart; i < len - 3; i++) {
       if (data[i] === 0xff && data[i + 1] === SOI && data[i + 2] === 0xff && data[i + 3] === 0xe5) {
         mainImageEnd = i - 3;
