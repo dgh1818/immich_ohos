@@ -290,8 +290,25 @@ function reorderLegacySdr(sdrData: Buffer, offsets: LegacyGainmapOffsets): Buffe
   const thumbEnd = offsets.thumbnailEnd - offsets.firstStart;
   const mainStart = offsets.mainImageStart - offsets.firstStart;
   const mainEnd = offsets.mainImageEnd - offsets.firstStart;
+  const jfif = Buffer.from('JFIF\0', 'ascii');
 
-  if (thumbStart >= 0 && mainStart >= 0 && thumbEnd >= thumbStart && mainEnd >= mainStart) {
+  const secondSoi = sdrData.indexOf(Buffer.from([0xff, 0xd8]), Math.max(2, thumbStart));
+  const thumbEoi = sdrData.indexOf(Buffer.from([0xff, 0xd9]), Math.max(2, thumbStart));
+  const mainLooksLikeJfif =
+    mainStart >= 0 &&
+    mainStart + 9 <= sdrData.length &&
+    sdrData[mainStart] === 0xff &&
+    sdrData[mainStart + 1] === 0xe0 &&
+    sdrData.subarray(mainStart + 4, mainStart + 9).equals(jfif);
+  const shouldReorder =
+    thumbStart >= 0 &&
+    mainStart >= 0 &&
+    thumbEnd >= thumbStart &&
+    mainEnd >= mainStart &&
+    mainEnd < sdrData.length &&
+    ((secondSoi !== -1 && secondSoi < mainStart) || (thumbEoi !== -1 && thumbEoi < mainStart && mainLooksLikeJfif));
+
+  if (shouldReorder) {
     const mainLen = mainEnd - mainStart + 1;
     sdrData.copy(output, thumbStart, mainStart, mainEnd + 1);
     sdrData.copy(output, thumbStart + mainLen, thumbStart, thumbEnd + 1);

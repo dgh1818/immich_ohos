@@ -484,6 +484,10 @@ export class AssetMediaService extends BaseService {
       return null;
     }
 
+    if ((asset.exifInfo?.make ?? '').trim().toUpperCase() !== 'HUAWEI') {
+      return null;
+    }
+
     const fullsizePath = StorageCore.getImagePath(asset, AssetPathType.FullSize, ImageFormat.Jpeg);
     if (await this.storageRepository.checkFileExists(fullsizePath)) {
       const { fullsizeFile } = getAssetFiles(asset.files ?? []);
