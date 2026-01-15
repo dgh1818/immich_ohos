@@ -241,14 +241,17 @@ function findLegacyGainmapOffsets(data: Buffer, make?: string | null): LegacyGai
   }
 
   if (secondStart === -1) {
-    for (let i = firstStart; i < len - 3; i++) {
+    for (let i = firstStart + 1; i < len - 3; i++) {
       if (data[i] === 0xff && data[i + 1] === SOI && data[i + 2] === 0xff && data[i + 3] === 0xe5) {
-        mainImageEnd = i - 3;
-        firstEnd = i - 1;
         secondStart = i;
-        type = 'cuva';
         break;
       }
+    }
+
+    if (secondStart !== -1) {
+      mainImageEnd = secondStart - 3;
+      firstEnd = secondStart - 1;
+      type = 'cuva';
     }
   }
 
