@@ -496,7 +496,13 @@ export class AssetMediaService extends BaseService {
     let source: Buffer;
     try {
       const { size } = await this.storageRepository.stat(asset.originalPath);
-      source = await this.storageRepository.readFile(asset.originalPath, { length: size, position: 0 });
+      const buffer = Buffer.allocUnsafe(size);
+      source = await this.storageRepository.readFile(asset.originalPath, {
+        buffer,
+        offset: 0,
+        length: size,
+        position: 0,
+      });
     } catch (error: any) {
       this.logger.error(`Failed to read source image for ${asset.id}: ${error?.message ?? error}`);
       return null;
