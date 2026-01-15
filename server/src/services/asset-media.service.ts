@@ -502,6 +502,9 @@ export class AssetMediaService extends BaseService {
     }
 
     const legacyGainmap = extractLegacyGainmap(source, { make: asset.exifInfo?.make ?? null });
+    this.logger.error(
+      `Legacy gainmap detect for ${asset.id}: ${legacyGainmap ? legacyGainmap.type : 'none'}`,
+    );
     if (!legacyGainmap || legacyGainmap.type !== 'cuva') {
       return null;
     }
