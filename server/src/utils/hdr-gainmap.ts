@@ -212,16 +212,6 @@ function findLegacyGainmapOffsets(data: Buffer, make?: string | null): LegacyGai
   }
 
   if (firstStart < 0) {
-    for (let i = 0; i < len - 1; i++) {
-      if (data[i] === 0xff && data[i + 1] === SOI) {
-        firstStart = i;
-        thumbnailStart = i + 2;
-        break;
-      }
-    }
-  }
-
-  if (firstStart < 0) {
     return null;
   }
 
