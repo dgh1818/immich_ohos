@@ -501,6 +501,9 @@ export class AssetMediaService extends BaseService {
       return null;
     }
 
+    this.logger.error(
+      `Legacy gainmap source for ${asset.id}: path=${asset.originalPath} size=${source.length}`,
+    );
     const firstE0 = source.indexOf(Buffer.from([0xff, 0xd8, 0xff, 0xe0]));
     const secondE5 = firstE0 >= 0 ? source.indexOf(Buffer.from([0xff, 0xd8, 0xff, 0xe5]), firstE0 + 1) : -1;
     const secondEoi = secondE5 >= 0 ? source.indexOf(Buffer.from([0xff, 0xd9]), secondE5 + 2) : -1;
