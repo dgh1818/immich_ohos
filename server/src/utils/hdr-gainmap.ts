@@ -74,6 +74,7 @@ const APP1 = 0xe1;
 const APP2 = 0xe2;
 const SOI = 0xd8;
 const EOI = 0xd9;
+const SOS = 0xda;
 
 const XMP_NAMESPACE_BYTES = Buffer.from(`${XMP_NAMESPACE}\0`, 'ascii');
 const ISO_NAMESPACE_BYTES = Buffer.from(`${ISO_NAMESPACE}\0`, 'ascii');
