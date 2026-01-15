@@ -2,7 +2,7 @@ import { BadRequestException, Injectable, InternalServerErrorException, NotFound
 import { extname } from 'node:path';
 import sanitize from 'sanitize-filename';
 import { StorageCore } from 'src/cores/storage.core';
-import { Asset } from 'src/database';
+import { Asset, AssetFile, Exif } from 'src/database';
 import {
   AssetBulkUploadCheckResponseDto,
   AssetMediaResponseDto,
@@ -23,10 +23,12 @@ import {
 import { AuthDto } from 'src/dtos/auth.dto';
 import {
   AssetFileType,
+  AssetPathType,
   AssetStatus,
   AssetType,
   AssetVisibility,
   CacheControl,
+  ImageFormat,
   JobName,
   Permission,
   StorageFolder,
@@ -38,6 +40,7 @@ import { requireUploadAccess } from 'src/utils/access';
 import { asUploadRequest, getAssetFiles, onBeforeLink } from 'src/utils/asset.util';
 import { isAssetChecksumConstraint } from 'src/utils/database';
 import { getFilenameExtension, getFileNameWithoutExtension, ImmichFileResponse } from 'src/utils/file';
+import { encodeIsoGainmapJpeg, extractLegacyGainmap } from 'src/utils/hdr-gainmap';
 import { mimeTypes } from 'src/utils/mime-types';
 import { fromChecksum } from 'src/utils/request';
 
@@ -197,6 +200,16 @@ export class AssetMediaService extends BaseService {
     await this.requireAccess({ auth, permission: Permission.AssetDownload, ids: [id] });
 
     const asset = await this.findOrFail(id);
+
+    const cuvaPath = await this.getCuvaIsoPath(asset);
+    if (cuvaPath) {
+      return new ImmichFileResponse({
+        path: cuvaPath,
+        fileName: asset.originalFileName,
+        contentType: mimeTypes.lookup(cuvaPath),
+        cacheControl: CacheControl.PrivateWithCache,
+      });
+    }
 
     return new ImmichFileResponse({
       path: asset.originalPath,
@@ -464,8 +477,49 @@ export class AssetMediaService extends BaseService {
     }
   }
 
+  private async getCuvaIsoPath(
+    asset: Asset & { files?: AssetFile[]; exifInfo?: Exif | null },
+  ): Promise<string | null> {
+    if (mimeTypes.lookup(asset.originalPath) !== 'image/jpeg') {
+      return null;
+    }
+
+    const fullsizePath = StorageCore.getImagePath(asset, AssetPathType.FullSize, ImageFormat.Jpeg);
+    if (await this.storageRepository.checkFileExists(fullsizePath)) {
+      const { fullsizeFile } = getAssetFiles(asset.files ?? []);
+      if (!fullsizeFile || fullsizeFile.path !== fullsizePath) {
+        await this.assetRepository.upsertFile({ assetId: asset.id, type: AssetFileType.FullSize, path: fullsizePath });
+      }
+      return fullsizePath;
+    }
+
+    let source: Buffer;
+    try {
+      source = await this.storageRepository.readFile(asset.originalPath);
+    } catch (error: any) {
+      this.logger.debug(`Failed to read source image for ${asset.id}: ${error?.message ?? error}`);
+      return null;
+    }
+
+    const legacyGainmap = extractLegacyGainmap(source, { make: asset.exifInfo?.make ?? null });
+    if (!legacyGainmap || legacyGainmap.type !== 'cuva') {
+      return null;
+    }
+
+    try {
+      this.storageCore.ensureFolders(fullsizePath);
+      const isoBuffer = encodeIsoGainmapJpeg(legacyGainmap.sdrImage, legacyGainmap.gainmapImage, source);
+      await this.storageRepository.createOrOverwriteFile(fullsizePath, isoBuffer);
+      await this.assetRepository.upsertFile({ assetId: asset.id, type: AssetFileType.FullSize, path: fullsizePath });
+      return fullsizePath;
+    } catch (error: any) {
+      this.logger.warn(`Failed to encode CUVA gainmap for ${asset.id}: ${error?.message ?? error}`);
+      return null;
+    }
+  }
+
   private async findOrFail(id: string) {
-    const asset = await this.assetRepository.getById(id, { files: true });
+    const asset = await this.assetRepository.getById(id, { files: true, exifInfo: true });
     if (!asset) {
       throw new NotFoundException('Asset not found');
     }

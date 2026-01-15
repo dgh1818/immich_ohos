@@ -505,7 +505,7 @@ describe(AssetMediaService.name, () => {
 
       await expect(sut.downloadOriginal(authStub.admin, 'asset-1')).rejects.toBeInstanceOf(NotFoundException);
 
-      expect(mocks.asset.getById).toHaveBeenCalledWith('asset-1', { files: true });
+      expect(mocks.asset.getById).toHaveBeenCalledWith('asset-1', { files: true, exifInfo: true });
     });
 
     it('should download a file', async () => {

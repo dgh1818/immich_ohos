@@ -276,6 +276,8 @@ export class MetadataService extends BaseService {
       }
     }
 
+    const make = exifTags.Make ?? exifTags?.Device?.Manufacturer ?? exifTags.AndroidMake ?? null;
+    const model = exifTags.Model ?? exifTags?.Device?.ModelName ?? exifTags.AndroidModel ?? null;
     const exifData: Insertable<AssetExifTable> = {
       assetId: asset.id,
 
@@ -301,8 +303,8 @@ export class MetadataService extends BaseService {
       colorspace: exifTags.ColorSpace ?? null,
 
       // camera
-      make: exifTags.Make ?? exifTags?.Device?.Manufacturer ?? exifTags.AndroidMake ?? null,
-      model: exifTags.Model ?? exifTags?.Device?.ModelName ?? exifTags.AndroidModel ?? null,
+      make,
+      model,
       fps: validate(Number.parseFloat(exifTags.VideoFrameRate!)),
       iso: validate(exifTags.ISO) as number,
       exposureTime: exifTags.ExposureTime ?? null,
