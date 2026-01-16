@@ -58,6 +58,7 @@ https://appgallery.huawei.com/app/detail?id=com.dgh18.immich&channelId=SHARE&sou
 .env 文件设置：<br/>
 PETALMAP_GEOCODE_KEYS: //华为 App Gallery Connect API KEY.<br/>
 GEOCODE_WITH_PETALMAP: 'true' // 启用 Petal Map 逆地理编码. 80000次/月免费 包括国内和国际<br/>
+CUVA_TO_ISO_HDR: 'true' // 启用 CUVA 转 ISO HDR<br/>
 
 AMAP_GEOCODE_KEYS: //高德地图 key.<br/>
 GEOCODE_WITH_AMAP: 'true' // 启用高德 逆地理编码 个人开发者国内免费 5000 次每天，国际收费.<br/>

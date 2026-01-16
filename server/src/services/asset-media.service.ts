@@ -481,6 +481,10 @@ export class AssetMediaService extends BaseService {
   private async getCuvaIsoPath(
     asset: Asset & { files?: AssetFile[]; exifInfo?: Exif | null },
   ): Promise<{ path: string; cleanup: () => Promise<void> } | null> {
+    if (process.env.CUVA_TO_ISO_HDR !== 'true') {
+      return null;
+    }
+
     if (mimeTypes.lookup(asset.originalPath) !== 'image/jpeg') {
       return null;
     }
