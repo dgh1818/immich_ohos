@@ -41,7 +41,12 @@
 
 # Harmonyos Next 鸿蒙端的 Immich <br/>
 
-# 升级v2.4.0 (最新release版本) <br/>
+# 网页版查看HDR照片小技巧 <br/>
+打开edge或者chrome的硬件加速即可 <br/>
+安装本服务器，并.env 文件设置：CUVA_TO_ISO_HDR: true ，更可实现网页端查看华为老的私有格式的HDR照片（包括麒麟9000s及之前的平台鸿蒙系统拍摄的照片，或者4.2系统拍摄的照片），也可将转换后的ISO HDR 照片下载到本地。实时请求，实时转换，实时清理。<br/>
+不安装本服务器，仅支持查看ISO HDR照片以及苹果iphone15及之前拍摄的MPF HDR照片<br/>
+
+# 升级v2.4.1 (最新release版本) <br/>
 注意事项：
 1. 需安装2.x.x版本服务器   <br/>
 2. 第一次打开APP白屏，请尝试重启APP    <br/>
