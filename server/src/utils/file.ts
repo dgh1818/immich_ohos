@@ -25,6 +25,7 @@ export class ImmichFileResponse {
   public readonly contentType!: string;
   public readonly cacheControl!: CacheControl;
   public readonly fileName?: string;
+  public readonly cleanup?: () => Promise<void>;
 
   constructor(response: ImmichFileResponse) {
     Object.assign(this, response);
@@ -64,7 +65,17 @@ export const sendFile = async (
 
     await access(file.path, constants.R_OK);
 
-    return await _sendFile(file.path, { dotfiles: 'allow' });
+    try {
+      return await _sendFile(file.path, { dotfiles: 'allow' });
+    } finally {
+      if (file.cleanup) {
+        try {
+          await file.cleanup();
+        } catch (error: Error | any) {
+          logger.debug(`Failed to cleanup file ${file.path}: ${error?.message ?? error}`);
+        }
+      }
+    }
   } catch (error: Error | any) {
     // ignore client-closed connection
     if (isConnectionAborted(error) || res.headersSent) {
