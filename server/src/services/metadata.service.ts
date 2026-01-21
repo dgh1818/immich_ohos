@@ -332,7 +332,10 @@ export class MetadataService extends BaseService {
       this.applyTagList(asset, exifTags),
     ];
 
-    const { hasOhosLivePhoto, ohosFileSize, ohosVideoOffset } = await this.checkOhosLivePhoto(asset.originalPath);
+    const { hasOhosLivePhoto, ohosFileSize, ohosVideoOffset } = await this.checkOhosLivePhoto(
+      asset.originalPath,
+      asset.type,
+    );
 
     if (this.isMotionPhoto(asset, exifTags) || hasOhosLivePhoto==1) {
       promises.push(this.applyMotionPhotos(asset, exifTags, dates, stats));
@@ -596,7 +599,10 @@ export class MetadataService extends BaseService {
     const directory = Array.isArray(tags.ContainerDirectory)
       ? (tags.ContainerDirectory as ContainerDirectoryItem[])
       : null;
-    const { hasOhosLivePhoto, ohosFileSize, ohosVideoOffset } = await this.checkOhosLivePhoto(asset.originalPath);
+    const { hasOhosLivePhoto, ohosFileSize, ohosVideoOffset } = await this.checkOhosLivePhoto(
+      asset.originalPath,
+      asset.type,
+    );
 
     let length = 0;
     let padding = 0;
@@ -1070,6 +1076,7 @@ export class MetadataService extends BaseService {
 
   private async checkOhosLivePhoto(
     filePath: string,
+    assetType: AssetType,
   ): Promise<{ hasOhosLivePhoto: number; ohosFileSize: number; ohosVideoOffset: number }> {
     const stats = await fs.stat(filePath);
     const ohosFileSize = stats.size;
@@ -1078,55 +1085,55 @@ export class MetadataService extends BaseService {
     let hasOhosLivePhoto = 0;
     let metadataBuffer = Buffer.alloc(ohosLiveMetaDataOFFSET);
     let ohosVideoOffset = -1;
-
     const minSize = ohosVideoEndOffset + 1;
     if (ohosFileSize < minSize) {
       return { hasOhosLivePhoto, ohosFileSize, ohosVideoOffset };
     }
-
-    const fd = await fs.open(filePath, 'r');
-    try {
-      await fd.read(metadataBuffer, 0, ohosLiveMetaDataOFFSET, ohosFileSize - ohosLiveMetaDataOFFSET);
-    } finally {
-      await fd.close();
-    }
-
-    let liveStr = '';
-    for (let i = 0; i < 5; i++) {
-      const byte = metadataBuffer.readUInt8(i);
-      liveStr += String.fromCharCode(byte);
-    }
-    if (liveStr == 'LIVE_') {
-      hasOhosLivePhoto = 1;
-    }
-
-    let numberStr = '';
-    if (hasOhosLivePhoto) {
-      const startPos = 5;
-      for (let i = startPos; i < metadataBuffer.length; i++) {
-        const byte = metadataBuffer.readUInt8(i);
-        if (byte === 0x20) continue; // Skip spaces
-        if (byte >= 0x30 && byte <= 0x39) {
-          numberStr += String.fromCharCode(byte);
-        } else {
-          break;
-        }
+    if (assetType === AssetType.Image) {
+      const fd = await fs.open(filePath, 'r');
+      try {
+        await fd.read(metadataBuffer, 0, ohosLiveMetaDataOFFSET, ohosFileSize - ohosLiveMetaDataOFFSET);
+      } finally {
+        await fd.close();
       }
-      const ohosVideoOffset = parseInt(numberStr, 10);
-      this.logger.log(`numberStr is ${numberStr} `);
 
-      if (isNaN(ohosVideoOffset)) {
-        hasOhosLivePhoto = 0;
-        return { hasOhosLivePhoto, ohosFileSize, ohosVideoOffset };
-      } else {
-        return { hasOhosLivePhoto, ohosFileSize, ohosVideoOffset };
+      let liveStr = '';
+      for (let i = 0; i < 5; i++) {
+        const byte = metadataBuffer.readUInt8(i);
+        liveStr += String.fromCharCode(byte);
+      }
+      if (liveStr == 'LIVE_') {
+        hasOhosLivePhoto = 1;
+      }
+
+      let numberStr = '';
+      if (hasOhosLivePhoto) {
+        const startPos = 5;
+        for (let i = startPos; i < metadataBuffer.length; i++) {
+          const byte = metadataBuffer.readUInt8(i);
+          if (byte === 0x20) continue; // Skip spaces
+          if (byte >= 0x30 && byte <= 0x39) {
+            numberStr += String.fromCharCode(byte);
+          } else {
+            break;
+          }
+        }
+        const ohosVideoOffset = parseInt(numberStr, 10);
+        this.logger.log(`numberStr is ${numberStr} `);
+
+        if (isNaN(ohosVideoOffset)) {
+          hasOhosLivePhoto = 0;
+          return { hasOhosLivePhoto, ohosFileSize, ohosVideoOffset };
+        } else {
+          return { hasOhosLivePhoto, ohosFileSize, ohosVideoOffset };
+        }
       }
     }
 
     let startPos:number = 0;
-    const tailLen_2 = 20000;
+    const tailLen_2 = 2 * 1024 * 1024; // scan last 2 MiB for MovingPhotoMeta
 
-    if(!hasOhosLivePhoto) {
+    if (!hasOhosLivePhoto && assetType === AssetType.Image) {
       startPos = Math.max(0, ohosFileSize - tailLen_2);;
     }
 
@@ -1136,58 +1143,45 @@ export class MetadataService extends BaseService {
       return { hasOhosLivePhoto, ohosFileSize, ohosVideoOffset };
     }
 
-    const buffer = Buffer.alloc(tailLen_2);
-    const fd_2 = await fs.open(filePath, 'r');
-    
-    
-
-     try {
-      const { bytesRead } = await fd_2.read(buffer, 0, tailLen_2, startPos);
-      const hay = buffer.slice(0, bytesRead); // 只取有效字节
-      const needle = Buffer.from('MovingPhotoMeta', 'utf8');
-      const foundIndex = hay.indexOf(needle);
-      const isMatch = foundIndex !== -1;
-      hasOhosLivePhoto = isMatch ? 2 : 0;
-      if(isMatch) {
-        hasOhosLivePhoto = 2;
-        return { hasOhosLivePhoto, ohosFileSize, ohosVideoOffset };
+    if (assetType === AssetType.Image) {
+      const buffer = Buffer.alloc(tailLen_2);
+      const fd_2 = await fs.open(filePath, 'r');
+      try {
+        const { bytesRead } = await fd_2.read(buffer, 0, tailLen_2, startPos);
+        const hay = buffer.slice(0, bytesRead); // 只取有效字节
+        const needle = Buffer.from('MovingPhotoMeta', 'utf8');
+        const foundIndex = hay.indexOf(needle);
+        const isMatch = foundIndex !== -1;
+        hasOhosLivePhoto = isMatch ? 2 : 0;
+        if (isMatch) {
+          hasOhosLivePhoto = 2;
+          return { hasOhosLivePhoto, ohosFileSize, ohosVideoOffset };
+        }
+      } finally {
+        await fd_2.close();
       }
-    } finally {
-      await fd_2.close();
     }
-
-    // try {
-    //   const { bytesRead } = await fd_2.read(buffer, 0, 15, startPos);
-    // } finally {
-    //   await fd_2.close();
-    // }
-
-    // const foundString = buffer.toString('utf8');
-    // //this.logger.log(`foundString is ${foundString}`);
-    // const isMatch = foundString === 'MovingPhotoMeta';
-    // if(isMatch) {
-    //   hasOhosLivePhoto = 2;
-    //   return { hasOhosLivePhoto, ohosFileSize, ohosVideoOffset };
-    // }
 
     //-------------------HM0S NEXT 5.1-------------------------
 
 
-    const tailLen = 400;
-    const startPos4 = Math.max(0, ohosFileSize - tailLen);
+    if (assetType === AssetType.Video) {
+      const tailLen = 400;
+      const startPos4 = Math.max(0, ohosFileSize - tailLen);
 
-    const buffer4 = Buffer.alloc(tailLen);
-    const fd4 = await fs.open(filePath, 'r');
-    try {
-      const { bytesRead } = await fd4.read(buffer4, 0, tailLen, startPos4);
-      const hay = buffer4.slice(0, bytesRead); // 只取有效字节
-      const needle = Buffer.from('mdtacom.openharmony.covertime', 'utf8');
-      const foundIndex = hay.indexOf(needle);
-      const isMatch = foundIndex !== -1;
-      hasOhosLivePhoto = isMatch ? 2 : 0;
-      return { hasOhosLivePhoto, ohosFileSize, ohosVideoOffset };
-    } finally {
-      await fd4.close();
+      const buffer4 = Buffer.alloc(tailLen);
+      const fd4 = await fs.open(filePath, 'r');
+      try {
+        const { bytesRead } = await fd4.read(buffer4, 0, tailLen, startPos4);
+        const hay = buffer4.slice(0, bytesRead); // 只取有效字节
+        const needle = Buffer.from('mdtacom.openharmony.covertime', 'utf8');
+        const foundIndex = hay.indexOf(needle);
+        const isMatch = foundIndex !== -1;
+        hasOhosLivePhoto = isMatch ? 2 : 0;
+        return { hasOhosLivePhoto, ohosFileSize, ohosVideoOffset };
+      } finally {
+        await fd4.close();
+      }
     }
 
     return { hasOhosLivePhoto, ohosFileSize, ohosVideoOffset };
