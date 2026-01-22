@@ -414,8 +414,8 @@ class BackupService {
       } finally {
         if (Platform.isIOS || Platform.isOhos) {
           try {
-            await file?.delete();
-            await livePhotoFile?.delete();
+            file?.deleteSync();
+            livePhotoFile?.deleteSync();
           } catch (e) {
             dPrint(() => "ERROR deleting file: ${e.toString()}");
           }

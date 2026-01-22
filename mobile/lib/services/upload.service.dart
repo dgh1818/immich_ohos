@@ -215,20 +215,35 @@ class UploadService {
     switch (update.status) {
       case TaskStatus.complete:
         unawaited(_handleLivePhoto(update));
+        unawaited(_deleteUploadFileIfNeeded(update));
 
-        if (CurrentPlatform.isIOS) {
-          try {
-            final path = await update.task.filePath();
-            await File(path).delete();
-          } catch (e) {
-            _logger.severe('Error deleting file path for iOS: $e');
-          }
-        }
-
+        break;
+      case TaskStatus.failed:
+        unawaited(_deleteUploadFileIfNeeded(update));
         break;
 
       default:
         break;
+    }
+  }
+
+  Future<void> _deleteUploadFileIfNeeded(TaskStatusUpdate update) async {
+    if (!Platform.isOhos) {
+      return;
+    }
+
+    try {
+      final path = await update.task.filePath();
+      if (path.isEmpty) {
+        return;
+      }
+
+      final file = File(path);
+      if (await file.exists()) {
+        await file.delete();
+      }
+    } catch (e) {
+      _logger.severe('Error deleting upload file path: $e');
     }
   }
 

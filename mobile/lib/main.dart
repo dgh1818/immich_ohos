@@ -131,13 +131,9 @@ Future<void> initApp() async {
 }
 
 Future<void> _cleanupTempCache() async {
-  if (!(Platform.isIOS || defaultTargetPlatform == TargetPlatform.ohos)) {
-    return;
-  }
-
   try {
     final tempDir = await getTemporaryDirectory();
-    final targets = [Directory('${tempDir.path}/originalPhoto'), Directory('${tempDir.path}/movingPhoto')];
+    final targets = [Directory('${tempDir.path}/photo_manager')];
 
     for (final dir in targets) {
       if (await dir.exists()) {
