@@ -24,6 +24,12 @@ class BackupSettings extends HookConsumerWidget {
     final albumSync = useAppSettingsState(AppSettingsEnum.syncAlbums);
     final isCorruptCheckInProgress = ref.watch(backupVerificationProvider);
     final isAlbumSyncInProgress = useState(false);
+    useEffect(() {
+      if (!ignoreIcloudAssets.value) {
+        ignoreIcloudAssets.value = true;
+      }
+      return null;
+    }, [ignoreIcloudAssets.value]);
 
     syncAlbums() async {
       isAlbumSyncInProgress.value = true;
@@ -40,12 +46,14 @@ class BackupSettings extends HookConsumerWidget {
     final backupSettings = [
       const ForegroundBackupSettings(),
       const BackgroundBackupSettings(), //上架屏蔽
-      // if (Platform.isIOS || Platform.isOhos)
-      //   SettingsSwitchListTile(
-      //     valueNotifier: ignoreIcloudAssets,
-      //     title: 'ignore_icloud_photos'.tr(),
-      //     subtitle: 'ignore_icloud_photos_description'.tr(),
-      //   ),
+      if (Platform.isIOS || Platform.isOhos)
+        SettingsSwitchListTile(
+          valueNotifier: ignoreIcloudAssets,
+          title: 'ignore_icloud_photos'.tr(),
+          subtitle: 'ignore_icloud_photos_description'.tr(),
+          enabled: false,
+          onChanged: null,
+        ),
       if (Platform.isAndroid && isAdvancedTroubleshooting.value)
         SettingsButtonListTile(
           icon: Icons.warning_rounded,

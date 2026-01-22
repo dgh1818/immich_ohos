@@ -39,7 +39,7 @@ class SettingsSwitchListTile extends StatelessWidget {
       contentPadding: contentPadding,
       selectedTileColor: enabled ? null : context.themeData.disabledColor,
       value: valueNotifier.value,
-      onChanged: onSwitchChanged,
+      onChanged: enabled ? onSwitchChanged : null,
       activeThumbColor: enabled ? context.primaryColor : context.themeData.disabledColor,
       dense: true,
       secondary: icon != null ? Icon(icon!, color: valueNotifier.value ? context.primaryColor : null) : null,
