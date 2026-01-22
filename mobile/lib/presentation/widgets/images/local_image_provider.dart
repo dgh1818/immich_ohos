@@ -98,7 +98,7 @@ class LocalFullImageProvider extends CancellableImageProvider<LocalFullImageProv
 
     yield* loadRequest(request, decode);
 
-    if (!Store.get(StoreKey.loadOriginal, false)) {
+    if (!Store.get(StoreKey.loadOriginal, true)) {
       return;
     }
 
