@@ -91,6 +91,7 @@ class AppLifeCycleNotifier extends StateNotifier<AppLifeCycleEnum> {
       _log.info("Using server URL: $endpoint");
 
       if (!Store.isBetaTimelineEnabled) {
+        _ref.read(backupProvider.notifier);
         final permission = _ref.watch(galleryPermissionNotifier);
         if (permission.isGranted || permission.isLimited) {
           await _ref.read(backupProvider.notifier).resumeBackup();
@@ -142,6 +143,7 @@ class AppLifeCycleNotifier extends StateNotifier<AppLifeCycleEnum> {
   }
 
   Future<void> _handleBetaTimelineResume() async {
+    _ref.read(driftBackupProvider.notifier);
     if (_shouldSkipBetaSyncForVideoPlayback()) {
       _log.fine("Skip beta timeline sync on resume during video playback");
       return;

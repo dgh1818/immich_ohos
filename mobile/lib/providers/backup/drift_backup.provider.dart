@@ -15,6 +15,11 @@ import 'package:immich_mobile/services/upload.service.dart';
 import 'package:immich_mobile/utils/debug_print.dart';
 import 'package:logging/logging.dart';
 
+import 'dart:io';
+import 'package:immich_mobile/platform/native_sync_api_ohos.g.dart';
+import 'package:immich_mobile/providers/infrastructure/platform.provider.dart';
+import 'package:immich_mobile/providers/sync_status.provider.dart';
+
 class EnqueueStatus {
   final int enqueueCount;
   final int totalCount;
@@ -192,12 +197,13 @@ class DriftBackupState {
 }
 
 final driftBackupProvider = StateNotifierProvider<DriftBackupNotifier, DriftBackupState>((ref) {
-  return DriftBackupNotifier(ref.watch(uploadServiceProvider));
+  return DriftBackupNotifier(ref.watch(uploadServiceProvider), ref);
 });
 
 class DriftBackupNotifier extends StateNotifier<DriftBackupState> {
-  DriftBackupNotifier(this._uploadService)
-    : super(
+  DriftBackupNotifier(this._uploadService, this._ref)
+    : _nativeSyncApi = _ref.read(nativeSyncApiProvider),
+      super(
         const DriftBackupState(
           totalCount: 0,
           backupCount: 0,
@@ -222,6 +228,10 @@ class DriftBackupNotifier extends StateNotifier<DriftBackupState> {
   StreamSubscription<TaskProgressUpdate>? _progressSubscription;
   final _logger = Logger("DriftBackupNotifier");
 
+  bool _enqueueCompleted = false;
+  final Ref _ref;
+  final NativeSyncApiOhos _nativeSyncApi;
+
   /// Remove upload item from state
   void _removeUploadItem(String taskId) {
     if (state.uploadItems.containsKey(taskId)) {
@@ -239,6 +249,18 @@ class DriftBackupNotifier extends StateNotifier<DriftBackupState> {
         if (update.task.group == kBackupGroup) {
           if (update.responseStatusCode == 201) {
             state = state.copyWith(backupCount: state.backupCount + 1, remainderCount: state.remainderCount - 1);
+            if (Platform.isOhos) {
+              final total = state.totalCount > 0 ? state.totalCount : state.backupCount + state.remainderCount;
+              if (total > 0) {
+                final progressPercent = ((state.backupCount / total) * 100).clamp(0.0, 100.0);
+                final name = update.task.displayName.isNotEmpty ? update.task.displayName : update.task.filename;
+                try {
+                  _nativeSyncApi.updateBackgroundTransferProgress(progressPercent, '正在上传媒体', name);
+                } catch (_) {
+                  // ignore background progress errors on OHOS
+                }
+              }
+            }
           }
         }
 
@@ -288,6 +310,39 @@ class DriftBackupNotifier extends StateNotifier<DriftBackupState> {
       default:
         break;
     }
+    if (Platform.isOhos &&
+        _enqueueCompleted &&
+        (update.task.group == kBackupGroup || update.task.group == kBackupLivePhotoGroup) &&
+        (update.status == TaskStatus.complete ||
+            update.status == TaskStatus.failed ||
+            update.status == TaskStatus.canceled)) {
+      bool isLivePhotoVideo = false;
+      if (update.status == TaskStatus.complete && update.task.metaData.isNotEmpty) {
+        try {
+          isLivePhotoVideo = UploadTaskMetadata.fromJson(update.task.metaData).isLivePhotos;
+        } catch (_) {
+          // ignore metadata parse errors
+        }
+      }
+
+      if (!isLivePhotoVideo) {
+        unawaited(() async {
+          await Future<void>.delayed(const Duration(milliseconds: 300));
+          try {
+            final backupTasks = await _uploadService.getActiveTasks(kBackupGroup);
+            final livePhotoTasks = await _uploadService.getActiveTasks(kBackupLivePhotoGroup);
+            if (backupTasks.isEmpty && livePhotoTasks.isEmpty) {
+              if (_ref.read(syncStatusProvider).isHashing) {
+                return;
+              }
+              await _nativeSyncApi.stopBackgroundTransfer();
+            }
+          } catch (_) {
+            // ignore stop failures on OHOS
+          }
+        }());
+      }
+    }
   }
 
   void _handleTaskProgressUpdate(TaskProgressUpdate update) {
@@ -313,22 +368,36 @@ class DriftBackupNotifier extends StateNotifier<DriftBackupState> {
               : currentItem.copyWith(progress: progress),
         },
       );
-
-      return;
+    } else {
+      state = state.copyWith(
+        uploadItems: {
+          ...state.uploadItems,
+          taskId: DriftUploadStatus(
+            taskId: taskId,
+            filename: filename,
+            progress: progress,
+            fileSize: update.expectedFileSize,
+            networkSpeedAsString: update.networkSpeedAsString,
+          ),
+        },
+      );
     }
 
-    state = state.copyWith(
-      uploadItems: {
-        ...state.uploadItems,
-        taskId: DriftUploadStatus(
-          taskId: taskId,
-          filename: filename,
-          progress: progress,
-          fileSize: update.expectedFileSize,
-          networkSpeedAsString: update.networkSpeedAsString,
-        ),
-      },
-    );
+    if (Platform.isOhos &&
+        (update.task.group == kBackupGroup || update.task.group == kBackupLivePhotoGroup) &&
+        progress >= 0) {
+      final total = state.totalCount > 0 ? state.totalCount : state.backupCount + state.remainderCount;
+      if (total > 0) {
+        final uploadProgress = progress.clamp(0.0, 1.0).toDouble();
+        final overallProgress = (((state.backupCount + uploadProgress) / total) * 100).clamp(0.0, 100.0);
+        final name = filename.isNotEmpty ? filename : update.task.filename;
+        try {
+          _nativeSyncApi.updateBackgroundTransferProgress(overallProgress, '正在上传媒体', name);
+        } catch (_) {
+          // ignore background progress errors on OHOS
+        }
+      }
+    }
   }
 
   Future<void> getBackupStatus(String userId) async {
@@ -350,9 +419,35 @@ class DriftBackupNotifier extends StateNotifier<DriftBackupState> {
     state = state.copyWith(isSyncing: isSyncing);
   }
 
-  Future<void> startBackup(String userId) {
+  Future<void> startBackup(String userId) async {
+    _enqueueCompleted = false;
     state = state.copyWith(error: BackupError.none);
-    return _uploadService.startBackup(userId, _updateEnqueueCount);
+    if (Platform.isOhos) {
+      try {
+        await _nativeSyncApi.startBackgroundTransfer();
+      } catch (_) {
+        // ignore start failures on OHOS
+      }
+    }
+    await _uploadService.startBackup(userId, _updateEnqueueCount);
+    _enqueueCompleted = true;
+    if (Platform.isOhos) {
+      unawaited(() async {
+        await Future<void>.delayed(const Duration(milliseconds: 300));
+        try {
+          final backupTasks = await _uploadService.getActiveTasks(kBackupGroup);
+          final livePhotoTasks = await _uploadService.getActiveTasks(kBackupLivePhotoGroup);
+          if (backupTasks.isEmpty && livePhotoTasks.isEmpty) {
+            if (_ref.read(syncStatusProvider).isHashing) {
+              return;
+            }
+            await _nativeSyncApi.stopBackgroundTransfer();
+          }
+        } catch (_) {
+          // ignore stop failures on OHOS
+        }
+      }());
+    }
   }
 
   void _updateEnqueueCount(EnqueueStatus status) {
@@ -372,12 +467,31 @@ class DriftBackupNotifier extends StateNotifier<DriftBackupState> {
       dPrint(() => "All tasks canceled successfully.");
       // Clear all upload items when cancellation is complete
       state = state.copyWith(isCanceling: false, uploadItems: {});
+      if (Platform.isOhos) {
+        unawaited(() async {
+          await Future<void>.delayed(const Duration(milliseconds: 300));
+          try {
+            final backupTasks = await _uploadService.getActiveTasks(kBackupGroup);
+            final livePhotoTasks = await _uploadService.getActiveTasks(kBackupLivePhotoGroup);
+            if (backupTasks.isEmpty && livePhotoTasks.isEmpty) {
+              if (_ref.read(syncStatusProvider).isHashing) {
+                return;
+              }
+              await _nativeSyncApi.stopBackgroundTransfer();
+            }
+          } catch (_) {
+            // ignore stop failures on OHOS
+          }
+        }());
+      }
     }
   }
 
   Future<void> handleBackupResume(String userId) async {
     _logger.info("Resuming backup tasks...");
+    _enqueueCompleted = true;
     state = state.copyWith(error: BackupError.none);
+    await getBackupStatus(userId);
     final tasks = await _uploadService.getActiveTasks(kBackupGroup);
     _logger.info("Found ${tasks.length} tasks");
 
@@ -387,6 +501,13 @@ class DriftBackupNotifier extends StateNotifier<DriftBackupState> {
       return startBackup(userId);
     }
 
+    if (Platform.isOhos) {
+      try {
+        await _nativeSyncApi.startBackgroundTransfer();
+      } catch (_) {
+        // ignore start failures on OHOS
+      }
+    }
     _logger.info("Tasks to resume: ${tasks.length}");
     return _uploadService.resumeBackup();
   }

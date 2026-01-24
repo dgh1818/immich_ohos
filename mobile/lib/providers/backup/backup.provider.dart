@@ -660,6 +660,13 @@ class BackupNotifier extends StateNotifier<BackUpState> {
   }
 
   Future<void> resumeBackup() async {
+    if (Platform.isOhos && state.autoBackup) {
+      try {
+        await ref.read(nativeSyncApiProvider).startBackgroundTransfer();
+      } catch (_) {
+        // ignore start failures on OHOS
+      }
+    }
     final List<BackupAlbum> selectedBackupAlbums = await _backupAlbumService.getAllBySelection(BackupSelection.select);
     final List<BackupAlbum> excludedBackupAlbums = await _backupAlbumService.getAllBySelection(BackupSelection.exclude);
     Set<AvailableAlbum> selectedAlbums = state.selectedBackupAlbums;

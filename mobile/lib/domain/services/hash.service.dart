@@ -9,6 +9,9 @@ import 'package:immich_mobile/infrastructure/repositories/local_album.repository
 import 'package:immich_mobile/infrastructure/repositories/local_asset.repository.dart';
 import 'package:immich_mobile/infrastructure/repositories/trashed_local_asset.repository.dart';
 import 'package:logging/logging.dart';
+import 'package:immich_mobile/domain/models/store.model.dart';
+import 'package:immich_mobile/entities/store.entity.dart';
+import 'package:background_downloader/background_downloader.dart';
 
 import 'dart:io';
 import 'package:flutter/foundation.dart';
@@ -102,10 +105,26 @@ class HashService {
       _log.info("Hashing took - ${stopwatch.elapsedMilliseconds}ms");
 
       if (_startedBackgroundTransfer && Platform.isOhos) {
-        try {
-          await _nativeSyncApi.stopBackgroundTransfer();
-        } catch (_) {
-          // ignore stop failures
+        final backupEnabled = Store.get(StoreKey.enableBackup, false);
+        if (!backupEnabled) {
+          try {
+            await _nativeSyncApi.stopBackgroundTransfer();
+          } catch (_) {
+            // ignore stop failures
+          }
+        } else {
+          unawaited(() async {
+            await Future<void>.delayed(const Duration(milliseconds: 300));
+            try {
+              final backupTasks = await FileDownloader().allTasks(group: kBackupGroup);
+              final livePhotoTasks = await FileDownloader().allTasks(group: kBackupLivePhotoGroup);
+              if (backupTasks.isEmpty && livePhotoTasks.isEmpty) {
+                await _nativeSyncApi.stopBackgroundTransfer();
+              }
+            } catch (_) {
+              // ignore stop failures
+            }
+          }());
         }
       }
     }
