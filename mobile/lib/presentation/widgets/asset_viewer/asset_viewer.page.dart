@@ -491,6 +491,9 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
   }
 
   void _onTapDown(_, __, ___) {
+    if (ref.read(isPlayingMotionVideoProvider)) {
+      return;
+    }
     if (!showingBottomSheet) {
       ref.read(assetViewerProvider.notifier).toggleControls();
     }

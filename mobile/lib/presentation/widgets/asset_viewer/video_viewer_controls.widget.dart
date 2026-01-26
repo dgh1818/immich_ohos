@@ -10,6 +10,8 @@ import 'package:immich_mobile/utils/hooks/timer_hook.dart';
 import 'package:immich_mobile/widgets/asset_viewer/center_play_button.dart';
 import 'package:immich_mobile/widgets/common/delayed_loading_indicator.dart';
 
+import 'package:immich_mobile/providers/asset_viewer/is_motion_video_playing.provider.dart';
+
 class VideoViewerControls extends HookConsumerWidget {
   final Duration hideTimerDuration;
 
@@ -20,6 +22,7 @@ class VideoViewerControls extends HookConsumerWidget {
     final assetIsVideo = ref.watch(currentAssetNotifier.select((asset) => asset != null && asset.isVideo));
     bool showControls = ref.watch(assetViewerProvider.select((s) => s.showingControls));
     final showBottomSheet = ref.watch(assetViewerProvider.select((s) => s.showingBottomSheet));
+    final isPlayingMotionVideo = ref.watch(isPlayingMotionVideoProvider);
     if (showBottomSheet) {
       showControls = false;
     }
@@ -29,7 +32,7 @@ class VideoViewerControls extends HookConsumerWidget {
 
     // A timer to hide the controls
     final hideTimer = useTimer(hideTimerDuration, () {
-      if (!context.mounted) {
+      if (!context.mounted || isPlayingMotionVideo) {
         return;
       }
       final state = ref.read(videoPlaybackValueProvider).state;
@@ -43,11 +46,17 @@ class VideoViewerControls extends HookConsumerWidget {
 
     /// Shows the controls and starts the timer to hide them
     void showControlsAndStartHideTimer() {
+      if (isPlayingMotionVideo) {
+        return;
+      }
       hideTimer.reset();
       ref.read(assetViewerProvider.notifier).setControls(true);
     }
 
     void toggleControls() {
+      if (isPlayingMotionVideo) {
+        return;
+      }
       if (showControls) {
         ref.read(assetViewerProvider.notifier).setControls(false);
         return;
