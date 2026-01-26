@@ -125,6 +125,7 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
   bool blockGestures = false;
   bool dragInProgress = false;
   bool shouldPopOnDrag = false;
+  int _activePointers = 0;
   bool assetReloadRequested = false;
   double? initialScale;
   double previousExtent = _kBottomSheetMinimumExtent;
@@ -491,6 +492,9 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
   }
 
   void _onTapDown(_, __, ___) {
+    if (_activePointers > 1) {
+      return;
+    }
     if (ref.read(isPlayingMotionVideoProvider)) {
       return;
     }
@@ -829,7 +833,20 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
         body: Stack(
           children: [
             Listener(
-              onPointerUp: (_) => _stopMotionPlayback(),
+              onPointerDown: (_) {
+                _activePointers += 1;
+              },
+              onPointerCancel: (_) {
+                if (_activePointers > 0) {
+                  _activePointers -= 1;
+                }
+              },
+              onPointerUp: (_) {
+                if (_activePointers > 0) {
+                  _activePointers -= 1;
+                }
+                _stopMotionPlayback();
+              },
               child: PhotoViewGallery.builder(
                 gaplessPlayback: true,
                 loadingBuilder: _placeholderBuilder,
