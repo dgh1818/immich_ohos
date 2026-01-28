@@ -141,9 +141,17 @@ export class MessagesImplBaseThumb extends ThumbnailApi {
 
     }
     let request = this.requestMap.get(requestId);
-    taskpool.cancel(request);
-    taskpool.terminateTask(request);
-    this.requestMap.delete(requestId);
+
+    try {
+      taskpool.cancel(request);
+      taskpool.terminateTask(request);
+    } catch (e) {
+      let error = e as BusinessError;
+      console.error("image request task cancel error:" + error.message);
+    } finally {
+      this.requestMap.delete(requestId);
+    }
+
     return;
   }
 
