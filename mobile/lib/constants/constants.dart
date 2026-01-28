@@ -12,7 +12,7 @@ const int kSyncEventBatchSize = 5000;
 const int kFetchLocalAssetsBatchSize = 40000;
 
 // Hash batch limits
-final int kBatchHashFileLimit = Platform.isIOS ? 32 : 512;
+final int kBatchHashFileLimit = Platform.isIOS || Platform.isOhos ? 32 : 512;
 const int kBatchHashSizeLimit = 1024 * 1024 * 1024; // 1GB
 
 // Secure storage keys
