@@ -126,6 +126,7 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
   bool dragInProgress = false;
   bool shouldPopOnDrag = false;
   int _activePointers = 0;
+  int _suppressTapUntilMs = 0;
   bool assetReloadRequested = false;
   double? initialScale;
   double previousExtent = _kBottomSheetMinimumExtent;
@@ -492,7 +493,14 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
   }
 
   void _onTapDown(_, __, ___) {
+    if (DateTime.now().millisecondsSinceEpoch < _suppressTapUntilMs) {
+      return;
+    }
     if (_activePointers > 1) {
+      return;
+    }
+    final asset = ref.read(currentAssetNotifier);
+    if (asset?.isVideo == true) {
       return;
     }
     if (ref.read(isPlayingMotionVideoProvider)) {
@@ -655,6 +663,7 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
   void _onLongPress(_, __, ___) {
     ui.SetHdr.setHdrMode(hdr: 0, is_image: true);
     ui.SetHdr.setHdrMode(hdr: -1, is_image: false);
+    ref.read(assetViewerProvider.notifier).setControls(false);
     ref.read(isPlayingMotionVideoProvider.notifier).playing = true;
     lastPlayingState = 1;
   }
@@ -662,6 +671,7 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
   void _stopMotionPlayback() {
     final asset = ref.read(currentAssetNotifier);
     if (asset?.isMotionPhoto == true && ref.read(isPlayingMotionVideoProvider)) {
+      _suppressTapUntilMs = DateTime.now().millisecondsSinceEpoch + 300;
       ref.read(isPlayingMotionVideoProvider.notifier).playing = false;
       //ui.SetHdr.setHdrMode(hdr: 0, is_image: true);
       lastPlayingState = 0;
@@ -728,7 +738,7 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
       onDragStart: _onDragStart,
       onDragUpdate: _onDragUpdate,
       onDragEnd: _onDragEnd,
-      onTapDown: _onTapDown,
+      onTapUp: _onTapDown,
       onLongPressStart: asset.isMotionPhoto ? _onLongPress : null,
       errorBuilder: (_, __, ___) => Container(
         width: size.width,
@@ -749,7 +759,7 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
       onDragStart: _onDragStart,
       onDragUpdate: _onDragUpdate,
       onDragEnd: _onDragEnd,
-      onTapDown: _onTapDown,
+      onTapUp: _onTapDown,
       heroAttributes: PhotoViewHeroAttributes(tag: '${asset.heroTag}_$heroOffset'),
       filterQuality: FilterQuality.high,
       maxScale: 1.0,

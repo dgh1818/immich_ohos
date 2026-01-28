@@ -11,6 +11,7 @@ import 'package:immich_mobile/presentation/widgets/action_buttons/motion_photo_a
 import 'package:immich_mobile/presentation/widgets/action_buttons/unfavorite_action_button.widget.dart';
 import 'package:immich_mobile/presentation/widgets/asset_viewer/asset_viewer.state.dart';
 import 'package:immich_mobile/presentation/widgets/asset_viewer/viewer_kebab_menu.widget.dart';
+import 'package:immich_mobile/providers/asset_viewer/is_motion_video_playing.provider.dart';
 import 'package:immich_mobile/providers/activity.provider.dart';
 import 'package:immich_mobile/providers/infrastructure/asset_viewer/current_asset.provider.dart';
 import 'package:immich_mobile/providers/infrastructure/current_album.provider.dart';
@@ -38,12 +39,13 @@ class ViewerTopAppBar extends ConsumerWidget implements PreferredSizeWidget {
     final isShowingSheet = ref.watch(assetViewerProvider.select((state) => state.showingBottomSheet));
     int opacity = ref.watch(assetViewerProvider.select((state) => state.backgroundOpacity));
     final showControls = ref.watch(assetViewerProvider.select((s) => s.showingControls));
+    final isPlayingMotionVideo = ref.watch(isPlayingMotionVideoProvider);
 
     if (album != null && album.isActivityEnabled && album.isShared && asset is RemoteAsset) {
       ref.watch(albumActivityProvider(album.id, asset.id));
     }
 
-    if (!showControls) {
+    if (!showControls || isPlayingMotionVideo) {
       opacity = 0;
     }
 

@@ -1,4 +1,5 @@
 import 'package:immich_mobile/domain/models/asset/base_asset.model.dart';
+import 'package:immich_mobile/providers/asset_viewer/is_motion_video_playing.provider.dart';
 import 'package:immich_mobile/providers/asset_viewer/video_player_controls_provider.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -94,6 +95,9 @@ class AssetViewerStateNotifier extends Notifier<AssetViewerState> {
   }
 
   void setControls(bool isShowing) {
+    if (ref.read(isPlayingMotionVideoProvider)) {
+      return;
+    }
     if (isShowing == state.showingControls) {
       return;
     }
@@ -101,6 +105,9 @@ class AssetViewerStateNotifier extends Notifier<AssetViewerState> {
   }
 
   void toggleControls() {
+    if (ref.read(isPlayingMotionVideoProvider)) {
+      return;
+    }
     state = state.copyWith(showingControls: !state.showingControls);
   }
 
