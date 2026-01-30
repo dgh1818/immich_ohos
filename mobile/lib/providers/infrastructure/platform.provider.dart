@@ -17,6 +17,6 @@ final nativeSyncApiProvider = Provider<NativeSyncApiOhos>((_) => NativeSyncApiOh
 
 final connectivityApiProvider = Provider<ConnectivityApi>((_) => ConnectivityApi());
 
-final localImageApi = LocalImageApi();
+final localImageApi = LocalImageApiOhos();
 
-final remoteImageApi = RemoteImageApi();
+final remoteImageApi = RemoteImageApiOhos();

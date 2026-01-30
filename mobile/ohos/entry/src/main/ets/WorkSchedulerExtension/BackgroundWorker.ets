@@ -18,8 +18,10 @@ import { GeneratedPluginRegistrant } from '../plugins/GeneratedPluginRegistrant'
 import { BackgroundServicePlugin } from '../plugins/BackgroundServicePlugin';
 import { NativeSyncApiOhos } from '../plugins/sync/Messages_ohos.g';
 import { MessagesImplBase } from '../plugins/sync/MessagesImplBase';
-import { MessagesImplBaseThumb } from '../plugins/Images/ThumbnailsImpl';
-import { ThumbnailApi } from '../plugins/Images/Messages_ohos.g';
+import { LocalImageApiOhos } from '../plugins/Images/LocalImages.g';
+import { RemoteImageApiOhos } from '../plugins/Images/RemoteImages.g';
+import { LocalImagesImpl } from '../plugins/Images/LocalImagesImpl';
+import { RemoteImagesImpl } from '../plugins/Images/RemoteImagesImpl';
 import { BackgroundWorkerFgHostApi } from './BackgroundWorker.g';
 import { ConnectivityApi } from '../plugins/connectivity/Connectivity.g';
 import { ConnectivityApiImpl } from '../plugins/connectivity/ConnectivityApiImpl';
@@ -64,7 +66,8 @@ class BackgroundWorker extends WorkSchedulerExtensionAbility {
 
   public static backgroundWorkerBgHostApiImpl?:BackgroundWorkerBgHostApiImpl;
   public static nativeSyncApiImpl?: MessagesImplBase;
-  public static thumbApiImpl?: MessagesImplBaseThumb;
+  public static localImageApiImpl?: LocalImagesImpl;
+  public static remoteImageApiImpl?: RemoteImagesImpl;
   public static backgroundEngineLock?: BackgroundEngineLock;
 
 
@@ -79,13 +82,15 @@ class BackgroundWorker extends WorkSchedulerExtensionAbility {
     GeneratedPluginRegistrant.registerWith(flutterEngine);
     const messenger = flutterEngine.dartExecutor.getBinaryMessenger();
     BackgroundWorker.nativeSyncApiImpl = new MessagesImplBase(this.ctx.getApplicationContext());   //??????ability?????????y?????????
-    BackgroundWorker.thumbApiImpl = new MessagesImplBaseThumb(this.ctx.getApplicationContext());
+    BackgroundWorker.localImageApiImpl = new LocalImagesImpl(this.ctx.getApplicationContext());
+    BackgroundWorker.remoteImageApiImpl = new RemoteImagesImpl();
     const backgroundWorkerApiImpl = new BackgroundWorkerApiImpl(this.ctx.getApplicationContext());
     const connectivityApiImpl = new ConnectivityApiImpl(this.ctx.getApplicationContext());
     BackgroundWorker.backgroundEngineLock = new BackgroundEngineLock(this.ctx);
 
     NativeSyncApiOhos.setup(messenger, BackgroundWorker.nativeSyncApiImpl);
-    ThumbnailApi.setup(messenger, BackgroundWorker.thumbApiImpl);
+    LocalImageApiOhos.setup(messenger, BackgroundWorker.localImageApiImpl);
+    RemoteImageApiOhos.setup(messenger, BackgroundWorker.remoteImageApiImpl);
     BackgroundWorkerFgHostApi.setup(messenger, backgroundWorkerApiImpl);
     ConnectivityApi.setup(messenger, connectivityApiImpl);
     BackgroundWorkerLockApi.setup(messenger, BackgroundWorker.backgroundEngineLock);
@@ -95,7 +100,8 @@ class BackgroundWorker extends WorkSchedulerExtensionAbility {
       BackgroundWorker.backgroundEngineLock?.detachFromEngine();
     } catch (_) {}
     BackgroundWorker.nativeSyncApiImpl = undefined;
-    BackgroundWorker.thumbApiImpl = undefined;
+    BackgroundWorker.localImageApiImpl = undefined;
+    BackgroundWorker.remoteImageApiImpl = undefined;
     BackgroundWorker.backgroundEngineLock = undefined;
   }
 

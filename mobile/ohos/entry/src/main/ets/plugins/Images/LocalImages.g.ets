@@ -76,25 +76,23 @@ export interface Result<T> {
   error( error: Error): void;
 }
 /* Generated abstract class from Pigeon that represents a handler of messages from Flutter.*/
-export abstract class ThumbnailApi {
+export abstract class LocalImageApiOhos {
 
   abstract requestImage(assetId: string , requestId: number , width: number , height: number , isVideo: boolean , result: Result<Map<string, Object>>): void;
 
-  abstract cancelImageRequest(requestId: number ): void;
+  abstract cancelRequest(requestId: number ): void;
 
   abstract getThumbhash(thumbhash: string , result: Result<Map<string, Object>>): void;
-
-  abstract getHdr(assetId: string , result: Result<Map<string, boolean>>): void;
-  /** The codec used by ThumbnailApi. */
+  /** The codec used by LocalImageApiOhos. */
   static getCodec(): MessageCodec<Object>{
     return PigeonCodec.INSTANCE;
   }
-  /*Sets up an instance of `ThumbnailApi` to handle messages through the `binaryMessenger`.*/
-  static setup(binaryMessenger: BinaryMessenger, api: ThumbnailApi | null): void {
+  /*Sets up an instance of `LocalImageApiOhos` to handle messages through the `binaryMessenger`.*/
+  static setup(binaryMessenger: BinaryMessenger, api: LocalImageApiOhos | null): void {
     {
       let channel: BasicMessageChannel<Object> =
           new BasicMessageChannel(
-              binaryMessenger, "dev.flutter.pigeon.immich_mobile.ThumbnailApi.requestImage", ThumbnailApi.getCodec());
+              binaryMessenger, "dev.flutter.pigeon.immich_mobile.LocalImageApiOhos.requestImage", LocalImageApiOhos.getCodec());
       if (api != null) {
         channel.setMessageHandler({
             onMessage(message: Object ,reply: Reply<Object> ) {
@@ -122,14 +120,14 @@ export abstract class ThumbnailApi {
     {
       let channel: BasicMessageChannel<Object> =
           new BasicMessageChannel(
-              binaryMessenger, "dev.flutter.pigeon.immich_mobile.ThumbnailApi.cancelImageRequest", ThumbnailApi.getCodec());
+              binaryMessenger, "dev.flutter.pigeon.immich_mobile.LocalImageApiOhos.cancelRequest", LocalImageApiOhos.getCodec());
       if (api != null) {
         channel.setMessageHandler({
             onMessage(message: Object ,reply: Reply<Object> ) {
               let args: Array<Object> = message as Array<Object>;
               let res: Array<Object> = [];
               try {
-                api!.cancelImageRequest(args[0] as number);
+                api!.cancelRequest(args[0] as number);
                 res.push(null);
               }
  catch (error) {
@@ -145,13 +143,13 @@ export abstract class ThumbnailApi {
     {
       let channel: BasicMessageChannel<Object> =
           new BasicMessageChannel(
-              binaryMessenger, "dev.flutter.pigeon.immich_mobile.ThumbnailApi.getThumbhash", ThumbnailApi.getCodec());
+              binaryMessenger, "dev.flutter.pigeon.immich_mobile.LocalImageApiOhos.getThumbhash", LocalImageApiOhos.getCodec());
       if (api != null) {
         channel.setMessageHandler({
             onMessage(message: Object ,reply: Reply<Object> ) {
               let args: Array<Object> = message as Array<Object>;
-              class ResultImp implements Result<Map<string, Object>>{
-                    success(result: Map<string, Object>): void {
+                class ResultImp implements Result<Map<string, Object>>{
+                      success(result: Map<string, Object>): void {
                       let res: Array<Object> = [];
                       res.push(result);
                       reply.reply(res);
@@ -162,37 +160,9 @@ export abstract class ThumbnailApi {
                       reply.reply(wrappedError);
                     }
               }
-              let resultCallback: Result<Map<string, Object>> = new ResultImp();
+                let resultCallback: Result<Map<string, Object>> = new ResultImp();
 
               api!.getThumbhash(args[0] as string, resultCallback);
-            } });
-      } else {
-        channel.setMessageHandler(null);
-      }
-    }
-    {
-      let channel: BasicMessageChannel<Object> =
-          new BasicMessageChannel(
-              binaryMessenger, "dev.flutter.pigeon.immich_mobile.ThumbnailApi.getHdr", ThumbnailApi.getCodec());
-      if (api != null) {
-        channel.setMessageHandler({
-            onMessage(message: Object ,reply: Reply<Object> ) {
-              let args: Array<Object> = message as Array<Object>;
-              class ResultImp implements Result<Map<string, boolean>>{
-                    success(result: Map<string, boolean>): void {
-                      let res: Array<Object> = [];
-                      res.push(result);
-                      reply.reply(res);
-                    }
-
-                    error(error: Error): void {
-                      let wrappedError: Array<Object> = wrapError(error);
-                      reply.reply(wrappedError);
-                    }
-              }
-              let resultCallback: Result<Map<string, boolean>> = new ResultImp();
-
-              api!.getHdr(args[0] as string, resultCallback);
             } });
       } else {
         channel.setMessageHandler(null);

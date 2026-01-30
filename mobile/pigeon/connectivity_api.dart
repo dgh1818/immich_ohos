@@ -7,6 +7,8 @@ import 'package:pigeon/pigeon.dart';
     swiftOptions: SwiftOptions(includeErrorClass: false),
     kotlinOut: 'android/app/src/main/kotlin/app/alextran/immich/connectivity/Connectivity.g.kt',
     kotlinOptions: KotlinOptions(package: 'app.alextran.immich.connectivity'),
+    arkTSOut: 'ohos/entry/src/main/ets/plugins/connectivity/Connectivity.g.ets',
+    arkTSOptions: ArkTSOptions(),
     dartOptions: DartOptions(),
     dartPackageName: 'immich_mobile',
   ),

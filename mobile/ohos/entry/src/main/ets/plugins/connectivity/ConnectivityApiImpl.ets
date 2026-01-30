@@ -1,5 +1,5 @@
 import { common } from '@kit.AbilityKit'
-import { ConnectivityApi, NetworkCapability } from './Connectivity.g'
+import { ConnectivityApi, NetworkCapability, NetworkCapabilityEnum } from './Connectivity.g'
 import { connection } from '@kit.NetworkKit';
 import { wifiManager } from '@kit.ConnectivityKit';
 
@@ -11,6 +11,10 @@ export class ConnectivityApiImpl extends ConnectivityApi {
     this.ctx = context;
   }
 
+  private wrapCapability(capability: NetworkCapability): NetworkCapabilityEnum {
+    return new NetworkCapabilityEnum(NetworkCapability[capability] as string);
+  }
+
   override getCapabilities(): Array<NetworkCapability> {
     let connectivityManager = connection.getDefaultNetSync();
     let netCapability = connection.getNetCapabilitiesSync(connectivityManager);
@@ -19,30 +23,32 @@ export class ConnectivityApiImpl extends ConnectivityApi {
     let isWifiEnabled = wifiManager.isWifiActive();
     let hasCellular = networkCap.includes(connection.NetCap.NET_CAPABILITY_NOT_METERED)
     let hasVpn = !networkCap.includes(connection.NetCap.NET_CAPABILITY_NOT_VPN)
-    let isUnmetered = !networkCap.includes(connection.NetCap.NET_CAPABILITY_NOT_METERED)
+    let isUnmetered = hasWifi || networkCap.includes(connection.NetCap.NET_CAPABILITY_NOT_METERED)
 
-    let res = new Array<NetworkCapability>();
+    let res: Array<NetworkCapability | NetworkCapabilityEnum> = [];
     if (hasWifi) {
-      res.push(NetworkCapability.WIFI)
+      res.push(this.wrapCapability(NetworkCapability.WIFI))
     }
     if (hasCellular) {
-      res.push(NetworkCapability.CELLULAR)
+      res.push(this.wrapCapability(NetworkCapability.CELLULAR))
     }
     if (hasVpn) {
-      res.push(NetworkCapability.VPN);
+      res.push(this.wrapCapability(NetworkCapability.VPN));
       if (!hasWifi && !hasCellular) {
         if (isWifiEnabled) {
-          res.push(NetworkCapability.WIFI)
+          res.push(this.wrapCapability(NetworkCapability.WIFI))
         } else {
-          res.push(NetworkCapability.CELLULAR)
+          res.push(this.wrapCapability(NetworkCapability.CELLULAR))
         }
         // If VPN is active, but neither WIFI nor CELLULAR is reported as active,
         // assume CELLULAR if WIFI is not enabled
       }
     }
+    if (isUnmetered) {
+      res.push(this.wrapCapability(NetworkCapability.UNMETERED))
+    }
 
-    return res;
+    return res as Array<NetworkCapability>;
   }
 }
-
 

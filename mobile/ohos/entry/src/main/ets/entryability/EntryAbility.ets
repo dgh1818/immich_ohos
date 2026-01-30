@@ -17,9 +17,11 @@ import { FlutterAbility, FlutterEngine } from '@ohos/flutter_ohos';
 import { GeneratedPluginRegistrant } from '../plugins/GeneratedPluginRegistrant';
 import { BackgroundServicePlugin } from '../../../main/ets/plugins/BackgroundServicePlugin';
 import { NativeSyncApiOhos } from '../../../main/ets/plugins/sync/Messages_ohos.g';
-import { ThumbnailApi } from '../../../main/ets/plugins/Images/Messages_ohos.g';
+import { LocalImageApiOhos } from '../../../main/ets/plugins/Images/LocalImages.g';
+import { RemoteImageApiOhos } from '../../../main/ets/plugins/Images/RemoteImages.g';
 import {MessagesImplBase} from '../plugins/sync/MessagesImplBase'
-import { MessagesImplBaseThumb } from '../plugins/Images/ThumbnailsImpl';
+import { LocalImagesImpl } from '../plugins/Images/LocalImagesImpl';
+import { RemoteImagesImpl } from '../plugins/Images/RemoteImagesImpl';
 import { BackgroundWorkerApiImpl } from '../WorkSchedulerExtension/BackgroundWorkerApiImpl';
 import { BackgroundWorkerFgHostApi } from '../WorkSchedulerExtension/BackgroundWorker.g';
 import { ConnectivityApi } from '../plugins/connectivity/Connectivity.g';
@@ -61,12 +63,14 @@ export default class EntryAbility extends FlutterAbility {
 
     let messenger = flutterEngine.dartExecutor.getBinaryMessenger();
     let nativeSyncApiImpl = new MessagesImplBase(super.getAbility().context);
-    let ThumbApiImpl = new MessagesImplBaseThumb(super.getAbility().context)
+    let localImageApiImpl = new LocalImagesImpl(super.getAbility().context);
+    let remoteImageApiImpl = new RemoteImagesImpl();
     let backgroundWorkerApiImpl = new BackgroundWorkerApiImpl(ctx.getApplicationContext());
     let connectivityApiImpl = new ConnectivityApiImpl(ctx.getApplicationContext());
     let backgroundEngineLock = new BackgroundEngineLock(ctx.getApplicationContext())
     NativeSyncApiOhos.setup(messenger, nativeSyncApiImpl)
-    ThumbnailApi.setup(messenger,ThumbApiImpl);
+    LocalImageApiOhos.setup(messenger, localImageApiImpl);
+    RemoteImageApiOhos.setup(messenger, remoteImageApiImpl);
     BackgroundWorkerFgHostApi.setup(messenger,backgroundWorkerApiImpl);
     ConnectivityApi.setup(messenger,connectivityApiImpl);
     BackgroundWorkerLockApi.setup(messenger,backgroundEngineLock);

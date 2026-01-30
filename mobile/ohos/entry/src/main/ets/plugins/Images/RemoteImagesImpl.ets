@@ -1,0 +1,212 @@
+import { RemoteImageApiOhos, Result } from './RemoteImages.g';
+import { http } from '@kit.NetworkKit';
+import { BusinessError } from '@kit.BasicServicesKit';
+import { taskpool } from '@kit.ArkTS';
+import { decodeRemoteImageTask, RemoteDecodeResult } from './RemoteImageTask';
+import nativeBuffer, { allocCopySafe } from '../../utils/native_buffer';
+
+interface RemoteRequestState {
+  request: http.HttpRequest;
+  cancelled: boolean;
+}
+
+let runner: taskpool.AsyncRunner | undefined = undefined;
+
+if (canIUse('api.version >= 18')) {
+  runner = new taskpool.AsyncRunner('remoteImageRunner', 4);
+}
+
+export class RemoteImagesImpl extends RemoteImageApiOhos {
+  private requestMap = new Map<number, RemoteRequestState>();
+  private cache = new Map<string, ArrayBuffer>();
+  private cacheBytes = 0;
+  private readonly maxCacheBytes = 64 * 1024 * 1024;
+
+  override async requestImage(
+  url: string,
+  headers: Map<string, string>,
+  requestId: number,
+  result: Result<Map<string, Object>>
+) {
+  const isPreview = this.isPreviewUrl(url);
+  // 1) Cache hit
+  const cached = this.cache.get(url);
+  if (cached) {
+    // 防历史“毒化缓存”（旧版本曾 transfer 过）
+    if (cached.byteLength === 0) {
+      this.cache.delete(url);
+    } else {
+      try {
+        const decoded = await this.decodeBuffer(cached, isPreview);
+        return result.success(decoded);
+      } catch (_) {
+        // 这里不需要额外拷贝：decodeBuffer 已经隔离 transfer，cached 不会被 detach
+        const fallback = new Map<string, Object>();
+        const pointer = allocCopySafe(cached);
+        if (pointer) {
+          fallback.set('pointer', pointer);
+        } else {
+          fallback.set('pointer', new Uint8Array(cached));
+        }
+        fallback.set('length', cached.byteLength);
+        return result.success(fallback);
+      }
+    }
+  }
+
+  // 2) HTTP request
+  const request = http.createHttp();
+  const state: RemoteRequestState = { request, cancelled: false };
+  this.requestMap.set(requestId, state);
+
+  const options: http.HttpRequestOptions = {
+    method: http.RequestMethod.GET,
+    header: this.toHeaderRecord(headers),
+    expectDataType: http.HttpDataType.ARRAY_BUFFER,
+    // allow responses larger than default 5MB limit
+    maxLimit: 64 * 1024 * 1024,
+  };
+
+  try {
+    const response = await request.request(url, options);
+
+    if (state.cancelled) {
+      return result.success(new Map<string, Object>());
+    }
+    if (response.responseCode < 200 || response.responseCode > 299) {
+      return result.error(new Error(`HTTP ${response.responseCode}`));
+    }
+
+    const data = response.result as ArrayBuffer;
+
+    if (state.cancelled) {
+      return result.success(new Map<string, Object>());
+    }
+    if (!data || data.byteLength === 0) {
+      return result.error(new Error('HTTP result is empty/detached (byteLength == 0)'));
+    }
+
+    // 3) Cache store（storeCache 内部会 slice(0)，不会存到会被 detach 的引用）
+    //this.storeCache(url, data);
+
+    // 4) Decode
+    try {
+      const decoded = await this.decodeBuffer(data, isPreview);
+
+      if (state.cancelled) {
+        return result.success(new Map<string, Object>());
+      }
+      return result.success(decoded);
+    } catch (_) {
+      if (state.cancelled) {
+        return result.success(new Map<string, Object>());
+      }
+
+      // 不需要额外拷贝：decodeBuffer 已经隔离 transfer，data 不会被 detach
+      const fallback = new Map<string, Object>();
+      const pointer = allocCopySafe(data);
+      if (pointer) {
+        fallback.set('pointer', pointer);
+      } else {
+        fallback.set('pointer', new Uint8Array(data));
+      }
+      fallback.set('length', data.byteLength);
+      return result.success(fallback);
+    }
+  } catch (e) {
+    if (state.cancelled) {
+      return result.success(new Map<string, Object>());
+    }
+    return result.error(e as BusinessError);
+  } finally {
+    request.destroy();
+    this.requestMap.delete(requestId);
+  }
+}
+
+  private async decodeBuffer(data: ArrayBuffer, isPreview: boolean): Promise<Map<string, Object>> {
+  if (!data || data.byteLength === 0) {
+    throw new Error('detached buffer (input byteLength == 0)');
+  }
+
+  // ✅ 最关键：taskpool 可能 transfer 入参，所以必须传“拷贝”
+  // 这就是“最少拷贝”的唯一必要拷贝点
+  const input = data.slice(0);
+
+  const task: taskpool.Task = new taskpool.Task(decodeRemoteImageTask, input, !isPreview);
+  try {
+    const executor = isPreview
+      ? (runner ? runner.execute(task) : taskpool.execute(task))
+      : taskpool.execute(task, taskpool.Priority.HIGH);
+
+    const processed = (await executor) as RemoteDecodeResult;
+
+    const resOut = new Map<string, Object>();
+    const pointer = allocCopySafe(processed.buffer);
+    if (pointer) {
+      resOut.set('pointer', pointer);
+    } else {
+      resOut.set('pointer', new Uint8Array(processed.buffer));
+    }
+    resOut.set('width', processed.width);
+    resOut.set('height', processed.height);
+    resOut.set('rowBytes', processed.rowBytes);
+    resOut.set('isHdr', processed.isHdr);
+    return resOut;
+  } finally {
+    taskpool.terminateTask(task);
+  }
+}
+
+  override cancelRequest(requestId: number) {
+    const state = this.requestMap.get(requestId);
+    if (!state) {
+      return;
+    }
+    state.cancelled = true;
+    try {
+      state.request.destroy();
+    } catch (_) {}
+    this.requestMap.delete(requestId);
+  }
+
+  override clearCache(result: Result<number>) {
+    const clearedBytes = this.cacheBytes;
+    this.cache.clear();
+    this.cacheBytes = 0;
+    result.success(clearedBytes);
+  }
+
+  private isPreviewUrl(url: string): boolean {
+    return url.includes('size=preview') || url.includes('size=thumbnail');
+  }
+
+  private toHeaderRecord(headers: Map<string, string>): Record<string, string> {
+    const out: Record<string, string> = {};
+    headers.forEach((value, key) => {
+      out[key] = value;
+    });
+    return out;
+  }
+
+  private storeCache(url: string, data: ArrayBuffer) {
+    const size = data.byteLength;
+    if (size <= 0 || size > this.maxCacheBytes) {
+      return;
+    }
+    while (this.cacheBytes + size > this.maxCacheBytes && this.cache.size > 0) {
+      const oldestKey: string | undefined = this.cache.keys().next().value as string | undefined;
+      if (oldestKey === undefined) {
+        break;
+      }
+      const oldest = this.cache.get(oldestKey);
+      if (oldest) {
+        this.cacheBytes -= oldest.byteLength;
+      }
+      this.cache.delete(oldestKey);
+    }
+    const copy = data.slice(0);
+    this.cache.set(url, copy);
+    this.cacheBytes += copy.byteLength;
+  }
+}

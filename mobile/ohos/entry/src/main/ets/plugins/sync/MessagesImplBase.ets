@@ -5,7 +5,7 @@ import { fileUri, hash } from '@kit.CoreFileKit';
 import { fileUriService } from '@kit.ScenarioFusionKit';
 import abilityAccessCtrl from '@ohos.abilityAccessCtrl';
 
-import { NativeSyncApiOhos, SyncDelta, PlatformAsset, PlatformAlbum, Result, HashResult,
+import { NativeSyncApiOhos, SyncDelta, PlatformAsset, PlatformAlbum, Result, HashResult, CloudIdResult,
   FlutterError } from './Messages_ohos.g'
 import { BusinessError } from '@kit.BasicServicesKit';
 import fs from '@ohos.file.fs';
@@ -978,5 +978,17 @@ export class MessagesImplBase extends NativeSyncApiOhos {
     let obj = new fileUri.FileUri(uri);
     let path = obj.path;
     result.success(path);
+  }
+
+  override getCloudIdForAssetIds(assetIds: Array<string>, result: Result<Array<CloudIdResult>>): void {
+    const results: CloudIdResult[] = [];
+    for (const id of assetIds) {
+      const item = new CloudIdResult();
+      item.setAssetId(id);
+      item.setCloudId(id);
+      item.setError('');
+      results.push(item);
+    }
+    result.success(results);
   }
 }

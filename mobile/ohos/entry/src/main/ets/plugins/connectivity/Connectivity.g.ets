@@ -60,7 +60,7 @@ export class NetworkCapabilityEnum {
   }
 }
 
-class PigeonCodec extends StandardMessageCodec {
+export class PigeonCodec extends StandardMessageCodec {
   static readonly INSTANCE: PigeonCodec  = new PigeonCodec();
 
   getByte(n: number): number {

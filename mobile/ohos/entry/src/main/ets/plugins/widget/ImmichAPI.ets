@@ -34,7 +34,7 @@ export class ImmichAPI {
   }
 
   async fetchImage(assetId: string): Promise<ArrayBuffer> {
-    const url = this.buildRequestUrl(`/assets/${assetId}/thumbnail`, { 'size': 'preview' });
+    const url = this.buildRequestUrl(`/assets/${assetId}/thumbnail`, { 'size': 'preview', 'edited': 'true' });
     return await this.requestBytes(url);
   }
 

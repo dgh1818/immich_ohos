@@ -70,6 +70,14 @@ class PlatformAlbum {
   });
 }
 
+class CloudIdResult {
+  final String assetId;
+  final String? error;
+  final String? cloudId;
+
+  const CloudIdResult({required this.assetId, this.error, this.cloudId});
+}
+
 class SyncDelta {
   final bool hasChanges;
   final List<PlatformAsset> updates;
@@ -136,4 +144,8 @@ abstract class NativeSyncApiOhos {
   @TaskQueue(type: TaskQueueType.serialBackgroundThread)
   @async
   String getPathFromUri(String uri);
+
+  @TaskQueue(type: TaskQueueType.serialBackgroundThread)
+  @async
+  List<CloudIdResult> getCloudIdForAssetIds(List<String> assetIds);
 }

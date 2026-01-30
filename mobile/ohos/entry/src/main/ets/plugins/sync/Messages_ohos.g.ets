@@ -428,6 +428,70 @@ export class PlatformAlbum {
 }
 
 /* Generated class from Pigeon that represents data sent in messages.*/
+export class CloudIdResult {
+  private assetId?: string;
+
+  public setAssetId(assetId:string):void {
+    this.assetId = assetId;
+  }
+
+  getAssetId(): string | undefined{
+    return this.assetId;
+  }
+
+  private error?: string;
+
+  public setError(error:string):void {
+    this.error = error;
+  }
+
+  getError(): string | undefined{
+    return this.error;
+  }
+
+  private cloudId?: string;
+
+  public setCloudId(cloudId:string):void {
+    this.cloudId = cloudId;
+  }
+
+  getCloudId(): string | undefined{
+    return this.cloudId;
+  }
+
+  constructor(assetId?: string, error?: string, cloudId?: string) {
+    this.assetId = assetId;
+    this.error = error;
+    this.cloudId = cloudId;
+  }
+
+  toList(): Object[] {
+    let arr: Object[] = new Array();
+    if(this.assetId !==undefined){
+      arr.push(this.assetId);
+    }
+    if(this.error !==undefined){
+      arr.push(this.error);
+    }
+    if(this.cloudId !==undefined){
+      arr.push(this.cloudId);
+    }
+    return arr;
+  }
+
+  static fromList(arr: Object[]): CloudIdResult {
+    let pigeonResult: CloudIdResult = new CloudIdResult();
+    let assetId: Object = arr[0];
+    pigeonResult.setAssetId(assetId as string);
+    let error: Object = arr[1];
+    pigeonResult.setError(error as string);
+    let cloudId: Object = arr[2];
+    pigeonResult.setCloudId(cloudId as string);
+    return pigeonResult;
+  }
+}
+
+/* Generated class from Pigeon that represents data sent in messages.*/
 export class SyncDelta {
   private hasChanges?: boolean;
 
@@ -528,6 +592,8 @@ export class PigeonCodec extends StandardMessageCodec {
       case this.getByte(131):
         return PlatformAlbum.fromList(super.readValue(buffer) as Object[]);
       case this.getByte(132):
+        return CloudIdResult.fromList(super.readValue(buffer) as Object[]);
+      case this.getByte(133):
         return SyncDelta.fromList(super.readValue(buffer) as Object[]);
       default:
         return super.readValueOfType(type, buffer);
@@ -544,8 +610,11 @@ export class PigeonCodec extends StandardMessageCodec {
     } else if (value instanceof PlatformAlbum) {
       stream.writeUint8(this.getByte(131));
       this.writeValue(stream, (value as PlatformAlbum).toList());
-    } else if (value instanceof SyncDelta) {
+    } else if (value instanceof CloudIdResult) {
       stream.writeUint8(this.getByte(132));
+      this.writeValue(stream, (value as CloudIdResult).toList());
+    } else if (value instanceof SyncDelta) {
+      stream.writeUint8(this.getByte(133));
       this.writeValue(stream, (value as SyncDelta).toList());
     } else {
       super.writeValue(stream, value);
@@ -591,6 +660,8 @@ export abstract class NativeSyncApiOhos {
   abstract getTrashedAssets(): Map<string, Array<PlatformAsset>>;
 
   abstract getPathFromUri(uri: string , result: Result<string>): void;
+
+  abstract getCloudIdForAssetIds(assetIds: Array<string> , result: Result<Array<CloudIdResult>>): void;
   /** The codec used by NativeSyncApiOhos. */
   static getCodec(): MessageCodec<Object>{
     return PigeonCodec.INSTANCE;
@@ -973,6 +1044,34 @@ export abstract class NativeSyncApiOhos {
               let resultCallback: Result<string> = new ResultImp();
 
               api!.getPathFromUri(args[0] as string, resultCallback);
+            } });
+      } else {
+        channel.setMessageHandler(null);
+      }
+    }
+    {
+      let channel: BasicMessageChannel<Object> =
+          new BasicMessageChannel(
+              binaryMessenger, "dev.flutter.pigeon.immich_mobile.NativeSyncApiOhos.getCloudIdForAssetIds", NativeSyncApiOhos.getCodec());
+      if (api != null) {
+        channel.setMessageHandler({
+            onMessage(message: Object ,reply: Reply<Object> ) {
+              let args: Array<Object> = message as Array<Object>;
+              class ResultImp implements Result<Array<CloudIdResult>>{
+                    success(result: Array<CloudIdResult>): void {
+                      let res: Array<Object> = [];
+                      res.push(result);
+                      reply.reply(res);
+                    }
+
+                    error(error: Error): void {
+                      let wrappedError: Array<Object> = wrapError(error);
+                      reply.reply(wrappedError);
+                    }
+              }
+              let resultCallback: Result<Array<CloudIdResult>> = new ResultImp();
+
+              api!.getCloudIdForAssetIds(args[0] as Array<string>, resultCallback);
             } });
       } else {
         channel.setMessageHandler(null);

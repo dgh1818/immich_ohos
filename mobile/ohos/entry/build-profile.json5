@@ -2,6 +2,7 @@
   "apiType": 'stageMode',
   "buildOption": {
     "externalNativeOptions": {
+      "path": "./src/main/cpp/CMakeLists.txt",
       "abiFilters": [
         "arm64-v8a"
       ],
