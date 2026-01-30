@@ -109,7 +109,10 @@ class RemoteFullImageProvider extends CancellableImageProvider<RemoteFullImagePr
     }
 
     final request = RemoteImageRequest(uri: getOriginalUrlForRemoteId(key.assetId), headers: headers);
-    final originalStream = loadRequest(request, decode);
+    final originalStream = loadRequest(request, decode).map((image) {
+      previewRequest.cancel();
+      return image;
+    });
     yield* StreamGroup.merge([previewStream, originalStream]);
   }
 

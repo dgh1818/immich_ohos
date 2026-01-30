@@ -81,7 +81,7 @@ class ImmichRemoteImageProvider extends ImageProvider<ImmichRemoteImageProvider>
     // Load the final remote image
     if (_useOriginal) {
       // Load the original image
-      final url = getOriginalUrlForRemoteId(key.assetId, is_image: is_image);
+      final url = getOriginalUrlForRemoteId(key.assetId);
       final codec = ImageLoader.loadImageFromCache(url, cache: cache, decode: decode, chunkEvents: chunkEvents);
 
       final previewTask = previewCodec.then((codec) => (codec: codec, isOriginal: false));

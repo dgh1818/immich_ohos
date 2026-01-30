@@ -1,5 +1,6 @@
 import 'dart:ui';
 
+import 'package:async/async.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:immich_mobile/domain/models/asset/base_asset.model.dart';
@@ -88,16 +89,16 @@ class LocalFullImageProvider extends CancellableImageProvider<LocalFullImageProv
       return;
     }
 
-    final devicePixelRatio = PlatformDispatcher.instance.views.first.devicePixelRatio;
-    var request = this.request = LocalImageRequest(
+    final previewRequest = LocalImageRequest(
       localId: key.id,
       size: Size(size.width, size.height),
       assetType: key.assetType,
     );
 
-    yield* loadRequest(request, decode);
+    final previewStream = loadRequest(previewRequest, decode);
 
     if (!Store.get(StoreKey.loadOriginal, true)) {
+      yield* previewStream;
       return;
     }
 
@@ -106,9 +107,13 @@ class LocalFullImageProvider extends CancellableImageProvider<LocalFullImageProv
       return;
     }
 
-    request = this.request = LocalImageRequest(localId: key.id, assetType: key.assetType, size: Size.zero);
+    final originalRequest = LocalImageRequest(localId: key.id, assetType: key.assetType, size: Size.zero);
+    final originalStream = loadRequest(originalRequest, decode).map((image) {
+      previewRequest.cancel();
+      return image;
+    });
 
-    yield* loadRequest(request, decode);
+    yield* StreamGroup.merge([previewStream, originalStream]);
   }
 
   @override
