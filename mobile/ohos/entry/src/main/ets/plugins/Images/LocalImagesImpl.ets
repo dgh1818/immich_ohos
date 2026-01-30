@@ -5,11 +5,7 @@ import { BusinessError } from '@kit.BasicServicesKit';
 import { decodeLocalImageTask, decodeThumbhashTask, LocalDecodeResult } from './LocalImageTask';
 import nativeBuffer, { allocCopySafe } from '../../utils/native_buffer';
 
-let runner: taskpool.AsyncRunner | undefined = undefined;
-
-if (canIUse('api.version >= 18')) {
-  runner = new taskpool.AsyncRunner('localImageRunner', 5);
-}
+const GRID_THUMB_MAX_DIM = 320;
 
 export class LocalImagesImpl extends LocalImageApiOhos {
   static ctx?: common.Context;
@@ -24,7 +20,7 @@ export class LocalImagesImpl extends LocalImageApiOhos {
     const task: taskpool.Task = new taskpool.Task(decodeThumbhashTask, thumbhash);
     try {
       taskpool
-        .execute(task)
+        .execute(task, taskpool.Priority.MEDIUM)
         .then((d: object) => {
           const res = d as LocalDecodeResult | undefined;
           if (res != undefined) {
@@ -74,9 +70,9 @@ export class LocalImagesImpl extends LocalImageApiOhos {
     this.requestMap.set(requestId, task);
 
     const isFullSize = width <= 0 && height <= 0;
-    const executor =
-      isFullSize ? taskpool.execute(task, taskpool.Priority.HIGH)
-        : (canIUse('api.version >= 18') ? runner!.execute(task) : taskpool.execute(task));
+    const isGridThumb = !isFullSize && width > 0 && height > 0 && Math.max(width, height) <= GRID_THUMB_MAX_DIM;
+    const priority = (isFullSize || isGridThumb) ? taskpool.Priority.HIGH : taskpool.Priority.MEDIUM;
+    const executor = taskpool.execute(task, priority);
 
     executor
       .then((d: object) => {

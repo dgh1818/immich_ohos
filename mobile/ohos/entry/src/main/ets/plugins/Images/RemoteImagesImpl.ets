@@ -10,12 +10,6 @@ interface RemoteRequestState {
   cancelled: boolean;
 }
 
-let runner: taskpool.AsyncRunner | undefined = undefined;
-
-if (canIUse('api.version >= 18')) {
-  runner = new taskpool.AsyncRunner('remoteImageRunner', 4);
-}
-
 export class RemoteImagesImpl extends RemoteImageApiOhos {
   private requestMap = new Map<number, RemoteRequestState>();
   private cache = new Map<string, ArrayBuffer>();
@@ -28,7 +22,7 @@ export class RemoteImagesImpl extends RemoteImageApiOhos {
   requestId: number,
   result: Result<Map<string, Object>>
 ) {
-  const isPreview = this.isPreviewUrl(url);
+  const sizeKind = this.getRemoteSizeKind(url);
   // 1) Cache hit
   const cached = this.cache.get(url);
   if (cached) {
@@ -37,7 +31,7 @@ export class RemoteImagesImpl extends RemoteImageApiOhos {
       this.cache.delete(url);
     } else {
       try {
-        const decoded = await this.decodeBuffer(cached, isPreview);
+        const decoded = await this.decodeBuffer(cached, sizeKind);
         return result.success(decoded);
       } catch (_) {
         // 这里不需要额外拷贝：decodeBuffer 已经隔离 transfer，cached 不会被 detach
@@ -91,7 +85,7 @@ export class RemoteImagesImpl extends RemoteImageApiOhos {
 
     // 4) Decode
     try {
-      const decoded = await this.decodeBuffer(data, isPreview);
+      const decoded = await this.decodeBuffer(data, sizeKind);
 
       if (state.cancelled) {
         return result.success(new Map<string, Object>());
@@ -124,7 +118,7 @@ export class RemoteImagesImpl extends RemoteImageApiOhos {
   }
 }
 
-  private async decodeBuffer(data: ArrayBuffer, isPreview: boolean): Promise<Map<string, Object>> {
+  private async decodeBuffer(data: ArrayBuffer, sizeKind: string): Promise<Map<string, Object>> {
   if (!data || data.byteLength === 0) {
     throw new Error('detached buffer (input byteLength == 0)');
   }
@@ -133,11 +127,11 @@ export class RemoteImagesImpl extends RemoteImageApiOhos {
   // 这就是“最少拷贝”的唯一必要拷贝点
   const input = data.slice(0);
 
-  const task: taskpool.Task = new taskpool.Task(decodeRemoteImageTask, input, !isPreview);
+  const allowHdr = sizeKind === 'full';
+  const task: taskpool.Task = new taskpool.Task(decodeRemoteImageTask, input, allowHdr);
   try {
-    const executor = isPreview
-      ? (runner ? runner.execute(task) : taskpool.execute(task))
-      : taskpool.execute(task, taskpool.Priority.HIGH);
+    const priority = sizeKind === 'preview' ? taskpool.Priority.MEDIUM : taskpool.Priority.HIGH;
+    const executor = taskpool.execute(task, priority);
 
     const processed = (await executor) as RemoteDecodeResult;
 
@@ -177,8 +171,14 @@ export class RemoteImagesImpl extends RemoteImageApiOhos {
     result.success(clearedBytes);
   }
 
-  private isPreviewUrl(url: string): boolean {
-    return url.includes('size=preview') || url.includes('size=thumbnail');
+  private getRemoteSizeKind(url: string): string {
+    if (url.includes('size=thumbnail')) {
+      return 'thumbnail';
+    }
+    if (url.includes('size=preview')) {
+      return 'preview';
+    }
+    return 'full';
   }
 
   private toHeaderRecord(headers: Map<string, string>): Record<string, string> {
