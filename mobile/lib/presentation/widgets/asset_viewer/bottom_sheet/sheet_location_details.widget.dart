@@ -4,6 +4,7 @@ import 'package:immich_mobile/constants/enums.dart';
 import 'package:immich_mobile/domain/models/asset/base_asset.model.dart';
 import 'package:immich_mobile/domain/models/exif.model.dart';
 import 'package:immich_mobile/extensions/build_context_extensions.dart';
+import 'package:immich_mobile/extensions/theme_extensions.dart';
 import 'package:immich_mobile/extensions/translate_extensions.dart';
 import 'package:immich_mobile/presentation/widgets/asset_viewer/sheet_tile.widget.dart';
 import 'package:immich_mobile/providers/infrastructure/action.provider.dart';
@@ -71,11 +72,10 @@ class _SheetLocationDetailsState extends ConsumerState<SheetLocationDetails> {
     final hasCoordinates = exifInfo?.hasCoordinates ?? false;
 
     // Guard local assets
-    if (asset != null && asset is LocalAsset && asset.hasRemote) {
+    if (asset is! RemoteAsset) {
       return const SizedBox.shrink();
     }
 
-    final remoteId = asset is LocalAsset ? asset.remoteId : (asset as RemoteAsset).id;
     final locationName = reverseText.isNotEmpty ? reverseText : _getLocationName(exifInfo);
     final coordinates = "${exifInfo?.latitude?.toStringAsFixed(4)}, ${exifInfo?.longitude?.toStringAsFixed(4)}";
 
@@ -85,11 +85,8 @@ class _SheetLocationDetailsState extends ConsumerState<SheetLocationDetails> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SheetTile(
-            title: 'location'.t(context: context).toUpperCase(),
-            titleStyle: context.textTheme.labelMedium?.copyWith(
-              color: context.textTheme.labelMedium?.color?.withAlpha(200),
-              fontWeight: FontWeight.w600,
-            ),
+            title: 'location'.t(context: context),
+            titleStyle: context.textTheme.labelLarge?.copyWith(color: context.colorScheme.onSurfaceSecondary),
             trailing: hasCoordinates ? const Icon(Icons.edit_location_alt, size: 20) : null,
             onTap: editLocation,
           ),
@@ -99,7 +96,13 @@ class _SheetLocationDetailsState extends ConsumerState<SheetLocationDetails> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  ExifMap(exifInfo: exifInfo!, markerId: remoteId, onMapCreated: _onMapCreated, onReverseGeocoded: _onReverseGeocoded,),
+                  ExifMap(
+                    exifInfo: exifInfo!,
+                    markerId: asset.id,
+                    markerAssetThumbhash: asset.thumbHash,
+                    onMapCreated: _onMapCreated,
+                    onReverseGeocoded: _onReverseGeocoded,
+                  ),
                   const SizedBox(height: 16),
                   if (locationName != null)
                     Padding(
@@ -108,9 +111,7 @@ class _SheetLocationDetailsState extends ConsumerState<SheetLocationDetails> {
                     ),
                   Text(
                     coordinates,
-                    style: context.textTheme.labelMedium?.copyWith(
-                      color: context.textTheme.labelMedium?.color?.withAlpha(200),
-                    ),
+                    style: context.textTheme.bodySmall?.copyWith(color: context.colorScheme.onSurfaceSecondary),
                   ),
                 ],
               ),

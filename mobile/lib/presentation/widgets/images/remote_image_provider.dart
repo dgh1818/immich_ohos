@@ -1,22 +1,22 @@
-import 'dart:async';
-
+import 'package:async/async.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/painting.dart';
+import 'package:immich_mobile/domain/models/asset/base_asset.model.dart';
 import 'package:immich_mobile/domain/models/setting.model.dart';
 import 'package:immich_mobile/domain/services/setting.service.dart';
 import 'package:immich_mobile/infrastructure/loaders/image_request.dart';
 import 'package:immich_mobile/presentation/widgets/images/image_provider.dart';
 import 'package:immich_mobile/presentation/widgets/images/one_frame_multi_image_stream_completer.dart';
-import 'package:immich_mobile/providers/image/cache/remote_image_cache_manager.dart';
 import 'package:immich_mobile/services/api.service.dart';
 import 'package:immich_mobile/utils/image_url_builder.dart';
+import 'package:openapi/api.dart';
 
 class RemoteThumbProvider extends CancellableImageProvider<RemoteThumbProvider>
     with CancellableImageProviderMixin<RemoteThumbProvider> {
-  static final cacheManager = RemoteThumbnailCacheManager();
   final String assetId;
+  final String thumbhash;
 
-  RemoteThumbProvider({required this.assetId});
+  RemoteThumbProvider({required this.assetId, required this.thumbhash});
 
   @override
   Future<RemoteThumbProvider> obtainKey(ImageConfiguration configuration) {
@@ -36,10 +36,9 @@ class RemoteThumbProvider extends CancellableImageProvider<RemoteThumbProvider>
   }
 
   Stream<ImageInfo> _codec(RemoteThumbProvider key, ImageDecoderCallback decode) {
-    final request = this.request = RemoteImageRequest(
-      uri: getThumbnailUrlForRemoteId(key.assetId),
+    final request = RemoteImageRequest(
+      uri: getThumbnailUrlForRemoteId(key.assetId, thumbhash: key.thumbhash),
       headers: ApiService.getRequestHeaders(),
-      cacheManager: cacheManager,
     );
     return loadRequest(request, decode);
   }
@@ -48,23 +47,23 @@ class RemoteThumbProvider extends CancellableImageProvider<RemoteThumbProvider>
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
     if (other is RemoteThumbProvider) {
-      return assetId == other.assetId;
+      return assetId == other.assetId && thumbhash == other.thumbhash;
     }
 
     return false;
   }
 
   @override
-  int get hashCode => assetId.hashCode;
+  int get hashCode => assetId.hashCode ^ thumbhash.hashCode;
 }
 
 class RemoteFullImageProvider extends CancellableImageProvider<RemoteFullImageProvider>
     with CancellableImageProviderMixin<RemoteFullImageProvider> {
-  static final cacheManager = RemoteThumbnailCacheManager();
   final String assetId;
+  final String thumbhash;
+  final AssetType assetType;
 
-  final bool? is_image;
-  RemoteFullImageProvider({required this.assetId, this.is_image});
+  RemoteFullImageProvider({required this.assetId, required this.thumbhash, required this.assetType});
 
   @override
   Future<RemoteFullImageProvider> obtainKey(ImageConfiguration configuration) {
@@ -75,7 +74,7 @@ class RemoteFullImageProvider extends CancellableImageProvider<RemoteFullImagePr
   ImageStreamCompleter loadImage(RemoteFullImageProvider key, ImageDecoderCallback decode) {
     return OneFramePlaceholderImageStreamCompleter(
       _codec(key, decode),
-      initialImage: getInitialImage(RemoteThumbProvider(assetId: key.assetId)),
+      initialImage: getInitialImage(RemoteThumbProvider(assetId: key.assetId, thumbhash: key.thumbhash)),
       informationCollector: () => <DiagnosticsNode>[
         DiagnosticsProperty<ImageProvider>('Image provider', this),
         DiagnosticsProperty<String>('Asset Id', key.assetId),
@@ -88,89 +87,42 @@ class RemoteFullImageProvider extends CancellableImageProvider<RemoteFullImagePr
     yield* initialImageStream();
 
     if (isCancelled) {
-      unawaited(evict());
+      PaintingBinding.instance.imageCache.evict(this);
       return;
     }
 
     final headers = ApiService.getRequestHeaders();
-    final request = this.request = RemoteImageRequest(
-      uri: getPreviewUrlForRemoteId(key.assetId),
+    final previewRequest = RemoteImageRequest(
+      uri: getThumbnailUrlForRemoteId(key.assetId, type: AssetMediaSize.preview, thumbhash: key.thumbhash),
       headers: headers,
-      cacheManager: cacheManager,
     );
-    final previewImage = request.load(decode);
+    final previewStream = loadRequest(previewRequest, decode);
 
-    if (is_image != null) {
-      if (!is_image!) {
-        final image = await previewImage;
-        this.request = null;
-        if (image == null || isCancelled) {
-          unawaited(evict());
-          return;
-        }
-        if (image != null) {
-          yield image;
-        }
-        return;
-      }
+    if (assetType != AssetType.image || !AppSetting.get(Setting.loadOriginal)) {
+      yield* previewStream;
+      return;
     }
 
     if (isCancelled) {
-      this.request = null;
-      unawaited(evict());
+      PaintingBinding.instance.imageCache.evict(this);
       return;
     }
 
-    if (AppSetting.get(Setting.loadOriginal)) {
-      final request = this.request = RemoteImageRequest(uri: getOriginalUrlForRemoteId(key.assetId), headers: headers);
-      final originalImage = request.load(decode);
-
-      final previewTask = previewImage.then((image) => (image: image, isOriginal: false));
-      final originalTask = originalImage.then((image) => (image: image, isOriginal: true));
-      final first = await Future.any([previewTask, originalTask]);
-      if (first.image != null && !isCancelled) {
-        yield first.image!;
-      }
-      if (!first.isOriginal) {
-        final image = await originalImage;
-        this.request = null;
-        if (image == null || isCancelled) {
-          unawaited(evict());
-          return;
-        }
-        if (image != null) {
-          yield image;
-        }
-        return;
-      }
-      this.request = null;
-      if (first.image == null || isCancelled) {
-        unawaited(evict());
-      }
-      return;
-    }
-
-    final image = await previewImage;
-    this.request = null;
-    if (image == null || isCancelled) {
-      unawaited(evict());
-      return;
-    }
-    if (image != null) {
-      yield image;
-    }
+    final request = RemoteImageRequest(uri: getOriginalUrlForRemoteId(key.assetId), headers: headers);
+    final originalStream = loadRequest(request, decode);
+    yield* StreamGroup.merge([previewStream, originalStream]);
   }
 
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
     if (other is RemoteFullImageProvider) {
-      return assetId == other.assetId;
+      return assetId == other.assetId && thumbhash == other.thumbhash;
     }
 
     return false;
   }
 
   @override
-  int get hashCode => assetId.hashCode;
+  int get hashCode => assetId.hashCode ^ thumbhash.hashCode;
 }

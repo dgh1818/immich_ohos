@@ -4,7 +4,8 @@ import 'package:immich_mobile/platform/background_worker_api.g.dart';
 import 'package:immich_mobile/platform/background_worker_lock_api.g.dart';
 import 'package:immich_mobile/platform/connectivity_api.g.dart';
 import 'package:immich_mobile/platform/native_sync_api_ohos.g.dart';
-import 'package:immich_mobile/platform/thumbnail_api_ohos.g.dart';
+import 'package:immich_mobile/platform/local_image_api_ohos.g.dart';
+import 'package:immich_mobile/platform/remote_image_api_ohos.g.dart';
 
 final backgroundWorkerFgServiceProvider = Provider((_) => BackgroundWorkerFgService(BackgroundWorkerFgHostApi()));
 
@@ -16,4 +17,6 @@ final nativeSyncApiProvider = Provider<NativeSyncApiOhos>((_) => NativeSyncApiOh
 
 final connectivityApiProvider = Provider<ConnectivityApi>((_) => ConnectivityApi());
 
-final thumbnailApi = ThumbnailApi();
+final localImageApi = LocalImageApi();
+
+final remoteImageApi = RemoteImageApi();

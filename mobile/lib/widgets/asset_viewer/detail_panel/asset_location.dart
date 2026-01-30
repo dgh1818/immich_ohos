@@ -85,7 +85,7 @@ class AssetLocation extends HookConsumerWidget {
             ],
           ),
           asset.isRemote ? const SizedBox.shrink() : const SizedBox(height: 16),
-          ExifMap(exifInfo: exifInfo!, markerId: asset.remoteId),
+          ExifMap(exifInfo: exifInfo!, markerId: asset.remoteId, markerAssetThumbhash: asset.thumbhash),
           const SizedBox(height: 16),
           getLocationName(),
           Text(locationText, style: context.textTheme.labelLarge),

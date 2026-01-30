@@ -16,13 +16,16 @@ class LocalImageRequest extends ImageRequest {
       return null;
     }
 
-    final Map<String, Object> info = await thumbnailApi.requestImage(
+    final info = await localImageApi.requestImage(
       localId,
       requestId: requestId,
       width: width,
       height: height,
       isVideo: assetType == AssetType.video,
     );
+    if (info == null) {
+      return null;
+    }
 
     final frame = await _fromPlatformImage(info);
     return frame == null ? null : ImageInfo(image: frame.image, scale: scale);
@@ -30,17 +33,6 @@ class LocalImageRequest extends ImageRequest {
 
   @override
   Future<void> _onCancelled() {
-    return thumbnailApi.cancelImageRequest(requestId);
-  }
-
-  Future<bool> getHdr() async {
-    final Map<String, bool> info = await thumbnailApi.getHdr(localId);
-
-    if (info['isHdr'] != null) {
-      final isHdr = info['isHdr'];
-      return isHdr!;
-    } else {
-      return false;
-    }
+    return localImageApi.cancelRequest(requestId);
   }
 }

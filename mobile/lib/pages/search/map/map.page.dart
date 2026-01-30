@@ -425,6 +425,7 @@ class _MapWithMarker extends StatelessWidget {
                   ? PositionedAssetMarkerIcon(
                       point: value.point,
                       assetRemoteId: value.marker.assetRemoteId,
+                      assetThumbhash: '',
                       durationInMilliseconds: value.shouldAnimate ? 100 : 0,
                       onTap: onMarkerTapped,
                     )

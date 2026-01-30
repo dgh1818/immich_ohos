@@ -13,13 +13,18 @@ import 'package:auto_route/auto_route.dart';
 
 class ExifMap extends StatelessWidget {
   final ExifInfo exifInfo;
+  // TODO: Pass in a BaseAsset instead of the ID and thumbhash when removing old timeline
+  // This is currently structured this way because of the old timeline implementation
+  // reusing this component
   final String? markerId;
+  final String? markerAssetThumbhash;
   final MapCreatedCallback? onMapCreated;
   final void Function(String)? onReverseGeocoded;
 
   const ExifMap({
     super.key,
     required this.exifInfo,
+    this.markerAssetThumbhash,
     this.markerId = 'marker',
     this.onMapCreated,
     this.onReverseGeocoded,
@@ -73,6 +78,7 @@ class ExifMap extends StatelessWidget {
           width: constraints.maxWidth,
           zoom: 12.0,
           assetMarkerRemoteId: markerId,
+          assetThumbhash: markerAssetThumbhash,
           onReverseGeocoded: onReverseGeocoded,
           onTap: (tapPosition, latLong) async {
             context.pushRoute<LatLng?>(

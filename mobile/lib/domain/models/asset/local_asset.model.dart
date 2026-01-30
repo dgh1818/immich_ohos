@@ -3,6 +3,7 @@ part of 'base_asset.model.dart';
 class LocalAsset extends BaseAsset {
   final String id;
   final String? remoteAssetId;
+  final String? cloudId;
   final int orientation;
 
   final DateTime? adjustmentTime;
@@ -12,6 +13,7 @@ class LocalAsset extends BaseAsset {
   const LocalAsset({
     required this.id,
     String? remoteId,
+    this.cloudId,
     required super.name,
     super.checksum,
     required super.type,
@@ -26,6 +28,7 @@ class LocalAsset extends BaseAsset {
     this.adjustmentTime,
     this.latitude,
     this.longitude,
+    required super.isEdited,
   }) : remoteAssetId = remoteId;
 
   @override
@@ -59,12 +62,14 @@ class LocalAsset extends BaseAsset {
    width: ${width ?? "<NA>"},
    height: ${height ?? "<NA>"},
    durationInSeconds: ${durationInSeconds ?? "<NA>"},
-   remoteId: ${remoteId ?? "<NA>"}
+   remoteId: ${remoteId ?? "<NA>"},
+   cloudId: ${cloudId ?? "<NA>"},
+   checksum: ${checksum ?? "<NA>"},
    isFavorite: $isFavorite,
-  orientation: $orientation,
-  adjustmentTime: $adjustmentTime,
-  latitude: ${latitude ?? "<NA>"},
-  longitude: ${longitude ?? "<NA>"},
+   orientation: $orientation,
+   adjustmentTime: $adjustmentTime,
+   latitude: ${latitude ?? "<NA>"},
+   longitude: ${longitude ?? "<NA>"},
  }''';
   }
 
@@ -75,6 +80,7 @@ class LocalAsset extends BaseAsset {
     if (identical(this, other)) return true;
     return super == other &&
         id == other.id &&
+        cloudId == other.cloudId &&
         orientation == other.orientation &&
         adjustmentTime == other.adjustmentTime &&
         latitude == other.latitude &&
@@ -94,6 +100,7 @@ class LocalAsset extends BaseAsset {
   LocalAsset copyWith({
     String? id,
     String? remoteId,
+    String? cloudId,
     String? name,
     String? checksum,
     AssetType? type,
@@ -107,10 +114,12 @@ class LocalAsset extends BaseAsset {
     DateTime? adjustmentTime,
     double? latitude,
     double? longitude,
+    bool? isEdited,
   }) {
     return LocalAsset(
       id: id ?? this.id,
       remoteId: remoteId ?? this.remoteId,
+      cloudId: cloudId ?? this.cloudId,
       name: name ?? this.name,
       checksum: checksum ?? this.checksum,
       type: type ?? this.type,
@@ -124,6 +133,7 @@ class LocalAsset extends BaseAsset {
       adjustmentTime: adjustmentTime ?? this.adjustmentTime,
       latitude: latitude ?? this.latitude,
       longitude: longitude ?? this.longitude,
+      isEdited: isEdited ?? this.isEdited,
     );
   }
 }
