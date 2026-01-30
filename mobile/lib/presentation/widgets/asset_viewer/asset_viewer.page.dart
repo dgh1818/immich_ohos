@@ -826,6 +826,7 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
         _handleCasting();
       });
     });
+    */
 
     // Listen for control visibility changes and change system UI mode accordingly
     ref.listen(assetViewerProvider.select((value) => value.showingControls), (_, showingControls) async {
@@ -835,7 +836,6 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
         unawaited(SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky));
       }
     });
-*/
 
     // Currently it is not possible to scroll the asset when the bottom sheet is open all the way.
     // Issue: https://github.com/flutter/flutter/issues/109037
