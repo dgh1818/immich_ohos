@@ -99,7 +99,8 @@ abstract class IntlKeys {
   static const admin_image_fullsize_quality_description = 'admin.image.fullsize.quality.description';
   static const admin_image_fullsize_title = 'admin.image.fullsize.title';
   static const admin_image_prefer_embedded_preview = 'admin.image.prefer.embedded.preview';
-  static const admin_image_prefer_embedded_preview_setting_description = 'admin.image.prefer.embedded.preview.setting.description';
+  static const admin_image_prefer_embedded_preview_setting_description =
+      'admin.image.prefer.embedded.preview.setting.description';
   static const admin_image_prefer_wide_gamut = 'admin.image.prefer.wide.gamut';
   static const admin_image_prefer_wide_gamut_setting_description = 'admin.image.prefer.wide.gamut.setting.description';
   static const admin_image_preview_description = 'admin.image.preview.description';
@@ -144,44 +145,63 @@ abstract class IntlKeys {
   static const admin_logging_level_description = 'admin.logging.level.description';
   static const admin_logging_settings = 'admin.logging.settings';
   static const admin_machine_learning_availability_checks = 'admin.machine.learning.availability.checks';
-  static const admin_machine_learning_availability_checks_description = 'admin.machine.learning.availability.checks.description';
-  static const admin_machine_learning_availability_checks_enabled = 'admin.machine.learning.availability.checks.enabled';
-  static const admin_machine_learning_availability_checks_interval = 'admin.machine.learning.availability.checks.interval';
-  static const admin_machine_learning_availability_checks_interval_description = 'admin.machine.learning.availability.checks.interval.description';
-  static const admin_machine_learning_availability_checks_timeout = 'admin.machine.learning.availability.checks.timeout';
-  static const admin_machine_learning_availability_checks_timeout_description = 'admin.machine.learning.availability.checks.timeout.description';
+  static const admin_machine_learning_availability_checks_description =
+      'admin.machine.learning.availability.checks.description';
+  static const admin_machine_learning_availability_checks_enabled =
+      'admin.machine.learning.availability.checks.enabled';
+  static const admin_machine_learning_availability_checks_interval =
+      'admin.machine.learning.availability.checks.interval';
+  static const admin_machine_learning_availability_checks_interval_description =
+      'admin.machine.learning.availability.checks.interval.description';
+  static const admin_machine_learning_availability_checks_timeout =
+      'admin.machine.learning.availability.checks.timeout';
+  static const admin_machine_learning_availability_checks_timeout_description =
+      'admin.machine.learning.availability.checks.timeout.description';
   static const admin_machine_learning_clip_model = 'admin.machine.learning.clip.model';
   static const admin_machine_learning_clip_model_description = 'admin.machine.learning.clip.model.description';
   static const admin_machine_learning_duplicate_detection = 'admin.machine.learning.duplicate.detection';
-  static const admin_machine_learning_duplicate_detection_enabled = 'admin.machine.learning.duplicate.detection.enabled';
-  static const admin_machine_learning_duplicate_detection_enabled_description = 'admin.machine.learning.duplicate.detection.enabled.description';
-  static const admin_machine_learning_duplicate_detection_setting_description = 'admin.machine.learning.duplicate.detection.setting.description';
+  static const admin_machine_learning_duplicate_detection_enabled =
+      'admin.machine.learning.duplicate.detection.enabled';
+  static const admin_machine_learning_duplicate_detection_enabled_description =
+      'admin.machine.learning.duplicate.detection.enabled.description';
+  static const admin_machine_learning_duplicate_detection_setting_description =
+      'admin.machine.learning.duplicate.detection.setting.description';
   static const admin_machine_learning_enabled = 'admin.machine.learning.enabled';
   static const admin_machine_learning_enabled_description = 'admin.machine.learning.enabled.description';
   static const admin_machine_learning_facial_recognition = 'admin.machine.learning.facial.recognition';
-  static const admin_machine_learning_facial_recognition_description = 'admin.machine.learning.facial.recognition.description';
+  static const admin_machine_learning_facial_recognition_description =
+      'admin.machine.learning.facial.recognition.description';
   static const admin_machine_learning_facial_recognition_model = 'admin.machine.learning.facial.recognition.model';
-  static const admin_machine_learning_facial_recognition_model_description = 'admin.machine.learning.facial.recognition.model.description';
+  static const admin_machine_learning_facial_recognition_model_description =
+      'admin.machine.learning.facial.recognition.model.description';
   static const admin_machine_learning_facial_recognition_setting = 'admin.machine.learning.facial.recognition.setting';
-  static const admin_machine_learning_facial_recognition_setting_description = 'admin.machine.learning.facial.recognition.setting.description';
+  static const admin_machine_learning_facial_recognition_setting_description =
+      'admin.machine.learning.facial.recognition.setting.description';
   static const admin_machine_learning_max_detection_distance = 'admin.machine.learning.max.detection.distance';
-  static const admin_machine_learning_max_detection_distance_description = 'admin.machine.learning.max.detection.distance.description';
+  static const admin_machine_learning_max_detection_distance_description =
+      'admin.machine.learning.max.detection.distance.description';
   static const admin_machine_learning_max_recognition_distance = 'admin.machine.learning.max.recognition.distance';
-  static const admin_machine_learning_max_recognition_distance_description = 'admin.machine.learning.max.recognition.distance.description';
+  static const admin_machine_learning_max_recognition_distance_description =
+      'admin.machine.learning.max.recognition.distance.description';
   static const admin_machine_learning_min_detection_score = 'admin.machine.learning.min.detection.score';
-  static const admin_machine_learning_min_detection_score_description = 'admin.machine.learning.min.detection.score.description';
+  static const admin_machine_learning_min_detection_score_description =
+      'admin.machine.learning.min.detection.score.description';
   static const admin_machine_learning_min_recognized_faces = 'admin.machine.learning.min.recognized.faces';
-  static const admin_machine_learning_min_recognized_faces_description = 'admin.machine.learning.min.recognized.faces.description';
+  static const admin_machine_learning_min_recognized_faces_description =
+      'admin.machine.learning.min.recognized.faces.description';
   static const admin_machine_learning_ocr = 'admin.machine.learning.ocr';
   static const admin_machine_learning_ocr_description = 'admin.machine.learning.ocr.description';
   static const admin_machine_learning_ocr_enabled = 'admin.machine.learning.ocr.enabled';
   static const admin_machine_learning_ocr_enabled_description = 'admin.machine.learning.ocr.enabled.description';
   static const admin_machine_learning_ocr_max_resolution = 'admin.machine.learning.ocr.max.resolution';
-  static const admin_machine_learning_ocr_max_resolution_description = 'admin.machine.learning.ocr.max.resolution.description';
+  static const admin_machine_learning_ocr_max_resolution_description =
+      'admin.machine.learning.ocr.max.resolution.description';
   static const admin_machine_learning_ocr_min_detection_score = 'admin.machine.learning.ocr.min.detection.score';
-  static const admin_machine_learning_ocr_min_detection_score_description = 'admin.machine.learning.ocr.min.detection.score.description';
+  static const admin_machine_learning_ocr_min_detection_score_description =
+      'admin.machine.learning.ocr.min.detection.score.description';
   static const admin_machine_learning_ocr_min_recognition_score = 'admin.machine.learning.ocr.min.recognition.score';
-  static const admin_machine_learning_ocr_min_score_recognition_description = 'admin.machine.learning.ocr.min.score.recognition.description';
+  static const admin_machine_learning_ocr_min_score_recognition_description =
+      'admin.machine.learning.ocr.min.score.recognition.description';
   static const admin_machine_learning_ocr_model = 'admin.machine.learning.ocr.model';
   static const admin_machine_learning_ocr_model_description = 'admin.machine.learning.ocr.model.description';
   static const admin_machine_learning_settings = 'admin.machine.learning.settings';
@@ -189,17 +209,20 @@ abstract class IntlKeys {
   static const admin_machine_learning_smart_search = 'admin.machine.learning.smart.search';
   static const admin_machine_learning_smart_search_description = 'admin.machine.learning.smart.search.description';
   static const admin_machine_learning_smart_search_enabled = 'admin.machine.learning.smart.search.enabled';
-  static const admin_machine_learning_smart_search_enabled_description = 'admin.machine.learning.smart.search.enabled.description';
+  static const admin_machine_learning_smart_search_enabled_description =
+      'admin.machine.learning.smart.search.enabled.description';
   static const admin_machine_learning_url_description = 'admin.machine.learning.url.description';
   static const admin_maintenance_delete_backup = 'admin.maintenance.delete.backup';
   static const admin_maintenance_delete_backup_description = 'admin.maintenance.delete.backup.description';
   static const admin_maintenance_delete_error = 'admin.maintenance.delete.error';
   static const admin_maintenance_restore_backup = 'admin.maintenance.restore.backup';
   static const admin_maintenance_restore_backup_description = 'admin.maintenance.restore.backup.description';
-  static const admin_maintenance_restore_backup_different_version = 'admin.maintenance.restore.backup.different.version';
+  static const admin_maintenance_restore_backup_different_version =
+      'admin.maintenance.restore.backup.different.version';
   static const admin_maintenance_restore_backup_unknown_version = 'admin.maintenance.restore.backup.unknown.version';
   static const admin_maintenance_restore_database_backup = 'admin.maintenance.restore.database.backup';
-  static const admin_maintenance_restore_database_backup_description = 'admin.maintenance.restore.database.backup.description';
+  static const admin_maintenance_restore_database_backup_description =
+      'admin.maintenance.restore.database.backup.description';
   static const admin_maintenance_settings = 'admin.maintenance.settings';
   static const admin_maintenance_settings_description = 'admin.maintenance.settings.description';
   static const admin_maintenance_start = 'admin.maintenance.start';
@@ -232,20 +255,26 @@ abstract class IntlKeys {
   static const admin_metadata_settings_description = 'admin.metadata.settings.description';
   static const admin_migration_job = 'admin.migration.job';
   static const admin_migration_job_description = 'admin.migration.job.description';
-  static const admin_nightly_tasks_cluster_faces_setting_description = 'admin.nightly.tasks.cluster.faces.setting.description';
+  static const admin_nightly_tasks_cluster_faces_setting_description =
+      'admin.nightly.tasks.cluster.faces.setting.description';
   static const admin_nightly_tasks_cluster_new_faces_setting = 'admin.nightly.tasks.cluster.new.faces.setting';
   static const admin_nightly_tasks_database_cleanup_setting = 'admin.nightly.tasks.database.cleanup.setting';
-  static const admin_nightly_tasks_database_cleanup_setting_description = 'admin.nightly.tasks.database.cleanup.setting.description';
+  static const admin_nightly_tasks_database_cleanup_setting_description =
+      'admin.nightly.tasks.database.cleanup.setting.description';
   static const admin_nightly_tasks_generate_memories_setting = 'admin.nightly.tasks.generate.memories.setting';
-  static const admin_nightly_tasks_generate_memories_setting_description = 'admin.nightly.tasks.generate.memories.setting.description';
+  static const admin_nightly_tasks_generate_memories_setting_description =
+      'admin.nightly.tasks.generate.memories.setting.description';
   static const admin_nightly_tasks_missing_thumbnails_setting = 'admin.nightly.tasks.missing.thumbnails.setting';
-  static const admin_nightly_tasks_missing_thumbnails_setting_description = 'admin.nightly.tasks.missing.thumbnails.setting.description';
+  static const admin_nightly_tasks_missing_thumbnails_setting_description =
+      'admin.nightly.tasks.missing.thumbnails.setting.description';
   static const admin_nightly_tasks_settings = 'admin.nightly.tasks.settings';
   static const admin_nightly_tasks_settings_description = 'admin.nightly.tasks.settings.description';
   static const admin_nightly_tasks_start_time_setting = 'admin.nightly.tasks.start.time.setting';
-  static const admin_nightly_tasks_start_time_setting_description = 'admin.nightly.tasks.start.time.setting.description';
+  static const admin_nightly_tasks_start_time_setting_description =
+      'admin.nightly.tasks.start.time.setting.description';
   static const admin_nightly_tasks_sync_quota_usage_setting = 'admin.nightly.tasks.sync.quota.usage.setting';
-  static const admin_nightly_tasks_sync_quota_usage_setting_description = 'admin.nightly.tasks.sync.quota.usage.setting.description';
+  static const admin_nightly_tasks_sync_quota_usage_setting_description =
+      'admin.nightly.tasks.sync.quota.usage.setting.description';
   static const admin_no_paths_added = 'admin.no.paths.added';
   static const admin_no_pattern_added = 'admin.no.pattern.added';
   static const admin_note_apply_storage_label_previous_assets = 'admin.note.apply.storage.label.previous.assets';
@@ -253,8 +282,10 @@ abstract class IntlKeys {
   static const admin_notification_email_from_address = 'admin.notification.email.from.address';
   static const admin_notification_email_from_address_description = 'admin.notification.email.from.address.description';
   static const admin_notification_email_host_description = 'admin.notification.email.host.description';
-  static const admin_notification_email_ignore_certificate_errors = 'admin.notification.email.ignore.certificate.errors';
-  static const admin_notification_email_ignore_certificate_errors_description = 'admin.notification.email.ignore.certificate.errors.description';
+  static const admin_notification_email_ignore_certificate_errors =
+      'admin.notification.email.ignore.certificate.errors';
+  static const admin_notification_email_ignore_certificate_errors_description =
+      'admin.notification.email.ignore.certificate.errors.description';
   static const admin_notification_email_password_description = 'admin.notification.email.password.description';
   static const admin_notification_email_port_description = 'admin.notification.email.port.description';
   static const admin_notification_email_secure = 'admin.notification.email.secure';
@@ -277,7 +308,8 @@ abstract class IntlKeys {
   static const admin_oauth_enable_description = 'admin.oauth.enable.description';
   static const admin_oauth_mobile_redirect_uri = 'admin.oauth.mobile.redirect.uri';
   static const admin_oauth_mobile_redirect_uri_override = 'admin.oauth.mobile.redirect.uri.override';
-  static const admin_oauth_mobile_redirect_uri_override_description = 'admin.oauth.mobile.redirect.uri.override.description';
+  static const admin_oauth_mobile_redirect_uri_override_description =
+      'admin.oauth.mobile.redirect.uri.override.description';
   static const admin_oauth_role_claim = 'admin.oauth.role.claim';
   static const admin_oauth_role_claim_description = 'admin.oauth.role.claim.description';
   static const admin_oauth_settings = 'admin.oauth.settings';
@@ -329,7 +361,8 @@ abstract class IntlKeys {
   static const admin_storage_template_date_time_sample = 'admin.storage.template.date.time.sample';
   static const admin_storage_template_enable_description = 'admin.storage.template.enable.description';
   static const admin_storage_template_hash_verification_enabled = 'admin.storage.template.hash.verification.enabled';
-  static const admin_storage_template_hash_verification_enabled_description = 'admin.storage.template.hash.verification.enabled.description';
+  static const admin_storage_template_hash_verification_enabled_description =
+      'admin.storage.template.hash.verification.enabled.description';
   static const admin_storage_template_migration = 'admin.storage.template.migration';
   static const admin_storage_template_migration_description = 'admin.storage.template.migration.description';
   static const admin_storage_template_migration_info = 'admin.storage.template.migration.info';
@@ -364,38 +397,46 @@ abstract class IntlKeys {
   static const admin_transcoding_acceleration_rkmpp = 'admin.transcoding.acceleration.rkmpp';
   static const admin_transcoding_acceleration_vaapi = 'admin.transcoding.acceleration.vaapi';
   static const admin_transcoding_accepted_audio_codecs = 'admin.transcoding.accepted.audio.codecs';
-  static const admin_transcoding_accepted_audio_codecs_description = 'admin.transcoding.accepted.audio.codecs.description';
+  static const admin_transcoding_accepted_audio_codecs_description =
+      'admin.transcoding.accepted.audio.codecs.description';
   static const admin_transcoding_accepted_containers = 'admin.transcoding.accepted.containers';
   static const admin_transcoding_accepted_containers_description = 'admin.transcoding.accepted.containers.description';
   static const admin_transcoding_accepted_video_codecs = 'admin.transcoding.accepted.video.codecs';
-  static const admin_transcoding_accepted_video_codecs_description = 'admin.transcoding.accepted.video.codecs.description';
+  static const admin_transcoding_accepted_video_codecs_description =
+      'admin.transcoding.accepted.video.codecs.description';
   static const admin_transcoding_advanced_options_description = 'admin.transcoding.advanced.options.description';
   static const admin_transcoding_audio_codec = 'admin.transcoding.audio.codec';
   static const admin_transcoding_audio_codec_description = 'admin.transcoding.audio.codec.description';
   static const admin_transcoding_bitrate_description = 'admin.transcoding.bitrate.description';
   static const admin_transcoding_codecs_learn_more = 'admin.transcoding.codecs.learn.more';
   static const admin_transcoding_constant_quality_mode = 'admin.transcoding.constant.quality.mode';
-  static const admin_transcoding_constant_quality_mode_description = 'admin.transcoding.constant.quality.mode.description';
+  static const admin_transcoding_constant_quality_mode_description =
+      'admin.transcoding.constant.quality.mode.description';
   static const admin_transcoding_constant_rate_factor = 'admin.transcoding.constant.rate.factor';
-  static const admin_transcoding_constant_rate_factor_description = 'admin.transcoding.constant.rate.factor.description';
+  static const admin_transcoding_constant_rate_factor_description =
+      'admin.transcoding.constant.rate.factor.description';
   static const admin_transcoding_disabled_description = 'admin.transcoding.disabled.description';
   static const admin_transcoding_encoding_options = 'admin.transcoding.encoding.options';
   static const admin_transcoding_encoding_options_description = 'admin.transcoding.encoding.options.description';
   static const admin_transcoding_hardware_acceleration = 'admin.transcoding.hardware.acceleration';
-  static const admin_transcoding_hardware_acceleration_description = 'admin.transcoding.hardware.acceleration.description';
+  static const admin_transcoding_hardware_acceleration_description =
+      'admin.transcoding.hardware.acceleration.description';
   static const admin_transcoding_hardware_decoding = 'admin.transcoding.hardware.decoding';
-  static const admin_transcoding_hardware_decoding_setting_description = 'admin.transcoding.hardware.decoding.setting.description';
+  static const admin_transcoding_hardware_decoding_setting_description =
+      'admin.transcoding.hardware.decoding.setting.description';
   static const admin_transcoding_max_b_frames = 'admin.transcoding.max.b.frames';
   static const admin_transcoding_max_b_frames_description = 'admin.transcoding.max.b.frames.description';
   static const admin_transcoding_max_bitrate = 'admin.transcoding.max.bitrate';
   static const admin_transcoding_max_bitrate_description = 'admin.transcoding.max.bitrate.description';
   static const admin_transcoding_max_keyframe_interval = 'admin.transcoding.max.keyframe.interval';
-  static const admin_transcoding_max_keyframe_interval_description = 'admin.transcoding.max.keyframe.interval.description';
+  static const admin_transcoding_max_keyframe_interval_description =
+      'admin.transcoding.max.keyframe.interval.description';
   static const admin_transcoding_optimal_description = 'admin.transcoding.optimal.description';
   static const admin_transcoding_policy = 'admin.transcoding.policy';
   static const admin_transcoding_policy_description = 'admin.transcoding.policy.description';
   static const admin_transcoding_preferred_hardware_device = 'admin.transcoding.preferred.hardware.device';
-  static const admin_transcoding_preferred_hardware_device_description = 'admin.transcoding.preferred.hardware.device.description';
+  static const admin_transcoding_preferred_hardware_device_description =
+      'admin.transcoding.preferred.hardware.device.description';
   static const admin_transcoding_preset_preset = 'admin.transcoding.preset.preset';
   static const admin_transcoding_preset_preset_description = 'admin.transcoding.preset.preset.description';
   static const admin_transcoding_reference_frames = 'admin.transcoding.reference.frames';
@@ -414,7 +455,8 @@ abstract class IntlKeys {
   static const admin_transcoding_transcode_policy = 'admin.transcoding.transcode.policy';
   static const admin_transcoding_transcode_policy_description = 'admin.transcoding.transcode.policy.description';
   static const admin_transcoding_two_pass_encoding = 'admin.transcoding.two.pass.encoding';
-  static const admin_transcoding_two_pass_encoding_setting_description = 'admin.transcoding.two.pass.encoding.setting.description';
+  static const admin_transcoding_two_pass_encoding_setting_description =
+      'admin.transcoding.two.pass.encoding.setting.description';
   static const admin_transcoding_video_codec = 'admin.transcoding.video.codec';
   static const admin_transcoding_video_codec_description = 'admin.transcoding.video.codec.description';
   static const admin_trash_enabled_description = 'admin.trash.enabled.description';
@@ -454,8 +496,10 @@ abstract class IntlKeys {
   static const advanced_settings_clear_image_cache = 'advanced_settings_clear_image_cache';
   static const advanced_settings_clear_image_cache_error = 'advanced_settings_clear_image_cache_error';
   static const advanced_settings_clear_image_cache_success = 'advanced_settings_clear_image_cache_success';
-  static const advanced_settings_enable_alternate_media_filter_subtitle = 'advanced_settings_enable_alternate_media_filter_subtitle';
-  static const advanced_settings_enable_alternate_media_filter_title = 'advanced_settings_enable_alternate_media_filter_title';
+  static const advanced_settings_enable_alternate_media_filter_subtitle =
+      'advanced_settings_enable_alternate_media_filter_subtitle';
+  static const advanced_settings_enable_alternate_media_filter_title =
+      'advanced_settings_enable_alternate_media_filter_title';
   static const advanced_settings_log_level_title = 'advanced_settings_log_level_title';
   static const advanced_settings_prefer_remote_subtitle = 'advanced_settings_prefer_remote_subtitle';
   static const advanced_settings_prefer_remote_title = 'advanced_settings_prefer_remote_title';
@@ -630,20 +674,30 @@ abstract class IntlKeys {
   static const backup_all = 'backup_all';
   static const backup_background_service_backup_failed_message = 'backup_background_service_backup_failed_message';
   static const backup_background_service_complete_notification = 'backup_background_service_complete_notification';
-  static const backup_background_service_connection_failed_message = 'backup_background_service_connection_failed_message';
-  static const backup_background_service_current_upload_notification = 'backup_background_service_current_upload_notification';
+  static const backup_background_service_connection_failed_message =
+      'backup_background_service_connection_failed_message';
+  static const backup_background_service_current_upload_notification =
+      'backup_background_service_current_upload_notification';
   static const backup_background_service_default_notification = 'backup_background_service_default_notification';
   static const backup_background_service_error_title = 'backup_background_service_error_title';
-  static const backup_background_service_in_progress_notification = 'backup_background_service_in_progress_notification';
-  static const backup_background_service_upload_failure_notification = 'backup_background_service_upload_failure_notification';
+  static const backup_background_service_in_progress_notification =
+      'backup_background_service_in_progress_notification';
+  static const backup_background_service_upload_failure_notification =
+      'backup_background_service_upload_failure_notification';
   static const backup_controller_page_albums = 'backup_controller_page_albums';
-  static const backup_controller_page_background_app_refresh_disabled_content = 'backup_controller_page_background_app_refresh_disabled_content';
-  static const backup_controller_page_background_app_refresh_disabled_title = 'backup_controller_page_background_app_refresh_disabled_title';
-  static const backup_controller_page_background_app_refresh_enable_button_text = 'backup_controller_page_background_app_refresh_enable_button_text';
-  static const backup_controller_page_background_battery_info_link = 'backup_controller_page_background_battery_info_link';
-  static const backup_controller_page_background_battery_info_message = 'backup_controller_page_background_battery_info_message';
+  static const backup_controller_page_background_app_refresh_disabled_content =
+      'backup_controller_page_background_app_refresh_disabled_content';
+  static const backup_controller_page_background_app_refresh_disabled_title =
+      'backup_controller_page_background_app_refresh_disabled_title';
+  static const backup_controller_page_background_app_refresh_enable_button_text =
+      'backup_controller_page_background_app_refresh_enable_button_text';
+  static const backup_controller_page_background_battery_info_link =
+      'backup_controller_page_background_battery_info_link';
+  static const backup_controller_page_background_battery_info_message =
+      'backup_controller_page_background_battery_info_message';
   static const backup_controller_page_background_battery_info_ok = 'backup_controller_page_background_battery_info_ok';
-  static const backup_controller_page_background_battery_info_title = 'backup_controller_page_background_battery_info_title';
+  static const backup_controller_page_background_battery_info_title =
+      'backup_controller_page_background_battery_info_title';
   static const backup_controller_page_background_charging = 'backup_controller_page_background_charging';
   static const backup_controller_page_background_configure_error = 'backup_controller_page_background_configure_error';
   static const backup_controller_page_background_delay = 'backup_controller_page_background_delay';
@@ -949,7 +1003,8 @@ abstract class IntlKeys {
   static const download_failed = 'download_failed';
   static const download_finished = 'download_finished';
   static const download_include_embedded_motion_videos = 'download_include_embedded_motion_videos';
-  static const download_include_embedded_motion_videos_description = 'download_include_embedded_motion_videos_description';
+  static const download_include_embedded_motion_videos_description =
+      'download_include_embedded_motion_videos_description';
   static const download_notfound = 'download_notfound';
   static const download_original = 'download_original';
   static const download_paused = 'download_paused';
@@ -1446,7 +1501,8 @@ abstract class IntlKeys {
   static const maintenance_restore_library_folder_write_fail = 'maintenance_restore_library_folder_write_fail';
   static const maintenance_restore_library_hint_missing_files = 'maintenance_restore_library_hint_missing_files';
   static const maintenance_restore_library_hint_regenerate_later = 'maintenance_restore_library_hint_regenerate_later';
-  static const maintenance_restore_library_hint_storage_template_missing_files = 'maintenance_restore_library_hint_storage_template_missing_files';
+  static const maintenance_restore_library_hint_storage_template_missing_files =
+      'maintenance_restore_library_hint_storage_template_missing_files';
   static const maintenance_restore_library_loading = 'maintenance_restore_library_loading';
   static const maintenance_task_backup = 'maintenance_task_backup';
   static const maintenance_task_migrations = 'maintenance_task_migrations';
@@ -1601,7 +1657,8 @@ abstract class IntlKeys {
   static const not_available = 'not_available';
   static const not_in_any_album = 'not_in_any_album';
   static const not_selected = 'not_selected';
-  static const note_apply_storage_label_to_previously_uploaded_assets = 'note_apply_storage_label_to_previously_uploaded assets';
+  static const note_apply_storage_label_to_previously_uploaded_assets =
+      'note_apply_storage_label_to_previously_uploaded assets';
   static const notes = 'notes';
   static const nothing_here_yet = 'nothing_here_yet';
   static const notification_permission_dialog_content = 'notification_permission_dialog_content';
@@ -2012,7 +2069,8 @@ abstract class IntlKeys {
   static const setting_image_viewer_title = 'setting_image_viewer_title';
   static const setting_languages_apply = 'setting_languages_apply';
   static const setting_languages_subtitle = 'setting_languages_subtitle';
-  static const setting_notifications_notify_failures_grace_period = 'setting_notifications_notify_failures_grace_period';
+  static const setting_notifications_notify_failures_grace_period =
+      'setting_notifications_notify_failures_grace_period';
   static const setting_notifications_notify_hours = 'setting_notifications_notify_hours';
   static const setting_notifications_notify_immediately = 'setting_notifications_notify_immediately';
   static const setting_notifications_notify_minutes = 'setting_notifications_notify_minutes';

@@ -271,8 +271,8 @@ dependency_overrides:
 
   easy_localization:
     git:
-      url: https://gitee.com/du_guang/easy_localization_ohos.git
-      ref: master
+      url: git@gitcode.com:dgh18/easy_localization_ohos.git
+      ref: easy_localization_ohos
       path: ./
   chewie:
     git:

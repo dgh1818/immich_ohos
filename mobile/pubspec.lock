@@ -472,11 +472,11 @@ packages:
     dependency: "direct main"
     description:
       path: "."
-      ref: master
-      resolved-ref: dda789a33393846d2f00218a55ea451eb6da7545
-      url: "https://gitee.com/du_guang/easy_localization_ohos.git"
+      ref: easy_localization_ohos
+      resolved-ref: "87c475b110e333809eae8c23abe865ec3dc67680"
+      url: "git@gitcode.com:dgh18/easy_localization_ohos.git"
     source: git
-    version: "3.0.3"
+    version: "3.0.8"
   easy_logger:
     dependency: transitive
     description:
