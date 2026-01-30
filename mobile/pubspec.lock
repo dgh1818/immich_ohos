@@ -299,6 +299,14 @@ packages:
       url: "https://github.com/dgh1818/coordtransform_dart.git"
     source: git
     version: "1.0.4"
+  cronet_http:
+    dependency: "direct main"
+    description:
+      name: cronet_http
+      sha256: "1fff7f26ac0c4cda97fe2a9aa082494baee4775f167c27ba45f6c8e88571e3ab"
+      url: "https://pub.flutter-io.cn"
+    source: hosted
+    version: "1.7.0"
   crop_image:
     dependency: "direct main"
     description:
@@ -331,6 +339,14 @@ packages:
       url: "https://pub.flutter-io.cn"
     source: hosted
     version: "1.0.2"
+  cupertino_http:
+    dependency: "direct main"
+    description:
+      name: cupertino_http
+      sha256: "82cbec60c90bf785a047a9525688b6dacac444e177e1d5a5876963d3c50369e8"
+      url: "https://pub.flutter-io.cn"
+    source: hosted
+    version: "2.4.0"
   cupertino_icons:
     dependency: transitive
     description:
@@ -909,6 +925,14 @@ packages:
       url: "https://pub.flutter-io.cn"
     source: hosted
     version: "4.1.2"
+  http_profile:
+    dependency: transitive
+    description:
+      name: http_profile
+      sha256: "7e679e355b09aaee2ab5010915c932cce3f2d1c11c3b2dc177891687014ffa78"
+      url: "https://pub.flutter-io.cn"
+    source: hosted
+    version: "0.1.0"
   huawei_cast:
     dependency: "direct main"
     description:
@@ -1083,7 +1107,7 @@ packages:
     description:
       name: jni
       sha256: "8706a77e94c76fe9ec9315e18949cc9479cc03af97085ca9c1077b61323ea12d"
-      url: "https://pub.dev"
+      url: "https://pub.flutter-io.cn"
     source: hosted
     version: "0.15.2"
   js:
@@ -1299,7 +1323,7 @@ packages:
     description:
       name: objective_c
       sha256: "1f81ed9e41909d44162d7ec8663b2c647c202317cc0b56d3d56f6a13146a0b64"
-      url: "https://pub.dev"
+      url: "https://pub.flutter-io.cn"
     source: hosted
     version: "9.1.0"
   octo_image:

@@ -84,7 +84,7 @@ dependencies:
   worker_manager: ^7.2.3
 
   cronet_http: ^1.7.0
-  cupertino_http: ^2.4.0  //新增
+  cupertino_http: ^2.4.0  #新增
 
   scroll_date_picker: ^3.8.0
   #ffi: ^2.1.4
