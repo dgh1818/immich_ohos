@@ -33,6 +33,7 @@ import 'package:immich_mobile/utils/debug_print.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path/path.dart';
 import 'package:flutter/foundation.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 
 final backupServiceProvider = Provider(
   (ref) => BackupService(
@@ -434,90 +435,87 @@ class BackupService {
     final deviceId = Store.get(StoreKey.deviceId);
     final endpoint = Store.get(StoreKey.serverEndpoint);
     final accessToken = Store.get(StoreKey.accessToken);
+    final displayName = image.name;
 
-    // 1. 准备文件
-    final file = File(image.path);
-    late final File? livePhotoFile;
-    if (liveFile != null) {
-      livePhotoFile = File(liveFile.path);
-    } else {
-      livePhotoFile = null;
-    }
-
-    final stat = await file.stat();
-
-    // 2. 创建唯一标识 - 使用文件路径哈希
-    final deviceAssetId = hash(file.path).toString();
-
-    // 3. 获取元数据
-    final fileCreatedAt = stat.changed.year == 1970 ? stat.modified : stat.changed;
-    final fileModifiedAt = stat.modified;
-
-    // 4. 构建请求
-    final baseRequest = http.MultipartRequest('POST', Uri.parse('$endpoint/assets'));
-
-    // 5. 设置头信息
-    baseRequest.headers.addAll({
-      'Authorization': 'Bearer $accessToken',
-      'Accept': 'application/json',
-      'Transfer-Encoding': 'chunked',
-    });
-
-    // 6. 添加表单字段
-    baseRequest.fields.addAll({
-      'deviceAssetId': file.path,
-      'deviceId': deviceId,
-      'fileCreatedAt': fileCreatedAt.toUtc().toIso8601String(),
-      'fileModifiedAt': fileModifiedAt.toUtc().toIso8601String(),
-      'isFavorite': 'false',
-      'duration': '0',
-    });
-
-    if (liveFile != null && livePhotoFile != null) {
-      final livePhotoTitle = liveFile.name;
-      final livePhotoRawUploadData = http.MultipartFile(
-        "assetData",
-        livePhotoFile.openRead(),
-        livePhotoFile.lengthSync(),
-        filename: livePhotoTitle,
-      );
-      final baseRequest2 = http.MultipartRequest('POST', Uri.parse('$endpoint/assets'))
-        ..headers.addAll(baseRequest.headers)
-        ..fields.addAll(baseRequest.fields);
-
-      baseRequest2.files.add(livePhotoRawUploadData);
-
-      final response = await http.Response.fromStream(await baseRequest2.send());
-
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        final json = jsonDecode(response.body);
-        final id = json.containsKey('id') ? json['id'] : null;
-        if (id != null) {
-          baseRequest.fields['livePhotoVideoId'] = id;
-        }
-        debugPrint('LIVE视频上传成功! 资产ID: ${json['id']}');
-      } else {
-        final error = jsonDecode(response.body);
-        throw Exception('上传失败: ${error['message']}');
-      }
-    }
-
-    // 7. 添加文件
-    baseRequest.files.add(http.MultipartFile('assetData', file.openRead(), file.lengthSync(), filename: image.name));
-
-    // 8. 发送请求
     try {
+      final file = File(image.path);
+      final File? livePhotoFile = liveFile != null ? File(liveFile.path) : null;
+
+      final stat = await file.stat();
+      final deviceAssetId = hash(file.path).toString();
+
+      final fileCreatedAt = stat.changed.year == 1970 ? stat.modified : stat.changed;
+      final fileModifiedAt = stat.modified;
+
+      final baseRequest = http.MultipartRequest('POST', Uri.parse('$endpoint/assets'));
+
+      baseRequest.headers.addAll({
+        'Authorization': 'Bearer $accessToken',
+        'Accept': 'application/json',
+        'Transfer-Encoding': 'chunked',
+      });
+
+      baseRequest.fields.addAll({
+        'deviceAssetId': file.path,
+        'deviceId': deviceId,
+        'fileCreatedAt': fileCreatedAt.toUtc().toIso8601String(),
+        'fileModifiedAt': fileModifiedAt.toUtc().toIso8601String(),
+        'isFavorite': 'false',
+        'duration': '0',
+      });
+
+      if (liveFile != null && livePhotoFile != null) {
+        final livePhotoTitle = liveFile.name;
+        final livePhotoRawUploadData = http.MultipartFile(
+          'assetData',
+          livePhotoFile.openRead(),
+          livePhotoFile.lengthSync(),
+          filename: livePhotoTitle,
+        );
+        final baseRequest2 = http.MultipartRequest('POST', Uri.parse('$endpoint/assets'))
+          ..headers.addAll(baseRequest.headers)
+          ..fields.addAll(baseRequest.fields);
+
+        baseRequest2.files.add(livePhotoRawUploadData);
+
+        final response = await http.Response.fromStream(await baseRequest2.send());
+
+        if (response.statusCode == 200 || response.statusCode == 201) {
+          final json = jsonDecode(response.body);
+          final id = json.containsKey('id') ? json['id'] : null;
+          if (id != null) {
+            baseRequest.fields['livePhotoVideoId'] = id;
+          }
+          debugPrint('LIVE video upload ok: ${json['id']}');
+        } else {
+          final error = jsonDecode(response.body);
+          throw Exception('upload failed: ${error['message']}');
+        }
+      }
+
+      baseRequest.files.add(http.MultipartFile('assetData', file.openRead(), file.lengthSync(), filename: image.name));
+
       final response = await http.Response.fromStream(await baseRequest.send());
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         final json = jsonDecode(response.body);
-        debugPrint('上传成功! 资产ID: ${json['id']}');
+        debugPrint('upload ok: ${json['id']}');
+        Fluttertoast.showToast(
+          msg: 'Upload complete: $displayName',
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.BOTTOM,
+        );
       } else {
         final error = jsonDecode(response.body);
-        throw Exception('上传失败: ${error['message']}');
+        throw Exception('upload failed: ${error['message']}');
       }
     } catch (e) {
-      debugPrint('上传出错: $e');
+      debugPrint('upload error: $e');
+      Fluttertoast.showToast(
+        msg: 'Upload failed: $displayName',
+        toastLength: Toast.LENGTH_LONG,
+        gravity: ToastGravity.BOTTOM,
+      );
       rethrow;
     }
   }

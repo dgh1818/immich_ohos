@@ -23,7 +23,7 @@ import 'package:immich_mobile/services/api.service.dart';
 import 'package:immich_mobile/services/app_settings.service.dart';
 import 'package:logging/logging.dart';
 import 'package:path/path.dart' as p;
-import 'package:photo_manager/photo_manager.dart' show PMProgressHandler;
+import 'package:photo_manager/photo_manager.dart' show AssetEntity, PMProgressHandler;
 
 /// Callbacks for upload progress and status updates
 class UploadCallbacks {
@@ -175,20 +175,31 @@ class ForegroundUploadService {
       items: files,
       cancelToken: effectiveCancelToken,
       processItem: (file, httpClient) async {
-        final fileId = p.hash(file.path).toString();
+        final originalPath = file.path;
+        final fileId = p.hash(originalPath).toString();
+        final resolvedFile = await _resolveShareIntentFile(file);
+        if (resolvedFile == null) {
+          onError?.call(fileId, "Unable to resolve shared file from URI");
+          return;
+        }
+        final originalName = _fileNameFromUriOrPath(originalPath);
+        try {
+          final result = await _uploadSingleFile(
+            resolvedFile,
+            deviceAssetId: fileId,
+            httpClient: httpClient,
+            cancelToken: effectiveCancelToken,
+            originalFileNameOverride: originalName,
+            onProgress: (bytes, totalBytes) => onProgress?.call(fileId, bytes, totalBytes),
+          );
 
-        final result = await _uploadSingleFile(
-          file,
-          deviceAssetId: fileId,
-          httpClient: httpClient,
-          cancelToken: effectiveCancelToken,
-          onProgress: (bytes, totalBytes) => onProgress?.call(fileId, bytes, totalBytes),
-        );
-
-        if (result.isSuccess) {
-          onSuccess?.call(fileId);
-        } else if (!result.isCancelled && result.errorMessage != null) {
-          onError?.call(fileId, result.errorMessage!);
+          if (result.isSuccess) {
+            onSuccess?.call(fileId);
+          } else if (!result.isCancelled && result.errorMessage != null) {
+            onError?.call(fileId, result.errorMessage!);
+          }
+        } finally {
+          await _cleanupShareIntentTempFile(originalPath, resolvedFile);
         }
       },
     );
@@ -276,7 +287,7 @@ class ForegroundUploadService {
 
       final isAvailableLocally = await _storageRepository.isAssetAvailableLocally(asset.id);
 
-      if (!isAvailableLocally && CurrentPlatform.isIOS) {
+      if (!isAvailableLocally && (CurrentPlatform.isIOS || Platform.isOhos)) {
         _logger.info("Loading iCloud asset ${asset.id} - ${asset.name}");
 
         // Create progress handler for iCloud download
@@ -380,7 +391,7 @@ class ForegroundUploadService {
       }
 
       // Add cloudId metadata only to the still image, not the motion video, becasue when the sync id happens, the motion video can get associated with the wrong still image.
-      if (CurrentPlatform.isIOS && asset.cloudId != null) {
+      if ((CurrentPlatform.isIOS || Platform.isOhos) && asset.cloudId != null) {
         fields['metadata'] = jsonEncode([
           RemoteAssetMetadataItem(
             key: RemoteAssetMetadataKey.mobileApp,
@@ -428,7 +439,7 @@ class ForegroundUploadService {
       _logger.severe(() => "Error backup asset: ${error.toString()}", stackTrace);
       callbacks.onError?.call(asset.localId!, error.toString());
     } finally {
-      if (Platform.isIOS) {
+      if (Platform.isIOS || Platform.isOhos) {
         try {
           await file?.delete();
           await livePhotoFile?.delete();
@@ -444,13 +455,16 @@ class ForegroundUploadService {
     required String deviceAssetId,
     required Client httpClient,
     required CancellationToken cancelToken,
+    String? originalFileNameOverride,
     void Function(int bytes, int totalBytes)? onProgress,
   }) async {
     try {
       final stats = await file.stat();
       final fileCreatedAt = stats.changed;
       final fileModifiedAt = stats.modified;
-      final filename = p.basename(file.path);
+      final filename = (originalFileNameOverride?.isNotEmpty ?? false)
+          ? originalFileNameOverride!
+          : p.basename(file.path);
 
       final headers = ApiService.getRequestHeaders();
       final deviceId = Store.get(StoreKey.deviceId);
@@ -489,5 +503,72 @@ class ForegroundUploadService {
     }
 
     return requiresWiFi;
+  }
+
+  Future<File?> _resolveShareIntentFile(File file) async {
+    try {
+      if (await file.exists()) {
+        return file;
+      }
+    } catch (_) {}
+
+    final rawPath = file.path;
+    final uri = Uri.tryParse(rawPath);
+    if (uri == null) {
+      return null;
+    }
+
+    if (uri.scheme == 'content' || uri.scheme == 'file') {
+      final entity = await AssetEntity.fromId(rawPath);
+      final resolved = await entity?.originFile;
+      if (resolved != null) {
+        return resolved;
+      }
+    }
+
+    if (uri.scheme == 'file') {
+      final realPath = uri.toFilePath(windows: false);
+      final realFile = File(realPath);
+      if (await realFile.exists()) {
+        return realFile;
+      }
+    }
+
+    return null;
+  }
+
+  String _fileNameFromUriOrPath(String rawPath) {
+    final uri = Uri.tryParse(rawPath);
+    if (uri != null && uri.pathSegments.isNotEmpty) {
+      return uri.pathSegments.last;
+    }
+    return p.basename(rawPath);
+  }
+
+  Future<void> _cleanupShareIntentTempFile(String originalPath, File resolvedFile) async {
+    try {
+      if (resolvedFile.path == originalPath) {
+        return;
+      }
+
+      final uri = Uri.tryParse(originalPath);
+      if (uri == null || (uri.scheme != 'content' && uri.scheme != 'file')) {
+        return;
+      }
+
+      final normalizedPath = resolvedFile.path.replaceAll('\\', '/');
+      if (!normalizedPath.contains('/photo_manager/')) {
+        return;
+      }
+
+      if (await resolvedFile.exists()) {
+        await resolvedFile.delete();
+      }
+
+      final parent = resolvedFile.parent;
+      if (await parent.exists() && await parent.list().isEmpty) {
+        await parent.delete();
+      }
+    } catch (_) {}
   }
 }

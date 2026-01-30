@@ -106,7 +106,9 @@ class ShareIntentPage extends ConsumerWidget {
                 ],
               ),
               title: Text(attachment.fileName, style: context.textTheme.titleSmall),
-              subtitle: Text(attachment.fileSize, style: context.textTheme.labelLarge),
+              subtitle: target.fileLength > 0
+                  ? Text(target.fileSize, style: context.textTheme.labelLarge)
+                  : null,
               trailing: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16.0),
                 child: UploadStatusIcon(

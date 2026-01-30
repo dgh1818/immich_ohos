@@ -414,7 +414,7 @@ class BackgroundUploadService {
       'isFavorite': isFavorite?.toString() ?? 'false',
       'duration': '0',
       if (fields != null) ...fields,
-      if (CurrentPlatform.isIOS && cloudId != null)
+      if ((CurrentPlatform.isIOS || Platform.isOhos) && cloudId != null)
         'metadata': jsonEncode([
           RemoteAssetMetadataItem(
             key: RemoteAssetMetadataKey.mobileApp,
