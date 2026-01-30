@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:async/async.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/painting.dart';
@@ -15,6 +17,8 @@ class RemoteThumbProvider extends CancellableImageProvider<RemoteThumbProvider>
     with CancellableImageProviderMixin<RemoteThumbProvider> {
   final String assetId;
   final String thumbhash;
+  ImageStream? _networkStream;
+  ImageStreamListener? _networkListener;
 
   RemoteThumbProvider({required this.assetId, required this.thumbhash});
 
@@ -36,11 +40,47 @@ class RemoteThumbProvider extends CancellableImageProvider<RemoteThumbProvider>
   }
 
   Stream<ImageInfo> _codec(RemoteThumbProvider key, ImageDecoderCallback decode) {
-    final request = RemoteImageRequest(
-      uri: getThumbnailUrlForRemoteId(key.assetId, thumbhash: key.thumbhash),
-      headers: ApiService.getRequestHeaders(),
+    final url = getThumbnailUrlForRemoteId(key.assetId, thumbhash: key.thumbhash);
+    final headers = ApiService.getRequestHeaders();
+    final provider = NetworkImage(url, headers: headers);
+    final controller = StreamController<ImageInfo>();
+
+    _networkStream = provider.resolve(const ImageConfiguration());
+    _networkListener = ImageStreamListener(
+      (image, _) {
+        if (!controller.isClosed) {
+          controller.add(image);
+          controller.close();
+        }
+        _clearNetworkListener();
+      },
+      onError: (error, stack) {
+        if (!controller.isClosed) {
+          controller.addError(error, stack);
+          controller.close();
+        }
+        _clearNetworkListener();
+      },
     );
-    return loadRequest(request, decode);
+    _networkStream!.addListener(_networkListener!);
+    return controller.stream;
+  }
+
+  void _clearNetworkListener() {
+    final stream = _networkStream;
+    final listener = _networkListener;
+    if (stream != null && listener != null) {
+      stream.removeListener(listener);
+    }
+    _networkStream = null;
+    _networkListener = null;
+  }
+
+  @override
+  void cancel() {
+    super.cancel();
+    _clearNetworkListener();
+    PaintingBinding.instance.imageCache.evict(this);
   }
 
   @override
