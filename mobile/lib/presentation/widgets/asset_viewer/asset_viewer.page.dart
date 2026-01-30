@@ -198,11 +198,8 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
     if (asset != null) {
       _stackChildrenKeepAlive = ref.read(stackChildrenNotifier(asset).notifier).ref.keepAlive();
     }
-    if (ref.read(assetViewerProvider).showingControls) {
-      unawaited(SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge));
-    } else {
-      unawaited(SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky));
-    }
+    // Always show status bar in the asset viewer.
+    unawaited(SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge));
   }
 
   @override
@@ -829,12 +826,8 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
     */
 
     // Listen for control visibility changes and change system UI mode accordingly
-    ref.listen(assetViewerProvider.select((value) => value.showingControls), (_, showingControls) async {
-      if (showingControls) {
-        unawaited(SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge));
-      } else {
-        unawaited(SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky));
-      }
+    ref.listen(assetViewerProvider.select((value) => value.showingControls), (_, __) async {
+      unawaited(SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge));
     });
 
     // Currently it is not possible to scroll the asset when the bottom sheet is open all the way.
