@@ -54,7 +54,7 @@
 4. 大地图页面待完善   <br/>
 
 链接已实测可用，解决了发布地区在海外导致不能安装的问题，推荐先卸载自签名版本再重新安装，如仍不可用可以提issue <br/>
-https://appgallery.huawei.com/link/invite-test-wap?taskId=381809fb69e2fdb267e933cb2ff2ee41&invitationCode=84kAYMKHhCp <br/>
+https://appgallery.huawei.com/link/invite-test-wap?taskId=6369ecf24007cf6283abafb5f106447f&invitationCode=833ea5Tb2zS <br/>
 https://appgallery.huawei.com/app/detail?id=com.dgh18.immich&channelId=SHARE&source=appshare   <br/>
 **IMMICH 搭配对应版本 本项目下服务器 使用**
 <h1>签名有关注意事项：</h1>
