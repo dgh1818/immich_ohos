@@ -40,6 +40,13 @@ class RemoteThumbProvider extends CancellableImageProvider<RemoteThumbProvider>
   }
 
   Stream<ImageInfo> _codec(RemoteThumbProvider key, ImageDecoderCallback decode) {
+    /*
+    final request = RemoteImageRequest(
+      uri: getThumbnailUrlForRemoteId(key.assetId, thumbhash: key.thumbhash),
+      headers: ApiService.getRequestHeaders(),
+    );
+*/
+
     final url = getThumbnailUrlForRemoteId(key.assetId, thumbhash: key.thumbhash);
     final headers = ApiService.getRequestHeaders();
     final provider = NetworkImage(url, headers: headers);
@@ -62,6 +69,11 @@ class RemoteThumbProvider extends CancellableImageProvider<RemoteThumbProvider>
         _clearNetworkListener();
       },
     );
+
+    /*
+    return loadRequest(request, decode);
+*/
+
     _networkStream!.addListener(_networkListener!);
     return controller.stream;
   }
@@ -102,6 +114,12 @@ class RemoteFullImageProvider extends CancellableImageProvider<RemoteFullImagePr
   final String assetId;
   final String thumbhash;
   final AssetType assetType;
+  ImageStream? _previewStream;
+  ImageStreamListener? _previewListener;
+  StreamController<ImageInfo>? _previewController;
+  ImageStream? _originalStream;
+  ImageStreamListener? _originalListener;
+  StreamController<ImageInfo>? _originalController;
 
   RemoteFullImageProvider({required this.assetId, required this.thumbhash, required this.assetType});
 
@@ -132,11 +150,20 @@ class RemoteFullImageProvider extends CancellableImageProvider<RemoteFullImagePr
     }
 
     final headers = ApiService.getRequestHeaders();
+
+    /*
     final previewRequest = RemoteImageRequest(
       uri: getThumbnailUrlForRemoteId(key.assetId, type: AssetMediaSize.preview, thumbhash: key.thumbhash),
       headers: headers,
     );
     final previewStream = loadRequest(previewRequest, decode);
+*/
+
+    final previewStream = _startNetworkStream(
+      getThumbnailUrlForRemoteId(key.assetId, type: AssetMediaSize.preview, thumbhash: key.thumbhash),
+      headers,
+      isPreview: true,
+    );
 
     if (assetType != AssetType.image || !AppSetting.get(Setting.loadOriginal)) {
       yield* previewStream;
@@ -148,12 +175,107 @@ class RemoteFullImageProvider extends CancellableImageProvider<RemoteFullImagePr
       return;
     }
 
+    /*
     final request = RemoteImageRequest(uri: getOriginalUrlForRemoteId(key.assetId), headers: headers);
     final originalStream = loadRequest(request, decode).map((image) {
       previewRequest.cancel();
       return image;
     });
+*/
+
+    final originalStream = _startNetworkStream(
+      getOriginalUrlForRemoteId(key.assetId),
+      headers,
+      isPreview: false,
+      onFirstImage: _clearPreviewListener,
+    );
     yield* StreamGroup.merge([previewStream, originalStream]);
+  }
+
+  Stream<ImageInfo> _startNetworkStream(
+    String url,
+    Map<String, String> headers, {
+    required bool isPreview,
+    void Function()? onFirstImage,
+  }) {
+    final provider = NetworkImage(url, headers: headers);
+    final controller = StreamController<ImageInfo>();
+    final stream = provider.resolve(const ImageConfiguration());
+    final listener = ImageStreamListener(
+      (image, _) {
+        if (!controller.isClosed) {
+          controller.add(image);
+          controller.close();
+        }
+        if (isPreview) {
+          _clearPreviewListener();
+        } else {
+          _clearOriginalListener();
+        }
+        onFirstImage?.call();
+      },
+      onError: (error, stack) {
+        if (!controller.isClosed) {
+          controller.addError(error, stack);
+          controller.close();
+        }
+        if (isPreview) {
+          _clearPreviewListener();
+        } else {
+          _clearOriginalListener();
+        }
+      },
+    );
+
+    stream.addListener(listener);
+    if (isPreview) {
+      _previewStream = stream;
+      _previewListener = listener;
+      _previewController = controller;
+    } else {
+      _originalStream = stream;
+      _originalListener = listener;
+      _originalController = controller;
+    }
+    return controller.stream;
+  }
+
+  void _clearPreviewListener() {
+    final stream = _previewStream;
+    final listener = _previewListener;
+    final controller = _previewController;
+    if (stream != null && listener != null) {
+      stream.removeListener(listener);
+    }
+    if (controller != null && !controller.isClosed) {
+      controller.close();
+    }
+    _previewStream = null;
+    _previewListener = null;
+    _previewController = null;
+  }
+
+  void _clearOriginalListener() {
+    final stream = _originalStream;
+    final listener = _originalListener;
+    final controller = _originalController;
+    if (stream != null && listener != null) {
+      stream.removeListener(listener);
+    }
+    if (controller != null && !controller.isClosed) {
+      controller.close();
+    }
+    _originalStream = null;
+    _originalListener = null;
+    _originalController = null;
+  }
+
+  @override
+  void cancel() {
+    super.cancel();
+    _clearPreviewListener();
+    _clearOriginalListener();
+    PaintingBinding.instance.imageCache.evict(this);
   }
 
   @override
