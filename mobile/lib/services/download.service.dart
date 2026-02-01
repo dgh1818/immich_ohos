@@ -80,7 +80,9 @@ class DownloadService {
     final title = _titleWithoutExtension(task.filename);
     final relativePath = Platform.isAndroid ? 'DCIM/Immich' : null;
     try {
-      if (Platform.isOhos) {
+      if (false) {
+        //To do
+        //if (Platform.isOhos) {
         final tempFile = File(filePath);
         if (tempFile.existsSync() == false) {
           return false;
@@ -158,7 +160,9 @@ class DownloadService {
     final relativePath = Platform.isAndroid ? 'DCIM/Immich' : null;
     final file = File(filePath);
     try {
-      if (Platform.isOhos) {
+      if (false) {
+        //To do
+        //if (Platform.isOhos) {
         final tempFile = File(filePath);
         final resultAsset = await ImageGallerySaver.saveFile(tempFile.path, name: title, isReturnPathOfIOS: true);
         return resultAsset != null;
