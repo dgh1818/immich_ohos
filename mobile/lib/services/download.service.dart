@@ -32,7 +32,9 @@ class _LiveParts {
   String? videoPath;
   String? imageTaskId; // = liveId
   String? videoTaskId; // = livePhotoVideoId
-  String? filenameForTitle;
+  String? videoRemoteId;
+  int imageAttempts = 0;
+  int saveAttempts = 0;
 }
 
 final Map<String, _LiveParts> _livePartsById = {}; // key=liveId(照片 remoteId)
@@ -110,6 +112,8 @@ class DownloadService {
 
   Future<void> handleLivePhotoDependency(TaskStatusUpdate update) async {
     LivePhotosMetadata md;
+    const int kLivePhotoVideoMinBytes = 1024 * 1024;
+    const int kLivePhotoImageMinBytes = 1024 * 1024;
     try {
       md = LivePhotosMetadata.fromJson(update.task.metaData);
     } catch (_) {
@@ -129,11 +133,51 @@ class DownloadService {
     if (update.status != TaskStatus.complete) return;
 
     final parts = _livePartsById.putIfAbsent(liveId, () => _LiveParts());
-    parts.filenameForTitle ??= update.task.filename;
-
     if (md.part == LivePhotosPart.image) {
       parts.imageTaskId = update.task.taskId; // = liveId
       parts.imagePath = await update.task.filePath();
+
+      int imageBytes = 0;
+      try {
+        imageBytes = await File(parts.imagePath!).length();
+      } catch (_) {
+        imageBytes = 0;
+      }
+      if (imageBytes < kLivePhotoImageMinBytes) {
+        parts.imageAttempts += 1;
+        final attempt = parts.imageAttempts;
+        _log.warning(
+          "Live photo image too small (${imageBytes} bytes), retrying download for $liveId (attempt $attempt)",
+        );
+
+        try {
+          await File(parts.imagePath!).delete();
+        } catch (_) {}
+
+        if (parts.imageTaskId != null) {
+          await _downloadRepository.deleteRecordsWithIds([parts.imageTaskId!]);
+        }
+        parts.imagePath = null;
+        parts.imageTaskId = null;
+
+        if (attempt < 2) {
+          final imageTask = _buildDownloadTask(
+            liveId,
+            update.task.filename,
+            group: kDownloadGroupLivePhoto,
+            metadata: LivePhotosMetadata(part: LivePhotosPart.image, id: liveId).toJson(),
+            priority: 0,
+          );
+          await _downloadRepository.downloadAll([imageTask]);
+          return;
+        }
+
+        _livePartsById.remove(liveId);
+        pendingLiveVideoTaskByRemoteId.remove(liveId);
+        videoEnqueuedLiveIds.remove(liveId);
+        _savingLiveIds.remove(liveId);
+        return;
+      }
 
       // image 完成 -> enqueue video
       if (!videoEnqueuedLiveIds.contains(liveId)) {
@@ -146,6 +190,69 @@ class DownloadService {
     } else if (md.part == LivePhotosPart.video) {
       parts.videoTaskId = update.task.taskId; // = livePhotoVideoId
       parts.videoPath = await update.task.filePath();
+      parts.videoRemoteId = update.task.taskId;
+
+      int videoBytes = 0;
+      try {
+        videoBytes = await File(parts.videoPath!).length();
+      } catch (_) {
+        videoBytes = 0;
+      }
+      if (videoBytes < kLivePhotoVideoMinBytes) {
+        parts.saveAttempts += 1;
+        final attempt = parts.saveAttempts;
+        _log.warning(
+          "Live photo video too small (${videoBytes} bytes), retrying download for $liveId (attempt $attempt)",
+        );
+
+        try {
+          await File(parts.videoPath!).delete();
+        } catch (_) {}
+
+        if (parts.videoTaskId != null) {
+          await _downloadRepository.deleteRecordsWithIds([parts.videoTaskId!]);
+        }
+        parts.videoPath = null;
+        parts.videoTaskId = null;
+        videoEnqueuedLiveIds.remove(liveId);
+
+        if (attempt < 2) {
+          final videoRemoteId = parts.videoRemoteId ?? pendingLiveVideoTaskByRemoteId[liveId]?.taskId;
+          if (videoRemoteId != null && videoRemoteId.isNotEmpty) {
+            final videoFilename = pendingLiveVideoTaskByRemoteId[liveId]?.filename ?? update.task.filename;
+
+            final videoTask = _buildDownloadTask(
+              videoRemoteId,
+              videoFilename,
+              group: kDownloadGroupLivePhoto,
+              metadata: LivePhotosMetadata(part: LivePhotosPart.video, id: liveId).toJson(),
+              priority: 1,
+            );
+            pendingLiveVideoTaskByRemoteId[liveId] = videoTask;
+            videoEnqueuedLiveIds.add(liveId);
+            await _downloadRepository.downloadAll([videoTask]);
+            return;
+          }
+        }
+
+        if (parts.imagePath != null) {
+          await _fileMediaRepository.saveImageWithFile(
+            parts.imagePath!,
+            title: _titleWithoutExtension(parts.imagePath!),
+          );
+          try {
+            await File(parts.imagePath!).delete();
+          } catch (_) {}
+        }
+        if (parts.imageTaskId != null) {
+          await _downloadRepository.deleteRecordsWithIds([parts.imageTaskId!]);
+        }
+
+        _livePartsById.remove(liveId);
+        pendingLiveVideoTaskByRemoteId.remove(liveId);
+        _savingLiveIds.remove(liveId);
+        return;
+      }
     }
 
     // 两段齐了：调用同名接口（签名不变）
@@ -195,9 +302,11 @@ class DownloadService {
     final imageTaskId = parts.imageTaskId ?? livePhotosId;
     final videoTaskId = parts.videoTaskId ?? task.taskId;
 
-    final title = _titleWithoutExtension(task.filename);
+    final title = _titleWithoutExtension(imageFilePath);
     String actualVideoPath = videoFilePath;
     File? convertedVideoFile;
+
+    bool saved = false;
 
     if (videoFilePath.toLowerCase().endsWith('.mov')) {
       try {
@@ -219,6 +328,7 @@ class DownloadService {
       }
     }
 
+    await Future.delayed(const Duration(seconds: 1));
     try {
       final result = await _fileMediaRepository.saveLivePhoto(
         image: File(imageFilePath),
@@ -226,20 +336,35 @@ class DownloadService {
         title: title,
       );
 
-      return result != null;
+      saved = result != null;
     } on PlatformException catch (error, stack) {
       _log.severe("Error saving live photo", error, stack);
-      // Handle saving MotionPhotos on iOS
-      //if (error.code == 'PHPhotosErrorDomain (-1)') {
-      final result = await _fileMediaRepository.saveImageWithFile(imageFilePath, title: task.filename);
-      return result != null;
-      //}
-      _log.severe("Error saving live photo", error, stack);
-      return false;
     } catch (error, stack) {
       _log.severe("Error saving live photo", error, stack);
-      return false;
-    } finally {
+    }
+
+    if (!saved) {
+      await Future.delayed(const Duration(seconds: 1));
+      try {
+        final result = await _fileMediaRepository.saveLivePhoto(
+          image: File(imageFilePath),
+          video: File(actualVideoPath),
+          title: title,
+        );
+        saved = result != null;
+      } on PlatformException catch (error, stack) {
+        _log.severe("Error saving live photo", error, stack);
+      } catch (error, stack) {
+        _log.severe("Error saving live photo", error, stack);
+      }
+    }
+
+    if (!saved) {
+      final result = await _fileMediaRepository.saveImageWithFile(imageFilePath, title: title);
+      saved = result != null;
+    }
+
+    try {
       final imageFile = File(imageFilePath);
       if (await imageFile.exists()) {
         await imageFile.delete();
@@ -254,12 +379,14 @@ class DownloadService {
       }
 
       await _downloadRepository.deleteRecordsWithIds([imageTaskId, videoTaskId]);
-
+    } finally {
       _livePartsById.remove(livePhotosId);
       pendingLiveVideoTaskByRemoteId.remove(livePhotosId);
       videoEnqueuedLiveIds.remove(livePhotosId);
       _savingLiveIds.remove(livePhotosId);
     }
+
+    return saved;
   }
 
   String _titleWithoutExtension(String name) => p.basenameWithoutExtension(name);
