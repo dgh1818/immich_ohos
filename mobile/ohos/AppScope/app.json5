@@ -2,7 +2,7 @@
   "app": {
     "bundleName": "com.dgh18.immich",
     "vendor": "dgh18",
-    "versionCode": 250020000,
+    "versionCode": 250020007,
     "versionName": "2.5.2",
     "icon": "$media:app_layered_image",
     "label": "$string:app_name"
