@@ -135,27 +135,31 @@ export async function decodeLocalImageTask(
     const actualHeight = pixelInfo.size.height;
     const bytesPerPixel = 4;
     const rowBytes = actualWidth * bytesPerPixel;
-    const isThumbnailRequest = width > 0 || height > 0;
     let stride = pixelInfo.stride ?? rowBytes;
-    // For non-full-size requests, treat stride as tight rowBytes.
-    if (isThumbnailRequest) {
-      stride = rowBytes;
-    } else if (stride > 0 && stride < rowBytes) {
-      // Some devices may report stride in pixels for full-size; normalize to bytes.
+    if (stride > 0 && stride < rowBytes) {
+      // Some devices may report stride in pixels; normalize to bytes.
       stride = stride >= actualWidth ? stride * bytesPerPixel : rowBytes;
+    }
+    if (stride <= 0) {
+      stride = rowBytes;
     }
 
     console.info(
       `LocalImageTask stride debug: reqW=${width} reqH=${height} w=${actualWidth} h=${actualHeight} rowBytes=${rowBytes} stride=${stride} rawStride=${pixelInfo.stride}`
     );
 
+    if (stride < rowBytes) {
+      stride = rowBytes;
+    }
     let buffer: ArrayBuffer = new ArrayBuffer(stride * actualHeight);
     pixelMap.readPixelsToBufferSync(buffer);
 
-    const outStride = stride;
+    // Force tight rows (width * 4) without repacking.
+    const outBuffer = buffer;
+    const outStride = rowBytes;
 
     return {
-      buffer,
+      buffer: outBuffer,
       width: actualWidth,
       height: actualHeight,
       rowBytes: outStride,

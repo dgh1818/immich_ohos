@@ -30,6 +30,17 @@ export class RemoteImagesImpl extends RemoteImageApiOhos {
     if (cached.byteLength === 0) {
       this.cache.delete(url);
     } else {
+      if (sizeKind === 'thumbnail') {
+        const encoded = new Map<string, Object>();
+        const pointer = allocCopySafe(cached);
+        if (pointer) {
+          encoded.set('pointer', pointer);
+        } else {
+          encoded.set('pointer', new Uint8Array(cached));
+        }
+        encoded.set('length', cached.byteLength);
+        return result.success(encoded);
+      }
       try {
         const decoded = await this.decodeBuffer(cached, sizeKind);
         return result.success(decoded);
@@ -83,8 +94,19 @@ export class RemoteImagesImpl extends RemoteImageApiOhos {
     // 3) Cache store（storeCache 内部会 slice(0)，不会存到会被 detach 的引用）
     //this.storeCache(url, data);
 
-    // 4) Decode
+    // 4) Decode (or return encoded bytes for thumbnails)
     try {
+      if (sizeKind === 'thumbnail') {
+        const encoded = new Map<string, Object>();
+        const pointer = allocCopySafe(data);
+        if (pointer) {
+          encoded.set('pointer', pointer);
+        } else {
+          encoded.set('pointer', new Uint8Array(data));
+        }
+        encoded.set('length', data.byteLength);
+        return result.success(encoded);
+      }
       const decoded = await this.decodeBuffer(data, sizeKind);
 
       if (state.cancelled) {
