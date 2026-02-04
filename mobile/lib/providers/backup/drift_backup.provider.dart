@@ -216,8 +216,9 @@ class DriftBackupNotifier extends StateNotifier<DriftBackupState> {
         ),
       ) {
     _backgroundStatusSubscription = _backgroundUploadService.taskStatusStream.listen(_handleBackgroundTaskStatusUpdate);
-    _backgroundProgressSubscription =
-        _backgroundUploadService.taskProgressStream.listen(_handleBackgroundTaskProgressUpdate);
+    _backgroundProgressSubscription = _backgroundUploadService.taskProgressStream.listen(
+      _handleBackgroundTaskProgressUpdate,
+    );
   }
 
   final ForegroundUploadService _foregroundUploadService;
@@ -469,6 +470,11 @@ class DriftBackupNotifier extends StateNotifier<DriftBackupState> {
   }
 
   Future<void> startForegroundBackup(String userId) async {
+    // Cancel any existing backup before starting a new one
+    if (state.cancelToken != null) {
+      await stopForegroundBackup();
+    }
+
     state = state.copyWith(error: BackupError.none);
 
     await _startOhosBackgroundTransfer();
@@ -605,7 +611,8 @@ class DriftBackupNotifier extends StateNotifier<DriftBackupState> {
       return;
     }
     _backgroundEnqueueCompleted = false;
-    _logger.info("Resuming backup tasks...");
+
+    _logger.info("Start background backup sequence");
     state = state.copyWith(error: BackupError.none);
     await _startOhosBackgroundTransfer();
     await getBackupStatus(userId);
@@ -614,10 +621,11 @@ class DriftBackupNotifier extends StateNotifier<DriftBackupState> {
       _logger.warning("Skip handleBackupResume (post-call): notifier disposed");
       return;
     }
-    _logger.info("Found ${tasks.length} tasks");
+    _logger.info("Found ${tasks.length} pending tasks");
 
     if (tasks.isEmpty) {
-      _logger.info("Start backup with URLSession");
+      _logger.info("No pending tasks, starting new upload");
+
       await _backgroundUploadService.uploadBackupCandidates(userId);
       _backgroundEnqueueCompleted = true;
       unawaited(() async {
@@ -627,7 +635,8 @@ class DriftBackupNotifier extends StateNotifier<DriftBackupState> {
       return;
     }
 
-    _logger.info("Tasks to resume: ${tasks.length}");
+    _logger.info("Resuming upload ${tasks.length} assets");
+
     await _backgroundUploadService.resume();
     _backgroundEnqueueCompleted = true;
     return;
