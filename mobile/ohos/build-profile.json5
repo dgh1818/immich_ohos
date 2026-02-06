@@ -6,9 +6,9 @@
         "type": "HarmonyOS",
         "material": {
           "storeFile": "F:/immich_sign/immich_ohos.p12",
-          "storePassword": "0000001B63000CB7E7CF1C922E57FC051B41B30FE01B0C5575A634CFDAD27BD19EF1162783BC3A373CB1A5",
+          "storePassword": "0000001B55714A24D7A7C344A4100F4A6F66C20B284F2D58C97F561FE448EAB3D46ED9E594F9C58832D510",
           "keyAlias": "dgh18",
-          "keyPassword": "0000001B8E95E4055C6D72C7FE89A7DF5F21CB7AD0F6DC0C92CD551C45CB21C7F5D3611075D93C101F4ADD",
+          "keyPassword": "0000001BF2BEE329237068B7BAB93212FF940F9E83BC9B454857395832F7AE592B95A41DDD0D3932CD2687",
           "signAlg": "SHA256withECDSA",
           "profile": "F:/immich_sign/immich_OctDebug.p7b",
           "certpath": "F:/immich_sign/immich_oct.cer"
