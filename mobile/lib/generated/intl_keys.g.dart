@@ -836,6 +836,8 @@ abstract class IntlKeys {
   static const client_cert_import = 'client_cert_import';
   static const client_cert_import_success_msg = 'client_cert_import_success_msg';
   static const client_cert_invalid_msg = 'client_cert_invalid_msg';
+  static const client_cert_password_message = 'client_cert_password_message';
+  static const client_cert_password_title = 'client_cert_password_title';
   static const client_cert_remove_msg = 'client_cert_remove_msg';
   static const client_cert_subtitle = 'client_cert_subtitle';
   static const client_cert_title = 'client_cert_title';
@@ -1248,8 +1250,9 @@ abstract class IntlKeys {
   static const features = 'features';
   static const features_in_development = 'features_in_development';
   static const features_setting_description = 'features_setting_description';
-  static const file_name = 'file_name';
   static const file_name_or_extension = 'file_name_or_extension';
+  static const file_name_text = 'file_name_text';
+  static const file_name_with_value = 'file_name_with_value';
   static const file_size = 'file_size';
   static const filename = 'filename';
   static const filetype = 'filetype';
