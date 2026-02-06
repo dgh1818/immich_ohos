@@ -107,7 +107,7 @@ export struct RandomConfigure {
     let items: Array<DropdownItem> = [];
     let nextState = WidgetConfigState.SUCCESS;
     try {
-      const api = new ImmichAPI(serverConfig);
+      const api = new ImmichAPI(serverConfig, this.context.getApplicationContext());
       const albums = await api.fetchAlbums();
       console.error(`[WidgetConfig] fetched albums count=${albums.length}`);
       const albumItems = albums.map((album): DropdownItem => this.buildItem(album.albumName, album.id));

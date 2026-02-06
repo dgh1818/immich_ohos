@@ -1,11 +1,15 @@
 import { http } from '@kit.NetworkKit';
+import { common } from '@kit.AbilityKit';
 import { ServerConfig, SearchFilters, MemoryResult, Asset, Album, AlbumInfo } from './model/Model';
+import { URLSessionManager } from '../core/URLSessionManager';
 
 export class ImmichAPI {
   private readonly config: ServerConfig;
+  private readonly context?: common.Context;
 
-  constructor(config: ServerConfig) {
+  constructor(config: ServerConfig, context?: common.Context) {
     this.config = config;
+    this.context = context;
   }
 
   async fetchSearchResults(filters: SearchFilters): Promise<Array<Asset>> {
@@ -77,6 +81,7 @@ export class ImmichAPI {
     if (body !== undefined) {
       options.extraData = body;
     }
+    URLSessionManager.applyToOptions(this.context, options);
 
     try {
       const response = await request.request(url, options);
@@ -98,6 +103,7 @@ export class ImmichAPI {
       header: headers,
       expectDataType: http.HttpDataType.ARRAY_BUFFER,
     };
+    URLSessionManager.applyToOptions(this.context, options);
 
     try {
       const response = await request.request(url, options);
@@ -117,3 +123,4 @@ export class ImmichAPI {
     return `${year}-${month}-${day}`;
   }
 }
+

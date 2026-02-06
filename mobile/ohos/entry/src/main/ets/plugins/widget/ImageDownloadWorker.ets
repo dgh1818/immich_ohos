@@ -82,7 +82,7 @@ export async function updateWidgetForm(
   }
   console.error(`[WidgetUpdate] server config ok endpoint=${config.serverEndpoint}`);
 
-  const api = new ImmichAPI(config);
+  const api = new ImmichAPI(config, context.getApplicationContext());
   let imageResult: ImageDownloadResult | null = null;
   try {
     const entries = await fetchEntries(
@@ -194,7 +194,7 @@ export async function loadMoreWidgetImages(
     return;
   }
 
-  const api = new ImmichAPI(config);
+  const api = new ImmichAPI(config, context.getApplicationContext());
   let files: Array<fs.File> = [];
   try {
     const newEntries = await fetchEntries(

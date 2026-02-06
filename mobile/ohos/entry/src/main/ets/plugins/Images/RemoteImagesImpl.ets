@@ -4,6 +4,8 @@ import { BusinessError } from '@kit.BasicServicesKit';
 import { taskpool } from '@kit.ArkTS';
 import { decodeRemoteImageTask, RemoteDecodeResult } from './RemoteImageTask';
 import nativeBuffer, { allocCopySafe } from '../../utils/native_buffer';
+import { common } from '@kit.AbilityKit';
+import { URLSessionManager } from '../core/URLSessionManager';
 
 interface RemoteRequestState {
   request: http.HttpRequest;
@@ -15,6 +17,12 @@ export class RemoteImagesImpl extends RemoteImageApiOhos {
   private cache = new Map<string, ArrayBuffer>();
   private cacheBytes = 0;
   private readonly maxCacheBytes = 64 * 1024 * 1024;
+  private ctx?: common.Context;
+
+  constructor(context?: common.Context) {
+    super();
+    this.ctx = context;
+  }
 
   override async requestImage(
   url: string,
@@ -45,7 +53,7 @@ export class RemoteImagesImpl extends RemoteImageApiOhos {
         const decoded = await this.decodeBuffer(cached, sizeKind);
         return result.success(decoded);
       } catch (_) {
-        // 这里不需要额外拷贝：decodeBuffer 已经隔离 transfer，cached 不会被 detach
+        // 这里不需要额外拷贝：decodeBuffer 已经隔离 transfer，cached 不会�?detach
         const fallback = new Map<string, Object>();
         const pointer = allocCopySafe(cached);
         if (pointer) {
@@ -71,6 +79,7 @@ export class RemoteImagesImpl extends RemoteImageApiOhos {
     // allow responses larger than default 5MB limit
     maxLimit: 64 * 1024 * 1024,
   };
+  URLSessionManager.applyToOptions(this.ctx, options);
 
   try {
     const response = await request.request(url, options);
@@ -91,7 +100,6 @@ export class RemoteImagesImpl extends RemoteImageApiOhos {
       return result.error(new Error('HTTP result is empty/detached (byteLength == 0)'));
     }
 
-    // 3) Cache store（storeCache 内部会 slice(0)，不会存到会被 detach 的引用）
     //this.storeCache(url, data);
 
     // 4) Decode (or return encoded bytes for thumbnails)
@@ -118,7 +126,6 @@ export class RemoteImagesImpl extends RemoteImageApiOhos {
         return result.success(new Map<string, Object>());
       }
 
-      // 不需要额外拷贝：decodeBuffer 已经隔离 transfer，data 不会被 detach
       const fallback = new Map<string, Object>();
       const pointer = allocCopySafe(data);
       if (pointer) {
@@ -145,8 +152,6 @@ export class RemoteImagesImpl extends RemoteImageApiOhos {
     throw new Error('detached buffer (input byteLength == 0)');
   }
 
-  // ✅ 最关键：taskpool 可能 transfer 入参，所以必须传“拷贝”
-  // 这就是“最少拷贝”的唯一必要拷贝点
   const input = data.slice(0);
 
   const allowHdr = sizeKind === 'full';

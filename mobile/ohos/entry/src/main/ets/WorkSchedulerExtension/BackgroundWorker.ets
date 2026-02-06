@@ -30,6 +30,8 @@ import { BackgroundWorkerLockApi } from '../plugins/Background/BackgroundWorkerL
 import { BackgroundWorkerPreferences } from '../plugins/Background/BackgroundWorkerPreferences';
 import { UIAbility } from "@kit.AbilityKit";
 import { common } from '@kit.AbilityKit'
+import { NetworkApi } from '../plugins/core/Network.g';
+import { NetworkApiImpl } from '../plugins/core/NetworkApiImpl';
 
 export class Deferred<T> {
   public promise: Promise<T>;
@@ -83,10 +85,11 @@ class BackgroundWorker extends WorkSchedulerExtensionAbility {
     const messenger = flutterEngine.dartExecutor.getBinaryMessenger();
     BackgroundWorker.nativeSyncApiImpl = new MessagesImplBase(this.ctx.getApplicationContext());   //??????ability?????????y?????????
     BackgroundWorker.localImageApiImpl = new LocalImagesImpl(this.ctx.getApplicationContext());
-    BackgroundWorker.remoteImageApiImpl = new RemoteImagesImpl();
+    BackgroundWorker.remoteImageApiImpl = new RemoteImagesImpl(this.ctx.getApplicationContext());
     const backgroundWorkerApiImpl = new BackgroundWorkerApiImpl(this.ctx.getApplicationContext());
     const connectivityApiImpl = new ConnectivityApiImpl(this.ctx.getApplicationContext());
     BackgroundWorker.backgroundEngineLock = new BackgroundEngineLock(this.ctx);
+    const networkApiImpl = new NetworkApiImpl(this.ctx.getApplicationContext());
 
     NativeSyncApiOhos.setup(messenger, BackgroundWorker.nativeSyncApiImpl);
     LocalImageApiOhos.setup(messenger, BackgroundWorker.localImageApiImpl);
@@ -94,6 +97,7 @@ class BackgroundWorker extends WorkSchedulerExtensionAbility {
     BackgroundWorkerFgHostApi.setup(messenger, backgroundWorkerApiImpl);
     ConnectivityApi.setup(messenger, connectivityApiImpl);
     BackgroundWorkerLockApi.setup(messenger, BackgroundWorker.backgroundEngineLock);
+    NetworkApi.setup(messenger, networkApiImpl);
   }
   public static cancelPlugins() {
     try {

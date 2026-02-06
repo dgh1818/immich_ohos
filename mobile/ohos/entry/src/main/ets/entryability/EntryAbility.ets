@@ -33,6 +33,8 @@ import { BackgroundWorkerLockApi } from '../plugins/Background/BackgroundWorkerL
 import ImmichPlugin from '../plugins/core/ImmichPlugin';
 import HomeWidgetPlugin from '../plugins/widget/HomeWidgetPlugin';
 import { AbilityConstant, Want } from '@kit.AbilityKit';
+import { NetworkApi } from '../plugins/core/Network.g';
+import { NetworkApiImpl } from '../plugins/core/NetworkApiImpl';
 
 export default class EntryAbility extends FlutterAbility {
   private pendingDeepLink: string | null = null;
@@ -64,16 +66,18 @@ export default class EntryAbility extends FlutterAbility {
     let messenger = flutterEngine.dartExecutor.getBinaryMessenger();
     let nativeSyncApiImpl = new MessagesImplBase(super.getAbility().context);
     let localImageApiImpl = new LocalImagesImpl(super.getAbility().context);
-    let remoteImageApiImpl = new RemoteImagesImpl();
+    let remoteImageApiImpl = new RemoteImagesImpl(ctx.getApplicationContext());
     let backgroundWorkerApiImpl = new BackgroundWorkerApiImpl(ctx.getApplicationContext());
     let connectivityApiImpl = new ConnectivityApiImpl(ctx.getApplicationContext());
     let backgroundEngineLock = new BackgroundEngineLock(ctx.getApplicationContext())
+    let networkApiImpl = new NetworkApiImpl(super.getAbility().context);
     NativeSyncApiOhos.setup(messenger, nativeSyncApiImpl)
     LocalImageApiOhos.setup(messenger, localImageApiImpl);
     RemoteImageApiOhos.setup(messenger, remoteImageApiImpl);
     BackgroundWorkerFgHostApi.setup(messenger,backgroundWorkerApiImpl);
     ConnectivityApi.setup(messenger,connectivityApiImpl);
     BackgroundWorkerLockApi.setup(messenger,backgroundEngineLock);
+    NetworkApi.setup(messenger, networkApiImpl);
 
     const constraints: workScheduler.WorkInfo = BackgroundWorkerApiImpl.BACKGROUND_WORKER_INFO;
     try {
