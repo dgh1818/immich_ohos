@@ -21,6 +21,7 @@ import 'package:flutter/foundation.dart';
 
 class LocalSyncService {
   final DriftLocalAlbumRepository _localAlbumRepository;
+  // ignore: unused_field
   final DriftLocalAssetRepository _localAssetRepository;
   final NativeSyncApiOhos _nativeSyncApi;
   final DriftTrashedLocalAssetRepository _trashedLocalAssetRepository;
@@ -55,8 +56,8 @@ class LocalSyncService {
       }
 
       if (CurrentPlatform.isIOS || defaultTargetPlatform == TargetPlatform.ohos) {
-        final assets = await _localAssetRepository.getEmptyCloudIdAssets();
-        await _mapIosCloudIds(assets);
+        // final assets = await _localAssetRepository.getEmptyCloudIdAssets();
+        // await _mapIosCloudIds(assets);
       }
 
       if (full || await _nativeSyncApi.shouldFullSync()) {
@@ -112,7 +113,6 @@ class LocalSyncService {
           }
           await updateAlbum(dbAlbum, album);
         }
-
       }
       await _mapIosCloudIds(newAssets);
       await _nativeSyncApi.checkpointSync();
@@ -315,27 +315,28 @@ class LocalSyncService {
     return true;
   }
 
+  // ignore: avoid-unused-parameters
   Future<void> _mapIosCloudIds(List<LocalAsset> assets) async {
-    if ((!(CurrentPlatform.isIOS || defaultTargetPlatform == TargetPlatform.ohos)) || assets.isEmpty) {
-      return;
-    }
+    // if ((!(CurrentPlatform.isIOS || defaultTargetPlatform == TargetPlatform.ohos)) || assets.isEmpty) {
+    return;
+    // }
 
-    final assetIds = assets.map((a) => a.id).toList();
-    final cloudMapping = <String, String>{};
-    final cloudIds = await _nativeSyncApi.getCloudIdForAssetIds(assetIds);
-    for (int i = 0; i < cloudIds.length; i++) {
-      final cloudIdResult = cloudIds[i];
-      if (cloudIdResult.cloudId != null) {
-        cloudMapping[cloudIdResult.assetId] = cloudIdResult.cloudId!;
-      } else {
-        final asset = assets.firstWhereOrNull((a) => a.id == cloudIdResult.assetId);
-        _log.fine(
-          "Cannot fetch cloudId for asset with id: ${cloudIdResult.assetId}, name: ${asset?.name}, createdAt: ${asset?.createdAt}. Error: ${cloudIdResult.error ?? "unknown"}",
-        );
-      }
-    }
+    // final assetIds = assets.map((a) => a.id).toList();
+    // final cloudMapping = <String, String>{};
+    // final cloudIds = await _nativeSyncApi.getCloudIdForAssetIds(assetIds);
+    // for (int i = 0; i < cloudIds.length; i++) {
+    //   final cloudIdResult = cloudIds[i];
+    //   if (cloudIdResult.cloudId != null) {
+    //     cloudMapping[cloudIdResult.assetId] = cloudIdResult.cloudId!;
+    //   } else {
+    //     final asset = assets.firstWhereOrNull((a) => a.id == cloudIdResult.assetId);
+    //     _log.fine(
+    //       "Cannot fetch cloudId for asset with id: ${cloudIdResult.assetId}, name: ${asset?.name}, createdAt: ${asset?.createdAt}. Error: ${cloudIdResult.error ?? "unknown"}",
+    //     );
+    //   }
+    // }
 
-    await _localAlbumRepository.updateCloudMapping(cloudMapping);
+    // await _localAlbumRepository.updateCloudMapping(cloudMapping);
   }
 
   bool _assetsEqual(LocalAsset a, LocalAsset b) {
