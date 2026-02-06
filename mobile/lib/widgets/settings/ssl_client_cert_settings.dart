@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -75,7 +77,18 @@ class _SslClientCertSettingsState extends State<SslClientCertSettings> {
         confirm: "confirm".tr(),
       );
       final cert = await networkApi.selectCertificate(styling);
-      await SSLClientCertStoreVal(cert.data, cert.password).save();
+      String password = cert.password;
+      if (Platform.isOhos) {
+        if (password.isEmpty) {
+          final entered = await _promptForPassword(styling);
+          if (entered == null) {
+            return;
+          }
+          password = entered;
+        }
+        await networkApi.addCertificate(ClientCertData(data: cert.data, password: password));
+      }
+      await SSLClientCertStoreVal(cert.data, password).save();
       HttpSSLOptions.apply();
       setState(() => isCertExist = true);
       showMessage("client_cert_import_success_msg".tr());
@@ -105,4 +118,44 @@ class _SslClientCertSettingsState extends State<SslClientCertSettings> {
   }
 
   bool _isCancellation(Object e) => e is PlatformException && e.code.toLowerCase().contains("cancel");
+
+  Future<String?> _promptForPassword(ClientCertPrompt prompt) async {
+    final controller = TextEditingController();
+    return showDialog<String>(
+      context: context,
+      barrierDismissible: true,
+      builder: (context) {
+        return AlertDialog(
+          title: Text(prompt.title),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (prompt.message.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Text(prompt.message),
+                ),
+              TextField(
+                controller: controller,
+                autofocus: true,
+                obscureText: true,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text(prompt.cancel),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(controller.text),
+              child: Text(prompt.confirm),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
 }

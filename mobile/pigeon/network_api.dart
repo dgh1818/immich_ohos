@@ -21,9 +21,10 @@ class ClientCertPrompt {
     dartOut: 'lib/platform/network_api.g.dart',
     swiftOut: 'ios/Runner/Core/Network.g.swift',
     swiftOptions: SwiftOptions(includeErrorClass: false),
-    kotlinOut:
-        'android/app/src/main/kotlin/app/alextran/immich/core/Network.g.kt',
+    kotlinOut: 'android/app/src/main/kotlin/app/alextran/immich/core/Network.g.kt',
     kotlinOptions: KotlinOptions(package: 'app.alextran.immich.core', includeErrorClass: true),
+    arkTSOut: 'ohos/entry/src/main/ets/plugins/core/Network.g.ets',
+    arkTSOptions: ArkTSOptions(),
     dartOptions: DartOptions(),
     dartPackageName: 'immich_mobile',
   ),
