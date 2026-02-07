@@ -195,10 +195,13 @@ class BackgroundUploadService {
 
     await _storageRepository.clearCache();
     await _uploadRepository.reset(kBackupGroup);
+    await _uploadRepository.reset(kBackupLivePhotoGroup);
     await _uploadRepository.deleteDatabaseRecords(kBackupGroup);
+    await _uploadRepository.deleteDatabaseRecords(kBackupLivePhotoGroup);
 
     final activeTasks = await _uploadRepository.getActiveTasks(kBackupGroup);
-    return activeTasks.length;
+    final activeLivePhotoTasks = await _uploadRepository.getActiveTasks(kBackupLivePhotoGroup);
+    return activeTasks.length + activeLivePhotoTasks.length;
   }
 
   /// Resume background backup processing

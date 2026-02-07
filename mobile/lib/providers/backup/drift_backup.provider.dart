@@ -250,6 +250,7 @@ class DriftBackupNotifier extends StateNotifier<DriftBackupState> {
     if (!Platform.isOhos) {
       return;
     }
+    // Keep the continuous task alive for hash runs; hash service stops it when hash completes.
     if (_ref.read(syncStatusProvider).isHashing) {
       return;
     }
@@ -470,17 +471,27 @@ class DriftBackupNotifier extends StateNotifier<DriftBackupState> {
   }
 
   Future<void> startForegroundBackup(String userId) async {
-    // Cancel any existing backup before starting a new one
-    if (state.cancelToken != null) {
-      await stopForegroundBackup();
+    if (state.cancelToken != null && !state.cancelToken!.isCancelled) {
+      _logger.info("Skip startForegroundBackup: backup is already starting or running");
+      return;
+    }
+    await getBackupStatus(userId);
+    if (Platform.isOhos || Platform.isIOS) {
+      final backupTasks = await _backgroundUploadService.getActiveTasks(kBackupGroup);
+      final livePhotoTasks = await _backgroundUploadService.getActiveTasks(kBackupLivePhotoGroup);
+      if (backupTasks.isNotEmpty || livePhotoTasks.isNotEmpty) {
+        _backgroundEnqueueCompleted = true;
+        await _startOhosBackgroundTransfer();
+        await _backgroundUploadService.resume();
+        _logger.info("Skip startForegroundBackup: resumed existing background upload tasks");
+        return;
+      }
     }
 
-    state = state.copyWith(error: BackupError.none);
+    final cancelToken = CancellationToken();
+    state = state.copyWith(error: BackupError.none, cancelToken: cancelToken);
 
     await _startOhosBackgroundTransfer();
-
-    final cancelToken = CancellationToken();
-    state = state.copyWith(cancelToken: cancelToken);
 
     try {
       await _foregroundUploadService.uploadCandidates(
@@ -494,6 +505,7 @@ class DriftBackupNotifier extends StateNotifier<DriftBackupState> {
         ),
       );
     } finally {
+      cancelToken.cancel();
       if (mounted) {
         unawaited(_stopOhosBackgroundTransfer(checkActiveTasks: false));
       }

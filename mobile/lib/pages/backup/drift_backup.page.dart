@@ -18,6 +18,7 @@ import 'package:immich_mobile/providers/backup/drift_backup.provider.dart';
 import 'package:immich_mobile/providers/sync_status.provider.dart';
 import 'package:immich_mobile/providers/user.provider.dart';
 import 'package:immich_mobile/routing/router.dart';
+import 'package:immich_mobile/services/background_upload.service.dart';
 import 'package:immich_mobile/widgets/backup/backup_info_card.dart';
 import 'package:logging/logging.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
@@ -108,6 +109,7 @@ class _DriftBackupPageState extends ConsumerState<DriftBackupPage> {
     }
 
     Future<void> stopBackup() async {
+      await ref.read(backgroundUploadServiceProvider).cancel();
       await backupNotifier.stopForegroundBackup();
     }
 

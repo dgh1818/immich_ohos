@@ -152,6 +152,8 @@ async function getAssetIdsForAlbumTask(
     const assetForAlbumfetchColumns: string[] = [
       photoAccessHelper.PhotoKeys.URI,
       photoAccessHelper.PhotoKeys.POSITION,
+      photoAccessHelper.PhotoKeys.OWNER_ALBUM_ID,
+
     ];
     const specialAlbumLpaths = new Set<string>([
       '/DCIM/Camera',
@@ -255,7 +257,8 @@ async function getAssetsForAlbumTask(
       photoAccessHelper.PhotoKeys.DURATION,
       photoAccessHelper.PhotoKeys.ORIENTATION,
       photoAccessHelper.PhotoKeys.FAVORITE,
-      photoAccessHelper.PhotoKeys.POSITION
+      photoAccessHelper.PhotoKeys.POSITION,
+      photoAccessHelper.PhotoKeys.OWNER_ALBUM_ID
     ];
     const specialAlbumLpaths = new Set<string>([
       '/DCIM/Camera',
@@ -389,6 +392,7 @@ export class MessagesImplBase extends NativeSyncApiOhos {
       fetchColumns: [
         photoAccessHelper.PhotoKeys.URI,
         photoAccessHelper.PhotoKeys.POSITION,
+        photoAccessHelper.PhotoKeys.OWNER_ALBUM_ID,
       ],
       predicates: predicates,
     };
@@ -558,7 +562,8 @@ export class MessagesImplBase extends NativeSyncApiOhos {
       photoAccessHelper.PhotoKeys.HEIGHT,
       photoAccessHelper.PhotoKeys.DURATION,
       photoAccessHelper.PhotoKeys.ORIENTATION,
-      photoAccessHelper.PhotoKeys.FAVORITE
+      photoAccessHelper.PhotoKeys.FAVORITE,
+      photoAccessHelper.PhotoKeys.OWNER_ALBUM_ID
     ],
     extraPredicates?: dataSharePredicates.DataSharePredicates
   ): Promise<photoAccessHelper.FetchResult<photoAccessHelper.PhotoAsset> | null> {
@@ -723,7 +728,10 @@ export class MessagesImplBase extends NativeSyncApiOhos {
           const predicates = new dataSharePredicates.DataSharePredicates();
           predicates.equalTo(photoAccessHelper.PhotoKeys.OWNER_ALBUM_ID, ownerAlbumId);
           const fetchOptions: photoAccessHelper.FetchOptions = {
-            fetchColumns: [photoAccessHelper.PhotoKeys.URI],
+            fetchColumns: [
+              photoAccessHelper.PhotoKeys.URI,
+              photoAccessHelper.PhotoKeys.OWNER_ALBUM_ID,
+            ],
             predicates: predicates
           };
           const fetchResult = await phAccessHelper.getAssets(fetchOptions);
@@ -818,6 +826,7 @@ export class MessagesImplBase extends NativeSyncApiOhos {
       photoAccessHelper.PhotoKeys.DATE_ADDED,
       photoAccessHelper.PhotoKeys.POSITION,
       photoAccessHelper.PhotoKeys.DATE_MODIFIED,
+      photoAccessHelper.PhotoKeys.OWNER_ALBUM_ID,
     ];
 
     let count: number = 0;
@@ -933,6 +942,10 @@ export class MessagesImplBase extends NativeSyncApiOhos {
       result.success(0);
       return;
     }
+    if (this.liveNotificationId >= 0) {
+      result.success(this.liveNotificationId);
+      return;
+    }
 
     const wantAgentInfo: wantAgent.WantAgentInfo = {
       wants: [
@@ -949,20 +962,25 @@ export class MessagesImplBase extends NativeSyncApiOhos {
     try {
       wantAgent.getWantAgent(wantAgentInfo).then((wantAgentObj: WantAgent) => {
         let list: Array<string> = ["dataTransfer"];
-        if(deviceInfo.sdkApiVersion>=21) {
+        if (deviceInfo.sdkApiVersion >= 21) {
           backgroundTaskManager.startBackgroundRunning(
             this.ctx!,
             list,
             wantAgentObj,
           ).then((res: backgroundTaskManager.ContinuousTaskNotification) => {
             console.info("Operation startBackgroundRunning succeeded");
-            // 对于上传下载类的长时任务，应用可以使用res中返回的notificationId来更新通知，比如发送带进度条的模板通知
             this.liveNotificationId = res.notificationId;
+            if (this.liveNotificationId <= 0) {
+              this.liveNotificationId = -1;
+              result.success(0);
+              return;
+            }
             result.success(this.liveNotificationId);
           }).catch((error: BusinessError) => {
-            result.success(0);
             console.error(`Operation startBackgroundRunning failed. code is ${error.code} message is ${error.message}`);
-          });;
+            this.liveNotificationId = -1;
+            result.success(0);
+          });
         } else {
           backgroundTaskManager.startBackgroundRunning(
             this.ctx!,
@@ -971,6 +989,7 @@ export class MessagesImplBase extends NativeSyncApiOhos {
             (err: BusinessError | undefined) => {
               if (err) {
                 console.error(`Failed to startBackgroundRunning. Code=${err.code} msg=${err.message}`);
+                this.liveNotificationId = -1;
                 result.success(0);
                 return;
               }
@@ -979,16 +998,17 @@ export class MessagesImplBase extends NativeSyncApiOhos {
               result.success(this.liveNotificationId);
             }
           );
-        };
+        }
       }).catch((err: BusinessError) => {
         console.error(`getWantAgent failed code=${err.code} msg=${err.message}`);
+        this.liveNotificationId = -1;
         result.success(0);
       });
     } catch (e) {
       const err = e as BusinessError;
-      result.success(0);
-      this.ctx.getApplicationContext().cacheDir
       console.error(`startBackgroundRunning failed code=${err.code} msg=${err.message}`);
+      this.liveNotificationId = -1;
+      result.success(0);
     }
   }
 
@@ -997,6 +1017,10 @@ export class MessagesImplBase extends NativeSyncApiOhos {
    */
   public override async updateBackgroundTransferProgress(progress: number , title: string , fileName: string , result: Result<void>) {
     const targetId = this.liveNotificationId;
+    if (targetId < 0) {
+      result.success();
+      return;
+    }
 
     let request: notificationManager.NotificationRequest = {
       id: targetId,
@@ -1031,6 +1055,8 @@ export class MessagesImplBase extends NativeSyncApiOhos {
    */
   public override async stopBackgroundTransfer(result: Result<void>) {
     if (!this.ctx) {
+      this.liveNotificationId = -1;
+      this.continuousTaskId = 0;
       result.success();
       return;
     }
@@ -1046,14 +1072,13 @@ export class MessagesImplBase extends NativeSyncApiOhos {
 
     try {
       await backgroundTaskManager.stopBackgroundRunning(this.ctx);
+    } catch (_) {
+      // Ignore repeated stop and verification errors.
+    } finally {
       this.liveNotificationId = -1;
       this.continuousTaskId = 0;
-      result.success();
-    } catch (e) {
-      const err = e as BusinessError;
-      result.success();
-      console.error(`stopBackgroundRunning fail code=${err.code} msg=${err.message}`);
     }
+    result.success();
   }
 
   public override async getAssetsForAlbum(albumId: string, updatedTimeCond?: number, result?: Result<Array<PlatformAsset>>) {

@@ -149,7 +149,7 @@ class AppLifeCycleNotifier extends StateNotifier<AppLifeCycleEnum> {
       return;
     }
 
-    _ref.read(backupProvider.notifier).cancelBackup();
+    // _ref.read(backupProvider.notifier).cancelBackup();
     unawaited(_ref.read(backgroundWorkerLockServiceProvider).lock());
 
     // Give isolates time to complete any ongoing database transactions
@@ -259,7 +259,7 @@ class AppLifeCycleNotifier extends StateNotifier<AppLifeCycleEnum> {
           _ref.read(backupProvider.notifier).cancelBackup();
         }
       } else {
-        await _ref.read(driftBackupProvider.notifier).stopForegroundBackup();
+        //await _ref.read(driftBackupProvider.notifier).stopForegroundBackup();
       }
 
       _ref.read(websocketProvider.notifier).disconnect();

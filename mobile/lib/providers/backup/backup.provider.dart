@@ -515,7 +515,7 @@ class BackupNotifier extends StateNotifier<BackUpState> {
     if (state.backupProgress != BackUpProgressEnum.inProgress) {
       notifyBackgroundServiceCanRun();
     }
-    if (Platform.isOhos) {
+    if (Platform.isOhos && !Store.isBetaTimelineEnabled) {
       try {
         ref.read(nativeSyncApiProvider).stopBackgroundTransfer();
       } catch (_) {

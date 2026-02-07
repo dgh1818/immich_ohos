@@ -15,6 +15,7 @@ import 'package:immich_mobile/providers/backup/drift_backup.provider.dart';
 import 'package:immich_mobile/providers/infrastructure/platform.provider.dart';
 import 'package:immich_mobile/providers/user.provider.dart';
 import 'package:immich_mobile/services/app_settings.service.dart';
+import 'package:immich_mobile/services/background_upload.service.dart';
 import 'package:immich_mobile/widgets/backup/drift_album_info_list_tile.dart';
 import 'package:immich_mobile/widgets/common/search_field.dart';
 import 'package:logging/logging.dart';
@@ -108,22 +109,25 @@ class _DriftBackupAlbumSelectionPageState extends ConsumerState<DriftBackupAlbum
           final backupNotifier = ref.read(driftBackupProvider.notifier);
           final backgroundSync = ref.read(backgroundSyncProvider);
           final nativeSync = ref.read(nativeSyncApiProvider);
+          final backgroundUploadService = ref.read(backgroundUploadServiceProvider);
           if (totalChanged) {
             // Waits for hashing to be cancelled before starting a new one
             unawaited(nativeSync.cancelHashing().whenComplete(() => backgroundSync.hashAssets()));
-            if (isBackupEnabled) {
-              unawaited(
-                backupNotifier.stopForegroundBackup().whenComplete(
-                  () => backgroundSync.syncRemote().then((success) {
-                    if (success) {
-                      return backupNotifier.startForegroundBackup(user.id);
-                    } else {
-                      Logger('DriftBackupAlbumSelectionPage').warning('Background sync failed, not starting backup');
-                    }
-                  }),
-                ),
-              );
-            }
+            unawaited(
+              backgroundUploadService.cancel().whenComplete(
+                () => backupNotifier.stopForegroundBackup().whenComplete(() {
+                  if (isBackupEnabled) {
+                    return backgroundSync.syncRemote().then((success) {
+                      if (success) {
+                        return backupNotifier.startForegroundBackup(user.id);
+                      } else {
+                        Logger('DriftBackupAlbumSelectionPage').warning('Background sync failed, not starting backup');
+                      }
+                    });
+                  }
+                }),
+              ),
+            );
           }
 
           Navigator.of(context).pop();

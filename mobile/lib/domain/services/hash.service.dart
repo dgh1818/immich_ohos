@@ -14,7 +14,7 @@ import 'package:immich_mobile/entities/store.entity.dart';
 import 'package:background_downloader/background_downloader.dart';
 
 import 'dart:io';
-import 'package:flutter/foundation.dart';
+
 import 'package:wakelock_plus/wakelock_plus.dart';
 import 'package:immich_mobile/platform/native_sync_api_ohos.g.dart';
 
@@ -49,6 +49,7 @@ class HashService {
   bool _startedBackgroundTransfer = false;
 
   Future<void> hashAssets() async {
+    _startedBackgroundTransfer = false;
     _log.info("Starting hashing of assets");
 
     //hash资产时避免息屏
