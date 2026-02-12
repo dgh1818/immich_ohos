@@ -32,7 +32,7 @@ class LocalThumbProvider extends CancellableImageProvider<LocalThumbProvider>
         DiagnosticsProperty<String>('Id', key.id),
         DiagnosticsProperty<Size>('Size', key.size),
       ],
-      onDispose: cancel,
+      onLastListenerRemoved: cancel,
     );
   }
 
@@ -77,7 +77,7 @@ class LocalFullImageProvider extends CancellableImageProvider<LocalFullImageProv
         DiagnosticsProperty<String>('Id', key.id),
         DiagnosticsProperty<Size>('Size', key.size),
       ],
-      onDispose: cancel,
+      onLastListenerRemoved: cancel,
     );
   }
 

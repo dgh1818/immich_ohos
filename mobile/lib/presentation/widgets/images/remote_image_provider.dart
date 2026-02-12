@@ -36,7 +36,7 @@ class RemoteImageProvider extends CancellableImageProvider<RemoteImageProvider>
         DiagnosticsProperty<ImageProvider>('Image provider', this),
         DiagnosticsProperty<String>('URL', key.url),
       ],
-      onDispose: cancel,
+      onLastListenerRemoved: cancel,
     );
   }
 
@@ -125,7 +125,7 @@ class RemoteFullImageProvider extends CancellableImageProvider<RemoteFullImagePr
         DiagnosticsProperty<ImageProvider>('Image provider', this),
         DiagnosticsProperty<String>('Asset Id', key.assetId),
       ],
-      onDispose: cancel,
+      onLastListenerRemoved: cancel,
     );
   }
 
