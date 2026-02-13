@@ -1052,6 +1052,11 @@ abstract class IntlKeys {
   static const editor_close_without_save_prompt = 'editor_close_without_save_prompt';
   static const editor_close_without_save_title = 'editor_close_without_save_title';
   static const editor_confirm_reset_all_changes = 'editor_confirm_reset_all_changes';
+  static const editor_discard_edits_confirm = 'editor_discard_edits_confirm';
+  static const editor_discard_edits_prompt = 'editor_discard_edits_prompt';
+  static const editor_discard_edits_title = 'editor_discard_edits_title';
+  static const editor_edits_applied_error = 'editor_edits_applied_error';
+  static const editor_edits_applied_success = 'editor_edits_applied_success';
   static const editor_flip_horizontal = 'editor_flip_horizontal';
   static const editor_flip_vertical = 'editor_flip_vertical';
   static const editor_orientation = 'editor_orientation';
