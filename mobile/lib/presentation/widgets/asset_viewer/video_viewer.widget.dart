@@ -582,7 +582,7 @@ class VideoViewer extends HookConsumerWidget {
         return false;
       }
 
-      if (DateTime.now().difference(seekAt) > const Duration(seconds: 1)) {
+      if (DateTime.now().difference(seekAt) > const Duration(seconds: 2)) {
         pendingSeekTarget.value = null; //seekto两秒以后开始正常更新进度
         pendingSeekAt.value = null;
         return false;
