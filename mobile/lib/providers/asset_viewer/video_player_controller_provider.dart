@@ -17,7 +17,10 @@ part 'video_player_controller_provider.g.dart';
 @riverpod
 Future<VideoPlayerController> videoPlayerController(VideoPlayerControllerRef ref, {required Asset asset}) async {
   late VideoPlayerController controller;
-  if (asset.isLocal && asset.livePhotoVideoId == null) {
+  final preferRemote = Store.get(StoreKey.preferRemoteImage, true);
+  final shouldUseLocal = asset.isLocal && asset.livePhotoVideoId == null && (!preferRemote || !asset.isRemote);
+
+  if (shouldUseLocal) {
     // Use a local file for the video player controller
     //final file = await asset.local!.file;
     final nativeSyncApi = NativeSyncApiOhos();
@@ -27,9 +30,13 @@ Future<VideoPlayerController> videoPlayerController(VideoPlayerControllerRef ref
   } else {
     // Use a network URL for the video player controller
     final serverEndpoint = Store.get(StoreKey.serverEndpoint);
+    final remoteId = asset.remoteId;
+    if (asset.livePhotoVideoId == null && remoteId == null) {
+      throw Exception('No remote id found for video playback');
+    }
     final String videoUrl = asset.livePhotoVideoId != null
         ? '$serverEndpoint/assets/${asset.livePhotoVideoId}/video/playback'
-        : '$serverEndpoint/assets/${asset.remoteId}/video/playback';
+        : '$serverEndpoint/assets/$remoteId/video/playback';
 
     final url = Uri.parse(videoUrl);
     controller = VideoPlayerController.networkUrl(
