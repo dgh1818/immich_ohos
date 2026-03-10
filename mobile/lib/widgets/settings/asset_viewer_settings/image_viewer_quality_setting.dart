@@ -14,6 +14,7 @@ class ImageViewerQualitySetting extends HookConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final isPreview = useAppSettingsState(AppSettingsEnum.loadPreview);
     final isOriginal = useAppSettingsState(AppSettingsEnum.loadOriginal);
+    final imageHdr = useAppSettingsState(AppSettingsEnum.imageHdr);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -33,6 +34,12 @@ class ImageViewerQualitySetting extends HookConsumerWidget {
           valueNotifier: isOriginal,
           title: "setting_image_viewer_original_title".t(context: context),
           subtitle: "setting_image_viewer_original_subtitle".t(context: context),
+          onChanged: (_) => ref.invalidate(appSettingsServiceProvider),
+        ),
+        SettingsSwitchListTile(
+          valueNotifier: imageHdr,
+          title: "图片 HDR",
+          subtitle: "在支持 HDR 的设备上以 HDR 方式显示图片",
           onChanged: (_) => ref.invalidate(appSettingsServiceProvider),
         ),
       ],

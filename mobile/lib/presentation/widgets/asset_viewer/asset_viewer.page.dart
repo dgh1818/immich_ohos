@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:auto_route/auto_route.dart';
-import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -36,11 +35,10 @@ import 'package:immich_mobile/widgets/common/immich_loading_indicator.dart';
 import 'package:immich_mobile/widgets/photo_view/photo_view.dart';
 import 'package:immich_mobile/widgets/photo_view/photo_view_gallery.dart';
 
-import 'dart:ui' as ui;
-import 'package:immich_mobile/infrastructure/loaders/image_request.dart';
 import 'package:immich_mobile/main.dart';
 import 'package:immich_mobile/domain/models/setting.model.dart';
 import 'package:immich_mobile/domain/services/setting.service.dart';
+import 'package:immich_mobile/utils/viewer_hdr.dart';
 
 @RoutePage()
 class AssetViewerPage extends StatelessWidget {
@@ -152,6 +150,9 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
 
   KeepAliveLink? _stackChildrenKeepAlive;
 
+  bool get _isImageHdrEnabled => AppSetting.get(Setting.imageHdr);
+  bool get _isVideoHdrEnabled => AppSetting.get(Setting.videoHdr);
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -181,9 +182,9 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
     bottomSheetController = DraggableScrollableController();
 
     routeAware = _MyRouteAware();
-    ui.SetHdr.enableHdr(enable_hdr: true);
+    ViewerHdr.enableEngine(imageEnabled: _isImageHdrEnabled, videoEnabled: _isVideoHdrEnabled);
 
-    WidgetsBinding.instance.addPostFrameCallback((_onAssetInit) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
       _onAssetChanged(widget.initialIndex);
 
       final modalRoute = ModalRoute.of(context);
@@ -265,13 +266,10 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
     ImageStream stream = provider.resolve(ImageConfiguration.empty);
 
     imageListener = ImageStreamListener((ImageInfo info, bool synchronousCall) {
-      if (info.image.colorSpace == ui.ColorSpace.extendedSRGB) {
-        ui.SetHdr.setHdrMode(hdr: 1, is_image: true);
-        imageHdrState = 1;
-      } else {
-        ui.SetHdr.setHdrMode(hdr: 0, is_image: true);
-        imageHdrState = -1;
-      }
+      imageHdrState = ViewerHdr.applyImageMode(
+        enabled: _isImageHdrEnabled,
+        hdr: ViewerHdr.imageModeFromColorSpace(info.image.colorSpace),
+      );
     }, onError: (_, __) {});
 
     currentImageProvider = provider;
@@ -295,14 +293,18 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
     }
 
     if (asset.isImage) {
-      final provider = getFullImageProvider(asset);
-      setDisplayMode(provider, context);
+      if (_isImageHdrEnabled) {
+        final provider = getFullImageProvider(asset);
+        setDisplayMode(provider, context);
+      } else {
+        imageHdrState = ViewerHdr.applyImageMode(enabled: _isImageHdrEnabled, hdr: 0);
+      }
     } else {
-      ui.SetHdr.setHdrMode(hdr: 0, is_image: true);
+      imageHdrState = ViewerHdr.applyImageMode(enabled: _isImageHdrEnabled, hdr: 0);
     }
 
     if (!asset.isImage) {
-      ui.SetHdr.setHdrMode(hdr: -1, is_image: false);
+      ViewerHdr.applyVideoMode(enabled: _isVideoHdrEnabled);
     }
 
     // This will trigger the pre-caching of adjacent assets ensuring
@@ -325,11 +327,6 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
     ref.read(assetViewerProvider.notifier).setAsset(asset);
 
     _delayedOperations.add(timer);
-  }
-
-  void _onAssetInit(Duration _) {
-    _precacheAssets(widget.initialIndex);
-    //_handleCasting();
   }
 
   void _onAssetChanged(int index) async {
@@ -687,8 +684,8 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
   }
 
   void _onLongPress(_, __, ___) {
-    ui.SetHdr.setHdrMode(hdr: 0, is_image: true);
-    ui.SetHdr.setHdrMode(hdr: -1, is_image: false);
+    imageHdrState = ViewerHdr.applyImageMode(enabled: _isImageHdrEnabled, hdr: 0);
+    ViewerHdr.applyVideoMode(enabled: _isVideoHdrEnabled);
     ref.read(assetViewerProvider.notifier).setControls(false);
     ref.read(isPlayingMotionVideoProvider.notifier).playing = true;
     lastPlayingState = 1;
@@ -737,10 +734,10 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
     if (displayAsset.isImage && !isPlayingMotionVideo) {
       if (lastPlayingState == 1) {
         if (imageHdrState == 1) {
-          ui.SetHdr.setHdrMode(hdr: 1, is_image: true);
+          imageHdrState = ViewerHdr.applyImageMode(enabled: _isImageHdrEnabled, hdr: 1);
         }
         if (imageHdrState == 0) {
-          ui.SetHdr.setHdrMode(hdr: 0, is_image: true);
+          imageHdrState = ViewerHdr.applyImageMode(enabled: _isImageHdrEnabled, hdr: 0);
         }
       }
 
@@ -918,7 +915,7 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
 class _MyRouteAware extends RouteAware {
   @override
   void didPop() {
-    ui.SetHdr.setHdrMode(hdr: 0, is_image: true);
+    ViewerHdr.resetModes();
     super.didPop();
   }
 }

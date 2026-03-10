@@ -15,6 +15,7 @@ class VideoViewerSettings extends HookConsumerWidget {
     final useLoopVideo = useAppSettingsState(AppSettingsEnum.loopVideo);
     final useOriginalVideo = useAppSettingsState(AppSettingsEnum.loadOriginalVideo);
     final useAutoPlayVideo = useAppSettingsState(AppSettingsEnum.autoPlayVideo);
+    final useVideoHdr = useAppSettingsState(AppSettingsEnum.videoHdr);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -39,6 +40,12 @@ class VideoViewerSettings extends HookConsumerWidget {
           valueNotifier: useOriginalVideo,
           title: "setting_video_viewer_original_video_title".t(context: context),
           subtitle: "setting_video_viewer_original_video_subtitle".t(context: context),
+          onChanged: (_) => ref.invalidate(appSettingsServiceProvider),
+        ),
+        SettingsSwitchListTile(
+          valueNotifier: useVideoHdr,
+          title: "视频 HDR",
+          subtitle: "在支持 HDR 的设备上以 HDR 方式播放视频",
           onChanged: (_) => ref.invalidate(appSettingsServiceProvider),
         ),
       ],

@@ -455,6 +455,8 @@ import 'package:immich_mobile/providers/asset_viewer/show_controls.provider.dart
 import 'package:immich_mobile/presentation/widgets/asset_viewer/video_viewer_controller_provider.dart';
 import 'package:immich_mobile/providers/asset_viewer/video_player_controls_provider.dart';
 import 'package:immich_mobile/providers/asset_viewer/video_player_value_provider.dart';
+import 'package:immich_mobile/providers/app_settings.provider.dart';
+import 'package:immich_mobile/services/app_settings.service.dart';
 import 'package:immich_mobile/widgets/asset_viewer/video_player.dart';
 import 'package:immich_mobile/widgets/common/delayed_loading_indicator.dart';
 //import 'package:wakelock_plus/wakelock_plus.dart';
@@ -514,6 +516,8 @@ class VideoViewer extends HookConsumerWidget {
   @override
   build(BuildContext context, WidgetRef ref) {
     final controller = ref.watch(videoViewerControllerProvider(asset: asset)).value;
+    final preferRemote = ref.read(appSettingsServiceProvider).getSetting<bool>(AppSettingsEnum.preferRemoteImage);
+    final shouldUseLocal = asset.hasLocal && asset.livePhotoVideoId == null && (!preferRemote || !asset.hasRemote);
     // The last volume of the video used when mute is toggled
     final lastVolume = useState(0.5);
     final pendingSeekTarget = useRef<Duration?>(null); //待跳转的进度位置
@@ -645,10 +649,9 @@ class VideoViewer extends HookConsumerWidget {
       return bufferedExpiration.isAfter(DateTime.now());
     }
 
-    setMetadata(RemoteAsset asset) async {
+    setMetadata(String remoteId, String name, int durationMs) async {
       // if(asset.isMotionPhoto){
       // TO DO
-
       if (!isSessionValid()) {
         sessionKey = await _sessionsApiService.createSession(
           "Cast",
@@ -657,20 +660,15 @@ class VideoViewer extends HookConsumerWidget {
         );
       }
 
-      final unauthenticatedUrlThumb = getThumbnailUrlForRemoteId(asset.remoteId!);
+      final unauthenticatedUrlThumb = getThumbnailUrlForRemoteId(remoteId);
       final authenticatedURLThumb = "$unauthenticatedUrlThumb&sessionKey=${sessionKey?.token}";
 
-      final String unauthenticatedUrlVideo = getPlaybackUrlForRemoteId(asset.id);
+      final String unauthenticatedUrlVideo = getPlaybackUrlForRemoteId(remoteId);
       final authenticatedURLVideo = "$unauthenticatedUrlVideo&sessionKey=${sessionKey?.token}";
 
       if (controller != null) {
         castController = HuaweiCast(controller);
-        castController!.setMetadata(
-          authenticatedURLVideo,
-          authenticatedURLThumb,
-          asset.name,
-          asset.duration.inMilliseconds,
-        );
+        castController!.setMetadata(authenticatedURLVideo, authenticatedURLThumb, name, durationMs);
       }
     } //
 
@@ -684,8 +682,11 @@ class VideoViewer extends HookConsumerWidget {
         return null;
       }
 
-      if (asset.hasRemote) {
-        setMetadata(asset as RemoteAsset);
+      if (!shouldUseLocal) {
+        final remoteId = asset.remoteId;
+        if (remoteId != null) {
+          setMetadata(remoteId, asset.name, asset.duration.inMilliseconds);
+        }
       }
 
       // Hide the controls

@@ -4,7 +4,6 @@ import 'dart:math';
 import 'dart:ui' as ui;
 
 import 'package:auto_route/auto_route.dart';
-import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_hooks/flutter_hooks.dart' hide Store;
@@ -40,6 +39,7 @@ import 'package:immich_mobile/providers/asset_viewer/video_player_controller_pro
 import 'package:immich_mobile/main.dart';
 import 'package:immich_mobile/pages/common/video_viewer.page.dart';
 import 'package:immich_mobile/utils/cache/custom_image_cache.dart';
+import 'package:immich_mobile/utils/viewer_hdr.dart';
 
 int imageHdrState = -1;
 int lastPlayingState = 0;
@@ -82,6 +82,9 @@ class GalleryViewerPage extends HookConsumerWidget {
     }
 
     final shouldLoopVideo = useState(AppSettingsEnum.loopVideo.defaultValue);
+
+    bool isImageHdrEnabled() => ref.read(appSettingsServiceProvider).getSetting<bool>(AppSettingsEnum.imageHdr);
+    bool isVideoHdrEnabled() => ref.read(appSettingsServiceProvider).getSetting<bool>(AppSettingsEnum.videoHdr);
 
     final routeAware = useMemoized(() => _MyRouteAware());
     final imageListener = useRef<ImageStreamListener?>(null);
@@ -141,13 +144,10 @@ class GalleryViewerPage extends HookConsumerWidget {
       ImageStream stream = provider.resolve(ImageConfiguration.empty);
 
       imageListener.value = ImageStreamListener((ImageInfo info, bool synchronousCall) {
-        if (info.image.colorSpace == ui.ColorSpace.extendedSRGB) {
-          ui.SetHdr.setHdrMode(hdr: 1, is_image: true);
-          imageHdrState = 1;
-        } else {
-          ui.SetHdr.setHdrMode(hdr: 0, is_image: true);
-          imageHdrState = 0;
-        }
+        imageHdrState = ViewerHdr.applyImageMode(
+          enabled: isImageHdrEnabled(),
+          hdr: ViewerHdr.imageModeFromColorSpace(info.image.colorSpace),
+        );
       }, onError: (_, __) {});
 
       currentImageProvider.value = provider;
@@ -265,13 +265,15 @@ class GalleryViewerPage extends HookConsumerWidget {
     useEffect(() {
       final a = loadAsset(currentIndex.value);
       final ImageProvider provider = ImmichImage.imageProvider(asset: a);
-      ui.SetHdr.enableHdr(enable_hdr: true);
+      ViewerHdr.enableEngine(imageEnabled: isImageHdrEnabled(), videoEnabled: isVideoHdrEnabled());
       if (a.isImage) {
-        ui.SetHdr.setHdrMode(hdr: 0, is_image: true);
-        setDisplayMode(provider, context);
+        imageHdrState = ViewerHdr.applyImageMode(enabled: isImageHdrEnabled(), hdr: 0);
+        if (isImageHdrEnabled()) {
+          setDisplayMode(provider, context);
+        }
       } else {
-        ui.SetHdr.setHdrMode(hdr: 0, is_image: true);
-        ui.SetHdr.setHdrMode(hdr: -1, is_image: false);
+        imageHdrState = ViewerHdr.applyImageMode(enabled: isImageHdrEnabled(), hdr: 0);
+        ViewerHdr.applyVideoMode(enabled: isVideoHdrEnabled());
       }
 
       if (ref.read(showControlsProvider)) {
@@ -321,9 +323,9 @@ class GalleryViewerPage extends HookConsumerWidget {
         },
         onLongPressStart: asset.isMotionPhoto
             ? (_, __, ___) {
-                ui.SetHdr.setHdrMode(hdr: 0, is_image: true);
+                imageHdrState = ViewerHdr.applyImageMode(enabled: isImageHdrEnabled(), hdr: 0);
                 ref.read(isPlayingMotionVideoProvider.notifier).playing = true;
-                ui.SetHdr.setHdrMode(hdr: -1, is_image: false);
+                ViewerHdr.applyVideoMode(enabled: isVideoHdrEnabled());
                 lastPlayingState = 1;
               }
             : null,
@@ -401,10 +403,10 @@ class GalleryViewerPage extends HookConsumerWidget {
       if (newAsset.isImage && !isPlayingMotionVideo) {
         if (lastPlayingState == 1) {
           if (imageHdrState == 1) {
-            ui.SetHdr.setHdrMode(hdr: 1, is_image: true);
+            imageHdrState = ViewerHdr.applyImageMode(enabled: isImageHdrEnabled(), hdr: 1);
           }
           if (imageHdrState == 0) {
-            ui.SetHdr.setHdrMode(hdr: 0, is_image: true);
+            imageHdrState = ViewerHdr.applyImageMode(enabled: isImageHdrEnabled(), hdr: 0);
           }
         }
         lastPlayingState = 0;
@@ -452,10 +454,10 @@ class GalleryViewerPage extends HookConsumerWidget {
                   if (asset.isImage && !isPlayingMotionVideo) {
                     if (lastPlayingState == 1) {
                       if (imageHdrState == 1) {
-                        ui.SetHdr.setHdrMode(hdr: 1, is_image: true);
+                        imageHdrState = ViewerHdr.applyImageMode(enabled: isImageHdrEnabled(), hdr: 1);
                       }
                       if (imageHdrState == 0) {
-                        ui.SetHdr.setHdrMode(hdr: 0, is_image: true);
+                        imageHdrState = ViewerHdr.applyImageMode(enabled: isImageHdrEnabled(), hdr: 0);
                       }
                     }
                     lastPlayingState = 0;
@@ -508,9 +510,12 @@ class GalleryViewerPage extends HookConsumerWidget {
                   if (a.isImage) {
                     lastPlayingState = 0;
                     imageHdrState = -1;
-                    setDisplayMode(provider, context);
+                    imageHdrState = ViewerHdr.applyImageMode(enabled: isImageHdrEnabled(), hdr: 0);
+                    if (isImageHdrEnabled()) {
+                      setDisplayMode(provider, context);
+                    }
                   } else {
-                    ui.SetHdr.setHdrMode(hdr: 0, is_image: true);
+                    imageHdrState = ViewerHdr.applyImageMode(enabled: isImageHdrEnabled(), hdr: 0);
                   }
 
                   // Then precache the next image
@@ -519,7 +524,7 @@ class GalleryViewerPage extends HookConsumerWidget {
                   timers.value.add(
                     Timer(const Duration(milliseconds: 400), () {
                       if (!a.isImage) {
-                        ui.SetHdr.setHdrMode(hdr: -1, is_image: false);
+                        ViewerHdr.applyVideoMode(enabled: isVideoHdrEnabled());
                       }
                       precacheNextImage(next);
                     }),
@@ -602,7 +607,7 @@ class _MyRouteAware extends RouteAware {
 
   @override
   void didPop() {
-    ui.SetHdr.setHdrMode(hdr: 0, is_image: true);
+    ViewerHdr.resetModes();
     super.didPop();
   }
 
