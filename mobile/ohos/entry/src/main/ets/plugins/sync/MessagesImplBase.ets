@@ -702,7 +702,7 @@ export class MessagesImplBase extends NativeSyncApiOhos {
 
 
 
-      const path = entry.albumUri;
+      const path = entry.albumUri ?? '';
       let name = entry.albumName ?? '';
 
       const hasName = name.trim().length > 0;
@@ -723,11 +723,13 @@ export class MessagesImplBase extends NativeSyncApiOhos {
             break;
         }
       }
-      const updatedAt = deviceInfo.sdkApiVersion >= 23 ? entry.changeTime:-1;
-      const isCloud: boolean = false;
-      const assetCount = entry.count;
 
-      let album = new PlatformAlbum(path, name, entry.changeTime, isCloud, assetCount)
+
+      const updatedAt = deviceInfo.sdkApiVersion >= 23 ? entry.changeTime ?? -1 : -1;
+      const isCloud: boolean = false;
+      const assetCount = entry.count ?? 0;
+
+      let album = new PlatformAlbum(path, name, updatedAt, isCloud, assetCount)
       albums.push(album);
     }
 
@@ -742,11 +744,11 @@ export class MessagesImplBase extends NativeSyncApiOhos {
 
 
 
-      const path = entry.albumUri;
-      let name = entry.albumName;
-      const updatedAt = deviceInfo.sdkApiVersion >= 23 ? entry.changeTime:-1;;
+      const path = entry.albumUri ?? '';
+      let name = entry.albumName ?? '';
+      const updatedAt = (deviceInfo.sdkApiVersion >= 23 && entry.changeTime !== undefined) ? entry.changeTime : -1;
       const isCloud: boolean = false;
-      const assetCount = entry.count;
+      const assetCount = entry.count ?? 0;
 
       let album = new PlatformAlbum(path, name, updatedAt, isCloud, assetCount)
       albums.push(album);
@@ -763,11 +765,11 @@ export class MessagesImplBase extends NativeSyncApiOhos {
 
 
 
-      const path = entry.albumUri;
-      let name = entry.albumName;
-      const updatedAt = deviceInfo.sdkApiVersion >= 23 ? entry.changeTime:-1;
+      const path = entry.albumUri ?? '';
+      let name = entry.albumName ?? '';
+      const updatedAt = (deviceInfo.sdkApiVersion >= 23 && entry.changeTime !== undefined) ? entry.changeTime : -1;
       const isCloud: boolean = false;
-      const assetCount = entry.count;
+      const assetCount = entry.count ?? 0;
 
       let album = new PlatformAlbum(path, name, updatedAt, isCloud, assetCount)
       albums.push(album);
