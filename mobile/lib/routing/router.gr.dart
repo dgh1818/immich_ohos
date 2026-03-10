@@ -1206,10 +1206,17 @@ class DriftMapRoute extends PageRouteInfo<DriftMapRouteArgs> {
   DriftMapRoute({
     Key? key,
     LatLng? initialLocation,
+    String? initialAssetId,
+    String? initialAssetThumbhash,
     List<PageRouteInfo>? children,
   }) : super(
          DriftMapRoute.name,
-         args: DriftMapRouteArgs(key: key, initialLocation: initialLocation),
+         args: DriftMapRouteArgs(
+           key: key,
+           initialLocation: initialLocation,
+           initialAssetId: initialAssetId,
+           initialAssetThumbhash: initialAssetThumbhash,
+         ),
          initialChildren: children,
        );
 
@@ -1221,21 +1228,35 @@ class DriftMapRoute extends PageRouteInfo<DriftMapRouteArgs> {
       final args = data.argsAs<DriftMapRouteArgs>(
         orElse: () => const DriftMapRouteArgs(),
       );
-      return DriftMapPage(key: args.key, initialLocation: args.initialLocation);
+      return DriftMapPage(
+        key: args.key,
+        initialLocation: args.initialLocation,
+        initialAssetId: args.initialAssetId,
+        initialAssetThumbhash: args.initialAssetThumbhash,
+      );
     },
   );
 }
 
 class DriftMapRouteArgs {
-  const DriftMapRouteArgs({this.key, this.initialLocation});
+  const DriftMapRouteArgs({
+    this.key,
+    this.initialLocation,
+    this.initialAssetId,
+    this.initialAssetThumbhash,
+  });
 
   final Key? key;
 
   final LatLng? initialLocation;
 
+  final String? initialAssetId;
+
+  final String? initialAssetThumbhash;
+
   @override
   String toString() {
-    return 'DriftMapRouteArgs{key: $key, initialLocation: $initialLocation}';
+    return 'DriftMapRouteArgs{key: $key, initialLocation: $initialLocation, initialAssetId: $initialAssetId, initialAssetThumbhash: $initialAssetThumbhash}';
   }
 }
 

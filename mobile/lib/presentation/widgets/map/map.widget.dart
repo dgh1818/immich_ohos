@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:immich_mobile/domain/models/asset/base_asset.model.dart';
 import 'package:immich_mobile/domain/models/events.model.dart';
 import 'package:immich_mobile/domain/utils/event_stream.dart';
 import 'package:immich_mobile/extensions/asyncvalue_extensions.dart';
@@ -20,9 +21,9 @@ import 'package:immich_mobile/utils/async_mutex.dart';
 import 'package:immich_mobile/utils/debounce.dart';
 import 'package:immich_mobile/widgets/common/immich_toast.dart';
 import 'package:immich_mobile/widgets/map/map_theme_override.dart';
+import 'package:immich_mobile/widgets/map/positioned_asset_marker_icon.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 
-import 'package:flutter/services.dart';
 import 'package:immich_mobile/providers/infrastructure/map.provider.dart';
 import 'package:flutter/foundation.dart';
 import 'package:coordtransform_dart/coordtransform_dart.dart';
@@ -44,10 +45,29 @@ class CustomSourceProperties implements SourceProperties {
   }
 }
 
+class DriftMapSelectedAsset {
+  final String assetId;
+  final String? thumbhash;
+  final LatLng location;
+
+  const DriftMapSelectedAsset({required this.assetId, required this.location, this.thumbhash});
+}
+
 class DriftMap extends ConsumerStatefulWidget {
   final LatLng? initialLocation;
+  final bool showTimelineSheet;
+  final ValueListenable<DriftMapSelectedAsset?>? selectedAssetListenable;
+  final DriftMapSelectedAsset? pinnedAsset;
+  final ValueChanged<BaseAsset?>? onTimelineAssetChanged;
 
-  const DriftMap({super.key, this.initialLocation});
+  const DriftMap({
+    super.key,
+    this.initialLocation,
+    this.showTimelineSheet = true,
+    this.selectedAssetListenable,
+    this.pinnedAsset,
+    this.onTimelineAssetChanged,
+  });
 
   @override
   ConsumerState<DriftMap> createState() => _DriftMapState();
@@ -58,24 +78,59 @@ class _DriftMapState extends ConsumerState<DriftMap> {
   final _reloadMutex = AsyncMutex();
   final _debouncer = Debouncer(interval: const Duration(milliseconds: 500), maxWaitTime: const Duration(seconds: 2));
   final ValueNotifier<double> bottomSheetOffset = ValueNotifier(0.25);
+  final ValueNotifier<_MapSelectedMarker?> _pinnedMarker = ValueNotifier(null);
+  final ValueNotifier<_MapSelectedMarker?> _selectedMarker = ValueNotifier(null);
   StreamSubscription? _eventSubscription;
+  DriftMapSelectedAsset? _pinnedAsset;
+  DriftMapSelectedAsset? _pendingSelectedAsset;
+  DriftMapSelectedAsset? _selectedAsset;
 
   @override
   void initState() {
     super.initState();
     _eventSubscription = EventStream.shared.listen<MapMarkerReloadEvent>(_onEvent);
+    _pinnedAsset = widget.pinnedAsset;
+    widget.selectedAssetListenable?.addListener(_onSelectedAssetChanged);
   }
 
   @override
   void dispose() {
     _debouncer.dispose();
     bottomSheetOffset.dispose();
+    _pinnedMarker.dispose();
+    _selectedMarker.dispose();
     _eventSubscription?.cancel();
+    widget.selectedAssetListenable?.removeListener(_onSelectedAssetChanged);
     super.dispose();
+  }
+
+  @override
+  void didUpdateWidget(covariant DriftMap oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.pinnedAsset != widget.pinnedAsset) {
+      _pinnedAsset = widget.pinnedAsset;
+      if (_pinnedAsset == null) {
+        _pinnedMarker.value = null;
+      } else {
+        unawaited(_updatePinnedMarkerPosition(shouldAnimate: false));
+      }
+    }
+    if (oldWidget.selectedAssetListenable != widget.selectedAssetListenable) {
+      oldWidget.selectedAssetListenable?.removeListener(_onSelectedAssetChanged);
+      widget.selectedAssetListenable?.addListener(_onSelectedAssetChanged);
+    }
   }
 
   void onMapCreated(MapLibreMapController controller) {
     mapController = controller;
+    controller.addListener(() {
+      if (_selectedAsset != null || _pendingSelectedAsset != null) {
+        unawaited(_updateSelectedMarkerPosition(shouldAnimate: false, checkBounds: false));
+      }
+      if (_pinnedAsset != null) {
+        unawaited(_updatePinnedMarkerPosition(shouldAnimate: false, checkBounds: false));
+      }
+    });
   }
 
   void _onEvent(_) => _debouncer.run(() => setBounds(forceReload: true));
@@ -115,18 +170,10 @@ class _DriftMapState extends ConsumerState<DriftMap> {
       );
     }
 
-    if (defaultTargetPlatform == TargetPlatform.ohos && widget.initialLocation != null) {
-      final out = CoordinateTransformUtil.wgs84ToGcj02(
-        widget.initialLocation!.longitude,
-        widget.initialLocation!.latitude,
-      );
-      final LatLng centreProcessed = LatLng(out[1], out[0]);
-      final ByteData mapMarkData = await rootBundle.load("assets/location-pin.png");
-      await controller.addMarkerAtLatLng_Ohos(centreProcessed, mapMarkData, 0.15);
-    }
-
     _debouncer.run(() => setBounds(forceReload: true));
     controller.addListener(onMapMoved);
+    unawaited(_updatePinnedMarkerPosition(shouldAnimate: false));
+    unawaited(_updateSelectedMarkerPosition(shouldAnimate: false));
   }
 
   void onMapMoved() {
@@ -135,6 +182,8 @@ class _DriftMapState extends ConsumerState<DriftMap> {
     }
 
     _debouncer.run(setBounds);
+    unawaited(_updatePinnedMarkerPosition(shouldAnimate: false));
+    unawaited(_updateSelectedMarkerPosition(shouldAnimate: false));
   }
 
   LatLngBounds _toWgs84Bounds(LatLngBounds bounds) {
@@ -203,6 +252,85 @@ class _DriftMapState extends ConsumerState<DriftMap> {
     //await controller.setGeoJsonSource(MapUtils.defaultSourceId, markers);
   }
 
+  void _onSelectedAssetChanged() {
+    _pendingSelectedAsset = widget.selectedAssetListenable?.value;
+    if (_pendingSelectedAsset == null) {
+      _selectedAsset = null;
+      _selectedMarker.value = null;
+      return;
+    }
+    unawaited(_updateSelectedMarkerPosition(shouldAnimate: true));
+  }
+
+  LatLng _toMapCoordinate(LatLng location) {
+    if (defaultTargetPlatform != TargetPlatform.ohos) {
+      return location;
+    }
+    final out = CoordinateTransformUtil.wgs84ToGcj02(location.longitude, location.latitude);
+    return LatLng(out[1], out[0]);
+  }
+
+  Future<void> _updateSelectedMarkerPosition({bool shouldAnimate = true, bool checkBounds = true}) async {
+    final asset = _pendingSelectedAsset ?? _selectedAsset;
+    if (!mounted || asset == null) {
+      _selectedAsset = null;
+      _selectedMarker.value = null;
+      return;
+    }
+
+    await _updateMarkerPosition(
+      asset: asset,
+      target: _selectedMarker,
+      shouldAnimate: shouldAnimate,
+      checkBounds: checkBounds,
+    );
+
+    if (!mounted) {
+      return;
+    }
+
+    _selectedAsset = asset;
+    _pendingSelectedAsset = null;
+  }
+
+  Future<void> _updatePinnedMarkerPosition({bool shouldAnimate = true, bool checkBounds = true}) async {
+    await _updateMarkerPosition(
+      asset: _pinnedAsset,
+      target: _pinnedMarker,
+      shouldAnimate: shouldAnimate,
+      checkBounds: checkBounds,
+    );
+  }
+
+  Future<void> _updateMarkerPosition({
+    required DriftMapSelectedAsset? asset,
+    required ValueNotifier<_MapSelectedMarker?> target,
+    bool shouldAnimate = true,
+    bool checkBounds = true,
+  }) async {
+    if (!mounted || asset == null) {
+      target.value = null;
+      return;
+    }
+
+    final controller = mapController;
+    if (controller == null) {
+      return;
+    }
+
+    final processed = _toMapCoordinate(asset.location);
+    if (checkBounds) {
+      final bounds = await controller.getVisibleRegion();
+      if (!bounds.contains(processed)) {
+        target.value = null;
+        return;
+      }
+    }
+
+    final point = await controller.toScreenLocation(processed);
+    target.value = _MapSelectedMarker(point: point, asset: asset, shouldAnimate: shouldAnimate);
+  }
+
   Future<void> onZoomToLocation() async {
     final (location, error) = await MapUtils.checkPermAndGetLocation(context: context);
     if (error != null) {
@@ -228,11 +356,40 @@ class _DriftMapState extends ConsumerState<DriftMap> {
 
   @override
   Widget build(BuildContext context) {
+    Widget buildMarker(ValueListenable<_MapSelectedMarker?> markerListenable) {
+      return ValueListenableBuilder<_MapSelectedMarker?>(
+        valueListenable: markerListenable,
+        builder: (context, marker, _) {
+          if (marker == null) {
+            return const SizedBox.shrink();
+          }
+          return PositionedAssetMarkerIcon(
+            point: marker.point,
+            assetRemoteId: marker.asset.assetId,
+            assetThumbhash: marker.asset.thumbhash ?? '',
+            durationInMilliseconds: marker.shouldAnimate ? 100 : 0,
+          );
+        },
+      );
+    }
+
     return Stack(
       children: [
         _Map(initialLocation: widget.initialLocation, onMapCreated: onMapCreated, onMapReady: onMapReady),
-        _DynamicBottomSheet(bottomSheetOffset: bottomSheetOffset),
-        _DynamicMyLocationButton(onZoomToLocation: onZoomToLocation, bottomSheetOffset: bottomSheetOffset),
+        buildMarker(_pinnedMarker),
+        buildMarker(_selectedMarker),
+        if (widget.showTimelineSheet)
+          NotificationListener<DraggableScrollableNotification>(
+            onNotification: (notification) {
+              bottomSheetOffset.value = notification.extent;
+              return true;
+            },
+            child: MapBottomSheet(onScrollAssetChanged: widget.onTimelineAssetChanged),
+          ),
+        _DynamicMyLocationButton(
+          onZoomToLocation: onZoomToLocation,
+          bottomSheetOffset: widget.showTimelineSheet ? bottomSheetOffset : null,
+        ),
       ],
     );
   }
@@ -265,6 +422,7 @@ class _Map extends StatelessWidget {
               : CameraPosition(target: processedInitialLocation, zoom: MapUtils.mapZoomToAssetLevel),
           compassEnabled: false,
           rotateGesturesEnabled: false,
+          trackCameraPosition: true,
           styleString: style,
           onMapCreated: onMapCreated,
           onStyleLoadedCallback: onMapReady,
@@ -276,42 +434,37 @@ class _Map extends StatelessWidget {
   }
 }
 
-class _DynamicBottomSheet extends StatefulWidget {
-  final ValueNotifier<double> bottomSheetOffset;
-
-  const _DynamicBottomSheet({required this.bottomSheetOffset});
-
-  @override
-  State<_DynamicBottomSheet> createState() => _DynamicBottomSheetState();
-}
-
-class _DynamicBottomSheetState extends State<_DynamicBottomSheet> {
-  @override
-  Widget build(BuildContext context) {
-    return NotificationListener<DraggableScrollableNotification>(
-      onNotification: (notification) {
-        widget.bottomSheetOffset.value = notification.extent;
-        return true;
-      },
-      child: const MapBottomSheet(),
-    );
-  }
-}
-
 class _DynamicMyLocationButton extends StatelessWidget {
   const _DynamicMyLocationButton({required this.onZoomToLocation, required this.bottomSheetOffset});
 
   final VoidCallback onZoomToLocation;
-  final ValueNotifier<double> bottomSheetOffset;
+  final ValueListenable<double>? bottomSheetOffset;
 
   @override
   Widget build(BuildContext context) {
+    final bottomSheetOffset = this.bottomSheetOffset;
+    final isMobile = context.isMobile;
+    final right = isMobile ? 12.0 : 4.0;
+    final tabletBottomOffset = isMobile ? 0.0 : 96.0;
+    final staticBottom = (isMobile ? 20.0 : 8.0) + context.padding.bottom + tabletBottomOffset;
+    if (bottomSheetOffset == null) {
+      return Positioned(
+        right: right,
+        bottom: staticBottom,
+        child: ElevatedButton(
+          onPressed: onZoomToLocation,
+          style: ElevatedButton.styleFrom(shape: const CircleBorder()),
+          child: const Icon(Icons.my_location),
+        ),
+      );
+    }
+
     return ValueListenableBuilder<double>(
       valueListenable: bottomSheetOffset,
       builder: (context, offset, child) {
         return Positioned(
-          right: 20,
-          bottom: context.height * (offset - 0.02) + context.padding.bottom,
+          right: right,
+          bottom: context.height * (offset - 0.02) + context.padding.bottom + tabletBottomOffset,
           child: AnimatedOpacity(
             opacity: offset < 0.8 ? 1 : 0,
             duration: const Duration(milliseconds: 150),
@@ -325,4 +478,12 @@ class _DynamicMyLocationButton extends StatelessWidget {
       },
     );
   }
+}
+
+class _MapSelectedMarker {
+  final Point<num> point;
+  final DriftMapSelectedAsset asset;
+  final bool shouldAnimate;
+
+  const _MapSelectedMarker({required this.point, required this.asset, required this.shouldAnimate});
 }

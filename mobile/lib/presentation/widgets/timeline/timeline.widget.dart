@@ -25,6 +25,7 @@ import 'package:immich_mobile/providers/infrastructure/readonly_mode.provider.da
 import 'package:immich_mobile/providers/infrastructure/setting.provider.dart';
 import 'package:immich_mobile/providers/infrastructure/timeline.provider.dart';
 import 'package:immich_mobile/providers/timeline/multiselect.provider.dart';
+import 'package:immich_mobile/utils/debounce.dart';
 import 'package:immich_mobile/widgets/common/immich_sliver_app_bar.dart';
 import 'package:immich_mobile/widgets/common/mesmerizing_sliver_app_bar.dart';
 import 'package:immich_mobile/widgets/common/selection_sliver_app_bar.dart';
@@ -43,6 +44,8 @@ class Timeline extends StatelessWidget {
     this.snapToMonth = true,
     this.initialScrollOffset,
     this.readOnly = false,
+    this.onScrollAssetChanged,
+    this.tilesPerRowOverride,
   });
 
   final Widget? topSliverWidget;
@@ -56,6 +59,8 @@ class Timeline extends StatelessWidget {
   final bool snapToMonth;
   final double? initialScrollOffset;
   final bool readOnly;
+  final ValueChanged<BaseAsset?>? onScrollAssetChanged;
+  final int? tilesPerRowOverride;
 
   @override
   Widget build(BuildContext context) {
@@ -69,7 +74,7 @@ class Timeline extends StatelessWidget {
               (ref) => TimelineArgs(
                 maxWidth: constraints.maxWidth,
                 maxHeight: constraints.maxHeight,
-                columnCount: ref.watch(settingsProvider.select((s) => s.get(Setting.tilesPerRow))),
+                columnCount: tilesPerRowOverride ?? ref.watch(settingsProvider.select((s) => s.get(Setting.tilesPerRow))),
                 showStorageIndicator: showStorageIndicator,
                 withStack: withStack,
                 groupBy: groupBy,
@@ -85,6 +90,8 @@ class Timeline extends StatelessWidget {
             withScrubber: withScrubber,
             snapToMonth: snapToMonth,
             initialScrollOffset: initialScrollOffset,
+            onScrollAssetChanged: onScrollAssetChanged,
+            tilesPerRowOverride: tilesPerRowOverride,
           ),
         ),
       ),
@@ -112,6 +119,8 @@ class _SliverTimeline extends ConsumerStatefulWidget {
     this.withScrubber = true,
     this.snapToMonth = true,
     this.initialScrollOffset,
+    this.onScrollAssetChanged,
+    this.tilesPerRowOverride,
   });
 
   final Widget? topSliverWidget;
@@ -121,6 +130,8 @@ class _SliverTimeline extends ConsumerStatefulWidget {
   final bool withScrubber;
   final bool snapToMonth;
   final double? initialScrollOffset;
+  final ValueChanged<BaseAsset?>? onScrollAssetChanged;
+  final int? tilesPerRowOverride;
 
   @override
   ConsumerState createState() => _SliverTimelineState();
@@ -129,6 +140,9 @@ class _SliverTimeline extends ConsumerStatefulWidget {
 class _SliverTimelineState extends ConsumerState<_SliverTimeline> {
   late final ScrollController _scrollController;
   StreamSubscription? _eventSubscription;
+  late final Debouncer _scrollAssetDebouncer;
+  List<Segment>? _segmentsCache;
+  int? _lastScrollAssetIndex;
 
   // Drag selection state
   bool _dragging = false;
@@ -148,9 +162,16 @@ class _SliverTimelineState extends ConsumerState<_SliverTimeline> {
       initialScrollOffset: widget.initialScrollOffset ?? 0.0,
       onAttach: _restoreScalePosition,
     );
+    _scrollAssetDebouncer = Debouncer(
+      interval: const Duration(milliseconds: 150),
+      maxWaitTime: const Duration(milliseconds: 400),
+    );
+    _scrollController.addListener(_onScroll);
     _eventSubscription = EventStream.shared.listen(_onEvent);
 
-    final currentTilesPerRow = ref.read(settingsProvider).get(Setting.tilesPerRow);
+    final currentTilesPerRow = widget.tilesPerRowOverride ??
+        ref.read(settingsProvider).get(Setting.tilesPerRow) ??
+        Setting.tilesPerRow.defaultValue;
     _perRow = currentTilesPerRow;
     _scaleFactor = 7.0 - _perRow;
     _baseScaleFactor = _scaleFactor;
@@ -203,9 +224,72 @@ class _SliverTimelineState extends ConsumerState<_SliverTimeline> {
 
   @override
   void dispose() {
+    _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     _eventSubscription?.cancel();
+    _scrollAssetDebouncer.dispose();
     super.dispose();
+  }
+
+  void _onScroll() {
+    if (widget.onScrollAssetChanged == null) {
+      return;
+    }
+    _scrollAssetDebouncer.run(_emitScrollAsset);
+  }
+
+  Future<void> _emitScrollAsset() async {
+    if (!mounted || widget.onScrollAssetChanged == null) {
+      return;
+    }
+
+    final segments = _segmentsCache;
+    if (segments == null || segments.isEmpty || !_scrollController.hasClients) {
+      return;
+    }
+
+    final timelineService = ref.read(timelineServiceProvider);
+    final totalAssets = timelineService.totalAssets;
+    if (totalAssets == 0) {
+      if (_lastScrollAssetIndex != null) {
+        _lastScrollAssetIndex = null;
+        widget.onScrollAssetChanged?.call(null);
+      }
+      return;
+    }
+
+    final offset = _scrollController.offset;
+    final segment = segments.findByOffset(offset);
+    if (segment == null) {
+      return;
+    }
+
+    final rowIndex = segment.getMinChildIndexForScrollOffset(offset);
+    final columnCount = ref.read(timelineArgsProvider).columnCount;
+    int assetIndex;
+    if (rowIndex <= segment.firstIndex) {
+      assetIndex = segment.firstAssetIndex;
+    } else {
+      final rowIndexInSegment = rowIndex - (segment.firstIndex + 1);
+      assetIndex = segment.firstAssetIndex + (rowIndexInSegment * columnCount);
+    }
+
+    if (assetIndex < 0) {
+      assetIndex = 0;
+    } else if (assetIndex >= totalAssets) {
+      assetIndex = totalAssets - 1;
+    }
+
+    if (_lastScrollAssetIndex == assetIndex) {
+      return;
+    }
+    _lastScrollAssetIndex = assetIndex;
+
+    final asset = await timelineService.getAssetAsync(assetIndex);
+    if (!mounted) {
+      return;
+    }
+    widget.onScrollAssetChanged?.call(asset);
   }
 
   void _scrollToDate(DateTime date) {
@@ -331,6 +415,7 @@ class _SliverTimelineState extends ConsumerState<_SliverTimeline> {
       },
       child: asyncSegments.widgetWhen(
         onData: (segments) {
+          _segmentsCache = segments;
           final childCount = (segments.lastOrNull?.lastIndex ?? -1) + 1;
           final double appBarExpandedHeight = widget.appBar != null && widget.appBar is MesmerizingSliverAppBar
               ? 200
@@ -397,6 +482,9 @@ class _SliverTimelineState extends ConsumerState<_SliverTimeline> {
                     };
 
                     scale.onUpdate = (details) {
+                      if (widget.tilesPerRowOverride != null) {
+                        return;
+                      }
                       final newScaleFactor = math.max(math.min(5.0, _baseScaleFactor * details.scale), 1.0);
                       final newPerRow = 7 - newScaleFactor.toInt();
 

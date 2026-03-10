@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:immich_mobile/domain/models/asset/base_asset.model.dart';
 import 'package:immich_mobile/extensions/build_context_extensions.dart';
 import 'package:immich_mobile/presentation/widgets/bottom_sheet/base_bottom_sheet.widget.dart';
 import 'package:immich_mobile/presentation/widgets/map/map.state.dart';
@@ -8,7 +9,9 @@ import 'package:immich_mobile/providers/infrastructure/timeline.provider.dart';
 import 'package:immich_mobile/providers/user.provider.dart';
 
 class MapBottomSheet extends StatelessWidget {
-  const MapBottomSheet({super.key});
+  const MapBottomSheet({super.key, this.onScrollAssetChanged});
+
+  final ValueChanged<BaseAsset?>? onScrollAssetChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -19,13 +22,20 @@ class MapBottomSheet extends StatelessWidget {
       resizeOnScroll: false,
       actions: [],
       backgroundColor: context.themeData.colorScheme.surface,
-      slivers: [const SliverFillRemaining(hasScrollBody: false, child: _ScopedMapTimeline())],
+      slivers: [
+        SliverFillRemaining(
+          hasScrollBody: false,
+          child: _ScopedMapTimeline(onScrollAssetChanged: onScrollAssetChanged),
+        ),
+      ],
     );
   }
 }
 
 class _ScopedMapTimeline extends StatelessWidget {
-  const _ScopedMapTimeline();
+  const _ScopedMapTimeline({this.onScrollAssetChanged});
+
+  final ValueChanged<BaseAsset?>? onScrollAssetChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -49,7 +59,12 @@ class _ScopedMapTimeline extends StatelessWidget {
           return timelineService;
         }),
       ],
-      child: const Timeline(appBar: null, bottomSheet: null, withScrubber: false),
+      child: Timeline(
+        appBar: null,
+        bottomSheet: null,
+        withScrubber: false,
+        onScrollAssetChanged: onScrollAssetChanged,
+      ),
     );
   }
 }
