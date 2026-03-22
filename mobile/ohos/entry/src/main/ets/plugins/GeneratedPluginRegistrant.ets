@@ -10,6 +10,7 @@ import ReceiveSharingIntentOhosPlugin from 'receive_sharing_intent';
 import PhotoManagerPlugin from 'photo_manager';
 import PermissionHandlerPlugin from 'permission_handler_ohos';
 import NetworkInfoPlusOhosPlugin from 'network_info_plus_ohos';
+import NativeVideoPlayerPlugin from 'native_video_player';
 import MapLibreMapsPlugin from 'maplibre_gl';
 import LocalAuthPlugin from 'local_auth_ohos';
 import IsarFlutterLibsPlugin from 'isar_flutter_libs';
@@ -50,6 +51,7 @@ export class GeneratedPluginRegistrant {
       flutterEngine.getPlugins()?.add(new PhotoManagerPlugin());
       flutterEngine.getPlugins()?.add(new PermissionHandlerPlugin());
       flutterEngine.getPlugins()?.add(new NetworkInfoPlusOhosPlugin());
+      flutterEngine.getPlugins()?.add(new NativeVideoPlayerPlugin());
       flutterEngine.getPlugins()?.add(new MapLibreMapsPlugin());
       flutterEngine.getPlugins()?.add(new LocalAuthPlugin());
       flutterEngine.getPlugins()?.add(new IsarFlutterLibsPlugin());
