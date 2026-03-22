@@ -1,7 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_hooks/flutter_hooks.dart';
+import 'package:huawei_cast/huawei_cast.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:immich_mobile/models/cast/cast_manager_state.dart';
 import 'package:immich_mobile/presentation/widgets/asset_viewer/asset_viewer.state.dart';
+import 'package:immich_mobile/providers/asset_viewer/is_motion_video_playing.provider.dart';
 import 'package:immich_mobile/providers/asset_viewer/video_player_controls_provider.dart';
 import 'package:immich_mobile/providers/asset_viewer/video_player_value_provider.dart';
 import 'package:immich_mobile/providers/cast.provider.dart';
@@ -9,8 +14,6 @@ import 'package:immich_mobile/providers/infrastructure/asset_viewer/current_asse
 import 'package:immich_mobile/utils/hooks/timer_hook.dart';
 import 'package:immich_mobile/widgets/asset_viewer/center_play_button.dart';
 import 'package:immich_mobile/widgets/common/delayed_loading_indicator.dart';
-
-import 'package:immich_mobile/providers/asset_viewer/is_motion_video_playing.provider.dart';
 
 class VideoViewerControls extends HookConsumerWidget {
   final Duration hideTimerDuration;
@@ -22,29 +25,27 @@ class VideoViewerControls extends HookConsumerWidget {
     final assetIsVideo = ref.watch(currentAssetNotifier.select((asset) => asset != null && asset.isVideo));
     bool showControls = ref.watch(assetViewerProvider.select((s) => s.showingControls));
     final showBottomSheet = ref.watch(assetViewerProvider.select((s) => s.showingBottomSheet));
-    final isPlayingMotionVideo = ref.watch(isPlayingMotionVideoProvider);
     if (showBottomSheet) {
       showControls = false;
     }
     final VideoPlaybackState state = ref.watch(videoPlaybackValueProvider.select((value) => value.state));
+    final cast = ref.watch(castProvider);
 
-    //final cast = ref.watch(castProvider);
+    final isPlayingMotionVideo = ref.watch(isPlayingMotionVideoProvider);
+    final huaweiCast = HuaweiCast();
 
-    // A timer to hide the controls
     final hideTimer = useTimer(hideTimerDuration, () {
       if (!context.mounted || isPlayingMotionVideo) {
         return;
       }
       final state = ref.read(videoPlaybackValueProvider).state;
 
-      // Do not hide on paused
       if (state != VideoPlaybackState.paused && state != VideoPlaybackState.completed && assetIsVideo) {
         ref.read(assetViewerProvider.notifier).setControls(false);
       }
     });
     final showBuffering = state == VideoPlaybackState.buffering;
 
-    /// Shows the controls and starts the timer to hide them
     void showControlsAndStartHideTimer() {
       if (isPlayingMotionVideo) {
         return;
@@ -71,11 +72,39 @@ class VideoViewerControls extends HookConsumerWidget {
       }
     });
 
+    useEffect(() {
+      // Bridge transport commands coming back from HuaweiCast/system media
+      // controls into the same Riverpod controls used by the in-app player UI.
+      // This keeps remote play/pause/scrub actions and the local player state aligned.
+      final subscription = huaweiCast.remoteControlStream.listen((event) {
+        switch (event.method) {
+          case 'play':
+            ref.read(videoPlayerControlsProvider.notifier).play();
+            break;
+          case 'pause':
+            ref.read(videoPlayerControlsProvider.notifier).pause();
+            break;
+          case 'seekTo':
+            final position = Duration(milliseconds: event.position ?? 0);
+            // Update both the requested seek target and the visible playback
+            // position so the slider reflects remote scrubbing immediately.
+            ref.read(videoPlayerControlsProvider.notifier).position = position;
+            ref.read(videoPlaybackValueProvider.notifier).position = position;
+            break;
+          default:
+            break;
+        }
+      });
+
+      return () {
+        unawaited(subscription.cancel());
+      };
+    }, const []);
+
     /// Toggles between playing and pausing depending on the state of the video
     void togglePlay() {
       showControlsAndStartHideTimer();
 
-      /*
       if (cast.isCasting) {
         if (cast.castState == CastState.playing) {
           ref.read(castProvider.notifier).pause();
@@ -87,11 +116,9 @@ class VideoViewerControls extends HookConsumerWidget {
           if (asset == null) {
             return;
           }
-          // ref.read(castProvider.notifier).loadMedia(asset, true);
         }
         return;
       }
-*/
 
       if (state == VideoPlaybackState.playing) {
         ref.read(videoPlayerControlsProvider.notifier).pause();
@@ -119,8 +146,7 @@ class VideoViewerControls extends HookConsumerWidget {
                   iconColor: Colors.white,
                   isFinished: state == VideoPlaybackState.completed,
                   isPlaying:
-                      //state == VideoPlaybackState.playing || (cast.isCasting && cast.castState == CastState.playing),
-                      state == VideoPlaybackState.playing,
+                      state == VideoPlaybackState.playing || (cast.isCasting && cast.castState == CastState.playing),
                   show: assetIsVideo && showControls,
                   onPressed: togglePlay,
                 ),

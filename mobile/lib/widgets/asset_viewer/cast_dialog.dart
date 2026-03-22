@@ -1,4 +1,3 @@
-/*
 import 'dart:async';
 
 import 'package:easy_localization/easy_localization.dart';
@@ -77,10 +76,7 @@ class CastDialog extends ConsumerWidget {
                       deviceName,
                       style: TextStyle(color: isCurrentDevice(deviceName) ? context.colorScheme.primary : null),
                     ),
-                    leading: Icon(
-                      type == CastDestinationType.googleCast ? Icons.cast : Icons.cast_connected,
-                      color: isCurrentDevice(deviceName) ? context.colorScheme.primary : null,
-                    ),
+                    leading: Icon(Icons.cast, color: isCurrentDevice(deviceName) ? context.colorScheme.primary : null),
                     trailing: isCurrentDevice(deviceName)
                         ? Icon(Icons.check, color: context.colorScheme.primary)
                         : isDeviceConnecting(deviceName)
@@ -126,4 +122,3 @@ class CastDialog extends ConsumerWidget {
     );
   }
 }
-*/

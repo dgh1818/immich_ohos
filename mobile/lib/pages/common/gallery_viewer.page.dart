@@ -4,6 +4,7 @@ import 'dart:math';
 import 'dart:ui' as ui;
 
 import 'package:auto_route/auto_route.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_hooks/flutter_hooks.dart' hide Store;
@@ -13,14 +14,14 @@ import 'package:immich_mobile/extensions/build_context_extensions.dart';
 import 'package:immich_mobile/extensions/scroll_extensions.dart';
 import 'package:immich_mobile/pages/common/download_panel.dart';
 import 'package:immich_mobile/pages/common/gallery_stacked_children.dart';
-// import 'package:immich_mobile/pages/common/native_video_viewer.page.dart';
+import 'package:immich_mobile/pages/common/native_video_viewer.page.dart';
 import 'package:immich_mobile/providers/app_settings.provider.dart';
 import 'package:immich_mobile/providers/asset_viewer/asset_stack.provider.dart';
 import 'package:immich_mobile/providers/asset_viewer/current_asset.provider.dart';
 import 'package:immich_mobile/providers/asset_viewer/is_motion_video_playing.provider.dart';
 import 'package:immich_mobile/providers/asset_viewer/show_controls.provider.dart';
 import 'package:immich_mobile/providers/asset_viewer/video_player_value_provider.dart';
-//import 'package:immich_mobile/providers/cast.provider.dart';
+import 'package:immich_mobile/providers/cast.provider.dart';
 import 'package:immich_mobile/providers/haptic_feedback.provider.dart';
 import 'package:immich_mobile/services/app_settings.service.dart';
 import 'package:immich_mobile/widgets/asset_grid/asset_grid_data_structure.dart';
@@ -37,7 +38,6 @@ import 'package:immich_mobile/widgets/photo_view/src/utils/photo_view_hero_attri
 
 import 'package:immich_mobile/providers/asset_viewer/video_player_controller_provider.dart';
 import 'package:immich_mobile/main.dart';
-import 'package:immich_mobile/pages/common/video_viewer.page.dart';
 import 'package:immich_mobile/utils/cache/custom_image_cache.dart';
 import 'package:immich_mobile/utils/viewer_hdr.dart';
 
@@ -72,7 +72,7 @@ class GalleryViewerPage extends HookConsumerWidget {
     final currentIndex = useValueNotifier(initialIndex);
     final loadAsset = renderList.loadAsset;
     final isPlayingMotionVideo = ref.watch(isPlayingMotionVideoProvider);
-    //final isCasting = ref.watch(castProvider.select((c) => c.isCasting));
+    final isCasting = ref.watch(castProvider.select((c) => c.isCasting));
 
     final videoPlayerKeys = useRef<Map<int, GlobalKey>>({});
 
@@ -80,8 +80,6 @@ class GalleryViewerPage extends HookConsumerWidget {
       videoPlayerKeys.value.putIfAbsent(id, () => GlobalKey());
       return videoPlayerKeys.value[id]!;
     }
-
-    final shouldLoopVideo = useState(AppSettingsEnum.loopVideo.defaultValue);
 
     bool isImageHdrEnabled() => ref.read(appSettingsServiceProvider).getSetting<bool>(AppSettingsEnum.imageHdr);
     bool isVideoHdrEnabled() => ref.read(appSettingsServiceProvider).getSetting<bool>(AppSettingsEnum.videoHdr);
@@ -173,7 +171,6 @@ class GalleryViewerPage extends HookConsumerWidget {
       return null;
     }, const []);
 
-    /*
     useEffect(() {
       final asset = loadAsset(currentIndex.value);
 
@@ -199,7 +196,6 @@ class GalleryViewerPage extends HookConsumerWidget {
       }
       return null;
     }, [ref.watch(castProvider).isCasting]);
-*/
 
     void showInfo() {
       final asset = ref.read(currentAssetProvider);
@@ -352,33 +348,12 @@ class GalleryViewerPage extends HookConsumerWidget {
         child: SizedBox(
           width: context.width,
           height: context.height,
-          // child: NativeVideoViewerPage(
-          //   key: getVideoPlayerKey(asset.id),
-          //   asset: asset,
-          //   image: Image(
-          //     key: ValueKey(asset),
-          //     image: ImmichImage.imageProvider(
-          //       asset: asset,
-          //       width: context.width,
-          //       height: context.height,
-          //     ),
-          //     fit: BoxFit.contain,
-          //     height: context.height,
-          //     width: context.width,
-          //     alignment: Alignment.center,
-          //   ),
-          // ),
-          child: VideoViewerPage(
+          child: NativeVideoViewerPage(
             key: getVideoPlayerKey(asset.id),
             asset: asset,
-            isMotionVideo: asset.livePhotoVideoId != null,
-            loopVideo: asset.livePhotoVideoId != null ? false : shouldLoopVideo.value,
-            placeholder: Image(
-              image: ImmichImage.imageProvider(
-                asset: asset,
-                width: context.width.toDouble(),
-                height: context.height.toDouble(),
-              ),
+            image: Image(
+              key: ValueKey(asset),
+              image: ImmichImage.imageProvider(asset: asset, width: context.width, height: context.height),
               fit: BoxFit.contain,
               height: context.height,
               width: context.width,
@@ -529,29 +504,27 @@ class GalleryViewerPage extends HookConsumerWidget {
                       precacheNextImage(next);
                     }),
                   );
-                  /*
-                context.scaffoldMessenger.hideCurrentSnackBar();
+                  context.scaffoldMessenger.hideCurrentSnackBar();
 
-                // send image to casting if the server has it
-                if (newAsset.isRemote) {
-                  ref.read(castProvider.notifier).loadMediaOld(newAsset, false);
-                } else {
-                  context.scaffoldMessenger.clearSnackBars();
+                  // Send the newly selected asset to casting only if the server has it.
+                  if (newAsset.isRemote) {
+                    ref.read(castProvider.notifier).loadMediaOld(newAsset, false);
+                  } else {
+                    context.scaffoldMessenger.clearSnackBars();
 
-                if (isCasting) {
-                  ref.read(castProvider.notifier).stop();
-                  context.scaffoldMessenger.showSnackBar(
-                    SnackBar(
-                      duration: const Duration(seconds: 2),
-                      content: Text(
-                        "local_asset_cast_failed".tr(),
-                        style: context.textTheme.bodyLarge?.copyWith(color: context.primaryColor),
-                      ),
-                    ),
-                  );
-                }
-                }
-*/
+                    if (isCasting) {
+                      ref.read(castProvider.notifier).stop();
+                      context.scaffoldMessenger.showSnackBar(
+                        SnackBar(
+                          duration: const Duration(seconds: 2),
+                          content: Text(
+                            "local_asset_cast_failed".tr(),
+                            style: context.textTheme.bodyLarge?.copyWith(color: context.primaryColor),
+                          ),
+                        ),
+                      );
+                    }
+                  }
                 },
                 builder: buildAsset,
               ),

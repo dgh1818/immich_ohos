@@ -1,70 +1,91 @@
-/*
-import 'package:cast/device.dart';
-import 'package:cast/session.dart';
-import 'package:cast/session_manager.dart';
-import 'package:cast/discovery_service.dart';
+import 'dart:async';
+
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:huawei_cast/huawei_cast.dart';
 
 final gCastRepositoryProvider = Provider((_) {
   return GCastRepository();
 });
 
 class GCastRepository {
-  CastSession? _castSession;
+  final HuaweiCast _huaweiCast = HuaweiCast();
+  late final StreamSubscription<HuaweiCastStatus> _statusSubscription;
 
   void Function(CastSessionState)? onCastStatus;
   void Function(Map<String, dynamic>)? onCastMessage;
 
-  Map<String, dynamic>? _receiverStatus;
+  GCastRepository() {
+    _statusSubscription = _huaweiCast.statusStream.listen(_handleCastStatus);
+  }
 
-  GCastRepository();
+  String get receiverName => _huaweiCast.receiverName;
 
-  Future<void> connect(CastDevice device) async {
-    _castSession = await CastSessionManager().startSession(device);
-
-    _castSession?.stateStream.listen((state) {
-      onCastStatus?.call(state);
+  void _handleCastStatus(HuaweiCastStatus status) {
+    onCastStatus?.call(status.state);
+    onCastMessage?.call({
+      'type': 'RECEIVER_STATUS',
+      'status': status.state == CastSessionState.connected ? {'receiverName': status.receiverName} : null,
     });
+  }
 
-    _castSession?.messageStream.listen((message) {
-      onCastMessage?.call(message);
-      if (message['type'] == 'RECEIVER_STATUS') {
-        _receiverStatus = message;
-      }
-    });
+  Future<void> connect(String assetId) async {
+    await _huaweiCast.startCast(assetId);
+  }
 
-    // open the default receiver
-    sendMessage(CastSession.kNamespaceReceiver, {'type': 'LAUNCH', 'appId': 'CC1AD845'});
+  Future<void> loadMedia(String assetId) async {
+    await _huaweiCast.startCast(assetId);
+  }
+
+  FutureOr<dynamic> setMetadata(String contentUrl, String mediaImage, String title, int duration) async {
+    return await _huaweiCast.setMetadata(contentUrl, mediaImage, title, duration);
+  }
+
+  FutureOr<dynamic> setCurrentPosition(int position, bool isPlaying) async {
+    return await _huaweiCast.setCurrentPosition(position, isPlaying);
+  }
+
+  FutureOr<dynamic> clearSession() async {
+    return await _huaweiCast.clearSession();
+  }
+
+  FutureOr<dynamic> play() async {
+    return await _huaweiCast.play();
+  }
+
+  FutureOr<dynamic> pause() async {
+    return await _huaweiCast.pause();
+  }
+
+  FutureOr<dynamic> seekTo(int position) async {
+    return await _huaweiCast.seekTo(position);
   }
 
   Future<void> disconnect() async {
-    final sessionID = getSessionId();
-
-    sendMessage(CastSession.kNamespaceReceiver, {'type': "STOP", "sessionId": sessionID});
-
-    // wait 500ms to ensure the stop command is processed
-    await Future.delayed(const Duration(milliseconds: 500));
-
-    await _castSession?.close();
+    await _huaweiCast.stopCast();
   }
 
+  FutureOr<dynamic> stopCast() async {
+    return await _huaweiCast.stopCast();
+  }
+
+  /*
+   * The upstream Google Cast repository also used getSessionId() and
+   * sendMessage() helpers backed by Chromecast namespaces such as
+   * kNamespaceReceiver and the CC1AD845 default receiver app.
+   *
+   * We intentionally keep those functions disabled on OHOS because the
+   * AVCastPicker/AVSession backend does not expose a Chromecast-compatible
+   * namespace transport channel to Flutter.
+   */
+  /*
   String? getSessionId() {
-    if (_receiverStatus == null) {
-      return null;
-    }
-    return _receiverStatus!['status']['applications'][0]['sessionId'];
+    return null;
   }
 
-  void sendMessage(String namespace, Map<String, dynamic> message) {
-    if (_castSession == null) {
-      throw Exception("Cast session is not established");
-    }
+  void sendMessage(String namespace, Map<String, dynamic> message) {}
+  */
 
-    _castSession!.sendMessage(namespace, message);
-  }
-
-  Future<List<CastDevice>> listDestinations() async {
-    return await CastDiscoveryService().search(timeout: const Duration(seconds: 3));
+  void dispose() {
+    _statusSubscription.cancel();
   }
 }
-*/

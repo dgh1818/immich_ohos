@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:auto_route/auto_route.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -26,7 +27,7 @@ import 'package:immich_mobile/presentation/widgets/images/thumbnail.widget.dart'
 import 'package:immich_mobile/providers/asset_viewer/is_motion_video_playing.provider.dart';
 import 'package:immich_mobile/providers/asset_viewer/video_player_controls_provider.dart';
 import 'package:immich_mobile/providers/asset_viewer/video_player_value_provider.dart';
-//import 'package:immich_mobile/providers/cast.provider.dart';
+import 'package:immich_mobile/providers/cast.provider.dart';
 import 'package:immich_mobile/providers/infrastructure/asset_viewer/current_asset.provider.dart';
 import 'package:immich_mobile/providers/infrastructure/current_album.provider.dart';
 import 'package:immich_mobile/providers/infrastructure/readonly_mode.provider.dart';
@@ -338,12 +339,11 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
 
     widget.changeAsset(ref, asset);
     _precacheAssets(index);
-    //_handleCasting();
+    _handleCasting();
     _stackChildrenKeepAlive?.close();
     _stackChildrenKeepAlive = ref.read(stackChildrenNotifier(asset).notifier).ref.keepAlive();
   }
 
-  /*
   void _handleCasting() {
     if (!ref.read(castProvider).isCasting) return;
     final asset = ref.read(currentAssetNotifier);
@@ -352,8 +352,7 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
     // hide any casting snackbars if they exist
     context.scaffoldMessenger.hideCurrentSnackBar();
 
-    // send image to casting if the server has it
-    if (asset is RemoteAsset) {
+    if (asset.isVideo && asset is RemoteAsset) {
       ref.read(castProvider.notifier).loadMedia(asset, false);
     } else {
       // casting cannot show local assets
@@ -373,7 +372,6 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
       }
     }
   }
-*/
 
   void _onPageBuild(PhotoViewControllerBase controller) {
     viewController ??= controller;
@@ -791,7 +789,7 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
       child: SizedBox(
         width: ctx.width,
         height: ctx.height,
-        child: VideoViewer(
+        child: NativeVideoViewer(
           key: _getVideoPlayerKey(asset.heroTag),
           asset: asset,
           image: Image(
@@ -823,8 +821,7 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
     ref.watch(isPlayingMotionVideoProvider);
     final showingControls = ref.watch(assetViewerProvider.select((s) => s.showingControls));
 
-    /*
-    Listen for casting changes and send initial asset to the cast provider
+    //Listen for casting changes and send initial asset to the cast provider
     ref.listen(castProvider.select((value) => value.isCasting), (_, isCasting) async {
       if (!isCasting) return;
 
@@ -835,7 +832,6 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
         _handleCasting();
       });
     });
-    */
 
     // Listen for control visibility changes and change system UI mode accordingly
     ref.listen(assetViewerProvider.select((value) => value.showingControls), (_, __) async {

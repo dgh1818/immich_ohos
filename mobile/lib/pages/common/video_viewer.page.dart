@@ -1,3 +1,6 @@
+/*
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -7,22 +10,19 @@ import 'package:immich_mobile/providers/asset_viewer/show_controls.provider.dart
 import 'package:immich_mobile/providers/asset_viewer/video_player_controller_provider.dart';
 import 'package:immich_mobile/providers/asset_viewer/video_player_controls_provider.dart';
 import 'package:immich_mobile/providers/asset_viewer/video_player_value_provider.dart';
+import 'package:immich_mobile/repositories/gcast.repository.dart';
+import 'package:immich_mobile/services/gcast.service.dart';
 import 'package:immich_mobile/widgets/asset_viewer/video_player.dart';
 import 'package:immich_mobile/widgets/common/delayed_loading_indicator.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
 import 'package:immich_mobile/providers/asset_viewer/is_motion_video_playing.provider.dart';
-import 'package:logging/logging.dart';
 
 import 'package:immich_mobile/utils/image_url_builder.dart';
 
 import 'package:immich_mobile/models/sessions/session_create_response.model.dart';
 import 'package:immich_mobile/repositories/sessions_api.repository.dart';
 import 'package:huawei_cast/huawei_cast.dart';
-
-HuaweiCast? castController;
-
-//import 'package:immich_mobile/providers/cast.provider.dart';
 
 class VideoViewerPage extends HookConsumerWidget {
   final Asset asset;
@@ -47,13 +47,14 @@ class VideoViewerPage extends HookConsumerWidget {
   @override
   build(BuildContext context, WidgetRef ref) {
     final controller = ref.watch(videoPlayerControllerProvider(asset: asset)).value;
+    final castController = ref.watch(gCastRepositoryProvider);
+    final gCastService = ref.watch(gCastServiceProvider);
     // The last volume of the video used when mute is toggled
-    final lastVolume = useState(0.5);
     final pendingSeekTarget = useRef<Duration?>(null); //待跳转的进度位置
     final pendingSeekAt = useRef<DateTime?>(null); //点击进度条的时间
 
     SessionCreateResponse? sessionKey;
-    final _sessionsApiService = ref.watch(sessionsAPIRepositoryProvider);
+    final sessionsApiService = ref.watch(sessionsAPIRepositoryProvider);
 
     //final isCasting = ref.watch(castProvider.select((c) => c.isCasting));
 
@@ -89,7 +90,7 @@ class VideoViewerPage extends HookConsumerWidget {
       }
 
       // Find the position to seek to
-      final Duration seek = controller.value.duration * (position / 100.0);
+      final Duration seek = position;
       pendingSeekTarget.value = seek;
       pendingSeekAt.value = DateTime.now();
       ref.read(videoPlaybackValueProvider.notifier).position = seek;
@@ -131,6 +132,7 @@ class VideoViewerPage extends HookConsumerWidget {
           ? videoPlayback.copyWith(position: ref.read(videoPlaybackValueProvider).position)
           : videoPlayback;
       ref.read(videoPlaybackValueProvider.notifier).value = updatedPlayback;
+      unawaited(gCastService.syncPlaybackState(updatedPlayback));
 
       // 检测视频是否自然结束
       final isAtEnd = videoPlayback.position >= videoPlayback.duration;
@@ -147,16 +149,10 @@ class VideoViewerPage extends HookConsumerWidget {
 
       // Enable the WakeLock while the video is playing
       // 更新媒体中心播放状态
-      if (castController != null) {
-        if (state == VideoPlaybackState.playing) {
-          castController!.setCurrentPosition(videoPlayback.position.inMilliseconds, true);
-          // Sync with the controls playing
-          WakelockPlus.enable();
-        } else {
-          castController!.setCurrentPosition(videoPlayback.position.inMilliseconds, false);
-          // Sync with the controls pause
-          WakelockPlus.disable();
-        }
+      if (state == VideoPlaybackState.playing) {
+        WakelockPlus.enable();
+      } else {
+        WakelockPlus.disable();
       }
     }
 
@@ -181,7 +177,7 @@ class VideoViewerPage extends HookConsumerWidget {
       // TO DO
 
       if (!isSessionValid()) {
-        sessionKey = await _sessionsApiService.createSession(
+        sessionKey = await sessionsApiService.createSession(
           "Cast",
           "Google Cast",
           duration: const Duration(minutes: 15).inSeconds,
@@ -194,15 +190,12 @@ class VideoViewerPage extends HookConsumerWidget {
       final String unauthenticatedUrlVideo = getPlaybackUrlForRemoteId(asset.remoteId!);
       final authenticatedURLVideo = "$unauthenticatedUrlVideo&sessionKey=${sessionKey?.token}";
 
-      if (controller != null) {
-        castController = HuaweiCast(controller!);
-        castController!.setMetadata(
-          authenticatedURLVideo,
-          authenticatedURLThumb,
-          asset.name,
-          asset.duration.inMilliseconds,
-        );
-      }
+      castController.setMetadata(
+        authenticatedURLVideo,
+        authenticatedURLThumb,
+        asset.name,
+        asset.duration.inMilliseconds,
+      );
     } //
 
     // Adds and removes the listener to the video player
@@ -231,13 +224,28 @@ class VideoViewerPage extends HookConsumerWidget {
       Future.microtask(() {
         controller.addListener(updateVideoPlayback);
       });
+      HuaweiCast.setMethodCallHandler((call) async {
+        switch (call.method) {
+          case 'play':
+            await controller.play();
+            break;
+          case 'pause':
+            await controller.pause();
+            break;
+          case 'seekTo':
+            final position = Duration(milliseconds: call.arguments['position'] as int);
+            await controller.seekTo(position);
+            break;
+          default:
+            break;
+        }
+      });
       return () {
         // Removes listener when we dispose
         controller.removeListener(updateVideoPlayback);
         controller.pause();
-        if (castController != null) {
-          castController!.clearSession();
-        }
+        castController.clearSession();
+        HuaweiCast.setMethodCallHandler(null);
       };
     }, [controller]);
 
@@ -282,3 +290,4 @@ class VideoViewerPage extends HookConsumerWidget {
     );
   }
 }
+*/

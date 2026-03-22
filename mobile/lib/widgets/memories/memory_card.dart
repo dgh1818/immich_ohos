@@ -7,7 +7,6 @@ import 'package:immich_mobile/extensions/build_context_extensions.dart';
 import 'package:immich_mobile/pages/common/native_video_viewer.page.dart';
 import 'package:immich_mobile/utils/hooks/blurhash_hook.dart';
 import 'package:immich_mobile/widgets/common/immich_image.dart';
-import 'package:immich_mobile/pages/common/video_viewer.page.dart';
 
 class MemoryCard extends StatelessWidget {
   final Asset asset;
@@ -54,27 +53,12 @@ class MemoryCard extends StatelessWidget {
                   child: SizedBox(
                     width: context.width,
                     height: context.height,
-                    /*
                     child: NativeVideoViewerPage(
                       key: ValueKey(asset.id),
                       asset: asset,
                       showControls: false,
                       playbackDelayFactor: 2,
                       image: ImmichImage(
-                        asset,
-                        width: context.width,
-                        height: context.height,
-                        fit: BoxFit.contain,
-                      ),
-                    ),
-*/
-                    child: VideoViewerPage(
-                      key: key,
-                      asset: asset,
-                      isMotionVideo: asset.livePhotoVideoId != null,
-                      showControls: false,
-                      //playbackDelayFactor: 2,
-                      placeholder: ImmichImage(
                         asset,
                         width: context.width,
                         height: context.height,

@@ -1,4 +1,3 @@
-/*
 import 'dart:async';
 import 'dart:io';
 
@@ -18,6 +17,7 @@ import 'package:immich_mobile/providers/cast.provider.dart';
 import 'package:immich_mobile/services/api.service.dart';
 import 'package:immich_mobile/services/app_settings.service.dart';
 import 'package:immich_mobile/services/asset.service.dart';
+import 'package:immich_mobile/services/gcast.service.dart';
 import 'package:immich_mobile/utils/debounce.dart';
 import 'package:immich_mobile/utils/hooks/interval_hook.dart';
 import 'package:immich_mobile/widgets/asset_viewer/custom_video_player_controls.dart';
@@ -46,6 +46,8 @@ class NativeVideoViewerPage extends HookConsumerWidget {
     final controller = useState<NativeVideoPlayerController?>(null);
     final lastVideoPosition = useRef(-1);
     final isBuffering = useRef(false);
+    final castNotifier = ref.read(castProvider.notifier);
+    final gCastService = ref.watch(gCastServiceProvider);
 
     // Used to track whether the video should play when the app
     // is brought back to the foreground
@@ -160,7 +162,12 @@ class NativeVideoViewerPage extends HookConsumerWidget {
       }
 
       if (oldControls?.pause != newControls.pause || newControls.restarted) {
-        unawaited(_onPauseChange(context, playerController, seekDebouncer, newControls.pause));
+        unawaited(() async {
+          if (!newControls.pause) {
+            await castNotifier.preparePlaybackMetadataOld(asset, isCurrent: ref.read(currentAssetProvider) == asset);
+          }
+          await _onPauseChange(context, playerController, seekDebouncer, newControls.pause);
+        }());
       }
     });
 
@@ -172,12 +179,14 @@ class NativeVideoViewerPage extends HookConsumerWidget {
 
       final videoPlayback = VideoPlaybackValue.fromNativeController(videoController);
       ref.read(videoPlaybackValueProvider.notifier).value = videoPlayback;
+      unawaited(gCastService.syncPlaybackState(videoPlayback));
 
       isVideoReady.value = true;
 
       try {
         final autoPlayVideo = ref.read(appSettingsServiceProvider).getSetting<bool>(AppSettingsEnum.autoPlayVideo);
         if (autoPlayVideo) {
+          await castNotifier.preparePlaybackMetadataOld(asset, isCurrent: ref.read(currentAssetProvider) == asset);
           await videoController.play();
         }
         await videoController.setVolume(0.9);
@@ -194,6 +203,7 @@ class NativeVideoViewerPage extends HookConsumerWidget {
 
       final videoPlayback = VideoPlaybackValue.fromNativeController(videoController);
       if (videoPlayback.state == VideoPlaybackState.playing) {
+        unawaited(castNotifier.preparePlaybackMetadataOld(asset, isCurrent: ref.read(currentAssetProvider) == asset));
         // Sync with the controls playing
         WakelockPlus.enable();
       } else {
@@ -202,6 +212,7 @@ class NativeVideoViewerPage extends HookConsumerWidget {
       }
 
       ref.read(videoPlaybackValueProvider.notifier).status = videoPlayback.state;
+      unawaited(gCastService.syncPlaybackState(ref.read(videoPlaybackValueProvider)));
     }
 
     void onPlaybackPositionChanged() {
@@ -221,6 +232,7 @@ class NativeVideoViewerPage extends HookConsumerWidget {
       }
 
       ref.read(videoPlaybackValueProvider.notifier).position = Duration(milliseconds: playbackInfo.position);
+      unawaited(gCastService.syncPlaybackState(ref.read(videoPlaybackValueProvider)));
 
       // Check if the video is buffering
       if (playbackInfo.status == PlaybackStatus.playing) {
@@ -239,7 +251,7 @@ class NativeVideoViewerPage extends HookConsumerWidget {
       }
 
       if (videoController.playbackInfo?.status == PlaybackStatus.stopped &&
-          !ref.read(appSettingsServiceProvider).getSetting<bool>(AppSettingsEnum.loopVideo)) {
+          (asset.isMotionPhoto || !ref.read(appSettingsServiceProvider).getSetting<bool>(AppSettingsEnum.loopVideo))) {
         ref.read(isPlayingMotionVideoProvider.notifier).playing = false;
       }
     }
@@ -274,16 +286,23 @@ class NativeVideoViewerPage extends HookConsumerWidget {
         }),
       );
       final loopVideo = ref.read(appSettingsServiceProvider).getSetting<bool>(AppSettingsEnum.loopVideo);
-      unawaited(nc.setLoop(loopVideo));
+      unawaited(nc.setLoop(!asset.isMotionPhoto && loopVideo));
 
       controller.value = nc;
       Timer(const Duration(milliseconds: 200), checkIfBuffering);
     }
 
+    useEffect(() {
+      castNotifier.setCurrentPlaybackAssetOld(ref.read(currentAssetProvider));
+      return null;
+    }, const []);
+
     ref.listen(currentAssetProvider, (_, value) {
+      castNotifier.setCurrentPlaybackAssetOld(value);
       final playerController = controller.value;
       if (playerController != null && value != asset) {
         removeListeners(playerController);
+        unawaited(castNotifier.clearPreparedPlaybackSessionIfCurrent());
       }
 
       final curAsset = currentAsset.value;
@@ -339,12 +358,14 @@ class NativeVideoViewerPage extends HookConsumerWidget {
           log.fine('Error stopping video: $error');
         });
 
+        unawaited(castNotifier.clearPreparedPlaybackSessionIfCurrent());
         WakelockPlus.disable();
       };
     }, const []);
 
     useOnAppLifecycleStateChange((_, state) async {
       if (state == AppLifecycleState.resumed && shouldPlayOnForeground.value) {
+        await castNotifier.preparePlaybackMetadataOld(asset, isCurrent: ref.read(currentAssetProvider) == asset);
         await controller.value?.play();
       } else if (state == AppLifecycleState.paused) {
         final videoPlaying = await controller.value?.isPlaying();
@@ -411,4 +432,3 @@ class NativeVideoViewerPage extends HookConsumerWidget {
     }
   }
 }
-*/

@@ -155,7 +155,9 @@ enum ActionButtonType {
             context.timelineOrigin != TimelineOrigin.archive &&
             context.timelineOrigin != TimelineOrigin.localAlbum &&
             context.isOwner,
-      ActionButtonType.cast => context.asset.isVideo && (context.isCasting || context.asset.hasRemote),
+      ActionButtonType.cast =>
+        context.asset.hasRemote && //
+            context.asset.isVideo,
     };
   }
 
@@ -241,7 +243,7 @@ enum ActionButtonType {
                 EventStream.shared.emit(ScrollToDateEvent(context.asset.createdAt));
               },
       ),
-      ActionButtonType.cast => CastActionButton(id: context.asset.remoteId!, menuItem: menuItem),
+      ActionButtonType.cast => CastActionButton(iconOnly: iconOnly, menuItem: menuItem),
     };
   }
 

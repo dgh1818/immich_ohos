@@ -5,7 +5,7 @@ import 'package:immich_mobile/providers/asset_viewer/current_asset.provider.dart
 import 'package:immich_mobile/providers/asset_viewer/show_controls.provider.dart';
 import 'package:immich_mobile/providers/asset_viewer/video_player_controls_provider.dart';
 import 'package:immich_mobile/providers/asset_viewer/video_player_value_provider.dart';
-//import 'package:immich_mobile/providers/cast.provider.dart';
+import 'package:immich_mobile/providers/cast.provider.dart';
 import 'package:immich_mobile/utils/hooks/timer_hook.dart';
 import 'package:immich_mobile/widgets/asset_viewer/center_play_button.dart';
 import 'package:immich_mobile/widgets/common/delayed_loading_indicator.dart';
@@ -20,8 +20,7 @@ class CustomVideoPlayerControls extends HookConsumerWidget {
     final assetIsVideo = ref.watch(currentAssetProvider.select((asset) => asset != null && asset.isVideo));
     final showControls = ref.watch(showControlsProvider);
     final VideoPlaybackState state = ref.watch(videoPlaybackValueProvider.select((value) => value.state));
-
-    //final cast = ref.watch(castProvider);
+    final cast = ref.watch(castProvider);
 
     // A timer to hide the controls
     final hideTimer = useTimer(hideTimerDuration, () {
@@ -35,9 +34,7 @@ class CustomVideoPlayerControls extends HookConsumerWidget {
         ref.read(showControlsProvider.notifier).show = false;
       }
     });
-    //final showBuffering = state == VideoPlaybackState.buffering && !cast.isCasting;
-
-    final showBuffering = state == VideoPlaybackState.buffering;
+    final showBuffering = state == VideoPlaybackState.buffering && !cast.isCasting;
 
     /// Shows the controls and starts the timer to hide them
     void showControlsAndStartHideTimer() {
@@ -54,7 +51,6 @@ class CustomVideoPlayerControls extends HookConsumerWidget {
     void togglePlay() {
       showControlsAndStartHideTimer();
 
-      /*
       if (cast.isCasting) {
         if (cast.castState == CastState.playing) {
           ref.read(castProvider.notifier).pause();
@@ -70,12 +66,11 @@ class CustomVideoPlayerControls extends HookConsumerWidget {
         }
         return;
       }
-*/
 
       if (state == VideoPlaybackState.playing) {
         ref.read(videoPlayerControlsProvider.notifier).pause();
-        // } else if (state == VideoPlaybackState.completed) {
-        //   ref.read(videoPlayerControlsProvider.notifier).restart();
+      } else if (state == VideoPlaybackState.completed) {
+        ref.read(videoPlayerControlsProvider.notifier).restart();
       } else {
         ref.read(videoPlayerControlsProvider.notifier).play();
       }
@@ -97,9 +92,8 @@ class CustomVideoPlayerControls extends HookConsumerWidget {
                   backgroundColor: Colors.black54,
                   iconColor: Colors.white,
                   isFinished: state == VideoPlaybackState.completed,
-                  // isPlaying:
-                  //     state == VideoPlaybackState.playing || (cast.isCasting && cast.castState == CastState.playing),
-                  isPlaying: state == VideoPlaybackState.playing,
+                  isPlaying:
+                      state == VideoPlaybackState.playing || (cast.isCasting && cast.castState == CastState.playing),
                   show: assetIsVideo && showControls,
                   onPressed: togglePlay,
                 ),

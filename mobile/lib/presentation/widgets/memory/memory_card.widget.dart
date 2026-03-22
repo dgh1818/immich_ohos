@@ -55,12 +55,12 @@ class DriftMemoryCard extends StatelessWidget {
                 return SizedBox(
                   width: context.width,
                   height: context.height,
-                  child: VideoViewer(
+                  child: NativeVideoViewer(
                     key: ValueKey(asset.id),
                     asset: asset,
                     showControls: false,
-                    // playbackDelayFactor: 2,
-                    // image: FullImage(asset, size: Size(context.width, context.height), fit: BoxFit.contain),
+                    playbackDelayFactor: 2,
+                    image: FullImage(asset, size: Size(context.width, context.height), fit: BoxFit.contain),
                   ),
                 );
               }
