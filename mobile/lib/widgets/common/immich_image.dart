@@ -35,20 +35,27 @@ class ImmichImage extends StatelessWidget {
     }
 
     if (asset == null) {
-      return RemoteFullImageProvider(assetId: assetId!, thumbhash: '', assetType: base_asset.AssetType.video);
+      return RemoteFullImageProvider(assetId: assetId!, thumbhash: '', assetType: base_asset.AssetType.image);
     }
+
+    final assetType = switch (asset.type) {
+      AssetType.image => base_asset.AssetType.image,
+      AssetType.video => base_asset.AssetType.video,
+      AssetType.audio => base_asset.AssetType.audio,
+      AssetType.other => base_asset.AssetType.other,
+    };
 
     if (useLocal(asset)) {
       return LocalFullImageProvider(
         id: asset.localId!,
-        assetType: base_asset.AssetType.video,
+        assetType: assetType,
         size: Size(width, height),
       );
     } else {
       return RemoteFullImageProvider(
         assetId: asset.remoteId!,
         thumbhash: asset.thumbhash ?? '',
-        assetType: base_asset.AssetType.video,
+        assetType: assetType,
       );
     }
   }
