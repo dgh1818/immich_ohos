@@ -39,4 +39,10 @@ abstract class NetworkApi {
 
   @async
   void removeCertificate();
+
+  bool hasCertificate();
+
+  int getClientPointer();
+
+  void setRequestHeaders(Map<String, String> headers, List<String> serverUrls, String? token);
 }

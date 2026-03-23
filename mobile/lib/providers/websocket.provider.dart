@@ -1,11 +1,11 @@
 import 'dart:async';
-import 'dart:convert';
 
 import 'package:collection/collection.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:immich_mobile/domain/models/store.model.dart';
 import 'package:immich_mobile/entities/asset.entity.dart';
 import 'package:immich_mobile/entities/store.entity.dart';
+import 'package:immich_mobile/infrastructure/repositories/network.repository.dart';
 import 'package:immich_mobile/models/server_info/server_version.model.dart';
 import 'package:immich_mobile/providers/asset.provider.dart';
 import 'package:immich_mobile/providers/auth.provider.dart';
@@ -99,11 +99,6 @@ class WebsocketNotifier extends StateNotifier<WebsocketState> {
     if (authenticationState.isAuthenticated) {
       try {
         final endpoint = Uri.parse(Store.get(StoreKey.serverEndpoint));
-        final headers = ApiService.getRequestHeaders();
-        if (endpoint.userInfo.isNotEmpty) {
-          headers["Authorization"] = "Basic ${base64.encode(utf8.encode(endpoint.userInfo))}";
-        }
-
         dPrint(() => "Attempting to connect to websocket");
         // Configure socket transports must be specified
         Socket socket = io(
@@ -111,11 +106,12 @@ class WebsocketNotifier extends StateNotifier<WebsocketState> {
           OptionBuilder()
               .setPath("${endpoint.path}/socket.io")
               .setTransports(['websocket'])
+              .setExtraHeaders(ApiService.getAuthenticatedRequestHeaders(endpoint.toString()))
+              .setWebSocketConnector(NetworkRepository.createWebSocket)
               .enableReconnection()
               .enableForceNew()
               .enableForceNewConnection()
               .enableAutoConnect()
-              .setExtraHeaders(headers)
               .build(),
         );
 
@@ -160,11 +156,8 @@ class WebsocketNotifier extends StateNotifier<WebsocketState> {
 
     _batchedAssetUploadReady.clear();
 
-    var socket = state.socket?.disconnect();
-
-    if (socket?.disconnected == true) {
-      state = WebsocketState(isConnected: false, socket: null, pendingChanges: state.pendingChanges);
-    }
+    state.socket?.dispose();
+    state = WebsocketState(isConnected: false, socket: null, pendingChanges: state.pendingChanges);
   }
 
   void stopListenToEvent(String eventName) {
@@ -319,7 +312,7 @@ class WebsocketNotifier extends StateNotifier<WebsocketState> {
   }
 
   void _handleSyncAssetEditReady(dynamic data) {
-    unawaited(_ref.read(backgroundSyncProvider).syncWebsocketEditBatch([data]));
+    unawaited(_ref.read(backgroundSyncProvider).syncWebsocketEdit(data));
   }
 
   void _processBatchedAssetUploadReady() {

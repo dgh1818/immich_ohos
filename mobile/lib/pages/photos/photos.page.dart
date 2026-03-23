@@ -156,7 +156,7 @@ class PhotosPage extends HookConsumerWidget {
           // 2. 悬浮 AppBar
           AnimatedPositioned(
             duration: const Duration(milliseconds: 300),
-            top: ref.watch(multiselectProvider) ? -(kToolbarHeight + context.padding.top) : -context.padding.top / 2,
+            top: ref.watch(multiselectProvider) ? -(kToolbarHeight + context.padding.top) : 0,
             left: 0,
             right: 0,
             child: Container(

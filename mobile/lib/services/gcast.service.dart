@@ -5,7 +5,7 @@ import 'package:huawei_cast/huawei_cast.dart';
 import 'package:immich_mobile/domain/models/asset/base_asset.model.dart';
 import 'package:immich_mobile/models/cast/cast_manager_state.dart';
 import 'package:immich_mobile/models/sessions/session_create_response.model.dart';
-import 'package:immich_mobile/providers/asset_viewer/video_player_value_provider.dart';
+import 'package:immich_mobile/providers/asset_viewer/video_player_provider.dart';
 import 'package:immich_mobile/repositories/gcast.repository.dart';
 import 'package:immich_mobile/repositories/sessions_api.repository.dart';
 import 'package:immich_mobile/utils/image_url_builder.dart';
@@ -81,12 +81,12 @@ class GCastService {
     onCastState?.call(CastState.idle);
   }
 
-  CastState _mapPlaybackState(VideoPlaybackState state) {
-    return switch (state) {
-      VideoPlaybackState.playing => CastState.playing,
-      VideoPlaybackState.paused => CastState.paused,
-      VideoPlaybackState.buffering || VideoPlaybackState.initializing => CastState.buffering,
-      VideoPlaybackState.completed => CastState.idle,
+  CastState _mapPlaybackState(VideoPlaybackStatus status) {
+    return switch (status) {
+      VideoPlaybackStatus.playing => CastState.playing,
+      VideoPlaybackStatus.paused => CastState.paused,
+      VideoPlaybackStatus.buffering => CastState.buffering,
+      VideoPlaybackStatus.completed => CastState.idle,
     };
   }
 
@@ -207,11 +207,7 @@ class GCastService {
       return (assetId, asset.duration);
     }
 
-    await _setMetadata(
-      assetId: assetId,
-      title: asset.name,
-      durationMs: asset.duration.inMilliseconds,
-    );
+    await _setMetadata(assetId: assetId, title: asset.name, durationMs: asset.duration.inMilliseconds);
 
     return (assetId, asset.duration);
   }
@@ -270,16 +266,16 @@ class GCastService {
     await _gCastRepository.loadMedia(preparedAsset.$1);
   }
 
-  Future<void> syncPlaybackState(VideoPlaybackValue playbackValue) async {
+  Future<void> syncPlaybackState(VideoPlayerState playbackState) async {
     if (isConnected) {
-      onCurrentTime?.call(playbackValue.position);
-      onDuration?.call(playbackValue.duration);
-      onCastState?.call(_mapPlaybackState(playbackValue.state));
+      onCurrentTime?.call(playbackState.position);
+      onDuration?.call(playbackState.duration);
+      onCastState?.call(_mapPlaybackState(playbackState.status));
     }
 
     await _gCastRepository.setCurrentPosition(
-      playbackValue.position.inMilliseconds,
-      playbackValue.state == VideoPlaybackState.playing,
+      playbackState.position.inMilliseconds,
+      playbackState.status == VideoPlaybackStatus.playing,
     );
   }
 

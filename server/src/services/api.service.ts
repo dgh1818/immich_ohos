@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotAcceptableException } from '@nestjs/common';
 import { Interval } from '@nestjs/schedule';
 import { NextFunction, Request, Response } from 'express';
 import { readFileSync } from 'node:fs';
@@ -112,12 +112,13 @@ export class ApiService {
 
     return async (request: Request, res: Response, next: NextFunction) => {
       const method = request.method.toLowerCase();
-      
+
       const forwarded = request.headers['x-forwarded-for'];
       const realIp = request.headers['x-real-ip'];
       const ip =
         (typeof realIp === 'string' && realIp) ||
-        (typeof forwarded === 'string' && forwarded.split(',')[0].trim()) || request.ip;
+        (typeof forwarded === 'string' && forwarded.split(',')[0].trim()) ||
+        request.ip;
       if (
         request.url.startsWith('/api') ||
         (method !== 'get' && method !== 'head') ||
@@ -130,6 +131,13 @@ export class ApiService {
         if (!isPrivateIp(ip)) {
           return res.sendStatus(404);
         }
+      }
+
+      const responseType = request.accepts('text/html');
+      if (!responseType) {
+        throw new NotAcceptableException(
+          `The route ${request.path} was requested as ${request.header('accept')}, but only returns text/html`,
+        );
       }
 
       let status = 200;
@@ -165,7 +173,7 @@ export class ApiService {
         html = render(index, meta);
       }
 
-      res.status(status).type('text/html').header('Cache-Control', 'no-store').send(html);
+      res.status(status).type(responseType).header('Cache-Control', 'no-store').send(html);
     };
   }
 }

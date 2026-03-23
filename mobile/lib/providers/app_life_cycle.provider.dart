@@ -251,7 +251,7 @@ class AppLifeCycleNotifier extends StateNotifier<AppLifeCycleEnum> {
     }
   }
 
-  Future<void> _performPause() async {
+  Future<void> _performPause() {
     if (_ref.read(authProvider).isAuthenticated) {
       if (!Store.isBetaTimelineEnabled) {
         // Do not cancel backup if manual upload is in progress
@@ -265,9 +265,7 @@ class AppLifeCycleNotifier extends StateNotifier<AppLifeCycleEnum> {
       _ref.read(websocketProvider.notifier).disconnect();
     }
 
-    try {
-      await LogService.I.flush();
-    } catch (_) {}
+    return LogService.I.flush().catchError((_) {});
   }
 
   Future<void> handleAppDetached() async {

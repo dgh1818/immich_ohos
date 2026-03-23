@@ -18,6 +18,9 @@ class MainTimelinePage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final hasMemories = ref.watch(driftMemoryFutureProvider.select((state) => state.value?.isNotEmpty ?? false));
+    const actionTop = 30.0;
+    const actionButtonSize = 48.0;
+    const uploadIconSize = 30.0;
 
     Future<void> pickUploadImage() async {
       final List<XFile> medias = await ImagePicker().pickMultipleMedia();
@@ -33,7 +36,7 @@ class MainTimelinePage extends ConsumerWidget {
             next != null && p.basenameWithoutExtension(current.name) == p.basenameWithoutExtension(next.name);
 
         try {
-          if (sameStem && next != null) {
+          if (sameStem) {
             await backupService.uploadImageDirectly(next, current);
             successCount += 2;
             i++;
@@ -76,17 +79,23 @@ class MainTimelinePage extends ConsumerWidget {
           ),
         ),
         Positioned(
-          top: 25,
+          top: actionTop,
           right: 110,
-          child: InkWell(
-            onTap: pickUploadImage,
-            borderRadius: BorderRadius.circular(12),
-            child: SvgPicture.asset('assets/HMOS_arrowshape_up.svg', height: 40),
+          child: SizedBox(
+            width: actionButtonSize,
+            height: actionButtonSize,
+            child: InkWell(
+              onTap: pickUploadImage,
+              borderRadius: BorderRadius.circular(12),
+              child: Center(
+                child: SvgPicture.asset('assets/HMOS_arrowshape_up.svg', height: uploadIconSize),
+              ),
+            ),
           ),
         ),
-        const Positioned(top: 30, right: 20, child: ProfileIndicator()),
-        const Positioned(top: 30, right: 70, child: BackupIndicator()),
-        const Positioned(top: 35, left: 20, child: SyncStatusIndicator()),
+        const Positioned(top: actionTop, right: 20, child: ProfileIndicator()),
+        const Positioned(top: actionTop, right: 70, child: BackupIndicator()),
+        const Positioned(top: actionTop, left: 20, child: SyncStatusIndicator()),
       ],
     );
   }

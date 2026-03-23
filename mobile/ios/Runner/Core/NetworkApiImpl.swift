@@ -1,5 +1,6 @@
 import Foundation
 import UniformTypeIdentifiers
+import native_video_player
 
 enum ImportError: Error {
   case noFile
@@ -16,13 +17,24 @@ class NetworkApiImpl: NetworkApi {
     self.viewController = viewController
   }
   
-  func selectCertificate(promptText: ClientCertPrompt, completion: @escaping (Result<ClientCertData, any Error>) -> Void) {
-    let importer = CertImporter(promptText: promptText, completion: { [weak self] result in
+  func selectCertificate(promptText _: ClientCertPrompt, completion: @escaping (Result<ClientCertData, any Error>) -> Void) {
+    let importer = CertImporter(completion: { [weak self] result in
       self?.activeImporter = nil
-      completion(result.map { ClientCertData(data: FlutterStandardTypedData(bytes: $0.0), password: $0.1) })
+      completion(result)
     }, viewController: viewController)
     activeImporter = importer
     importer.load()
+  }
+
+  func hasCertificate() throws -> Bool {
+    let query: [String: Any] = [
+      kSecClass as String: kSecClassIdentity,
+      kSecAttrLabel as String: CLIENT_CERT_LABEL,
+      kSecReturnRef as String: true,
+    ]
+    var item: CFTypeRef?
+    let status = SecItemCopyMatching(query as CFDictionary, &item)
+    return status == errSecSuccess
   }
   
   func removeCertificate(completion: @escaping (Result<Void, any Error>) -> Void) {
@@ -40,15 +52,54 @@ class NetworkApiImpl: NetworkApi {
     }
     completion(.failure(ImportError.keychainError(status)))
   }
+  
+  func getClientPointer() throws -> Int64 {
+    let pointer = URLSessionManager.shared.sessionPointer
+    return Int64(Int(bitPattern: pointer))
+  }
+  
+  func setRequestHeaders(headers: [String : String], serverUrls: [String], token: String?) throws {
+    URLSessionManager.setServerUrls(serverUrls)
+
+    if let token = token {
+      let expiry = Date().addingTimeInterval(COOKIE_EXPIRY_DAYS * 24 * 60 * 60)
+      for serverUrl in serverUrls {
+        guard let url = URL(string: serverUrl), let domain = url.host else { continue }
+        let isSecure = serverUrl.hasPrefix("https")
+        let values: [AuthCookie: String] = [
+          .accessToken: token,
+          .isAuthenticated: "true",
+          .authType: "password",
+        ]
+        for (cookie, value) in values {
+          var properties: [HTTPCookiePropertyKey: Any] = [
+            .name: cookie.name,
+            .value: value,
+            .domain: domain,
+            .path: "/",
+            .expires: expiry,
+          ]
+          if isSecure { properties[.secure] = "TRUE" }
+          if cookie.httpOnly { properties[.init("HttpOnly")] = "TRUE" }
+          if let httpCookie = HTTPCookie(properties: properties) {
+            URLSessionManager.cookieStorage.setCookie(httpCookie)
+          }
+        }
+      }
+    }
+
+    if headers != UserDefaults.group.dictionary(forKey: HEADERS_KEY) as? [String: String] {
+      UserDefaults.group.set(headers, forKey: HEADERS_KEY)
+      URLSessionManager.shared.recreateSession()
+    }
+  }
 }
 
 private class CertImporter: NSObject, UIDocumentPickerDelegate {
-  private let promptText: ClientCertPrompt
-  private var completion: ((Result<(Data, String), Error>) -> Void)
+  private var completion: ((Result<ClientCertData, Error>) -> Void)
   private weak var viewController: UIViewController?
-  
-  init(promptText: ClientCertPrompt, completion: (@escaping (Result<(Data, String), Error>) -> Void), viewController: UIViewController?) {
-    self.promptText = promptText
+
+  init(completion: (@escaping (Result<ClientCertData, Error>) -> Void), viewController: UIViewController?) {
     self.completion = completion
     self.viewController = viewController
   }
@@ -72,16 +123,7 @@ private class CertImporter: NSObject, UIDocumentPickerDelegate {
     Task { @MainActor in
       do {
         let data = try readSecurityScoped(url: url)
-        guard let password = await promptForPassword() else {
-          return completion(.failure(ImportError.cancelled))
-        }
-        let status = importCert(clientData: data, password: password)
-        if status != errSecSuccess {
-          return completion(.failure(ImportError.keychainError(status)))
-        }
-        
-        await URLSessionManager.shared.session.flush()
-        self.completion(.success((data, password)))
+        self.completion(.success(ClientCertData(data: FlutterStandardTypedData(bytes: data), password: "")))
       } catch {
         completion(.failure(error))
       }
@@ -91,31 +133,7 @@ private class CertImporter: NSObject, UIDocumentPickerDelegate {
   func documentPickerWasCancelled(_ controller: UIDocumentPickerViewController) {
     completion(.failure(ImportError.cancelled))
   }
-  
-  private func promptForPassword() async -> String? {
-    guard let vc = viewController else { return nil }
-    
-    return await withCheckedContinuation { continuation in
-      let alert = UIAlertController(
-        title: promptText.title,
-        message: promptText.message,
-        preferredStyle: .alert
-      )
-      
-      alert.addTextField { $0.isSecureTextEntry = true }
-      
-      alert.addAction(UIAlertAction(title: promptText.cancel, style: .cancel) { _ in
-        continuation.resume(returning: nil)
-      })
-      
-      alert.addAction(UIAlertAction(title: promptText.confirm, style: .default) { _ in
-        continuation.resume(returning: alert.textFields?.first?.text ?? "")
-      })
-      
-      vc.present(alert, animated: true)
-    }
-  }
-  
+
   private func readSecurityScoped(url: URL) throws -> Data {
     guard url.startAccessingSecurityScopedResource() else {
       throw ImportError.noFile

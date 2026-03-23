@@ -123,7 +123,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   Future<bool> saveAuthInfo({required String accessToken}) async {
-    await _apiService.setAccessToken(accessToken);
+    await Store.put(StoreKey.accessToken, accessToken);
+    await _apiService.updateHeaders();
 
     final serverEndpoint = Store.get(StoreKey.serverEndpoint);
     final customHeaders = Store.tryGet(StoreKey.customHeaders);

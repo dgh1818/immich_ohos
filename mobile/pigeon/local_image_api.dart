@@ -22,6 +22,7 @@ abstract class LocalImageApi {
     required int width,
     required int height,
     required bool isVideo,
+    required bool preferEncoded,
   });
 
   void cancelRequest(int requestId);

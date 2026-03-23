@@ -8,6 +8,7 @@ import 'package:immich_mobile/presentation/widgets/images/local_image_provider.d
 import 'package:immich_mobile/presentation/widgets/images/remote_image_provider.dart';
 import 'package:immich_mobile/widgets/asset_grid/thumbnail_placeholder.dart';
 import 'package:octo_image/octo_image.dart';
+import 'package:path/path.dart' as p;
 
 class ImmichImage extends StatelessWidget {
   const ImmichImage(
@@ -18,6 +19,8 @@ class ImmichImage extends StatelessWidget {
     this.placeholder = const ThumbnailPlaceholder(),
     super.key,
   });
+
+  static const _animatedImageExtensions = {'.gif', '.webp', '.avif'};
 
   final Asset? asset;
   final Widget? placeholder;
@@ -35,7 +38,12 @@ class ImmichImage extends StatelessWidget {
     }
 
     if (asset == null) {
-      return RemoteFullImageProvider(assetId: assetId!, thumbhash: '', assetType: base_asset.AssetType.image);
+      return RemoteFullImageProvider(
+        assetId: assetId!,
+        thumbhash: '',
+        assetType: base_asset.AssetType.image,
+        isAnimated: false,
+      );
     }
 
     final assetType = switch (asset.type) {
@@ -44,20 +52,32 @@ class ImmichImage extends StatelessWidget {
       AssetType.audio => base_asset.AssetType.audio,
       AssetType.other => base_asset.AssetType.other,
     };
+    final isAnimated = _isAnimatedAsset(asset);
 
     if (useLocal(asset)) {
       return LocalFullImageProvider(
         id: asset.localId!,
         assetType: assetType,
         size: Size(width, height),
-      );
-    } else {
-      return RemoteFullImageProvider(
-        assetId: asset.remoteId!,
-        thumbhash: asset.thumbhash ?? '',
-        assetType: assetType,
+        isAnimated: isAnimated,
       );
     }
+
+    return RemoteFullImageProvider(
+      assetId: asset.remoteId!,
+      thumbhash: asset.thumbhash ?? '',
+      assetType: assetType,
+      isAnimated: isAnimated,
+    );
+  }
+
+  static bool _isAnimatedAsset(Asset asset) {
+    if (asset.type != AssetType.image) {
+      return false;
+    }
+
+    final extension = p.extension(asset.fileName).toLowerCase();
+    return _animatedImageExtensions.contains(extension);
   }
 
   // Whether to use the local asset image provider or a remote one

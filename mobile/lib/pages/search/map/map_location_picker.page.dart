@@ -38,7 +38,7 @@ class MapLocationPickerPage extends HookConsumerWidget {
       }
     }
 
-    Future<void> onMapClick(Point<num> point, LatLng centre) async {
+    Future<void> onMapClick(Point<num> _, LatLng centre) async {
       selectedLatLng.value = centre;
 
       if (defaultTargetPlatform == TargetPlatform.ohos) {

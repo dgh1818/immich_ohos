@@ -1,16 +1,16 @@
 import 'dart:io';
 
 import 'package:hooks_riverpod/hooks_riverpod.dart';
-import 'package:network_info_plus/network_info_plus.dart';
+import 'package:network_info_plus_platform_interface/network_info_plus_platform_interface.dart';
 
 final networkRepositoryProvider = Provider((_) {
-  final networkInfo = NetworkInfo();
+  final networkInfo = NetworkInfoPlatform.instance;
 
   return NetworkRepository(networkInfo);
 });
 
 class NetworkRepository {
-  final NetworkInfo _networkInfo;
+  final NetworkInfoPlatform _networkInfo;
 
   const NetworkRepository(this._networkInfo);
 

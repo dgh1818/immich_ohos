@@ -29,6 +29,11 @@ class GalleryAppBar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final assetProviderNotifier = ref.read(assetProvider.notifier);
+    final trashNotifier = ref.read(trashProvider.notifier);
+    final manualUploadNotifier = ref.read(manualUploadProvider.notifier);
+    final downloadNotifier = ref.read(downloadStateProvider.notifier);
+    final tabNotifier = ref.read(tabProvider.notifier);
     final asset = ref.watch(currentAssetProvider);
     if (asset == null) {
       return const SizedBox();
@@ -39,7 +44,7 @@ class GalleryAppBar extends ConsumerWidget {
 
     final isPartner = ref.watch(partnerSharedWithProvider).map((e) => fastHash(e.id)).contains(asset.ownerId);
 
-    toggleFavorite(Asset asset) => ref.read(assetProvider.notifier).toggleFavorite([asset]);
+    toggleFavorite(Asset asset) => assetProviderNotifier.toggleFavorite([asset]);
 
     handleActivities() {
       if (album != null && album.shared && album.remoteId != null) {
@@ -48,7 +53,7 @@ class GalleryAppBar extends ConsumerWidget {
     }
 
     handleRestore(Asset asset) async {
-      final result = await ref.read(trashProvider.notifier).restoreAssets([asset]);
+      final result = await trashNotifier.restoreAssets([asset]);
 
       if (result && context.mounted) {
         ImmichToast.show(context: context, msg: 'asset_restored_successfully'.tr(), gravity: ToastGravity.BOTTOM);
@@ -61,7 +66,7 @@ class GalleryAppBar extends ConsumerWidget {
         builder: (BuildContext _) {
           return UploadDialog(
             onUpload: () {
-              ref.read(manualUploadProvider.notifier).uploadAssets(context, [asset]);
+              manualUploadNotifier.uploadAssets(context, [asset]);
             },
           );
         },
@@ -80,14 +85,14 @@ class GalleryAppBar extends ConsumerWidget {
     }
 
     handleDownloadAsset() {
-      ref.read(downloadStateProvider.notifier).downloadAsset(asset);
+      downloadNotifier.downloadAsset(asset);
     }
 
     handleLocateAsset() async {
       // Go back to the gallery
       await context.maybePop();
       await context.navigateTo(const TabControllerRoute(children: [PhotosRoute()]));
-      ref.read(tabProvider.notifier).update((state) => state = TabEnum.home);
+      tabNotifier.update((state) => state = TabEnum.home);
       // Scroll to the asset's date
       scrollToDateNotifierProvider.scrollToDate(asset.fileCreatedAt);
     }

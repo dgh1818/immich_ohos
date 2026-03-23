@@ -1,13 +1,14 @@
+import 'dart:async';
 import 'package:auto_route/auto_route.dart';
 import 'package:easy_localization/easy_localization.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:immich_mobile/extensions/build_context_extensions.dart';
 import 'package:immich_mobile/models/backup/backup_state.model.dart';
+import 'package:immich_mobile/models/cast/cast_manager_state.dart';
 import 'package:immich_mobile/providers/backup/backup.provider.dart';
-//import 'package:immich_mobile/providers/cast.provider.dart';
+import 'package:immich_mobile/providers/cast.provider.dart';
 import 'package:immich_mobile/providers/server_info.provider.dart';
 import 'package:immich_mobile/providers/user.provider.dart';
 import 'package:immich_mobile/routing/router.dart';
@@ -25,9 +26,9 @@ import 'package:immich_mobile/repositories/file_media.repository.dart';
 import 'package:immich_mobile/repositories/asset.repository.dart';
 import 'package:immich_mobile/repositories/asset_media.repository.dart';
 
-import 'dart:io';
 import 'package:path/path.dart' as p;
 import 'package:flutter/services.dart';
+import 'dart:io';
 
 final backupServiceProvider = Provider(
   (ref) => BackupService(
@@ -57,7 +58,7 @@ class ImmichAppBar extends ConsumerWidget implements PreferredSizeWidget {
     final bool versionWarningPresent = ref.watch(versionWarningPresentProvider(user));
     final isDarkTheme = context.isDarkTheme;
     const widgetSize = 30.0;
-    //final isCasting = ref.watch(castProvider.select((c) => c.isCasting));
+    final isCasting = ref.watch(castProvider.select((c) => c.isCasting));
 
     buildProfileIndicator() {
       return InkWell(
@@ -77,7 +78,7 @@ class ImmichAppBar extends ConsumerWidget implements PreferredSizeWidget {
               ? const Icon(Icons.face_outlined, size: widgetSize)
               : Semantics(
                   label: "logged_in_as".tr(namedArgs: {"user": user.name}),
-                  child: UserCircleAvatar(radius: 17, size: 31, user: user),
+                  child: UserCircleAvatar(size: 32, user: user),
                 ),
         ),
       );
@@ -165,20 +166,20 @@ class ImmichAppBar extends ConsumerWidget implements PreferredSizeWidget {
               successCount = successCount + 2;
               i++;
               final file = File(xfile.path);
-              file.delete();
+              unawaited(file.delete());
               final fileNext = File(xfileNext.path);
-              fileNext.delete();
+              unawaited(fileNext.delete());
             } else {
               await backupService.uploadImageDirectly(xfile, null);
               successCount++;
               final file = File(xfile.path);
-              file.delete();
+              unawaited(file.delete());
             }
           } else {
             await backupService.uploadImageDirectly(xfile, null);
             successCount++;
             final file = File(xfile.path);
-            file.delete();
+            unawaited(file.delete());
           }
 
           // 每成功上传一个文件显示消息
@@ -229,8 +230,8 @@ class ImmichAppBar extends ConsumerWidget implements PreferredSizeWidget {
             children: [
               Builder(
                 builder: (context) {
-                  return Padding(
-                    padding: const EdgeInsets.only(top: 3.0),
+                  return const Padding(
+                    padding: EdgeInsets.only(top: 3.0),
 
                     /*
                     child: SvgPicture.asset(
@@ -251,24 +252,14 @@ class ImmichAppBar extends ConsumerWidget implements PreferredSizeWidget {
         if (actions != null)
           ...actions!.map((action) => Padding(padding: const EdgeInsets.only(right: 16), child: action)),
         Padding(padding: const EdgeInsets.only(right: 20), child: buildUploadIndicator()),
-
-        if (kDebugMode || kProfileMode)
-          IconButton(
-            icon: const Icon(Icons.palette_rounded),
-            onPressed: () => context.pushRoute(const ImmichUIShowcaseRoute()),
-          ),
-        /*
         if (isCasting)
           Padding(
             padding: const EdgeInsets.only(right: 12),
             child: IconButton(
-              onPressed: () {
-                showDialog(context: context, builder: (context) => const CastDialog());
-              },
+              onPressed: () => ref.read(castProvider.notifier).connect(CastDestinationType.googleCast, null),
               icon: Icon(isCasting ? Icons.cast_connected_rounded : Icons.cast_rounded),
             ),
           ),
-*/
         if (showUploadButton) Padding(padding: const EdgeInsets.only(right: 20), child: buildBackupIndicator()),
         Padding(padding: const EdgeInsets.only(right: 20), child: buildProfileIndicator()),
       ],

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:easy_localization/easy_localization.dart';
@@ -8,13 +9,10 @@ import 'package:immich_mobile/extensions/build_context_extensions.dart';
 import 'package:immich_mobile/extensions/theme_extensions.dart';
 import 'package:immich_mobile/platform/network_api.g.dart';
 import 'package:immich_mobile/providers/infrastructure/platform.provider.dart';
-import 'package:immich_mobile/utils/http_ssl_options.dart';
 import 'package:logging/logging.dart';
 
 class SslClientCertSettings extends StatefulWidget {
-  const SslClientCertSettings({super.key, required this.isLoggedIn});
-
-  final bool isLoggedIn;
+  const SslClientCertSettings({super.key});
 
   @override
   State<StatefulWidget> createState() => _SslClientCertSettingsState();
@@ -23,9 +21,24 @@ class SslClientCertSettings extends StatefulWidget {
 class _SslClientCertSettingsState extends State<SslClientCertSettings> {
   final _log = Logger("SslClientCertSettings");
 
-  bool isCertExist;
+  bool isCertExist = false;
 
-  _SslClientCertSettingsState() : isCertExist = SSLClientCertStoreVal.load() != null;
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_checkCertificate());
+  }
+
+  Future<void> _checkCertificate() async {
+    try {
+      final exists = await networkApi.hasCertificate();
+      if (mounted && exists != isCertExist) {
+        setState(() => isCertExist = exists);
+      }
+    } catch (e) {
+      _log.warning("Failed to check certificate existence", e);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -47,11 +60,8 @@ class _SslClientCertSettingsState extends State<SslClientCertSettings> {
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              ElevatedButton(onPressed: widget.isLoggedIn ? null : importCert, child: Text("client_cert_import".tr())),
-              ElevatedButton(
-                onPressed: widget.isLoggedIn || !isCertExist ? null : removeCert,
-                child: Text("remove".tr()),
-              ),
+              ElevatedButton(onPressed: importCert, child: Text("client_cert_import".tr())),
+              ElevatedButton(onPressed: !isCertExist ? null : removeCert, child: Text("remove".tr())),
             ],
           ),
         ],
@@ -77,8 +87,13 @@ class _SslClientCertSettingsState extends State<SslClientCertSettings> {
         confirm: "confirm".tr(),
       );
       final cert = await networkApi.selectCertificate(styling);
-      String password = cert.password;
-      if (Platform.isOhos) {
+
+      if (!Platform.isAndroid) {
+        if (cert.data.isEmpty) {
+          throw StateError("Certificate data is empty");
+        }
+
+        var password = cert.password;
         if (password.isEmpty) {
           final entered = await _promptForPassword(styling);
           if (entered == null) {
@@ -86,10 +101,11 @@ class _SslClientCertSettingsState extends State<SslClientCertSettings> {
           }
           password = entered;
         }
+
         await networkApi.addCertificate(ClientCertData(data: cert.data, password: password));
       }
-      await SSLClientCertStoreVal(cert.data, password).save();
-      HttpSSLOptions.apply();
+
+      await SSLClientCertStoreVal.delete();
       setState(() => isCertExist = true);
       showMessage("client_cert_import_success_msg".tr());
     } catch (e) {
@@ -105,7 +121,6 @@ class _SslClientCertSettingsState extends State<SslClientCertSettings> {
     try {
       await networkApi.removeCertificate();
       await SSLClientCertStoreVal.delete();
-      HttpSSLOptions.apply();
       setState(() => isCertExist = false);
       showMessage("client_cert_remove_msg".tr());
     } catch (e) {
@@ -119,43 +134,30 @@ class _SslClientCertSettingsState extends State<SslClientCertSettings> {
 
   bool _isCancellation(Object e) => e is PlatformException && e.code.toLowerCase().contains("cancel");
 
-  Future<String?> _promptForPassword(ClientCertPrompt prompt) async {
+  Future<String?> _promptForPassword(ClientCertPrompt promptText) async {
     final controller = TextEditingController();
-    return showDialog<String>(
-      context: context,
-      barrierDismissible: true,
-      builder: (context) {
-        return AlertDialog(
-          title: Text(prompt.title),
+    try {
+      return await showDialog<String>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text(promptText.title),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (prompt.message.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: Text(prompt.message),
-                ),
-              TextField(
-                controller: controller,
-                autofocus: true,
-                obscureText: true,
-              ),
+              Text(promptText.message),
+              const SizedBox(height: 12),
+              TextField(controller: controller, obscureText: true, autofocus: true),
             ],
           ),
           actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: Text(prompt.cancel),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(controller.text),
-              child: Text(prompt.confirm),
-            ),
+            TextButton(onPressed: () => Navigator.of(context).pop(), child: Text(promptText.cancel)),
+            TextButton(onPressed: () => Navigator.of(context).pop(controller.text), child: Text(promptText.confirm)),
           ],
-        );
-      },
-    );
+        ),
+      );
+    } finally {
+      controller.dispose();
+    }
   }
-
 }

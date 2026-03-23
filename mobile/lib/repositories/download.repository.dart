@@ -79,7 +79,6 @@ class DownloadRepository {
     final length = Platform.isAndroid ? assets.length : assets.length * 2;
     final tasks = List.filled(length, _dummyTask);
     int taskIndex = 0;
-    final headers = ApiService.getRequestHeaders();
     for (final asset in assets) {
       if (!asset.isRemoteOnly) {
         continue;
@@ -98,7 +97,7 @@ class DownloadRepository {
         tasks[taskIndex++] = DownloadTask(
           taskId: id,
           url: url,
-          headers: headers,
+          headers: ApiService.getAuthenticatedRequestHeaders(url),
           filename: asset.name,
           updates: Updates.statusAndProgress,
           group: isVideo ? kDownloadGroupVideo : kDownloadGroupImage,
@@ -111,7 +110,7 @@ class DownloadRepository {
       tasks[taskIndex++] = DownloadTask(
         taskId: id,
         url: url,
-        headers: headers,
+        headers: ApiService.getAuthenticatedRequestHeaders(url),
         filename: asset.name,
         updates: Updates.statusAndProgress,
         group: kDownloadGroupLivePhoto,
@@ -122,7 +121,7 @@ class DownloadRepository {
       tasks[taskIndex++] = DownloadTask(
         taskId: livePhotoVideoId,
         url: getOriginalUrlForRemoteId(livePhotoVideoId),
-        headers: headers,
+        headers: ApiService.getAuthenticatedRequestHeaders(getOriginalUrlForRemoteId(livePhotoVideoId)),
         filename: asset.name.toUpperCase().replaceAll(RegExp(r"\.(JPG|HEIC)$"), '.MP4'),
         updates: Updates.statusAndProgress,
         group: kDownloadGroupLivePhoto,

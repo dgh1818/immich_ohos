@@ -43,7 +43,7 @@ Future<VideoPlayerController> videoViewerController(VideoViewerControllerRef ref
     final url = Uri.parse(videoUrl);
     controller = VideoPlayerController.networkUrl(
       url,
-      httpHeaders: ApiService.getRequestHeaders(),
+      httpHeaders: ApiService.getAuthenticatedRequestHeaders(videoUrl),
       videoPlayerOptions: asset.livePhotoVideoId != null
           ? VideoPlayerOptions(mixWithOthers: true)
           : VideoPlayerOptions(mixWithOthers: false),

@@ -34,5 +34,6 @@ class ViewerHdr {
   static void resetModes() {
     ui.SetHdr.setHdrMode(hdr: 0, is_image: true);
     ui.SetHdr.setHdrMode(hdr: 0, is_image: false);
+    ui.SetHdr.enableHdr(enable_hdr: false);
   }
 }

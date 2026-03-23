@@ -39,6 +39,7 @@ enum AppSettingsEnum<T> {
   autoPlayVideo<bool>(StoreKey.autoPlayVideo, "autoPlayVideo", true),
   imageHdr<bool>(StoreKey.imageHdr, "imageHdr", true),
   videoHdr<bool>(StoreKey.videoHdr, "videoHdr", true),
+  tapToNavigate<bool>(StoreKey.tapToNavigate, "tapToNavigate", false),
   mapThemeMode<int>(StoreKey.mapThemeMode, null, 0),
   mapShowFavoriteOnly<bool>(StoreKey.mapShowFavoriteOnly, null, false),
   mapIncludeArchived<bool>(StoreKey.mapIncludeArchived, null, false),

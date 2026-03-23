@@ -6,7 +6,7 @@ import { fileUriService } from '@kit.ScenarioFusionKit';
 import abilityAccessCtrl from '@ohos.abilityAccessCtrl';
 
 import { NativeSyncApiOhos, SyncDelta, PlatformAsset, PlatformAlbum, Result, HashResult, CloudIdResult,
-  FlutterError } from './Messages_ohos.g'
+  FlutterError, PlatformAssetPlaybackStyle } from './Messages_ohos.g'
 import { BusinessError } from '@kit.BasicServicesKit';
 import fs from '@ohos.file.fs';
 import { uri, taskpool } from '@kit.ArkTS';
@@ -37,6 +37,7 @@ interface AssetInfo {
   orientation: number;
   isFavorite: boolean;
   size: number;
+  playbackStyle: PlatformAssetPlaybackStyle;
 }
 
 interface HashAssetParams {
@@ -148,13 +149,15 @@ async function getAssetIdsForAlbumTask(
   try {
     const ctx = sendableContextManager.convertToContext(sendableCtx);
     const phAccessHelper = photoAccessHelper.getPhotoAccessHelper(ctx);
+    const ownerAlbumIdKey = 'owner_album_id';
 
     const assetForAlbumfetchColumns: string[] = [
       photoAccessHelper.PhotoKeys.URI,
       photoAccessHelper.PhotoKeys.POSITION,
-      photoAccessHelper.PhotoKeys.OWNER_ALBUM_ID,
-
     ];
+    if (deviceInfo.sdkApiVersion >= 22) {
+      assetForAlbumfetchColumns.push(ownerAlbumIdKey);
+    }
     const specialAlbumLpaths = new Set<string>([
       '/DCIM/Camera',
       '/Pictures/Screenshots',
@@ -251,6 +254,7 @@ async function getAssetsForAlbumTask(
   try {
     const ctx = sendableContextManager.convertToContext(sendableCtx);
     const phAccessHelper = photoAccessHelper.getPhotoAccessHelper(ctx);
+    const ownerAlbumIdKey = 'owner_album_id';
 
     const assetForAlbumfetchColumns: string[] = [
       photoAccessHelper.PhotoKeys.URI,
@@ -265,9 +269,12 @@ async function getAssetsForAlbumTask(
       photoAccessHelper.PhotoKeys.DURATION,
       photoAccessHelper.PhotoKeys.ORIENTATION,
       photoAccessHelper.PhotoKeys.FAVORITE,
+      photoAccessHelper.PhotoKeys.PHOTO_SUBTYPE,
       photoAccessHelper.PhotoKeys.POSITION,
-      photoAccessHelper.PhotoKeys.OWNER_ALBUM_ID
     ];
+    if (deviceInfo.sdkApiVersion >= 22) {
+      assetForAlbumfetchColumns.push(ownerAlbumIdKey);
+    }
     const specialAlbumLpaths = new Set<string>([
       '/DCIM/Camera',
       '/Pictures/Screenshots',
@@ -285,7 +292,7 @@ async function getAssetsForAlbumTask(
 
     if (deviceInfo.sdkApiVersion >= 22 && ownerAlbumId !== null) {
       const predicatesPhoto: dataSharePredicates.DataSharePredicates = new dataSharePredicates.DataSharePredicates();
-      predicatesPhoto.equalTo(photoAccessHelper.PhotoKeys.OWNER_ALBUM_ID, ownerAlbumId);
+      predicatesPhoto.equalTo(ownerAlbumIdKey, ownerAlbumId);
       const photoFetchOptions: photoAccessHelper.FetchOptions = {
         fetchColumns: assetForAlbumfetchColumns,
         predicates: predicatesPhoto
@@ -368,6 +375,20 @@ async function getAssetsForAlbumTask(
       const orientation = currentAsset.get(photoAccessHelper.PhotoKeys.ORIENTATION).valueOf() as number;
       const isFavorite =
         (currentAsset.get(photoAccessHelper.PhotoKeys.FAVORITE).valueOf() as number) > 0 ? true : false;
+      let subtype: number | undefined = undefined;
+      try {
+        subtype = currentAsset.get(photoAccessHelper.PhotoKeys.PHOTO_SUBTYPE).valueOf() as number;
+      } catch (_) {
+        subtype = undefined;
+      }
+      let playbackStyle = PlatformAssetPlaybackStyle.IMAGE;
+      if (mediaType === photoAccessHelper.PhotoType.VIDEO) {
+        playbackStyle = PlatformAssetPlaybackStyle.VIDEO;
+      } else if (subtype === photoAccessHelper.PhotoSubtype.MOVING_PHOTO) {
+        playbackStyle = PlatformAssetPlaybackStyle.LIVE_PHOTO;
+      } else if (name.toLowerCase().endsWith('.gif')) {
+        playbackStyle = PlatformAssetPlaybackStyle.IMAGE_ANIMATED;
+      }
 
       results.push({
         id: id,
@@ -381,6 +402,7 @@ async function getAssetsForAlbumTask(
         orientation: orientation ?? 0,
         isFavorite: isFavorite,
         size: size ?? 0,
+        playbackStyle: playbackStyle,
       });
     }
   } catch (e) {
@@ -409,10 +431,12 @@ export class MessagesImplBase extends NativeSyncApiOhos {
       fetchColumns: [
         photoAccessHelper.PhotoKeys.URI,
         photoAccessHelper.PhotoKeys.POSITION,
-        photoAccessHelper.PhotoKeys.OWNER_ALBUM_ID,
       ],
       predicates: predicates,
     };
+    if (deviceInfo.sdkApiVersion >= 22) {
+      fetchOption.fetchColumns?.push('owner_album_id');
+    }
 
     try {
       const fetchResult = await phAccessHelper.getAssets(fetchOption);
@@ -579,18 +603,20 @@ export class MessagesImplBase extends NativeSyncApiOhos {
       photoAccessHelper.PhotoKeys.HEIGHT,
       photoAccessHelper.PhotoKeys.DURATION,
       photoAccessHelper.PhotoKeys.ORIENTATION,
-      photoAccessHelper.PhotoKeys.FAVORITE,
-      photoAccessHelper.PhotoKeys.OWNER_ALBUM_ID
+      photoAccessHelper.PhotoKeys.FAVORITE
     ],
     extraPredicates?: dataSharePredicates.DataSharePredicates
   ): Promise<photoAccessHelper.FetchResult<photoAccessHelper.PhotoAsset> | null> {
     console.error("MessagesImplBase 2 ")
     const phAccessHelper = photoAccessHelper.getPhotoAccessHelper(this.ctx);
     const preds = extraPredicates ?? new dataSharePredicates.DataSharePredicates();
-
+    const resolvedFetchColumns = [...fetchColumns];
+    if (deviceInfo.sdkApiVersion >= 22) {
+      resolvedFetchColumns.push('owner_album_id');
+    }
 
     const fetchOptions: photoAccessHelper.FetchOptions = {
-      fetchColumns: fetchColumns,
+      fetchColumns: resolvedFetchColumns,
       predicates: preds
       // 视 SDK 可加分页/排序参数
     };
@@ -889,21 +915,18 @@ export class MessagesImplBase extends NativeSyncApiOhos {
     })
     const phAccessHelper = photoAccessHelper.getPhotoAccessHelper(this.ctx);
 
-    let assetsCountfetchColumns: string[] = deviceInfo.sdkApiVersion >= 22?[
+    let assetsCountfetchColumns: string[] = [
       photoAccessHelper.PhotoKeys.URI,
       photoAccessHelper.PhotoKeys.DATE_ADDED,
       photoAccessHelper.PhotoKeys.POSITION,
       photoAccessHelper.PhotoKeys.DATE_MODIFIED,
-      photoAccessHelper.PhotoKeys.OWNER_ALBUM_ID,
-    ]:
-    [
-        photoAccessHelper.PhotoKeys.URI,
-        photoAccessHelper.PhotoKeys.DATE_ADDED,
-        photoAccessHelper.PhotoKeys.POSITION,
-        photoAccessHelper.PhotoKeys.DATE_MODIFIED,
-        photoAccessHelper.PhotoKeys.OWNER_ALBUM_ID,
-        photoAccessHelper.PhotoKeys.CHANGE_TIME,
-      ];
+    ];
+    if (deviceInfo.sdkApiVersion >= 22) {
+      assetsCountfetchColumns.push('owner_album_id');
+    }
+    if (deviceInfo.sdkApiVersion >= 23) {
+      assetsCountfetchColumns.push(photoAccessHelper.PhotoKeys.CHANGE_TIME);
+    }
 
     let count: number = 0;
     let fetchResult: photoAccessHelper.FetchResult<photoAccessHelper.PhotoAsset>;
@@ -923,7 +946,7 @@ export class MessagesImplBase extends NativeSyncApiOhos {
       // }
       if (deviceInfo.sdkApiVersion >= 22 && ownerAlbumId !== null) {
         let predicates: dataSharePredicates.DataSharePredicates = new dataSharePredicates.DataSharePredicates();
-        predicates.equalTo(photoAccessHelper.PhotoKeys.OWNER_ALBUM_ID, ownerAlbumId);
+        predicates.equalTo('owner_album_id', ownerAlbumId);
 
         let getAssetsCountetchOptions: photoAccessHelper.FetchOptions = {
           fetchColumns: assetsCountfetchColumns,
@@ -1172,10 +1195,10 @@ export class MessagesImplBase extends NativeSyncApiOhos {
     result.success();
   }
 
-  public override async getAssetsForAlbum(albumId: string, updatedTimeCond?: number, result?: Result<Array<PlatformAsset>>) {
+  public override async getAssetsForAlbum(albumId: string, updatedTimeCond: number, result: Result<Array<PlatformAsset>>) {
     console.error("MessagesImplBase 8 ")
     if (!this.ctx) {
-      result?.success([]);
+      result.success([]);
       return;
     }
     if (this.isUiContext(this.ctx)) {
@@ -1194,7 +1217,8 @@ export class MessagesImplBase extends NativeSyncApiOhos {
     const snapshotRows: MediaRecord[] = [];
     try {
       const sendableCtx = sendableContextManager.convertFromContext(this.ctx);
-      const task = updatedTimeCond === undefined
+      const hasUpdatedTimeCond = updatedTimeCond !== undefined && updatedTimeCond !== null;
+      const task = !hasUpdatedTimeCond
         ? new taskpool.Task(getAssetsForAlbumTask, sendableCtx, albumId)
         : new taskpool.Task(getAssetsForAlbumTask, sendableCtx, albumId, updatedTimeCond);
       try {
@@ -1214,6 +1238,7 @@ export class MessagesImplBase extends NativeSyncApiOhos {
             -1,
             199.9,
             199.9,
+            info.playbackStyle,
           );
           assetResult.push(asset);
           snapshotRows.push({ uri: info.id, mtime: info.modifiedAt ?? 0, size: info.size ?? 0 });
@@ -1227,7 +1252,7 @@ export class MessagesImplBase extends NativeSyncApiOhos {
       }
     } catch (e) {
       console.error(`getAssetsForAlbum taskpool error for ${albumId}`, e);
-      result?.success([]);
+      result.success([]);
       return;
     }
     try {
@@ -1240,7 +1265,7 @@ export class MessagesImplBase extends NativeSyncApiOhos {
     } catch (e) {
       console.error(`${this.TAG} replaceSnapshot failed`, e);
     }
-    result?.success(assetResult);
+    result.success(assetResult);
     return;
   }
 
@@ -1295,14 +1320,6 @@ export class MessagesImplBase extends NativeSyncApiOhos {
   }
 
   override getCloudIdForAssetIds(assetIds: Array<string>, result: Result<Array<CloudIdResult>>): void {
-    const results: CloudIdResult[] = [];
-    for (const id of assetIds) {
-      const item = new CloudIdResult();
-      item.setAssetId(id);
-      item.setCloudId(id);
-      item.setError('');
-      results.push(item);
-    }
-    result.success(results);
+    result.success([]);
   }
 }

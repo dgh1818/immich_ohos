@@ -2,14 +2,16 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:cancellation_token_http/http.dart' as http;
 import 'package:collection/collection.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:http/http.dart';
 import 'package:immich_mobile/domain/models/store.model.dart';
 import 'package:immich_mobile/entities/album.entity.dart';
 import 'package:immich_mobile/entities/asset.entity.dart';
 import 'package:immich_mobile/entities/backup_album.entity.dart';
 import 'package:immich_mobile/entities/store.entity.dart';
+import 'package:immich_mobile/infrastructure/repositories/network.repository.dart';
+import 'package:immich_mobile/repositories/upload.repository.dart';
 import 'package:immich_mobile/models/backup/backup_candidate.model.dart';
 import 'package:immich_mobile/models/backup/current_upload_asset.model.dart';
 import 'package:immich_mobile/models/backup/error_upload_asset.model.dart';
@@ -48,7 +50,6 @@ final backupServiceProvider = Provider(
 );
 
 class BackupService {
-  final httpClient = http.Client();
   final ApiService _apiService;
   final Logger _log = Logger("BackupService");
   final AppSettingsService _appSetting;
@@ -238,7 +239,7 @@ class BackupService {
 
   Future<bool> backupAsset(
     Iterable<BackupCandidate> assets,
-    http.CancellationToken cancelToken, {
+    Completer<void> cancelToken, {
     bool isBackground = false,
     PMProgressHandler? pmProgressHandler,
     required void Function(SuccessUploadAsset result) onSuccess,
@@ -312,20 +313,20 @@ class BackupService {
           }
 
           final fileStream = file.openRead();
-          final assetRawUploadData = http.MultipartFile(
+          final assetRawUploadData = MultipartFile(
             "assetData",
             fileStream,
             file.lengthSync(),
             filename: originalFileName,
           );
 
-          final baseRequest = MultipartRequest(
+          final baseRequest = ProgressMultipartRequest(
             'POST',
             Uri.parse('$savedEndpoint/assets'),
+            abortTrigger: cancelToken.future,
             onProgress: ((bytes, totalBytes) => onProgress(bytes, totalBytes)),
           );
 
-          baseRequest.headers.addAll(ApiService.getRequestHeaders());
           baseRequest.fields['deviceAssetId'] = asset.localId!;
           baseRequest.fields['deviceId'] = deviceId;
           baseRequest.fields['fileCreatedAt'] = asset.fileCreatedAt.toUtc().toIso8601String();
@@ -354,7 +355,7 @@ class BackupService {
             baseRequest.fields['livePhotoVideoId'] = livePhotoVideoId;
           }
 
-          final response = await httpClient.send(baseRequest, cancellationToken: cancelToken);
+          final response = await NetworkRepository.client.send(baseRequest);
 
           final responseBody = jsonDecode(await response.stream.bytesToString());
 
@@ -404,7 +405,7 @@ class BackupService {
             await _albumService.syncUploadAlbums(candidate.albumNames, [responseBody['id'] as String]);
           }
         }
-      } on http.CancelledException {
+      } on RequestAbortedException {
         dPrint(() => "Backup was cancelled by the user");
         anyErrors = true;
         break;
@@ -447,7 +448,7 @@ class BackupService {
       final fileCreatedAt = stat.changed.year == 1970 ? stat.modified : stat.changed;
       final fileModifiedAt = stat.modified;
 
-      final baseRequest = http.MultipartRequest('POST', Uri.parse('$endpoint/assets'));
+      final baseRequest = MultipartRequest('POST', Uri.parse('$endpoint/assets'));
 
       baseRequest.headers.addAll({
         'Authorization': 'Bearer $accessToken',
@@ -456,7 +457,7 @@ class BackupService {
       });
 
       baseRequest.fields.addAll({
-        'deviceAssetId': file.path,
+        'deviceAssetId': deviceAssetId,
         'deviceId': deviceId,
         'fileCreatedAt': fileCreatedAt.toUtc().toIso8601String(),
         'fileModifiedAt': fileModifiedAt.toUtc().toIso8601String(),
@@ -466,19 +467,19 @@ class BackupService {
 
       if (liveFile != null && livePhotoFile != null) {
         final livePhotoTitle = liveFile.name;
-        final livePhotoRawUploadData = http.MultipartFile(
+        final livePhotoRawUploadData = MultipartFile(
           'assetData',
           livePhotoFile.openRead(),
           livePhotoFile.lengthSync(),
           filename: livePhotoTitle,
         );
-        final baseRequest2 = http.MultipartRequest('POST', Uri.parse('$endpoint/assets'))
+        final baseRequest2 = MultipartRequest('POST', Uri.parse('$endpoint/assets'))
           ..headers.addAll(baseRequest.headers)
           ..fields.addAll(baseRequest.fields);
 
         baseRequest2.files.add(livePhotoRawUploadData);
 
-        final response = await http.Response.fromStream(await baseRequest2.send());
+        final response = await Response.fromStream(await baseRequest2.send());
 
         if (response.statusCode == 200 || response.statusCode == 201) {
           final json = jsonDecode(response.body);
@@ -493,29 +494,29 @@ class BackupService {
         }
       }
 
-      baseRequest.files.add(http.MultipartFile('assetData', file.openRead(), file.lengthSync(), filename: image.name));
+      baseRequest.files.add(MultipartFile('assetData', file.openRead(), file.lengthSync(), filename: image.name));
 
-      final response = await http.Response.fromStream(await baseRequest.send());
+      final response = await Response.fromStream(await baseRequest.send());
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         final json = jsonDecode(response.body);
         debugPrint('upload ok: ${json['id']}');
-        Fluttertoast.showToast(
+        unawaited(Fluttertoast.showToast(
           msg: 'Upload complete: $displayName',
           toastLength: Toast.LENGTH_SHORT,
           gravity: ToastGravity.BOTTOM,
-        );
+        ));
       } else {
         final error = jsonDecode(response.body);
         throw Exception('upload failed: ${error['message']}');
       }
     } catch (e) {
       debugPrint('upload error: $e');
-      Fluttertoast.showToast(
+      unawaited(Fluttertoast.showToast(
         msg: 'Upload failed: $displayName',
         toastLength: Toast.LENGTH_LONG,
         gravity: ToastGravity.BOTTOM,
-      );
+      ));
       rethrow;
     }
   }
@@ -524,26 +525,26 @@ class BackupService {
     String originalFileName,
     File? livePhotoVideoFile,
     MultipartRequest baseRequest,
-    http.CancellationToken cancelToken,
+    Completer cancelToken,
   ) async {
     if (livePhotoVideoFile == null) {
       return null;
     }
     final livePhotoTitle = p.setExtension(originalFileName, p.extension(livePhotoVideoFile.path));
     final fileStream = livePhotoVideoFile.openRead();
-    final livePhotoRawUploadData = http.MultipartFile(
+    final livePhotoRawUploadData = MultipartFile(
       "assetData",
       fileStream,
       livePhotoVideoFile.lengthSync(),
       filename: livePhotoTitle,
     );
-    final livePhotoReq = MultipartRequest(baseRequest.method, baseRequest.url, onProgress: baseRequest.onProgress)
+    final livePhotoReq = ProgressMultipartRequest(baseRequest.method, baseRequest.url, abortTrigger: cancelToken.future)
       ..headers.addAll(baseRequest.headers)
       ..fields.addAll(baseRequest.fields);
 
     livePhotoReq.files.add(livePhotoRawUploadData);
 
-    var response = await httpClient.send(livePhotoReq, cancellationToken: cancelToken);
+    var response = await NetworkRepository.client.send(livePhotoReq);
 
     var responseBody = jsonDecode(await response.stream.bytesToString());
 
@@ -564,32 +565,4 @@ class BackupService {
     AssetType.video => "VIDEO",
     AssetType.other => "OTHER",
   };
-}
-
-class MultipartRequest extends http.MultipartRequest {
-  /// Creates a new [MultipartRequest].
-  MultipartRequest(super.method, super.url, {required this.onProgress});
-
-  final void Function(int bytes, int totalBytes) onProgress;
-
-  /// Freezes all mutable fields and returns a
-  /// single-subscription [http.ByteStream]
-  /// that will emit the request body.
-  @override
-  http.ByteStream finalize() {
-    final byteStream = super.finalize();
-
-    final total = contentLength;
-    var bytes = 0;
-
-    final t = StreamTransformer.fromHandlers(
-      handleData: (List<int> data, EventSink<List<int>> sink) {
-        bytes += data.length;
-        onProgress.call(bytes, total);
-        sink.add(data);
-      },
-    );
-    final stream = byteStream.transform(t);
-    return http.ByteStream(stream);
-  }
 }

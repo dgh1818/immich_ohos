@@ -12,6 +12,7 @@ class GalleryStackedChildren extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final currentAssetNotifier = ref.read(currentAssetProvider.notifier);
     final asset = ref.watch(currentAssetProvider);
     if (asset == null) {
       return const SizedBox();
@@ -49,8 +50,11 @@ class GalleryStackedChildren extends HookConsumerWidget {
                 padding: const EdgeInsets.only(right: 5),
                 child: GestureDetector(
                   onTap: () {
+                    if (!context.mounted) {
+                      return;
+                    }
                     stackIndex.value = index;
-                    ref.read(currentAssetProvider.notifier).set(currentAsset);
+                    currentAssetNotifier.set(currentAsset);
                   },
                   child: Container(
                     width: 60,

@@ -1,11 +1,12 @@
+import 'dart:async';
+
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:immich_mobile/domain/models/asset/base_asset.model.dart';
 import 'package:immich_mobile/entities/asset.entity.dart' as old_asset_entity;
 import 'package:immich_mobile/models/cast/cast_manager_state.dart';
+import 'package:immich_mobile/providers/asset_viewer/asset_viewer.provider.dart';
 import 'package:immich_mobile/providers/asset_viewer/current_asset.provider.dart';
-import 'package:immich_mobile/providers/asset_viewer/video_player_controls_provider.dart';
-import 'package:immich_mobile/providers/asset_viewer/video_player_value_provider.dart';
-import 'package:immich_mobile/providers/infrastructure/asset_viewer/current_asset.provider.dart';
+import 'package:immich_mobile/providers/asset_viewer/video_player_provider.dart';
 import 'package:immich_mobile/services/gcast.service.dart';
 
 final castProvider = StateNotifierProvider<CastNotifier, CastManagerState>(
@@ -54,7 +55,7 @@ class CastNotifier extends StateNotifier<CastManagerState> {
   }
 
   BaseAsset? _currentCastAsset() {
-    final currentAsset = _ref.read(currentAssetNotifier);
+    final currentAsset = _ref.read(assetViewerProvider).currentAsset;
     if (currentAsset != null) {
       return currentAsset;
     }
@@ -104,11 +105,19 @@ class CastNotifier extends StateNotifier<CastManagerState> {
     );
   }
 
+  VideoPlayerNotifier? _currentVideoPlayer() {
+    final heroTag = _ref.read(assetViewerProvider).currentAsset?.heroTag;
+    if (heroTag == null) {
+      return null;
+    }
+    return _ref.read(videoPlayerProvider(heroTag).notifier);
+  }
+
   void loadMedia(RemoteAsset asset, bool reload) {
     _gCastService.loadMedia(asset, reload);
   }
 
-  // TODO: remove this when we migrate to new timeline
+  // TODO: remove this when we migrate legacy viewers to the new asset viewer.
   void loadMediaOld(old_asset_entity.Asset asset, bool reload) {
     final remoteAsset = RemoteAsset(
       id: asset.remoteId!,
@@ -130,8 +139,7 @@ class CastNotifier extends StateNotifier<CastManagerState> {
   }
 
   Future<void> connect(CastDestinationType type, dynamic device) async {
-    final currentAsset = _currentCastAsset();
-    _gCastService.setCurrentPlaybackAsset(currentAsset);
+    _gCastService.setCurrentPlaybackAsset(_currentCastAsset());
 
     switch (type) {
       case CastDestinationType.googleCast:
@@ -173,20 +181,39 @@ class CastNotifier extends StateNotifier<CastManagerState> {
     await _gCastService.clearPreparedPlaybackSessionIfCurrent();
   }
 
+  Future<void> syncPlaybackState(VideoPlayerState playbackState) async {
+    await _gCastService.syncPlaybackState(playbackState);
+  }
+
+  void toggle() {
+    switch (state.castState) {
+      case CastState.playing:
+        pause();
+      case CastState.paused:
+        play();
+      default:
+    }
+  }
+
   void play() {
     _gCastService.play();
-    _ref.read(videoPlayerControlsProvider.notifier).play();
+    final player = _currentVideoPlayer();
+    if (player != null) {
+      unawaited(player.play());
+    }
   }
 
   void pause() {
     _gCastService.pause();
-    _ref.read(videoPlayerControlsProvider.notifier).pause();
+    final player = _currentVideoPlayer();
+    if (player != null) {
+      unawaited(player.pause());
+    }
   }
 
   void seekTo(Duration position) {
     _gCastService.seekTo(position);
-    _ref.read(videoPlayerControlsProvider.notifier).position = position;
-    _ref.read(videoPlaybackValueProvider.notifier).position = position;
+    _currentVideoPlayer()?.seekTo(position);
   }
 
   void stop() {

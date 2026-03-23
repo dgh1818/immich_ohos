@@ -9,7 +9,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_hooks/flutter_hooks.dart' hide Store;
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:immich_mobile/domain/models/store.model.dart';
 import 'package:immich_mobile/entities/asset.entity.dart';
+import 'package:immich_mobile/entities/store.entity.dart';
 import 'package:immich_mobile/extensions/build_context_extensions.dart';
 import 'package:immich_mobile/extensions/scroll_extensions.dart';
 import 'package:immich_mobile/pages/common/download_panel.dart';
@@ -20,7 +22,7 @@ import 'package:immich_mobile/providers/asset_viewer/asset_stack.provider.dart';
 import 'package:immich_mobile/providers/asset_viewer/current_asset.provider.dart';
 import 'package:immich_mobile/providers/asset_viewer/is_motion_video_playing.provider.dart';
 import 'package:immich_mobile/providers/asset_viewer/show_controls.provider.dart';
-import 'package:immich_mobile/providers/asset_viewer/video_player_value_provider.dart';
+import 'package:immich_mobile/providers/asset_viewer/video_player_provider.dart';
 import 'package:immich_mobile/providers/cast.provider.dart';
 import 'package:immich_mobile/providers/haptic_feedback.provider.dart';
 import 'package:immich_mobile/services/app_settings.service.dart';
@@ -36,7 +38,6 @@ import 'package:immich_mobile/widgets/photo_view/src/photo_view_computed_scale.d
 import 'package:immich_mobile/widgets/photo_view/src/photo_view_scale_state.dart';
 import 'package:immich_mobile/widgets/photo_view/src/utils/photo_view_hero_attributes.dart';
 
-import 'package:immich_mobile/providers/asset_viewer/video_player_controller_provider.dart';
 import 'package:immich_mobile/main.dart';
 import 'package:immich_mobile/utils/cache/custom_image_cache.dart';
 import 'package:immich_mobile/utils/viewer_hdr.dart';
@@ -65,6 +66,7 @@ class GalleryViewerPage extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final isAlive = useRef(true);
     final totalAssets = useState(renderList.totalAssets);
     final isZoomed = useState(false);
     final stackIndex = useState(0);
@@ -81,8 +83,9 @@ class GalleryViewerPage extends HookConsumerWidget {
       return videoPlayerKeys.value[id]!;
     }
 
-    bool isImageHdrEnabled() => ref.read(appSettingsServiceProvider).getSetting<bool>(AppSettingsEnum.imageHdr);
-    bool isVideoHdrEnabled() => ref.read(appSettingsServiceProvider).getSetting<bool>(AppSettingsEnum.videoHdr);
+    bool isImageHdrEnabled() => Store.get(StoreKey.imageHdr, true);
+    bool isVideoHdrEnabled() => Store.get(StoreKey.videoHdr, true);
+    bool isTapToNavigateEnabled() => Store.get(StoreKey.tapToNavigate, false);
 
     final routeAware = useMemoized(() => _MyRouteAware());
     final imageListener = useRef<ImageStreamListener?>(null);
@@ -94,9 +97,19 @@ class GalleryViewerPage extends HookConsumerWidget {
       }
       timers.value.clear();
     }, []);
+    bool canUseRef() => context.mounted && isAlive.value;
+
+    useEffect(() {
+      return () {
+        isAlive.value = false;
+      };
+    }, const []);
 
     useEffect(() {
       WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!canUseRef()) {
+          return;
+        }
         final modalRoute = ModalRoute.of(context);
         if (modalRoute is PageRoute) {
           routeObserver.subscribe(routeAware, modalRoute);
@@ -157,21 +170,24 @@ class GalleryViewerPage extends HookConsumerWidget {
     }
 
     useEffect(() {
-      if (ref.read(showControlsProvider)) {
-        SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
-      } else {
-        SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersive);
+      if (!canUseRef()) {
+        return null;
       }
+      SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
 
-      // Delay this a bit so we can finish loading the page
-      Timer(const Duration(milliseconds: 400), () {
-        precacheNextImage(currentIndex.value + 1);
-      });
+      timers.value.add(
+        Timer(const Duration(milliseconds: 400), () {
+          precacheNextImage(currentIndex.value + 1);
+        }),
+      );
 
       return null;
     }, const []);
 
     useEffect(() {
+      if (!canUseRef()) {
+        return null;
+      }
       final asset = loadAsset(currentIndex.value);
 
       if (asset.isRemote) {
@@ -179,7 +195,7 @@ class GalleryViewerPage extends HookConsumerWidget {
       } else {
         if (isCasting) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (context.mounted) {
+            if (canUseRef()) {
               ref.read(castProvider.notifier).stop();
               context.scaffoldMessenger.showSnackBar(
                 SnackBar(
@@ -198,6 +214,9 @@ class GalleryViewerPage extends HookConsumerWidget {
     }, [ref.watch(castProvider).isCasting]);
 
     void showInfo() {
+      if (!canUseRef()) {
+        return;
+      }
       final asset = ref.read(currentAssetProvider);
       if (asset == null) {
         return;
@@ -230,6 +249,9 @@ class GalleryViewerPage extends HookConsumerWidget {
     }
 
     void handleSwipeUpDown(DragUpdateDetails details) {
+      if (!canUseRef()) {
+        return;
+      }
       const int sensitivity = 15;
       const int dxThreshold = 50;
       const double ratioThreshold = 3.0;
@@ -259,6 +281,9 @@ class GalleryViewerPage extends HookConsumerWidget {
     }
 
     useEffect(() {
+      if (!canUseRef()) {
+        return null;
+      }
       final a = loadAsset(currentIndex.value);
       final ImageProvider provider = ImmichImage.imageProvider(asset: a);
       ViewerHdr.enableEngine(imageEnabled: isImageHdrEnabled(), videoEnabled: isVideoHdrEnabled());
@@ -294,18 +319,6 @@ class GalleryViewerPage extends HookConsumerWidget {
       };
     }, []);
 
-    useEffect(() {
-      // No need to await this
-      unawaited(
-        // Delay this a bit so we can finish loading the page
-        Future.delayed(const Duration(milliseconds: 400)).then(
-          // Precache the next image
-          (_) => precacheNextImage(currentIndex.value + 1),
-        ),
-      );
-      return null;
-    }, []);
-
     PhotoViewGalleryPageOptions buildImage(Asset asset) {
       return PhotoViewGalleryPageOptions(
         onDragStart: (_, details, __, ___) {
@@ -314,11 +327,46 @@ class GalleryViewerPage extends HookConsumerWidget {
         onDragUpdate: (_, details, __) {
           handleSwipeUpDown(details);
         },
-        onTapDown: (_, __, ___) {
-          ref.read(showControlsProvider.notifier).toggle();
+        onTapDown: (ctx, tapDownDetails, _) {
+          if (!canUseRef()) {
+            return;
+          }
+          final tapToNavigate = isTapToNavigateEnabled();
+          if (!tapToNavigate) {
+            ref.read(showControlsProvider.notifier).toggle();
+            return;
+          }
+
+          double tapX = tapDownDetails.globalPosition.dx;
+          double screenWidth = ctx.width;
+
+          // We want to change images if the user taps in the leftmost or
+          // rightmost quarter of the screen
+          bool tappedLeftSide = tapX < screenWidth / 4;
+          bool tappedRightSide = tapX > screenWidth * (3 / 4);
+
+          int? currentPage = controller.page?.toInt();
+          int maxPage = renderList.totalAssets - 1;
+
+          if (tappedLeftSide && currentPage != null) {
+            // Nested if because we don't want to fallback to show/hide controls
+            if (currentPage != 0) {
+              controller.jumpToPage(currentPage - 1);
+            }
+          } else if (tappedRightSide && currentPage != null) {
+            // Nested if because we don't want to fallback to show/hide controls
+            if (currentPage != maxPage) {
+              controller.jumpToPage(currentPage + 1);
+            }
+          } else {
+            ref.read(showControlsProvider.notifier).toggle();
+          }
         },
         onLongPressStart: asset.isMotionPhoto
             ? (_, __, ___) {
+                if (!canUseRef()) {
+                  return;
+                }
                 imageHdrState = ViewerHdr.applyImageMode(enabled: isImageHdrEnabled(), hdr: 0);
                 ref.read(isPlayingMotionVideoProvider.notifier).playing = true;
                 ViewerHdr.applyVideoMode(enabled: isVideoHdrEnabled());
@@ -369,6 +417,9 @@ class GalleryViewerPage extends HookConsumerWidget {
 
       final stackId = newAsset.stackId;
       if (stackId != null && currentIndex.value == index) {
+        if (!canUseRef()) {
+          return buildImage(newAsset);
+        }
         final stackElements = ref.read(assetStackStateProvider(newAsset.stackId!));
         if (stackIndex.value < stackElements.length) {
           newAsset = stackElements.elementAt(stackIndex.value);
@@ -391,13 +442,14 @@ class GalleryViewerPage extends HookConsumerWidget {
     }
 
     void stopMotionPlayback() {
+      if (!canUseRef()) {
+        return;
+      }
       final current = ref.read(currentAssetProvider);
       if (current?.isMotionPhoto == true && ref.read(isPlayingMotionVideoProvider)) {
         ref.read(isPlayingMotionVideoProvider.notifier).playing = false;
-        //ui.SetHdr.setHdrMode(hdr: 0, is_image: true);
         lastPlayingState = 0;
-        final controller = ref.read(videoPlayerControllerProvider(asset: current!)).value;
-        controller?.pause();
+        unawaited(ref.read(videoPlayerProvider(current!.id.toString()).notifier).pause());
 
         setDisplayMode(ImmichImage.imageProvider(asset: current), context);
       }
@@ -420,6 +472,9 @@ class GalleryViewerPage extends HookConsumerWidget {
               PhotoViewGallery.builder(
                 key: const ValueKey('gallery'),
                 scaleStateChangedCallback: (state) {
+                  if (!canUseRef()) {
+                    return;
+                  }
                   final asset = ref.read(currentAssetProvider);
                   if (asset == null) {
                     return;
@@ -463,6 +518,9 @@ class GalleryViewerPage extends HookConsumerWidget {
                 itemCount: totalAssets.value,
                 scrollDirection: Axis.horizontal,
                 onPageChanged: (value, _) {
+                  if (!canUseRef()) {
+                    return;
+                  }
                   ref.read(isPlayingMotionVideoProvider.notifier).playing = false;
 
                   final next = currentIndex.value < value ? value + 1 : value - 1;
@@ -476,7 +534,7 @@ class GalleryViewerPage extends HookConsumerWidget {
 
                   ref.read(currentAssetProvider.notifier).set(newAsset);
                   if (newAsset.isVideo || newAsset.isMotionPhoto) {
-                    ref.read(videoPlaybackValueProvider.notifier).reset();
+                    ref.read(videoPlayerProvider(newAsset.id.toString()).notifier).reset();
                   }
 
                   final a = loadAsset(currentIndex.value);
@@ -496,8 +554,12 @@ class GalleryViewerPage extends HookConsumerWidget {
                   // Then precache the next image
 
                   // Wait for page change animation to finish, then precache the next image
+                  cancelAllTimers();
                   timers.value.add(
                     Timer(const Duration(milliseconds: 400), () {
+                      if (!canUseRef()) {
+                        return;
+                      }
                       if (!a.isImage) {
                         ViewerHdr.applyVideoMode(enabled: isVideoHdrEnabled());
                       }

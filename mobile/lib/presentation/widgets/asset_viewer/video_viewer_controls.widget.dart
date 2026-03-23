@@ -5,12 +5,10 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:huawei_cast/huawei_cast.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:immich_mobile/models/cast/cast_manager_state.dart';
-import 'package:immich_mobile/presentation/widgets/asset_viewer/asset_viewer.state.dart';
+import 'package:immich_mobile/providers/asset_viewer/asset_viewer.provider.dart';
 import 'package:immich_mobile/providers/asset_viewer/is_motion_video_playing.provider.dart';
-import 'package:immich_mobile/providers/asset_viewer/video_player_controls_provider.dart';
-import 'package:immich_mobile/providers/asset_viewer/video_player_value_provider.dart';
+import 'package:immich_mobile/providers/asset_viewer/video_player_provider.dart';
 import 'package:immich_mobile/providers/cast.provider.dart';
-import 'package:immich_mobile/providers/infrastructure/asset_viewer/current_asset.provider.dart';
 import 'package:immich_mobile/utils/hooks/timer_hook.dart';
 import 'package:immich_mobile/widgets/asset_viewer/center_play_button.dart';
 import 'package:immich_mobile/widgets/common/delayed_loading_indicator.dart';
@@ -22,74 +20,92 @@ class VideoViewerControls extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final assetIsVideo = ref.watch(currentAssetNotifier.select((asset) => asset != null && asset.isVideo));
+    final asset = ref.watch(assetViewerProvider.select((s) => s.currentAsset));
+    final heroTag = asset?.heroTag;
+    final assetIsVideo = asset?.isVideo ?? false;
+    final assetViewerNotifier = ref.read(assetViewerProvider.notifier);
+    final castNotifier = ref.read(castProvider.notifier);
+    final videoNotifier = heroTag == null ? null : ref.read(videoPlayerProvider(heroTag).notifier);
+
     bool showControls = ref.watch(assetViewerProvider.select((s) => s.showingControls));
-    final showBottomSheet = ref.watch(assetViewerProvider.select((s) => s.showingBottomSheet));
-    if (showBottomSheet) {
+    final showingDetails = ref.watch(assetViewerProvider.select((s) => s.showingDetails));
+    if (showingDetails) {
       showControls = false;
     }
-    final VideoPlaybackState state = ref.watch(videoPlaybackValueProvider.select((value) => value.state));
+
+    final playback = heroTag == null ? null : ref.watch(videoPlayerProvider(heroTag));
+    final state = playback?.status ?? VideoPlaybackStatus.paused;
     final cast = ref.watch(castProvider);
 
     final isPlayingMotionVideo = ref.watch(isPlayingMotionVideoProvider);
-    final huaweiCast = HuaweiCast();
+    final huaweiCast = useMemoized(HuaweiCast.new);
 
     final hideTimer = useTimer(hideTimerDuration, () {
       if (!context.mounted || isPlayingMotionVideo) {
         return;
       }
-      final state = ref.read(videoPlaybackValueProvider).state;
 
-      if (state != VideoPlaybackState.paused && state != VideoPlaybackState.completed && assetIsVideo) {
+      final currentAsset = ref.read(assetViewerProvider).currentAsset;
+      final currentState = currentAsset == null
+          ? VideoPlaybackStatus.paused
+          : ref.read(videoPlayerProvider(currentAsset.heroTag)).status;
+
+      if (currentState != VideoPlaybackStatus.paused && currentState != VideoPlaybackStatus.completed && assetIsVideo) {
         ref.read(assetViewerProvider.notifier).setControls(false);
       }
     });
-    final showBuffering = state == VideoPlaybackState.buffering;
+    final showBuffering = state == VideoPlaybackStatus.buffering;
 
     void showControlsAndStartHideTimer() {
-      if (isPlayingMotionVideo) {
+      if (!context.mounted || isPlayingMotionVideo) {
         return;
       }
       hideTimer.reset();
-      ref.read(assetViewerProvider.notifier).setControls(true);
+      assetViewerNotifier.setControls(true);
     }
 
     void toggleControls() {
-      if (isPlayingMotionVideo) {
+      if (!context.mounted || isPlayingMotionVideo) {
         return;
       }
       if (showControls) {
-        ref.read(assetViewerProvider.notifier).setControls(false);
+        assetViewerNotifier.setControls(false);
         return;
       }
       showControlsAndStartHideTimer();
     }
 
-    // When we change position, only keep the timer alive if controls are already showing
-    ref.listen(videoPlayerControlsProvider.select((v) => v.position), (previous, next) {
-      if (showControls) {
-        hideTimer.reset();
-      }
-    });
+    if (heroTag != null) {
+      ref.listen(videoPlayerProvider(heroTag).select((v) => v.position), (_, __) {
+        if (!context.mounted) {
+          return;
+        }
+        if (showControls) {
+          hideTimer.reset();
+        }
+      });
+    }
 
     useEffect(() {
-      // Bridge transport commands coming back from HuaweiCast/system media
-      // controls into the same Riverpod controls used by the in-app player UI.
-      // This keeps remote play/pause/scrub actions and the local player state aligned.
       final subscription = huaweiCast.remoteControlStream.listen((event) {
+        if (!context.mounted) {
+          return;
+        }
+        final currentAsset = ref.read(assetViewerProvider).currentAsset;
+        if (currentAsset == null) {
+          return;
+        }
+
+        final notifier = ref.read(videoPlayerProvider(currentAsset.heroTag).notifier);
         switch (event.method) {
           case 'play':
-            ref.read(videoPlayerControlsProvider.notifier).play();
+            unawaited(notifier.play());
             break;
           case 'pause':
-            ref.read(videoPlayerControlsProvider.notifier).pause();
+            unawaited(notifier.pause());
             break;
           case 'seekTo':
-            final position = Duration(milliseconds: event.position ?? 0);
-            // Update both the requested seek target and the visible playback
-            // position so the slider reflects remote scrubbing immediately.
-            ref.read(videoPlayerControlsProvider.notifier).position = position;
-            ref.read(videoPlaybackValueProvider.notifier).position = position;
+            notifier.seekTo(Duration(milliseconds: event.position ?? 0));
             break;
           default:
             break;
@@ -101,31 +117,33 @@ class VideoViewerControls extends HookConsumerWidget {
       };
     }, const []);
 
-    /// Toggles between playing and pausing depending on the state of the video
     void togglePlay() {
+      if (!context.mounted) {
+        return;
+      }
       showControlsAndStartHideTimer();
 
       if (cast.isCasting) {
         if (cast.castState == CastState.playing) {
-          ref.read(castProvider.notifier).pause();
+          castNotifier.pause();
         } else if (cast.castState == CastState.paused) {
-          ref.read(castProvider.notifier).play();
-        } else if (cast.castState == CastState.idle) {
-          // resend the play command since its finished
-          final asset = ref.read(currentAssetNotifier);
-          if (asset == null) {
-            return;
-          }
+          castNotifier.play();
         }
         return;
       }
 
-      if (state == VideoPlaybackState.playing) {
-        ref.read(videoPlayerControlsProvider.notifier).pause();
-      } else if (state == VideoPlaybackState.completed) {
-        ref.read(videoPlayerControlsProvider.notifier).restart();
-      } else {
-        ref.read(videoPlayerControlsProvider.notifier).play();
+      if (videoNotifier == null) {
+        return;
+      }
+
+      switch (state) {
+        case VideoPlaybackStatus.playing:
+        case VideoPlaybackStatus.buffering:
+          unawaited(videoNotifier.pause());
+        case VideoPlaybackStatus.completed:
+          unawaited(videoNotifier.restart());
+        case VideoPlaybackStatus.paused:
+          unawaited(videoNotifier.play());
       }
     }
 
@@ -140,13 +158,18 @@ class VideoViewerControls extends HookConsumerWidget {
               const Center(child: DelayedLoadingIndicator(fadeInDuration: Duration(milliseconds: 400)))
             else
               GestureDetector(
-                onTap: () => ref.read(assetViewerProvider.notifier).setControls(false),
+                onTap: () {
+                  if (!context.mounted) {
+                    return;
+                  }
+                  assetViewerNotifier.setControls(false);
+                },
                 child: CenterPlayButton(
                   backgroundColor: Colors.black54,
                   iconColor: Colors.white,
-                  isFinished: state == VideoPlaybackState.completed,
+                  isFinished: state == VideoPlaybackStatus.completed,
                   isPlaying:
-                      state == VideoPlaybackState.playing || (cast.isCasting && cast.castState == CastState.playing),
+                      state == VideoPlaybackStatus.playing || (cast.isCasting && cast.castState == CastState.playing),
                   show: assetIsVideo && showControls,
                   onPressed: togglePlay,
                 ),

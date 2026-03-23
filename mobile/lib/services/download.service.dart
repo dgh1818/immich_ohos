@@ -458,12 +458,12 @@ class DownloadService {
   DownloadTask _buildDownloadTask(String id, String filename, {String? group, String? metadata, int? priority}) {
     final path = r'/assets/{id}/original'.replaceAll('{id}', id);
     final serverEndpoint = Store.get(StoreKey.serverEndpoint);
-    final headers = ApiService.getRequestHeaders();
+    final url = serverEndpoint + path;
 
     return DownloadTask(
       taskId: id,
-      url: serverEndpoint + path,
-      headers: headers,
+      url: url,
+      headers: ApiService.getAuthenticatedRequestHeaders(url),
       filename: filename,
       updates: Updates.statusAndProgress,
       group: group ?? '',

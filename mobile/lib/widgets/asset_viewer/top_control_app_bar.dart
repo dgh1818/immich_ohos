@@ -10,7 +10,6 @@ import 'package:immich_mobile/providers/asset.provider.dart';
 import 'package:immich_mobile/providers/cast.provider.dart';
 import 'package:immich_mobile/providers/routes.provider.dart';
 import 'package:immich_mobile/providers/tab.provider.dart';
-import 'package:immich_mobile/widgets/asset_viewer/cast_dialog.dart';
 import 'package:immich_mobile/widgets/asset_viewer/motion_photo_button.dart';
 import 'package:immich_mobile/providers/asset_viewer/current_asset.provider.dart';
 
@@ -45,6 +44,7 @@ class TopControlAppBar extends HookConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isInLockedView = ref.watch(inLockedViewProvider);
+    final castNotifier = ref.read(castProvider.notifier);
     const double iconSize = 22.0;
     final a = ref.watch(assetWatcher(asset)).value ?? asset;
     final album = ref.watch(currentAlbumProvider);
@@ -143,13 +143,11 @@ class TopControlAppBar extends HookConsumerWidget {
 
     Widget buildCastButton() {
       return IconButton(
-        onPressed: () async {
-          if (isCasting) {
-            await showDialog<void>(context: context, builder: (context) => const CastDialog());
+        onPressed: () {
+          if (!context.mounted) {
             return;
           }
-
-          await ref.read(castProvider.notifier).connect(CastDestinationType.googleCast, null);
+          castNotifier.connect(CastDestinationType.googleCast, null);
         },
         icon: Icon(
           isCasting ? Icons.cast_connected_rounded : Icons.cast_rounded,

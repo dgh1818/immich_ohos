@@ -1,13 +1,12 @@
+import 'dart:async';
 import 'dart:io';
 
-import 'package:cancellation_token_http/http.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:immich_mobile/domain/models/store.model.dart';
 import 'package:immich_mobile/entities/store.entity.dart';
 import 'package:immich_mobile/models/upload/share_intent_attachment.model.dart';
 import 'package:immich_mobile/repositories/upload.repository.dart';
 import 'package:immich_mobile/routing/router.dart';
-import 'package:immich_mobile/services/api.service.dart';
 import 'package:immich_mobile/services/share_intent_service.dart';
 import 'package:immich_mobile/services/foreground_upload.service.dart';
 import 'package:logging/logging.dart';
@@ -166,7 +165,6 @@ class ShareIntentUploadStateNotifier extends StateNotifier<List<ShareIntentAttac
 
     final fileId = _attachmentFileId(attachment);
     final deviceId = Store.get(StoreKey.deviceId);
-    final headers = ApiService.getRequestHeaders();
     final createdAt = entity.createDateTime;
     final modifiedAt = entity.modifiedDateTime;
     final duration = entity.duration;
@@ -182,16 +180,13 @@ class ShareIntentUploadStateNotifier extends StateNotifier<List<ShareIntentAttac
     final imageName = p.basename(imageFile.path);
     final videoName = p.setExtension(imageName, p.extension(videoFile.path));
 
-    final httpClient = Client();
-    final cancelToken = CancellationToken();
+    final cancelToken = Completer<void>();
 
     try {
       final videoResult = await _uploadRepository.uploadFile(
         file: videoFile,
         originalFileName: videoName,
-        headers: headers,
         fields: baseFields,
-        httpClient: httpClient,
         cancelToken: cancelToken,
         onProgress: (bytes, totalBytes) {
           final progress = totalBytes > 0 ? bytes / totalBytes : 0.0;
@@ -205,17 +200,12 @@ class ShareIntentUploadStateNotifier extends StateNotifier<List<ShareIntentAttac
         return true;
       }
 
-      final imageFields = {
-        ...baseFields,
-        'livePhotoVideoId': videoResult.remoteAssetId!,
-      };
+      final imageFields = {...baseFields, 'livePhotoVideoId': videoResult.remoteAssetId!};
 
       final imageResult = await _uploadRepository.uploadFile(
         file: imageFile,
         originalFileName: imageName,
-        headers: headers,
         fields: imageFields,
-        httpClient: httpClient,
         cancelToken: cancelToken,
         onProgress: (bytes, totalBytes) {
           final progress = totalBytes > 0 ? bytes / totalBytes : 0.0;
@@ -232,8 +222,6 @@ class ShareIntentUploadStateNotifier extends StateNotifier<List<ShareIntentAttac
     } catch (error) {
       _logger.warning("Live photo upload failed for ${attachment.path}: $error");
       _updateStatus(fileId, UploadStatus.failed);
-    } finally {
-      httpClient.close();
     }
 
     return true;

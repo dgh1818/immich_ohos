@@ -1,14 +1,14 @@
 import 'dart:ui';
 
 const Map<String, Locale> locales = {
-  'Chinese Simplified (zh_CN)': Locale.fromSubtags(languageCode: 'zh', scriptCode: 'SIMPLIFIED'),
+  'Chinese Simplified (zh_CN)': Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hans'),
   // Default locale
   'English (en)': Locale('en'),
   // Additional locales
   'Arabic (ar)': Locale('ar'),
   'Bulgarian (bg)': Locale('bg'),
   'Catalan (ca)': Locale('ca'),
-  //'Chinese Simplified (zh_CN)': Locale.fromSubtags(languageCode: 'zh', scriptCode: 'SIMPLIFIED'),
+  //'Chinese Simplified (zh_CN)': Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hans'),
   'Chinese Traditional (zh_TW)': Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hant'),
   'Croatian (hr)': Locale('hr'),
   'Czech (cs)': Locale('cs'),

@@ -12,7 +12,7 @@ import 'package:pigeon/pigeon.dart';
 @HostApi()
 abstract class RemoteImageApiOhos {
   @async
-  Map<String, Object>? requestImage(String url, {required Map<String, String> headers, required int requestId});
+  Map<String, Object>? requestImage(String url, {required int requestId, required bool preferEncoded});
 
   void cancelRequest(int requestId);
 

@@ -6,6 +6,8 @@ import 'package:flutter/painting.dart';
 import 'package:immich_mobile/domain/models/asset/base_asset.model.dart';
 import 'package:immich_mobile/domain/models/setting.model.dart';
 import 'package:immich_mobile/domain/services/setting.service.dart';
+import 'package:immich_mobile/infrastructure/loaders/image_request.dart';
+import 'package:immich_mobile/presentation/widgets/images/animated_image_stream_completer.dart';
 import 'package:immich_mobile/presentation/widgets/images/image_provider.dart';
 import 'package:immich_mobile/presentation/widgets/images/one_frame_multi_image_stream_completer.dart';
 import 'package:immich_mobile/services/api.service.dart';
@@ -21,7 +23,7 @@ class RemoteImageProvider extends CancellableImageProvider<RemoteImageProvider>
   RemoteImageProvider({required this.url});
 
   RemoteImageProvider.thumbnail({required String assetId, required String thumbhash})
-      : url = getThumbnailUrlForRemoteId(assetId, thumbhash: thumbhash);
+    : url = getThumbnailUrlForRemoteId(assetId, thumbhash: thumbhash);
 
   @override
   Future<RemoteImageProvider> obtainKey(ImageConfiguration configuration) {
@@ -41,8 +43,7 @@ class RemoteImageProvider extends CancellableImageProvider<RemoteImageProvider>
   }
 
   Stream<ImageInfo> _codec(RemoteImageProvider key, ImageDecoderCallback decode) {
-    final headers = ApiService.getRequestHeaders();
-    final provider = NetworkImage(key.url, headers: headers);
+    final provider = NetworkImage(key.url, headers: ApiService.getAuthenticatedRequestHeaders(key.url));
     final controller = StreamController<ImageInfo>();
 
     _networkStream = provider.resolve(const ImageConfiguration());
@@ -102,6 +103,8 @@ class RemoteFullImageProvider extends CancellableImageProvider<RemoteFullImagePr
   final String assetId;
   final String thumbhash;
   final AssetType assetType;
+  final bool isAnimated;
+
   ImageStream? _previewStream;
   ImageStreamListener? _previewListener;
   StreamController<ImageInfo>? _previewController;
@@ -109,7 +112,12 @@ class RemoteFullImageProvider extends CancellableImageProvider<RemoteFullImagePr
   ImageStreamListener? _originalListener;
   StreamController<ImageInfo>? _originalController;
 
-  RemoteFullImageProvider({required this.assetId, required this.thumbhash, required this.assetType});
+  RemoteFullImageProvider({
+    required this.assetId,
+    required this.thumbhash,
+    required this.assetType,
+    required this.isAnimated,
+  });
 
   @override
   Future<RemoteFullImageProvider> obtainKey(ImageConfiguration configuration) {
@@ -118,12 +126,27 @@ class RemoteFullImageProvider extends CancellableImageProvider<RemoteFullImagePr
 
   @override
   ImageStreamCompleter loadImage(RemoteFullImageProvider key, ImageDecoderCallback decode) {
+    if (key.isAnimated) {
+      return AnimatedImageStreamCompleter(
+        stream: _animatedCodec(key, decode),
+        scale: 1.0,
+        initialImage: getInitialImage(RemoteImageProvider.thumbnail(assetId: key.assetId, thumbhash: key.thumbhash)),
+        informationCollector: () => <DiagnosticsNode>[
+          DiagnosticsProperty<ImageProvider>('Image provider', this),
+          DiagnosticsProperty<String>('Asset Id', key.assetId),
+          DiagnosticsProperty<bool>('isAnimated', key.isAnimated),
+        ],
+        onLastListenerRemoved: cancel,
+      );
+    }
+
     return OneFramePlaceholderImageStreamCompleter(
       _codec(key, decode),
       initialImage: getInitialImage(RemoteImageProvider.thumbnail(assetId: key.assetId, thumbhash: key.thumbhash)),
       informationCollector: () => <DiagnosticsNode>[
         DiagnosticsProperty<ImageProvider>('Image provider', this),
         DiagnosticsProperty<String>('Asset Id', key.assetId),
+        DiagnosticsProperty<bool>('isAnimated', key.isAnimated),
       ],
       onLastListenerRemoved: cancel,
     );
@@ -137,8 +160,9 @@ class RemoteFullImageProvider extends CancellableImageProvider<RemoteFullImagePr
       return;
     }
 
-    final headers = ApiService.getRequestHeaders();
-
+    final headers = ApiService.getAuthenticatedRequestHeaders(
+      getThumbnailUrlForRemoteId(key.assetId, type: AssetMediaSize.preview, thumbhash: key.thumbhash),
+    );
     final previewStream = _startNetworkStream(
       getThumbnailUrlForRemoteId(key.assetId, type: AssetMediaSize.preview, thumbhash: key.thumbhash),
       headers,
@@ -157,11 +181,42 @@ class RemoteFullImageProvider extends CancellableImageProvider<RemoteFullImagePr
 
     final originalStream = _startNetworkStream(
       getOriginalUrlForRemoteId(key.assetId),
-      headers,
+      ApiService.getAuthenticatedRequestHeaders(getOriginalUrlForRemoteId(key.assetId)),
       isPreview: false,
       onFirstImage: _clearPreviewListener,
     );
     yield* StreamGroup.merge([previewStream, originalStream]);
+  }
+
+  Stream<Object> _animatedCodec(RemoteFullImageProvider key, ImageDecoderCallback decode) async* {
+    yield* initialImageStream();
+
+    if (isCancelled) {
+      PaintingBinding.instance.imageCache.evict(this);
+      return;
+    }
+
+    final headers = ApiService.getAuthenticatedRequestHeaders(
+      getThumbnailUrlForRemoteId(key.assetId, type: AssetMediaSize.preview, thumbhash: key.thumbhash),
+    );
+    yield* _startNetworkStream(
+      getThumbnailUrlForRemoteId(key.assetId, type: AssetMediaSize.preview, thumbhash: key.thumbhash),
+      headers,
+      isPreview: true,
+      swallowErrors: true,
+    );
+
+    if (isCancelled) {
+      PaintingBinding.instance.imageCache.evict(this);
+      return;
+    }
+
+    final originalRequest = request = RemoteImageRequest(uri: getOriginalUrlForRemoteId(key.assetId));
+    final codec = await loadCodecRequest(originalRequest);
+    if (codec == null) {
+      throw StateError('Failed to load animated codec for asset ${key.assetId}');
+    }
+    yield codec;
   }
 
   Stream<ImageInfo> _startNetworkStream(
@@ -169,6 +224,7 @@ class RemoteFullImageProvider extends CancellableImageProvider<RemoteFullImagePr
     Map<String, String> headers, {
     required bool isPreview,
     void Function()? onFirstImage,
+    bool swallowErrors = false,
   }) {
     final provider = NetworkImage(url, headers: headers);
     final controller = StreamController<ImageInfo>();
@@ -187,8 +243,10 @@ class RemoteFullImageProvider extends CancellableImageProvider<RemoteFullImagePr
         onFirstImage?.call();
       },
       onError: (error, stack) {
-        if (!controller.isClosed) {
+        if (!controller.isClosed && !swallowErrors) {
           controller.addError(error, stack);
+        }
+        if (!controller.isClosed) {
           controller.close();
         }
         if (isPreview) {
@@ -254,12 +312,12 @@ class RemoteFullImageProvider extends CancellableImageProvider<RemoteFullImagePr
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
     if (other is RemoteFullImageProvider) {
-      return assetId == other.assetId && thumbhash == other.thumbhash;
+      return assetId == other.assetId && thumbhash == other.thumbhash && isAnimated == other.isAnimated;
     }
 
     return false;
   }
 
   @override
-  int get hashCode => assetId.hashCode ^ thumbhash.hashCode;
+  int get hashCode => assetId.hashCode ^ thumbhash.hashCode ^ isAnimated.hashCode;
 }

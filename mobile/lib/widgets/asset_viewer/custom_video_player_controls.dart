@@ -3,76 +3,94 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:immich_mobile/models/cast/cast_manager_state.dart';
 import 'package:immich_mobile/providers/asset_viewer/current_asset.provider.dart';
 import 'package:immich_mobile/providers/asset_viewer/show_controls.provider.dart';
-import 'package:immich_mobile/providers/asset_viewer/video_player_controls_provider.dart';
-import 'package:immich_mobile/providers/asset_viewer/video_player_value_provider.dart';
+import 'package:immich_mobile/providers/asset_viewer/video_player_provider.dart';
 import 'package:immich_mobile/providers/cast.provider.dart';
 import 'package:immich_mobile/utils/hooks/timer_hook.dart';
 import 'package:immich_mobile/widgets/asset_viewer/center_play_button.dart';
 import 'package:immich_mobile/widgets/common/delayed_loading_indicator.dart';
 
 class CustomVideoPlayerControls extends HookConsumerWidget {
+  final String videoId;
   final Duration hideTimerDuration;
 
-  const CustomVideoPlayerControls({super.key, this.hideTimerDuration = const Duration(seconds: 5)});
+  const CustomVideoPlayerControls({
+    super.key,
+    required this.videoId,
+    this.hideTimerDuration = const Duration(seconds: 5),
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final currentAsset = ref.watch(currentAssetProvider);
     final assetIsVideo = ref.watch(currentAssetProvider.select((asset) => asset != null && asset.isVideo));
     final showControls = ref.watch(showControlsProvider);
-    final VideoPlaybackState state = ref.watch(videoPlaybackValueProvider.select((value) => value.state));
+    final status = ref.watch(videoPlayerProvider(videoId).select((value) => value.status));
     final cast = ref.watch(castProvider);
+    final showControlsNotifier = ref.read(showControlsProvider.notifier);
+    final castNotifier = ref.read(castProvider.notifier);
+    final videoNotifier = ref.read(videoPlayerProvider(videoId).notifier);
 
     // A timer to hide the controls
     final hideTimer = useTimer(hideTimerDuration, () {
       if (!context.mounted) {
         return;
       }
-      final state = ref.read(videoPlaybackValueProvider).state;
+      final s = ref.read(videoPlayerProvider(videoId)).status;
 
       // Do not hide on paused
-      if (state != VideoPlaybackState.paused && state != VideoPlaybackState.completed && assetIsVideo) {
-        ref.read(showControlsProvider.notifier).show = false;
+      if (s != VideoPlaybackStatus.paused && s != VideoPlaybackStatus.completed && assetIsVideo) {
+        showControlsNotifier.show = false;
       }
     });
-    final showBuffering = state == VideoPlaybackState.buffering && !cast.isCasting;
+    final showBuffering = status == VideoPlaybackStatus.buffering && !cast.isCasting;
 
     /// Shows the controls and starts the timer to hide them
     void showControlsAndStartHideTimer() {
+      if (!context.mounted) {
+        return;
+      }
       hideTimer.reset();
-      ref.read(showControlsProvider.notifier).show = true;
+      showControlsNotifier.show = true;
     }
 
-    // When we change position, show or hide timer
-    ref.listen(videoPlayerControlsProvider.select((v) => v.position), (previous, next) {
-      showControlsAndStartHideTimer();
+    // When playback starts, reset the hide timer
+    ref.listen(videoPlayerProvider(videoId).select((v) => v.status), (previous, next) {
+      if (!context.mounted) {
+        return;
+      }
+      if (next == VideoPlaybackStatus.playing) {
+        hideTimer.reset();
+      }
     });
 
     /// Toggles between playing and pausing depending on the state of the video
     void togglePlay() {
+      if (!context.mounted) {
+        return;
+      }
       showControlsAndStartHideTimer();
 
       if (cast.isCasting) {
         if (cast.castState == CastState.playing) {
-          ref.read(castProvider.notifier).pause();
+          castNotifier.pause();
         } else if (cast.castState == CastState.paused) {
-          ref.read(castProvider.notifier).play();
+          castNotifier.play();
         } else if (cast.castState == CastState.idle) {
           // resend the play command since its finished
-          final asset = ref.read(currentAssetProvider);
-          if (asset == null) {
+          if (currentAsset == null) {
             return;
           }
-          ref.read(castProvider.notifier).loadMediaOld(asset, true);
+          castNotifier.loadMediaOld(currentAsset, true);
         }
         return;
       }
 
-      if (state == VideoPlaybackState.playing) {
-        ref.read(videoPlayerControlsProvider.notifier).pause();
-      } else if (state == VideoPlaybackState.completed) {
-        ref.read(videoPlayerControlsProvider.notifier).restart();
+      if (status == VideoPlaybackStatus.playing) {
+        videoNotifier.pause();
+      } else if (status == VideoPlaybackStatus.completed) {
+        videoNotifier.restart();
       } else {
-        ref.read(videoPlayerControlsProvider.notifier).play();
+        videoNotifier.play();
       }
     }
 
@@ -87,13 +105,18 @@ class CustomVideoPlayerControls extends HookConsumerWidget {
               const Center(child: DelayedLoadingIndicator(fadeInDuration: Duration(milliseconds: 400)))
             else
               GestureDetector(
-                onTap: () => ref.read(showControlsProvider.notifier).show = false,
+                onTap: () {
+                  if (!context.mounted) {
+                    return;
+                  }
+                  showControlsNotifier.show = false;
+                },
                 child: CenterPlayButton(
                   backgroundColor: Colors.black54,
                   iconColor: Colors.white,
-                  isFinished: state == VideoPlaybackState.completed,
+                  isFinished: status == VideoPlaybackStatus.completed,
                   isPlaying:
-                      state == VideoPlaybackState.playing || (cast.isCasting && cast.castState == CastState.playing),
+                      status == VideoPlaybackStatus.playing || (cast.isCasting && cast.castState == CastState.playing),
                   show: assetIsVideo && showControls,
                   onPressed: togglePlay,
                 ),

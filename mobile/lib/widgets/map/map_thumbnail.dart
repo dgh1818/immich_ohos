@@ -1,19 +1,18 @@
 import 'dart:math';
 
+import 'package:coordtransform_dart/coordtransform_dart.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:immich_mobile/extensions/asyncvalue_extensions.dart';
 import 'package:immich_mobile/extensions/build_context_extensions.dart';
 import 'package:immich_mobile/extensions/maplibrecontroller_extensions.dart';
+import 'package:immich_mobile/widgets/asset_viewer/detail_panel/asset_location.dart';
 import 'package:immich_mobile/widgets/map/map_theme_override.dart';
 import 'package:immich_mobile/widgets/map/positioned_asset_marker_icon.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
-
-import 'package:flutter/services.dart';
-import 'package:flutter/foundation.dart';
-import 'package:coordtransform_dart/coordtransform_dart.dart';
-import 'package:immich_mobile/widgets/asset_viewer/detail_panel/asset_location.dart';
 
 /// A non-interactive thumbnail of a map in the given coordinates with optional markers
 ///
@@ -54,56 +53,74 @@ class MapThumbnail extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final outLngLat = CoordinateTransformUtil.wgs84ToGcj02(centre.longitude, centre.latitude);
-    final LatLng centreProcessed = LatLng(outLngLat[1], outLngLat[0]);
-
-    final offsettedCentre = LatLng(centreProcessed.latitude, centreProcessed.longitude);
     final controller = useRef<MapLibreMapController?>(null);
     final styleLoaded = useState(false);
     final position = useValueNotifier<Point<num>?>(null);
-    final reverseLocation = useValueNotifier<String?>(null);
+
+    LatLng toMapCoordinate(LatLng location) {
+      if (defaultTargetPlatform != TargetPlatform.ohos) {
+        return location;
+      }
+
+      final outLngLat = CoordinateTransformUtil.wgs84ToGcj02(location.longitude, location.latitude);
+      return LatLng(outLngLat[1], outLngLat[0]);
+    }
+
+    final centreProcessed = toMapCoordinate(centre);
+
+    Future<void> onLocationChanged() async {
+      final reverseLocation = controller.value?.reverseLocation;
+      if (reverseLocation == null || reverseLocation.isEmpty) {
+        return;
+      }
+
+      ref.read(exifLocationTextProvider.notifier).state = reverseLocation;
+      onReverseGeocoded?.call(reverseLocation);
+    }
+
+    useEffect(() {
+      final mapController = controller.value;
+      if (mapController == null || defaultTargetPlatform != TargetPlatform.ohos) {
+        return null;
+      }
+
+      mapController.addListener(onLocationChanged);
+      return () => mapController.removeListener(onLocationChanged);
+    }, [controller.value]);
+
     Future<void> onMapCreated(MapLibreMapController mapController) async {
       controller.value = mapController;
       styleLoaded.value = false;
 
-      if (defaultTargetPlatform == TargetPlatform.android ||
-          defaultTargetPlatform == TargetPlatform.iOS ||
-          defaultTargetPlatform == TargetPlatform.ohos) {
-        if (assetMarkerRemoteId != null) {
-          // The iOS impl returns wrong toScreenLocation without the delay
-          Future.delayed(
-            const Duration(milliseconds: 100),
-            () async => position.value = await mapController.toScreenLocation(centre),
-          );
-        }
-        onCreated?.call(mapController);
+      if (assetMarkerRemoteId != null &&
+          (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS)) {
+        // The iOS implementation may return an incorrect screen location
+        // immediately after map creation, so keep the delayed read.
+        Future.delayed(
+          const Duration(milliseconds: 100),
+          () async => position.value = await mapController.toScreenLocation(centre),
+        );
       }
-    }
 
-    Future<void> onLocationChanged() async {
-      reverseLocation.value = controller.value?.reverseLocation;
-      ref.read(exifLocationTextProvider.notifier).state = reverseLocation.value!;
-      if (reverseLocation.value != null && onReverseGeocoded != null) {
-        onReverseGeocoded!(reverseLocation.value!);
-      }
+      onCreated?.call(mapController);
     }
 
     Future<void> onStyleLoaded() async {
       try {
         if (defaultTargetPlatform == TargetPlatform.ohos) {
-          controller.value?.addListener(onLocationChanged);
           if (assetMarkerRemoteId != null) {
             position.value = await controller.value?.toScreenLocation(centreProcessed);
           }
 
           await controller.value?.reverseGeo(centreProcessed);
         }
+
         if (showMarkerPin && controller.value != null) {
-          if (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS) {
-            await controller.value?.addMarkerAtLatLng(centre);
-          } else if (defaultTargetPlatform == TargetPlatform.ohos) {
-            ByteData mapMarkData = await rootBundle.load("assets/location-pin.png");
+          if (defaultTargetPlatform == TargetPlatform.ohos) {
+            final mapMarkData = await rootBundle.load("assets/location-pin.png");
             await controller.value?.addMarkerAtLatLng_Ohos(centreProcessed, mapMarkData, 0.15);
+          } else {
+            await controller.value?.addMarkerAtLatLng(centre);
           }
         }
       } finally {
@@ -111,6 +128,7 @@ class MapThumbnail extends HookConsumerWidget {
         // We do not have a way to check if the controller is disposed for now
         // https://github.com/maplibre/flutter-maplibre-gl/issues/192
       }
+
       styleLoaded.value = true;
     }
 
@@ -144,19 +162,23 @@ class MapThumbnail extends HookConsumerWidget {
                   scrollGesturesEnabled: false,
                   rotateGesturesEnabled: false,
                   myLocationEnabled: false,
-                  attributionButtonMargins: showAttribution == false ? const Point(-100, 0) : null,
+                  attributionButtonMargins: showAttribution ? null : const Point(-100, 0),
                 ),
               ),
-              ValueListenableBuilder(
+              ValueListenableBuilder<Point<num>?>(
                 valueListenable: position,
-                builder: (_, value, __) => value != null && assetMarkerRemoteId != null && assetThumbhash != null
-                    ? PositionedAssetMarkerIcon(
-                        size: height / 2,
-                        point: value,
-                        assetRemoteId: assetMarkerRemoteId!,
-                        assetThumbhash: assetThumbhash!,
-                      )
-                    : const SizedBox.shrink(),
+                builder: (_, value, __) {
+                  if (value == null || assetMarkerRemoteId == null || assetThumbhash == null) {
+                    return const SizedBox.shrink();
+                  }
+
+                  return PositionedAssetMarkerIcon(
+                    size: height / 2,
+                    point: value,
+                    assetRemoteId: assetMarkerRemoteId!,
+                    assetThumbhash: assetThumbhash!,
+                  );
+                },
               ),
             ],
           ),
