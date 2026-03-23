@@ -4,6 +4,7 @@ import { dataSharePredicates } from '@kit.ArkData';
 import { photoAccessHelper } from '@kit.MediaLibraryKit';
 import { image } from '@kit.ImageKit';
 import { fileUri } from '@kit.CoreFileKit';
+import fs from '@ohos.file.fs';
 import { thumbHashToRGBA } from './Thumbhash';
 
 export interface LocalDecodeResult {
@@ -26,6 +27,27 @@ export async function decodeThumbhashTask(thumbhash: string): Promise<LocalDecod
     rowBytes: imageOut.stride,
     isHdr: imageOut.isHdr,
   };
+}
+
+@Concurrent
+export async function readEncodedLocalAssetTask(assetId: string): Promise<ArrayBuffer> {
+  const file = fs.openSync(assetId, fs.OpenMode.READ_ONLY);
+  try {
+    const stat = fs.statSync(file.fd);
+    if (stat.size <= 0) {
+      throw new Error(`asset is empty: ${assetId}`);
+    }
+
+    const buffer = new ArrayBuffer(stat.size);
+    const bytesRead = fs.readSync(file.fd, buffer);
+    if (bytesRead <= 0) {
+      throw new Error(`failed to read asset bytes: ${assetId}`);
+    }
+
+    return bytesRead === stat.size ? buffer : buffer.slice(0, bytesRead);
+  } finally {
+    fs.closeSync(file);
+  }
 }
 
 @Concurrent

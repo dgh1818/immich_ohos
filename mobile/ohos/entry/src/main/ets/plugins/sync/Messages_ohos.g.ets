@@ -43,6 +43,25 @@ function wrapError(error: Error): Array<Object> {
   return errorList;
 }
 
+/* Generated enum from Pigeon that represents data sent in messages.*/
+export enum PlatformAssetPlaybackStyle {
+  UNKNOWN,
+  IMAGE,
+  VIDEO,
+  IMAGE_ANIMATED,
+  LIVE_PHOTO,
+  VIDEO_LOOPING
+}
+
+/* Generated enum Companion class from Pigeon that represents data sent 
+   in messages.Do not delete otherwise enum type data transfer will be failed*/
+export class PlatformAssetPlaybackStyleEnum {
+  index: string|null = null;
+	constructor(index: string){
+    this.index = index;
+  }
+}
+
 /* Generated class from Pigeon that represents data sent in messages.*/
 export class HashResult {
   private assetId?: string;
@@ -239,7 +258,17 @@ export class PlatformAsset {
     return this.longitude;
   }
 
-  constructor(id?: string, name?: string, type?: number, createdAt?: number, updatedAt?: number, width?: number, height?: number, durationInSeconds?: number, orientation?: number, isFavorite?: boolean, adjustmentTime?: number, latitude?: number, longitude?: number) {
+  private playbackStyle?: PlatformAssetPlaybackStyle;
+
+  public setPlaybackStyle(playbackStyle:PlatformAssetPlaybackStyle):void {
+    this.playbackStyle = playbackStyle;
+  }
+
+  getPlaybackStyle(): PlatformAssetPlaybackStyle | undefined{
+    return this.playbackStyle;
+  }
+
+  constructor(id?: string, name?: string, type?: number, createdAt?: number, updatedAt?: number, width?: number, height?: number, durationInSeconds?: number, orientation?: number, isFavorite?: boolean, adjustmentTime?: number, latitude?: number, longitude?: number, playbackStyle?: PlatformAssetPlaybackStyle) {
     this.id = id;
     this.name = name;
     this.type = type;
@@ -253,6 +282,7 @@ export class PlatformAsset {
     this.adjustmentTime = adjustmentTime;
     this.latitude = latitude;
     this.longitude = longitude;
+    this.playbackStyle = playbackStyle;
   }
 
   toList(): Object[] {
@@ -296,6 +326,10 @@ export class PlatformAsset {
     if(this.longitude !==undefined){
       arr.push(this.longitude);
     }
+    if(this.playbackStyle !==undefined){
+      const playbackStyleStr = PlatformAssetPlaybackStyle[this.playbackStyle as number];
+      arr.push(new PlatformAssetPlaybackStyleEnum(playbackStyleStr));
+    }
     return arr;
   }
 
@@ -327,6 +361,8 @@ export class PlatformAsset {
     pigeonResult.setLatitude(latitude as number);
     let longitude: Object = arr[12];
     pigeonResult.setLongitude(longitude as number);
+    const playbackStyleStr: string = arr[13]! as string;
+    pigeonResult.setPlaybackStyle(PlatformAssetPlaybackStyle[playbackStyleStr]);
     return pigeonResult;
   }
 }
@@ -585,15 +621,19 @@ export class PigeonCodec extends StandardMessageCodec {
 
   readValueOfType(type: number,  buffer: ByteBuffer): ESObject {
     switch (type) {
-      case this.getByte(129):
-        return HashResult.fromList(super.readValue(buffer) as Object[]);
+      case this.getByte(129): {
+        let value: Object= super.readValue(buffer);
+        return value == null ? null : PlatformAssetPlaybackStyle[value as number];
+      }
       case this.getByte(130):
-        return PlatformAsset.fromList(super.readValue(buffer) as Object[]);
+        return HashResult.fromList(super.readValue(buffer) as Object[]);
       case this.getByte(131):
-        return PlatformAlbum.fromList(super.readValue(buffer) as Object[]);
+        return PlatformAsset.fromList(super.readValue(buffer) as Object[]);
       case this.getByte(132):
-        return CloudIdResult.fromList(super.readValue(buffer) as Object[]);
+        return PlatformAlbum.fromList(super.readValue(buffer) as Object[]);
       case this.getByte(133):
+        return CloudIdResult.fromList(super.readValue(buffer) as Object[]);
+      case this.getByte(134):
         return SyncDelta.fromList(super.readValue(buffer) as Object[]);
       default:
         return super.readValueOfType(type, buffer);
@@ -601,20 +641,23 @@ export class PigeonCodec extends StandardMessageCodec {
   }
 
   writeValue(stream: ByteBuffer , value: ESObject): ESObject{
-    if (value instanceof HashResult) {
+    if (value instanceof PlatformAssetPlaybackStyleEnum) {
       stream.writeUint8(this.getByte(129));
+      this.writeValue(stream, value == null ? null : PlatformAssetPlaybackStyle[value.index as string]);
+    } else if (value instanceof HashResult) {
+      stream.writeUint8(this.getByte(130));
       this.writeValue(stream, (value as HashResult).toList());
     } else if (value instanceof PlatformAsset) {
-      stream.writeUint8(this.getByte(130));
+      stream.writeUint8(this.getByte(131));
       this.writeValue(stream, (value as PlatformAsset).toList());
     } else if (value instanceof PlatformAlbum) {
-      stream.writeUint8(this.getByte(131));
+      stream.writeUint8(this.getByte(132));
       this.writeValue(stream, (value as PlatformAlbum).toList());
     } else if (value instanceof CloudIdResult) {
-      stream.writeUint8(this.getByte(132));
+      stream.writeUint8(this.getByte(133));
       this.writeValue(stream, (value as CloudIdResult).toList());
     } else if (value instanceof SyncDelta) {
-      stream.writeUint8(this.getByte(133));
+      stream.writeUint8(this.getByte(134));
       this.writeValue(stream, (value as SyncDelta).toList());
     } else {
       super.writeValue(stream, value);

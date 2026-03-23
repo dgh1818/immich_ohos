@@ -221,6 +221,12 @@ export abstract class NetworkApi {
   abstract selectCertificate(promptText: ClientCertPrompt , result: Result<ClientCertData>): void;
 
   abstract removeCertificate(result: Result<void>): void;
+
+  abstract hasCertificate(): boolean;
+
+  abstract getClientPointer(): number;
+
+  abstract setRequestHeaders(headers: Map<string, string> , serverUrls: Array<string> , token: string ): void;
   /** The codec used by NetworkApi. */
   static getCodec(): MessageCodec<Object>{
     return PigeonCodec.INSTANCE;
@@ -305,6 +311,73 @@ export abstract class NetworkApi {
               let resultCallback: Result<void> = new ResultImp();
 
               api!.removeCertificate(resultCallback);
+            } });
+      } else {
+        channel.setMessageHandler(null);
+      }
+    }
+    {
+      let channel: BasicMessageChannel<Object> =
+          new BasicMessageChannel(
+              binaryMessenger, "dev.flutter.pigeon.immich_mobile.NetworkApi.hasCertificate", NetworkApi.getCodec());
+      if (api != null) {
+        channel.setMessageHandler({
+            onMessage(message: Object ,reply: Reply<Object> ) {
+              let res: Array<Object> = [];
+              try {
+                let output: boolean = api!.hasCertificate();
+                res.push(output);
+              }
+ catch (error) {
+                let wrappedError: Array<Object> = wrapError(error);
+                res = wrappedError;
+              }
+              reply.reply(res);
+            } });
+      } else {
+        channel.setMessageHandler(null);
+      }
+    }
+    {
+      let channel: BasicMessageChannel<Object> =
+          new BasicMessageChannel(
+              binaryMessenger, "dev.flutter.pigeon.immich_mobile.NetworkApi.getClientPointer", NetworkApi.getCodec());
+      if (api != null) {
+        channel.setMessageHandler({
+            onMessage(message: Object ,reply: Reply<Object> ) {
+              let res: Array<Object> = [];
+              try {
+                let output: number = api!.getClientPointer();
+                res.push(output);
+              }
+ catch (error) {
+                let wrappedError: Array<Object> = wrapError(error);
+                res = wrappedError;
+              }
+              reply.reply(res);
+            } });
+      } else {
+        channel.setMessageHandler(null);
+      }
+    }
+    {
+      let channel: BasicMessageChannel<Object> =
+          new BasicMessageChannel(
+              binaryMessenger, "dev.flutter.pigeon.immich_mobile.NetworkApi.setRequestHeaders", NetworkApi.getCodec());
+      if (api != null) {
+        channel.setMessageHandler({
+            onMessage(message: Object ,reply: Reply<Object> ) {
+              let args: Array<Object> = message as Array<Object>;
+              let res: Array<Object> = [];
+              try {
+                api!.setRequestHeaders(args[0] as Map<string, string>, args[1] as Array<string>, args[2] as string);
+                res.push(null);
+              }
+ catch (error) {
+                let wrappedError: Array<Object> = wrapError(error);
+                res = wrappedError;
+              }
+              reply.reply(res);
             } });
       } else {
         channel.setMessageHandler(null);

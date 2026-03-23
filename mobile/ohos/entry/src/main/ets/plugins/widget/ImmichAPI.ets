@@ -81,7 +81,7 @@ export class ImmichAPI {
     if (body !== undefined) {
       options.extraData = body;
     }
-    URLSessionManager.applyToOptions(this.context, options);
+    URLSessionManager.applyToOptions(this.context, options, url);
 
     try {
       const response = await request.request(url, options);
@@ -103,7 +103,7 @@ export class ImmichAPI {
       header: headers,
       expectDataType: http.HttpDataType.ARRAY_BUFFER,
     };
-    URLSessionManager.applyToOptions(this.context, options);
+    URLSessionManager.applyToOptions(this.context, options, url);
 
     try {
       const response = await request.request(url, options);

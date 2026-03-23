@@ -56,8 +56,8 @@ export class NetworkApiImpl extends NetworkApi {
         result.error(new Error('Certificate file is empty.'));
         return;
       }
-      const cert = new ClientCertData(Array.from(bytes), '');
-      result.success(cert);
+
+      result.success(new ClientCertData(Array.from(bytes), ''));
     } catch (e) {
       let error = e as BusinessError;
       if (this.isCancelError(error)) {
@@ -78,6 +78,25 @@ export class NetworkApiImpl extends NetworkApi {
     } catch (e) {
       result.error(e as Error);
     }
+  }
+
+  override hasCertificate(): boolean {
+    if (!this.ctx) {
+      return false;
+    }
+    return URLSessionManager.hasCertificate(this.ctx);
+  }
+
+  override getClientPointer(): number {
+    // OHOS requests use NetworkKit directly; there is no shared native client pointer.
+    return 0;
+  }
+
+  override setRequestHeaders(headers: Map<string, string>, serverUrls: Array<string>, token: string): void {
+    if (!this.ctx) {
+      return;
+    }
+    URLSessionManager.setRequestHeaders(this.ctx, headers, serverUrls, token);
   }
 
   private isUiContext(ctx: common.Context): boolean {
