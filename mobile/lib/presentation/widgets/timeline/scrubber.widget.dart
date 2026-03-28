@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
@@ -91,6 +92,8 @@ class ScrubberState extends ConsumerState<Scrubber> with TickerProviderStateMixi
   int _monthCount = 0;
   DateTime? _currentScrubberDate;
   Debouncer? _scrubberDebouncer;
+  double _lastBuiltScrubberHeight = -1.0;
+  double _lastBuiltLayoutExtent = -1.0;
 
   late AnimationController _thumbAnimationController;
   Timer? _fadeOutTimer;
@@ -99,25 +102,83 @@ class ScrubberState extends ConsumerState<Scrubber> with TickerProviderStateMixi
   late AnimationController _labelAnimationController;
   late Animation<double> _labelAnimation;
 
-  double get _scrubberHeight => widget.timelineHeight - widget.topPadding - widget.bottomPadding;
+  double get _resolvedTimelineHeight {
+    final RenderBox? renderBox = context.findRenderObject() as RenderBox?;
+    final renderBoxHeight = renderBox != null && renderBox.hasSize ? renderBox.size.height : 0.0;
+    final mediaQueryHeight = MediaQuery.maybeSizeOf(context)?.height ?? 0.0;
+
+    return <double>[widget.timelineHeight, renderBoxHeight, mediaQueryHeight]
+        .where((value) => value.isFinite && value > 0)
+        .fold(0.0, math.max);
+  }
+
+  double get _minimumUsableHeight => math.min(kScrubberThumbHeight, _resolvedTimelineHeight);
+
+  double get _effectiveTopPadding {
+    final resolvedHeight = _resolvedTimelineHeight;
+    if (!resolvedHeight.isFinite || resolvedHeight <= 0) {
+      return 0.0;
+    }
+
+    final maxTopPadding = math.max(0.0, resolvedHeight - _minimumUsableHeight);
+    return widget.topPadding.isFinite ? widget.topPadding.clamp(0.0, maxTopPadding) : 0.0;
+  }
+
+  double get _effectiveBottomPadding {
+    final resolvedHeight = _resolvedTimelineHeight;
+    if (!resolvedHeight.isFinite || resolvedHeight <= 0) {
+      return 0.0;
+    }
+
+    final maxBottomPadding = math.max(0.0, resolvedHeight - _effectiveTopPadding - _minimumUsableHeight);
+    return widget.bottomPadding.isFinite ? widget.bottomPadding.clamp(0.0, maxBottomPadding) : 0.0;
+  }
+
+  double get _scrubberHeight {
+    final height = _resolvedTimelineHeight - _effectiveTopPadding - _effectiveBottomPadding;
+    if (!height.isFinite || height <= 0) {
+      return 0.0;
+    }
+    return height;
+  }
 
   late ScrollController _scrollController;
+  bool _hasScrollController = false;
 
   double get _currentOffset {
-    if (_scrollController.hasClients != true) return 0.0;
+    if (!_hasScrollController || _scrollController.hasClients != true) return 0.0;
 
-    return _scrollController.offset * _scrubberHeight / _scrollController.position.maxScrollExtent;
+    final maxScrollExtent = _scrollController.position.maxScrollExtent;
+    if (!maxScrollExtent.isFinite || maxScrollExtent <= 0 || _scrubberHeight <= 0) {
+      return 0.0;
+    }
+
+    return _scrollController.offset.clamp(0.0, maxScrollExtent) * _scrubberHeight / maxScrollExtent;
+  }
+
+  void _syncSegmentsIfNeeded() {
+    final scrubberHeight = _scrubberHeight;
+    final layoutExtent = widget.layoutSegments.lastOrNull?.endOffset ?? -1.0;
+
+    if (_segments.length == widget.layoutSegments.length &&
+        _lastBuiltScrubberHeight == scrubberHeight &&
+        _lastBuiltLayoutExtent == layoutExtent) {
+      return;
+    }
+
+    _segments = _buildSegments(layoutSegments: widget.layoutSegments, timelineHeight: scrubberHeight);
+    _monthCount = getMonthCount();
+    _lastBuiltScrubberHeight = scrubberHeight;
+    _lastBuiltLayoutExtent = layoutExtent;
   }
 
   @override
   void initState() {
     super.initState();
     _isDragging = false;
-    _segments = _buildSegments(layoutSegments: widget.layoutSegments, timelineHeight: _scrubberHeight);
     _thumbAnimationController = AnimationController(vsync: this, duration: kTimelineScrubberFadeInDuration);
     _thumbAnimation = CurvedAnimation(parent: _thumbAnimationController, curve: Curves.fastEaseInToSlowEaseOut);
     _labelAnimationController = AnimationController(vsync: this, duration: kTimelineScrubberFadeInDuration);
-    _monthCount = getMonthCount();
 
     _labelAnimation = CurvedAnimation(parent: _labelAnimationController, curve: Curves.fastOutSlowIn);
   }
@@ -126,16 +187,14 @@ class ScrubberState extends ConsumerState<Scrubber> with TickerProviderStateMixi
   void didChangeDependencies() {
     super.didChangeDependencies();
     _scrollController = PrimaryScrollController.of(context);
+    _hasScrollController = true;
+    _syncSegmentsIfNeeded();
   }
 
   @override
   void didUpdateWidget(covariant Scrubber oldWidget) {
     super.didUpdateWidget(oldWidget);
-
-    if (oldWidget.layoutSegments.lastOrNull?.endOffset != widget.layoutSegments.lastOrNull?.endOffset) {
-      _segments = _buildSegments(layoutSegments: widget.layoutSegments, timelineHeight: _scrubberHeight);
-      _monthCount = getMonthCount();
-    }
+    _syncSegmentsIfNeeded();
   }
 
   @override
@@ -219,6 +278,10 @@ class ScrubberState extends ConsumerState<Scrubber> with TickerProviderStateMixi
       return;
     }
 
+    if (!_hasScrollController || !_scrollController.hasClients || _scrubberHeight <= 0) {
+      return;
+    }
+
     if (_thumbAnimationController.status != AnimationStatus.forward) {
       _thumbAnimationController.forward();
     }
@@ -241,9 +304,12 @@ class ScrubberState extends ConsumerState<Scrubber> with TickerProviderStateMixi
 
     if (_monthCount < kMinMonthsToEnableScrubberSnap || !widget.snapToMonth) {
       // If there are less than kMinMonthsToEnableScrubberSnap months, we don't need to snap to segments
+      final maxScrollExtent = _scrollController.position.maxScrollExtent;
       setState(() {
         _thumbTopOffset = dragPosition;
-        _scrollController.jumpTo((dragPosition / _scrubberHeight) * _scrollController.position.maxScrollExtent);
+        if (maxScrollExtent > 0) {
+          _scrollController.jumpTo((dragPosition / _scrubberHeight) * maxScrollExtent);
+        }
       });
     } else if (nearestMonthSegment != null) {
       _snapToSegment(nearestMonthSegment);
@@ -266,28 +332,27 @@ class ScrubberState extends ConsumerState<Scrubber> with TickerProviderStateMixi
   /// - If user drags to global Y position that's 100 pixels from the top
   /// - The relative position would be 100 - 50 = 50 (50 pixels into the scrubber area)
   double _calculateDragPosition(DragUpdateDetails details) {
-    if (widget.hasAppBar) {
-      final dragAreaTop = widget.topPadding;
-      final dragAreaBottom = widget.timelineHeight - widget.bottomPadding;
-      final dragAreaHeight = dragAreaBottom - dragAreaTop;
-
-      final relativePosition = details.globalPosition.dy - dragAreaTop;
-
-      // Make sure the position stays within the scrubber's bounds
-      return relativePosition.clamp(0.0, dragAreaHeight);
+    final maxDragPosition = _scrubberHeight;
+    if (maxDragPosition <= 0) {
+      return 0.0;
     }
 
-    // Get the local position relative to the gesture detector
+    if (widget.hasAppBar) {
+      final dragAreaHeight = _scrubberHeight;
+      final safeDragAreaHeight = !dragAreaHeight.isFinite || dragAreaHeight <= 0 ? 0.0 : dragAreaHeight;
+      final relativePosition = details.globalPosition.dy - _effectiveTopPadding;
+      return relativePosition.clamp(0.0, safeDragAreaHeight);
+    }
+
     final RenderBox? renderBox = context.findRenderObject() as RenderBox?;
     if (renderBox != null) {
       final localPosition = renderBox.globalToLocal(details.globalPosition);
-      return localPosition.dy.clamp(0.0, _scrubberHeight);
+      return localPosition.dy.clamp(0.0, maxDragPosition);
     }
 
-    // Fallback to current logic if render box is not available
-    final dragAreaTop = widget.topPadding;
+    final dragAreaTop = _effectiveTopPadding;
     final relativePosition = details.globalPosition.dy - dragAreaTop;
-    return relativePosition.clamp(0.0, _scrubberHeight);
+    return relativePosition.clamp(0.0, maxDragPosition);
   }
 
   /// Find the segment closest to the given position
@@ -355,6 +420,7 @@ class ScrubberState extends ConsumerState<Scrubber> with TickerProviderStateMixi
 
   @override
   Widget build(BuildContext ctx) {
+    _syncSegmentsIfNeeded();
     Text? label;
     if (_scrollController.hasClients == true) {
       // Cache to avoid multiple calls to [_currentOffset]
@@ -380,13 +446,13 @@ class ScrubberState extends ConsumerState<Scrubber> with TickerProviderStateMixi
             child: _SegmentsLayer(
               key: ValueKey('segments_${_isDragging}_${_segments.length}'),
               segments: _segments,
-              topPadding: widget.topPadding,
+              topPadding: _effectiveTopPadding,
               isDragging: _isDragging,
             ),
           ),
           if (_scrollController.hasClients && _scrollController.position.maxScrollExtent > 0)
             PositionedDirectional(
-              top: _thumbTopOffset + widget.topPadding,
+              top: _thumbTopOffset + _effectiveTopPadding,
               end: 0,
               child: RepaintBoundary(
                 child: GestureDetector(

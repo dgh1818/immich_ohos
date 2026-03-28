@@ -17,7 +17,6 @@ import 'package:immich_mobile/extensions/asyncvalue_extensions.dart';
 import 'package:immich_mobile/extensions/build_context_extensions.dart';
 import 'package:immich_mobile/presentation/widgets/action_buttons/download_status_floating_button.widget.dart';
 import 'package:immich_mobile/presentation/widgets/bottom_sheet/general_bottom_sheet.widget.dart';
-import 'package:immich_mobile/presentation/widgets/timeline/constants.dart';
 import 'package:immich_mobile/presentation/widgets/timeline/scrubber.widget.dart';
 import 'package:immich_mobile/presentation/widgets/timeline/segment.model.dart';
 import 'package:immich_mobile/presentation/widgets/timeline/timeline.state.dart';
@@ -486,15 +485,8 @@ class _SliverTimelineState extends ConsumerState<_SliverTimeline> {
           final double appBarExpandedHeight = widget.appBar != null && widget.appBar is MesmerizingSliverAppBar
               ? 200
               : 0;
-          final topPadding = context.padding.top + (widget.appBar == null ? 0 : kToolbarHeight) + 10;
-
-          const bottomSheetOpenModifier = 120.0;
-          const minimumScrubberBottomPadding = 150.0;
-          final contentBottomPadding = context.padding.bottom + (isMultiSelectEnabled ? bottomSheetOpenModifier : 0);
-          final scrubberBottomPadding = math.max(
-            minimumScrubberBottomPadding,
-            contentBottomPadding + kScrubberThumbHeight,
-          );
+          final topPadding = widget.appBar == null ? 0.0 : 50.0;
+          const sharedBottomPadding = 150.0;
 
           final grid = CustomScrollView(
             primary: true,
@@ -519,7 +511,7 @@ class _SliverTimelineState extends ConsumerState<_SliverTimeline> {
                 ),
               ),
               if (widget.bottomSliverWidget != null) widget.bottomSliverWidget!,
-              SliverPadding(padding: EdgeInsets.only(bottom: contentBottomPadding)),
+              const SliverPadding(padding: EdgeInsets.only(bottom: sharedBottomPadding)),
             ],
           );
 
@@ -530,8 +522,8 @@ class _SliverTimelineState extends ConsumerState<_SliverTimeline> {
               layoutSegments: segments,
               timelineHeight: maxHeight,
               topPadding: topPadding,
-              bottomPadding: scrubberBottomPadding,
-              monthSegmentSnappingOffset: widget.topSliverWidgetHeight ?? 0 + appBarExpandedHeight,
+              bottomPadding: sharedBottomPadding,
+              monthSegmentSnappingOffset: (widget.topSliverWidgetHeight ?? 0) + appBarExpandedHeight,
               hasAppBar: widget.appBar != null,
               child: grid,
             );
