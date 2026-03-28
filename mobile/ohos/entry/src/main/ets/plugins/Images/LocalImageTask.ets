@@ -5,9 +5,10 @@ import { photoAccessHelper } from '@kit.MediaLibraryKit';
 import { image } from '@kit.ImageKit';
 import { fileUri } from '@kit.CoreFileKit';
 import fs from '@ohos.file.fs';
+import nativeBuffer from '../../utils/native_buffer';
 import { thumbHashToRGBA } from './Thumbhash';
 
-export interface LocalDecodeResult {
+export interface LocalBufferResult {
   buffer: ArrayBuffer;
   width: number;
   height: number;
@@ -15,8 +16,16 @@ export interface LocalDecodeResult {
   isHdr: boolean;
 }
 
+export interface LocalDecodeResult {
+  pointer: number;
+  width: number;
+  height: number;
+  rowBytes: number;
+  isHdr: boolean;
+}
+
 @Concurrent
-export async function decodeThumbhashTask(thumbhash: string): Promise<LocalDecodeResult> {
+export async function decodeThumbhashTask(thumbhash: string): Promise<LocalBufferResult> {
   const inputBuffer = buffer.from(thumbhash, 'base64');
   const bytes = new Uint8Array(inputBuffer.buffer);
   const imageOut = thumbHashToRGBA(bytes);
@@ -175,16 +184,37 @@ export async function decodeLocalImageTask(
     }
     let buffer: ArrayBuffer = new ArrayBuffer(stride * actualHeight);
     pixelMap.readPixelsToBufferSync(buffer);
+    const length = buffer.byteLength;
+    if (length <= 0) {
+      throw new Error(`decoded local image (${actualWidth}x${actualHeight}, stride=${stride}) buffer is empty`);
+    }
 
-    // Force tight rows (width * 4) without repacking.
-    const outBuffer = buffer;
-    const outStride = rowBytes;
+    const pointer = nativeBuffer.allocate(length);
+    if (pointer === 0) {
+      throw new Error(
+        `decoded local image (${actualWidth}x${actualHeight}, stride=${stride}, bytes=${length}) native pointer allocation failed`,
+      );
+    }
+
+    try {
+      const copied = nativeBuffer.copy(buffer, pointer, 0, length);
+      if (copied !== length) {
+        throw new Error(
+          `decoded local image (${actualWidth}x${actualHeight}, stride=${stride}, bytes=${length}) native copy failed`,
+        );
+      }
+    } catch (error) {
+      try {
+        nativeBuffer.free(pointer);
+      } catch (_) {}
+      throw error as Error;
+    }
 
     return {
-      buffer: outBuffer,
+      pointer,
       width: actualWidth,
       height: actualHeight,
-      rowBytes: outStride,
+      rowBytes: rowBytes,
       isHdr: pixelInfo.isHdr,
     };
   } finally {

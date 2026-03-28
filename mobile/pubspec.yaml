@@ -27,7 +27,7 @@ dependencies:
   drift_flutter: 0.2.4
   dynamic_color: ^1.8.1 #ohos待适配
   easy_localization: ^3.0.8
-  #ffi: ^2.1.4
+  ffi: ^2.1.4
   file_picker: ^8.0.0+1
   flutter:
     sdk: flutter
@@ -104,7 +104,6 @@ dependencies:
       ref: '549c24b0a4d3881a9a44b70f4873450d43c1c4af' # https://github.com/dart-lang/http/pull/1877
       path: pkgs/ok_http/
 
-  #ffi: ^2.1.4
   video_compress: ^3.1.0
   video_player: ^2.9.2
   isar: ^3.1.0+1 #ok

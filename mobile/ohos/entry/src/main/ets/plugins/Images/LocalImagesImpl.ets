@@ -5,16 +5,42 @@ import { BusinessError } from "@kit.BasicServicesKit";
 import {
   decodeLocalImageTask,
   decodeThumbhashTask,
+  LocalBufferResult,
   LocalDecodeResult,
   readEncodedLocalAssetTask,
 } from "./LocalImageTask";
-import { allocCopySafe } from "../../utils/native_buffer";
+import nativeBuffer from "../../utils/native_buffer";
 
 const GRID_THUMB_MAX_DIM = 320;
 
 export class LocalImagesImpl extends LocalImageApiOhos {
   static ctx?: common.Context;
   private requestMap = new Map<number, taskpool.Task>();
+
+  private static toNativeBuffer(buffer: ArrayBuffer, label: string): number {
+    const length = buffer.byteLength;
+    if (length <= 0) {
+      throw new Error(`${label} buffer is empty`);
+    }
+
+    const pointer = nativeBuffer.allocate(length);
+    if (pointer === 0) {
+      throw new Error(`${label} native pointer allocation failed`);
+    }
+
+    try {
+      const copied = nativeBuffer.copy(buffer, pointer, 0, length);
+      if (copied !== length) {
+        throw new Error(`${label} native copy failed`);
+      }
+      return pointer;
+    } catch (error) {
+      try {
+        nativeBuffer.free(pointer);
+      } catch (_) {}
+      throw error as Error;
+    }
+  }
 
   constructor(context: common.Context) {
     super();
@@ -27,28 +53,21 @@ export class LocalImagesImpl extends LocalImageApiOhos {
       taskpool
         .execute(task, taskpool.Priority.MEDIUM)
         .then((d: object) => {
-          const res = d as LocalDecodeResult | undefined;
+          const res = d as LocalBufferResult | undefined;
           if (res != undefined) {
             const finalResult = new Map<string, Object>();
-            const pointer = allocCopySafe(res.buffer);
+            const pointer = LocalImagesImpl.toNativeBuffer(res.buffer, "thumbhash");
             finalResult.set("width", res.width);
             finalResult.set("height", res.height);
             finalResult.set("rowBytes", res.rowBytes);
             finalResult.set("isHdr", res.isHdr);
-            if (pointer) {
-              finalResult.set("pointer", pointer);
-            } else {
-              finalResult.set("pointer", new Uint8Array(res.buffer));
-            }
+            finalResult.set("pointer", pointer);
             return result.success(finalResult);
           }
           return result.error(new Error("thumbhash result undefined"));
         })
         .catch((e: BusinessError) => {
           return result.error(e);
-        })
-        .finally(() => {
-          taskpool.terminateTask(task);
         });
     } catch (e) {
       return result.error(e as Error);
@@ -85,12 +104,8 @@ export class LocalImagesImpl extends LocalImageApiOhos {
           const encoded = d as ArrayBuffer | undefined;
           if (encoded != undefined) {
             const resOut = new Map<string, Object>();
-            const pointer = allocCopySafe(encoded);
-            if (pointer) {
-              resOut.set("pointer", pointer);
-            } else {
-              resOut.set("pointer", new Uint8Array(encoded));
-            }
+            const pointer = LocalImagesImpl.toNativeBuffer(encoded, "encoded local image");
+            resOut.set("pointer", pointer);
             resOut.set("length", encoded.byteLength);
             return result.success(resOut);
           } else {
@@ -101,16 +116,11 @@ export class LocalImagesImpl extends LocalImageApiOhos {
         const res = d as LocalDecodeResult | undefined;
         if (res != undefined) {
           const resOut = new Map<string, Object>();
-          const pointer = allocCopySafe(res.buffer);
           resOut.set("width", res.width);
           resOut.set("height", res.height);
           resOut.set("rowBytes", res.rowBytes);
           resOut.set("isHdr", res.isHdr);
-          if (pointer) {
-            resOut.set("pointer", pointer);
-          } else {
-            resOut.set("pointer", new Uint8Array(res.buffer));
-          }
+          resOut.set("pointer", res.pointer);
           return result.success(resOut);
         } else {
           return result.error(new Error("res==undefined"));
@@ -121,7 +131,6 @@ export class LocalImagesImpl extends LocalImageApiOhos {
       })
       .finally(() => {
         this.requestMap.delete(requestId);
-        taskpool.terminateTask(task);
       });
   }
 
@@ -135,7 +144,6 @@ export class LocalImagesImpl extends LocalImageApiOhos {
     }
     try {
       taskpool.cancel(request);
-      taskpool.terminateTask(request);
     } catch (e) {
       const error = e as BusinessError;
       console.error("image request task cancel error:" + error.message);

@@ -3,6 +3,7 @@
 #include <cstring>
 
 #include <napi/native_api.h>
+#include <js_native_api.h>
 
 namespace {
 
@@ -18,7 +19,7 @@ napi_value ReturnUndefined(napi_env env) {
   return undefined;
 }
 
-napi_value Alloc(napi_env env, napi_callback_info info) {
+napi_value Allocate(napi_env env, napi_callback_info info) {
   size_t argc = 1;
   napi_value args[1];
   napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
@@ -56,34 +57,74 @@ napi_value Free(napi_env env, napi_callback_info info) {
   return ReturnUndefined(env);
 }
 
-napi_value AllocCopy(napi_env env, napi_callback_info info) {
-  size_t argc = 1;
-  napi_value args[1];
+napi_value Realloc(napi_env env, napi_callback_info info) {
+  size_t argc = 2;
+  napi_value args[2];
   napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
-  if (argc < 1) {
+  if (argc < 2) {
+    return MakeInt64(env, 0);
+  }
+
+  int64_t ptr_value = 0;
+  int64_t size = 0;
+  if (napi_get_value_int64(env, args[0], &ptr_value) != napi_ok ||
+      napi_get_value_int64(env, args[1], &size) != napi_ok ||
+      ptr_value == 0 || size <= 0) {
+    return MakeInt64(env, 0);
+  }
+
+  void* ptr = std::realloc(reinterpret_cast<void*>(ptr_value), static_cast<size_t>(size));
+  if (!ptr) {
+    return MakeInt64(env, 0);
+  }
+
+  return MakeInt64(env, reinterpret_cast<int64_t>(ptr));
+}
+
+napi_value Copy(napi_env env, napi_callback_info info) {
+  size_t argc = 4;
+  napi_value args[4];
+  napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
+  if (argc < 4) {
     return MakeInt64(env, 0);
   }
 
   void* data = nullptr;
-  size_t length = 0;
-  if (napi_get_arraybuffer_info(env, args[0], &data, &length) != napi_ok || data == nullptr || length == 0) {
+  size_t source_length = 0;
+  if (napi_get_arraybuffer_info(env, args[0], &data, &source_length) != napi_ok ||
+      data == nullptr || source_length == 0) {
     return MakeInt64(env, 0);
   }
 
-  void* dest = std::malloc(length);
-  if (!dest) {
+  int64_t dest_value = 0;
+  int64_t offset_value = 0;
+  int64_t length_value = 0;
+  if (napi_get_value_int64(env, args[1], &dest_value) != napi_ok ||
+      napi_get_value_int64(env, args[2], &offset_value) != napi_ok ||
+      napi_get_value_int64(env, args[3], &length_value) != napi_ok ||
+      dest_value == 0 || offset_value < 0) {
     return MakeInt64(env, 0);
   }
 
-  std::memcpy(dest, data, length);
-  return MakeInt64(env, reinterpret_cast<int64_t>(dest));
+  size_t copy_length = source_length;
+  if (length_value > 0 && static_cast<size_t>(length_value) < copy_length) {
+    copy_length = static_cast<size_t>(length_value);
+  }
+  if (copy_length == 0) {
+    return MakeInt64(env, 0);
+  }
+
+  void* dest = reinterpret_cast<void*>(dest_value + offset_value);
+  std::memcpy(dest, data, copy_length);
+  return MakeInt64(env, static_cast<int64_t>(copy_length));
 }
 
-napi_value Init(napi_env env, napi_value exports) {
+static napi_value Init(napi_env env, napi_value exports) {
   napi_property_descriptor descriptors[] = {
-    {"alloc", nullptr, Alloc, nullptr, nullptr, nullptr, napi_default, nullptr},
+    {"allocate", nullptr, Allocate, nullptr, nullptr, nullptr, napi_default, nullptr},
     {"free", nullptr, Free, nullptr, nullptr, nullptr, napi_default, nullptr},
-    {"allocCopy", nullptr, AllocCopy, nullptr, nullptr, nullptr, napi_default, nullptr},
+    {"realloc", nullptr, Realloc, nullptr, nullptr, nullptr, napi_default, nullptr},
+    {"copy", nullptr, Copy, nullptr, nullptr, nullptr, napi_default, nullptr},
   };
   napi_define_properties(env, exports, sizeof(descriptors) / sizeof(descriptors[0]), descriptors);
   return exports;
@@ -91,4 +132,19 @@ napi_value Init(napi_env env, napi_value exports) {
 
 }  // namespace
 
-NAPI_MODULE(NODE_GYP_MODULE_NAME, Init)
+EXTERN_C_START
+static napi_module native_buffer_module = {
+    1,
+    0,
+    nullptr,
+    Init,
+    "native_buffer",
+    nullptr,
+    {0},
+};
+
+static void RegisterNativeBufferModule(void) __attribute__((constructor));
+static void RegisterNativeBufferModule(void) {
+  napi_module_register(&native_buffer_module);
+}
+EXTERN_C_END

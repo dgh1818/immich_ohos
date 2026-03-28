@@ -1,6 +1,3 @@
-import 'dart:async';
-
-import 'package:async/async.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:immich_mobile/domain/models/asset/base_asset.model.dart';
@@ -107,16 +104,15 @@ class LocalFullImageProvider extends CancellableImageProvider<LocalFullImageProv
       return;
     }
 
-    final previewRequest = LocalImageRequest(
+    final devicePixelRatio = PlatformDispatcher.instance.views.first.devicePixelRatio;
+    var request = this.request = LocalImageRequest(
       localId: key.id,
-      size: Size(size.width, size.height),
+      size: Size(size.width * devicePixelRatio, size.height * devicePixelRatio),
       assetType: key.assetType,
     );
+    yield* loadRequest(request, decode);
 
-    final previewStream = loadRequest(previewRequest, decode);
-
-    if (!Store.get(StoreKey.loadOriginal, true)) {
-      yield* previewStream;
+    if (!Store.get(StoreKey.loadOriginal, false)) {
       return;
     }
 
@@ -125,13 +121,9 @@ class LocalFullImageProvider extends CancellableImageProvider<LocalFullImageProv
       return;
     }
 
-    final originalRequest = LocalImageRequest(localId: key.id, assetType: key.assetType, size: Size.zero);
-    final originalStream = loadRequest(originalRequest, decode).map((image) {
-      previewRequest.cancel();
-      return image;
-    });
+    request = this.request = LocalImageRequest(localId: key.id, assetType: key.assetType, size: Size.zero);
 
-    yield* StreamGroup.merge([previewStream, originalStream]);
+    yield* loadRequest(request, decode);
   }
 
   Stream<Object> _animatedCodec(LocalFullImageProvider key, ImageDecoderCallback decode) async* {
@@ -142,18 +134,20 @@ class LocalFullImageProvider extends CancellableImageProvider<LocalFullImageProv
       return;
     }
 
-    final previewRequest = LocalImageRequest(
+    final devicePixelRatio = PlatformDispatcher.instance.views.first.devicePixelRatio;
+    final previewRequest = request = LocalImageRequest(
       localId: key.id,
-      size: Size(size.width, size.height),
+      size: Size(size.width * devicePixelRatio, size.height * devicePixelRatio),
       assetType: key.assetType,
     );
-    yield* loadRequest(previewRequest, decode, evictOnError: false);
+    yield* loadRequest(previewRequest, decode);
 
     if (isCancelled) {
       PaintingBinding.instance.imageCache.evict(this);
       return;
     }
 
+    // always try original for animated, since previews don't support animation
     final originalRequest = request = LocalImageRequest(localId: key.id, size: Size.zero, assetType: key.assetType);
     final codec = await loadCodecRequest(originalRequest);
     if (codec == null) {

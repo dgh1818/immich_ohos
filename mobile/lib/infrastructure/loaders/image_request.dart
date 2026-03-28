@@ -1,9 +1,9 @@
 import 'dart:async';
 import 'dart:ffi';
-import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:ffi/ffi.dart';
 import 'package:immich_mobile/domain/models/asset/base_asset.model.dart';
 import 'package:immich_mobile/providers/infrastructure/platform.provider.dart';
@@ -36,88 +36,7 @@ abstract class ImageRequest {
 
   void _onCancelled();
 
-  Future<ui.FrameInfo?> _fromPlatformImage(Map<String, Object> info) async {
-    final Object? pointer = info['pointer'];
-    if (pointer == null) {
-      return null;
-    }
-
-    final length = info['length'] as int?;
-    if (length != null) {
-      return _fromEncodedPlatformImage(pointer, length);
-    }
-
-    final width = info['width'] as int?;
-    final height = info['height'] as int?;
-    final rowBytes = info['rowBytes'] as int?;
-    if (width == null || height == null || rowBytes == null) {
-      return null;
-    }
-
-    final isHdr = info['isHdr'] as bool? ?? false;
-    return _fromDecodedPlatformImage(
-      pointer,
-      width,
-      height,
-      rowBytes,
-      isHdr,
-    );
-  }
-
-  Future<(ui.Codec, ui.ImageDescriptor)?> _codecFromEncodedPlatformImage(
-    Object image,
-    int length,
-  ) async {
-    return switch (image) {
-      int address => _codecFromEncodedPlatformImagePointer(address, length),
-      Uint8List data => _codecFromEncodedPlatformImageData(data, length),
-      _ => null,
-    };
-  }
-
-  Future<(ui.Codec, ui.ImageDescriptor)?> _codecFromEncodedPlatformImageData(
-    Uint8List data,
-    int length,
-  ) async {
-    if (_isCancelled) {
-      return null;
-    }
-
-    final int effectiveLength = length > 0 && length <= data.length ? length : data.length;
-    final Uint8List view =
-        effectiveLength == data.length ? data : Uint8List.view(data.buffer, data.offsetInBytes, effectiveLength);
-
-    final buffer = await ui.ImmutableBuffer.fromUint8List(view);
-    if (_isCancelled) {
-      buffer.dispose();
-      return null;
-    }
-
-    final descriptor = await ui.ImageDescriptor.encoded(buffer);
-    buffer.dispose();
-    if (_isCancelled) {
-      descriptor.dispose();
-      return null;
-    }
-
-    final codec = await descriptor.instantiateCodec();
-    if (_isCancelled) {
-      descriptor.dispose();
-      codec.dispose();
-      return null;
-    }
-
-    return (codec, descriptor);
-  }
-
-  Future<(ui.Codec, ui.ImageDescriptor)?> _codecFromEncodedPlatformImagePointer(int address, int length) async {
-    if (address == 0 || length <= 0) {
-      if (address != 0) {
-        malloc.free(Pointer<Uint8>.fromAddress(address));
-      }
-      return null;
-    }
-
+  Future<(ui.Codec, ui.ImageDescriptor)?> _codecFromEncodedPlatformImage(int address, int length) async {
     final pointer = Pointer<Uint8>.fromAddress(address);
     if (_isCancelled) {
       malloc.free(pointer);
@@ -126,7 +45,7 @@ abstract class ImageRequest {
 
     final ui.ImmutableBuffer buffer;
     try {
-      buffer = await ui.ImmutableBuffer.fromUint8List(pointer.asTypedList(length));
+      buffer = await ImmutableBuffer.fromUint8List(pointer.asTypedList(length));
     } finally {
       malloc.free(pointer);
     }
@@ -153,8 +72,8 @@ abstract class ImageRequest {
     return (codec, descriptor);
   }
 
-  Future<ui.FrameInfo?> _fromEncodedPlatformImage(Object image, int length) async {
-    final result = await _codecFromEncodedPlatformImage(image, length);
+  Future<ui.FrameInfo?> _fromEncodedPlatformImage(int address, int length) async {
+    final result = await _codecFromEncodedPlatformImage(address, length);
     if (result == null) return null;
 
     final (codec, descriptor) = result;
@@ -175,77 +94,21 @@ abstract class ImageRequest {
     return frame;
   }
 
-  Future<ui.FrameInfo?> _fromDecodedPlatformImage(
-    Object image,
-    int width,
-    int height,
-    int rowBytes,
-    bool isHdr,
-  ) async {
-    return switch (image) {
-      int address => _fromDecodedPlatformImagePointer(address, width, height, rowBytes, isHdr),
-      Uint8List data => _fromDecodedPlatformImageData(data, width, height, rowBytes, isHdr),
-      _ => null,
-    };
-  }
-
-  Future<ui.FrameInfo?> _fromDecodedPlatformImageData(
-    Uint8List data,
-    int width,
-    int height,
-    int rowBytes,
-    bool isHdr,
-  ) async {
-    if (_isCancelled) {
-      return null;
-    }
-
-    final buffer = await ui.ImmutableBuffer.fromUint8List(data);
-    final effectiveRowBytes = rowBytes > 0 ? rowBytes : width * 4;
-    return _decodeRawBuffer(buffer, width, height, effectiveRowBytes, isHdr);
-  }
-
-  Future<ui.FrameInfo?> _fromDecodedPlatformImagePointer(
-    int address,
-    int width,
-    int height,
-    int rowBytes,
-    bool isHdr,
-  ) async {
-    if (address == 0) {
-      return null;
-    }
-
-    final int effectiveRowBytes = rowBytes > 0 ? rowBytes : width * 4;
-    final length = effectiveRowBytes * height;
-    if (length <= 0) {
-      malloc.free(Pointer<Uint8>.fromAddress(address));
-      return null;
-    }
-
+  Future<ui.FrameInfo?> _fromDecodedPlatformImage(int address, int width, int height, int rowBytes, [bool isHdr = false]) async {
     final pointer = Pointer<Uint8>.fromAddress(address);
     if (_isCancelled) {
       malloc.free(pointer);
       return null;
     }
 
+    final size = rowBytes * height;
     final ui.ImmutableBuffer buffer;
     try {
-      buffer = await ui.ImmutableBuffer.fromUint8List(pointer.asTypedList(length));
+      buffer = await ImmutableBuffer.fromUint8List(pointer.asTypedList(size));
     } finally {
       malloc.free(pointer);
     }
 
-    return _decodeRawBuffer(buffer, width, height, effectiveRowBytes, isHdr);
-  }
-
-  Future<ui.FrameInfo?> _decodeRawBuffer(
-    ui.ImmutableBuffer buffer,
-    int width,
-    int height,
-    int rowBytes,
-    bool isHdr,
-  ) async {
     if (_isCancelled) {
       buffer.dispose();
       return null;

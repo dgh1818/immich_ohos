@@ -28,7 +28,13 @@ class LocalImageRequest extends ImageRequest {
       return null;
     }
 
-    final frame = await _fromPlatformImage(info);
+    final frame = await _fromDecodedPlatformImage(
+      info["pointer"]! as int,
+      info["width"]! as int,
+      info["height"]! as int,
+      info["rowBytes"]! as int,
+      info["isHdr"] as bool? ?? false,
+    );
     return frame == null ? null : ImageInfo(image: frame.image, scale: scale);
   }
 
@@ -48,13 +54,8 @@ class LocalImageRequest extends ImageRequest {
     );
     if (info == null) return null;
 
-    final pointer = info['pointer'];
-    final length = info['length'] as int?;
-    if (pointer == null || length == null) {
-      return null;
-    }
-
-    final (codec, _) = await _codecFromEncodedPlatformImage(pointer, length) ?? (null, null);
+    final (codec, _) =
+        await _codecFromEncodedPlatformImage(info['pointer']! as int, info['length']! as int) ?? (null, null);
     return codec;
   }
 

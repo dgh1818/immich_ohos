@@ -1,7 +1,8 @@
 import { image } from '@kit.ImageKit';
+import nativeBuffer from '../../utils/native_buffer';
 
 export interface RemoteDecodeResult {
-  buffer: ArrayBuffer;
+  pointer: number;
   width: number;
   height: number;
   rowBytes: number;
@@ -56,8 +57,34 @@ export async function decodeRemoteImageTask(data: ArrayBuffer, allowHdr: boolean
     let buffer: ArrayBuffer = new ArrayBuffer(stride * actualHeight);
     pixelMap.readPixelsToBufferSync(buffer);
     const outStride = stride;
+    const length = buffer.byteLength;
+    if (length <= 0) {
+      throw new Error(`decoded remote image (${actualWidth}x${actualHeight}, stride=${outStride}) buffer is empty`);
+    }
+
+    const pointer = nativeBuffer.allocate(length);
+    if (pointer === 0) {
+      throw new Error(
+        `decoded remote image (${actualWidth}x${actualHeight}, stride=${outStride}, bytes=${length}) native pointer allocation failed`,
+      );
+    }
+
+    try {
+      const copied = nativeBuffer.copy(buffer, pointer, 0, length);
+      if (copied !== length) {
+        throw new Error(
+          `decoded remote image (${actualWidth}x${actualHeight}, stride=${outStride}, bytes=${length}) native copy failed`,
+        );
+      }
+    } catch (error) {
+      try {
+        nativeBuffer.free(pointer);
+      } catch (_) {}
+      throw error as Error;
+    }
+
     return {
-      buffer,
+      pointer,
       width: actualWidth,
       height: actualHeight,
       rowBytes: outStride,

@@ -1,6 +1,3 @@
-import 'dart:async';
-
-import 'package:async/async.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/painting.dart';
 import 'package:immich_mobile/domain/models/asset/base_asset.model.dart';
@@ -10,15 +7,12 @@ import 'package:immich_mobile/infrastructure/loaders/image_request.dart';
 import 'package:immich_mobile/presentation/widgets/images/animated_image_stream_completer.dart';
 import 'package:immich_mobile/presentation/widgets/images/image_provider.dart';
 import 'package:immich_mobile/presentation/widgets/images/one_frame_multi_image_stream_completer.dart';
-import 'package:immich_mobile/services/api.service.dart';
 import 'package:immich_mobile/utils/image_url_builder.dart';
 import 'package:openapi/api.dart';
 
 class RemoteImageProvider extends CancellableImageProvider<RemoteImageProvider>
     with CancellableImageProviderMixin<RemoteImageProvider> {
   final String url;
-  ImageStream? _networkStream;
-  ImageStreamListener? _networkListener;
 
   RemoteImageProvider({required this.url});
 
@@ -43,46 +37,8 @@ class RemoteImageProvider extends CancellableImageProvider<RemoteImageProvider>
   }
 
   Stream<ImageInfo> _codec(RemoteImageProvider key, ImageDecoderCallback decode) {
-    final provider = NetworkImage(key.url, headers: ApiService.getAuthenticatedRequestHeaders(key.url));
-    final controller = StreamController<ImageInfo>();
-
-    _networkStream = provider.resolve(const ImageConfiguration());
-    _networkListener = ImageStreamListener(
-      (image, _) {
-        if (!controller.isClosed) {
-          controller.add(image);
-          controller.close();
-        }
-        _clearNetworkListener();
-      },
-      onError: (error, stack) {
-        if (!controller.isClosed) {
-          controller.addError(error, stack);
-          controller.close();
-        }
-        _clearNetworkListener();
-      },
-    );
-
-    _networkStream!.addListener(_networkListener!);
-    return controller.stream;
-  }
-
-  void _clearNetworkListener() {
-    final stream = _networkStream;
-    final listener = _networkListener;
-    if (stream != null && listener != null) {
-      stream.removeListener(listener);
-    }
-    _networkStream = null;
-    _networkListener = null;
-  }
-
-  @override
-  void cancel() {
-    super.cancel();
-    _clearNetworkListener();
-    PaintingBinding.instance.imageCache.evict(this);
+    final request = this.request = RemoteImageRequest(uri: key.url);
+    return loadRequest(request, decode);
   }
 
   @override
@@ -104,13 +60,6 @@ class RemoteFullImageProvider extends CancellableImageProvider<RemoteFullImagePr
   final String thumbhash;
   final AssetType assetType;
   final bool isAnimated;
-
-  ImageStream? _previewStream;
-  ImageStreamListener? _previewListener;
-  StreamController<ImageInfo>? _previewController;
-  ImageStream? _originalStream;
-  ImageStreamListener? _originalListener;
-  StreamController<ImageInfo>? _originalController;
 
   RemoteFullImageProvider({
     required this.assetId,
@@ -160,17 +109,13 @@ class RemoteFullImageProvider extends CancellableImageProvider<RemoteFullImagePr
       return;
     }
 
-    final headers = ApiService.getAuthenticatedRequestHeaders(
-      getThumbnailUrlForRemoteId(key.assetId, type: AssetMediaSize.preview, thumbhash: key.thumbhash),
+    final previewRequest = request = RemoteImageRequest(
+      uri: getThumbnailUrlForRemoteId(key.assetId, type: AssetMediaSize.preview, thumbhash: key.thumbhash),
     );
-    final previewStream = _startNetworkStream(
-      getThumbnailUrlForRemoteId(key.assetId, type: AssetMediaSize.preview, thumbhash: key.thumbhash),
-      headers,
-      isPreview: true,
-    );
+    final loadOriginal = assetType == AssetType.image && AppSetting.get(Setting.loadOriginal);
+    yield* loadRequest(previewRequest, decode, evictOnError: !loadOriginal);
 
-    if (assetType != AssetType.image || !AppSetting.get(Setting.loadOriginal)) {
-      yield* previewStream;
+    if (!loadOriginal) {
       return;
     }
 
@@ -179,13 +124,8 @@ class RemoteFullImageProvider extends CancellableImageProvider<RemoteFullImagePr
       return;
     }
 
-    final originalStream = _startNetworkStream(
-      getOriginalUrlForRemoteId(key.assetId),
-      ApiService.getAuthenticatedRequestHeaders(getOriginalUrlForRemoteId(key.assetId)),
-      isPreview: false,
-      onFirstImage: _clearPreviewListener,
-    );
-    yield* StreamGroup.merge([previewStream, originalStream]);
+    final originalRequest = request = RemoteImageRequest(uri: getOriginalUrlForRemoteId(key.assetId));
+    yield* loadRequest(originalRequest, decode);
   }
 
   Stream<Object> _animatedCodec(RemoteFullImageProvider key, ImageDecoderCallback decode) async* {
@@ -196,116 +136,23 @@ class RemoteFullImageProvider extends CancellableImageProvider<RemoteFullImagePr
       return;
     }
 
-    final headers = ApiService.getAuthenticatedRequestHeaders(
-      getThumbnailUrlForRemoteId(key.assetId, type: AssetMediaSize.preview, thumbhash: key.thumbhash),
+    final previewRequest = request = RemoteImageRequest(
+      uri: getThumbnailUrlForRemoteId(key.assetId, type: AssetMediaSize.preview, thumbhash: key.thumbhash),
     );
-    yield* _startNetworkStream(
-      getThumbnailUrlForRemoteId(key.assetId, type: AssetMediaSize.preview, thumbhash: key.thumbhash),
-      headers,
-      isPreview: true,
-      swallowErrors: true,
-    );
+    yield* loadRequest(previewRequest, decode, evictOnError: false);
 
     if (isCancelled) {
       PaintingBinding.instance.imageCache.evict(this);
       return;
     }
 
+    // always try original for animated, since previews don't support animation
     final originalRequest = request = RemoteImageRequest(uri: getOriginalUrlForRemoteId(key.assetId));
     final codec = await loadCodecRequest(originalRequest);
     if (codec == null) {
       throw StateError('Failed to load animated codec for asset ${key.assetId}');
     }
     yield codec;
-  }
-
-  Stream<ImageInfo> _startNetworkStream(
-    String url,
-    Map<String, String> headers, {
-    required bool isPreview,
-    void Function()? onFirstImage,
-    bool swallowErrors = false,
-  }) {
-    final provider = NetworkImage(url, headers: headers);
-    final controller = StreamController<ImageInfo>();
-    final stream = provider.resolve(const ImageConfiguration());
-    final listener = ImageStreamListener(
-      (image, _) {
-        if (!controller.isClosed) {
-          controller.add(image);
-          controller.close();
-        }
-        if (isPreview) {
-          _clearPreviewListener();
-        } else {
-          _clearOriginalListener();
-        }
-        onFirstImage?.call();
-      },
-      onError: (error, stack) {
-        if (!controller.isClosed && !swallowErrors) {
-          controller.addError(error, stack);
-        }
-        if (!controller.isClosed) {
-          controller.close();
-        }
-        if (isPreview) {
-          _clearPreviewListener();
-        } else {
-          _clearOriginalListener();
-        }
-      },
-    );
-
-    stream.addListener(listener);
-    if (isPreview) {
-      _previewStream = stream;
-      _previewListener = listener;
-      _previewController = controller;
-    } else {
-      _originalStream = stream;
-      _originalListener = listener;
-      _originalController = controller;
-    }
-    return controller.stream;
-  }
-
-  void _clearPreviewListener() {
-    final stream = _previewStream;
-    final listener = _previewListener;
-    final controller = _previewController;
-    if (stream != null && listener != null) {
-      stream.removeListener(listener);
-    }
-    if (controller != null && !controller.isClosed) {
-      controller.close();
-    }
-    _previewStream = null;
-    _previewListener = null;
-    _previewController = null;
-  }
-
-  void _clearOriginalListener() {
-    final stream = _originalStream;
-    final listener = _originalListener;
-    final controller = _originalController;
-    if (stream != null && listener != null) {
-      stream.removeListener(listener);
-    }
-    if (controller != null && !controller.isClosed) {
-      controller.close();
-    }
-    _originalStream = null;
-    _originalListener = null;
-    _originalController = null;
-  }
-
-  @override
-  void cancel() {
-    super.cancel();
-    _clearPreviewListener();
-    _clearOriginalListener();
-    PaintingBinding.instance.imageCache.evict(this);
   }
 
   @override

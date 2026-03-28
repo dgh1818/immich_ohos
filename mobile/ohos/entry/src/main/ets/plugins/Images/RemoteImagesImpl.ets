@@ -1,15 +1,14 @@
 import { RemoteImageApiOhos, Result } from './RemoteImages.g';
 import { http } from '@kit.NetworkKit';
 import { BusinessError } from '@kit.BasicServicesKit';
-import { taskpool } from '@kit.ArkTS';
-import { decodeRemoteImageTask, RemoteDecodeResult } from './RemoteImageTask';
 import { common } from '@kit.AbilityKit';
-import { allocCopySafe } from '../../utils/native_buffer';
+import nativeBuffer, { INITIAL_BUFFER_SIZE, NativeByteBuffer } from '../../utils/native_buffer';
 import { URLSessionManager } from '../core/URLSessionManager';
 
 interface RemoteRequestState {
   request: http.HttpRequest;
   cancelled: boolean;
+  buffer?: NativeByteBuffer;
 }
 
 export class RemoteImagesImpl extends RemoteImageApiOhos {
@@ -18,6 +17,31 @@ export class RemoteImagesImpl extends RemoteImageApiOhos {
   private cacheBytes = 0;
   private readonly maxCacheBytes = 64 * 1024 * 1024;
   private ctx?: common.Context;
+
+  private static toNativeBuffer(buffer: ArrayBuffer, label: string): number {
+    const length = buffer.byteLength;
+    if (length <= 0) {
+      throw new Error(`${label} buffer is empty`);
+    }
+
+    const pointer = nativeBuffer.allocate(length);
+    if (pointer === 0) {
+      throw new Error(`${label} native pointer allocation failed`);
+    }
+
+    try {
+      const copied = nativeBuffer.copy(buffer, pointer, 0, length);
+      if (copied !== length) {
+        throw new Error(`${label} native copy failed`);
+      }
+      return pointer;
+    } catch (error) {
+      try {
+        nativeBuffer.free(pointer);
+      } catch (_) {}
+      throw error as Error;
+    }
+  }
 
   constructor(context?: common.Context) {
     super();
@@ -30,39 +54,17 @@ export class RemoteImagesImpl extends RemoteImageApiOhos {
     preferEncoded: boolean,
     result: Result<Map<string, Object>>
   ) {
-    const sizeKind = this.getRemoteSizeKind(url);
     // 1) Cache hit
     const cached = this.cache.get(url);
     if (cached) {
       if (cached.byteLength === 0) {
         this.cache.delete(url);
       } else {
-        if (preferEncoded) {
-          const encoded = new Map<string, Object>();
-          const pointer = allocCopySafe(cached);
-          if (pointer) {
-            encoded.set('pointer', pointer);
-          } else {
-            encoded.set('pointer', new Uint8Array(cached));
-          }
-          encoded.set('length', cached.byteLength);
-          return result.success(encoded);
-        }
-
-        try {
-          const decoded = await this.decodeBuffer(cached, sizeKind);
-          return result.success(decoded);
-        } catch (_) {
-          const fallback = new Map<string, Object>();
-          const pointer = allocCopySafe(cached);
-          if (pointer) {
-            fallback.set('pointer', pointer);
-          } else {
-            fallback.set('pointer', new Uint8Array(cached));
-          }
-          fallback.set('length', cached.byteLength);
-          return result.success(fallback);
-        }
+        const encoded = new Map<string, Object>();
+        const pointer = RemoteImagesImpl.toNativeBuffer(cached, 'cached encoded remote image');
+        encoded.set('pointer', pointer);
+        encoded.set('length', cached.byteLength);
+        return result.success(encoded);
       }
     }
 
@@ -80,61 +82,23 @@ export class RemoteImagesImpl extends RemoteImageApiOhos {
     URLSessionManager.applyToOptions(this.ctx, options, url);
 
     try {
-      const response = await request.request(url, options);
-
       if (state.cancelled) {
         return result.success(new Map<string, Object>());
       }
-      if (response.responseCode < 200 || response.responseCode > 299) {
-        return result.error(new Error(`HTTP ${response.responseCode}`));
-      }
-
-      const data = response.result as ArrayBuffer;
-
+      const encoded = await this.requestEncoded(url, state, options);
       if (state.cancelled) {
+        const pointer = encoded.get('pointer') as number | undefined;
+        if (pointer !== undefined && pointer !== 0) {
+          try {
+            nativeBuffer.free(pointer);
+          } catch (_) {}
+        }
         return result.success(new Map<string, Object>());
       }
-      if (!data || data.byteLength === 0) {
-        return result.error(new Error('HTTP result is empty/detached (byteLength == 0)'));
-      }
-
-      //this.storeCache(url, data);
-
-      try {
-        if (preferEncoded) {
-          const encoded = new Map<string, Object>();
-          const pointer = allocCopySafe(data);
-          if (pointer) {
-            encoded.set('pointer', pointer);
-          } else {
-            encoded.set('pointer', new Uint8Array(data));
-          }
-          encoded.set('length', data.byteLength);
-          return result.success(encoded);
-        }
-
-        const decoded = await this.decodeBuffer(data, sizeKind);
-        if (state.cancelled) {
-          return result.success(new Map<string, Object>());
-        }
-        return result.success(decoded);
-      } catch (_) {
-        if (state.cancelled) {
-          return result.success(new Map<string, Object>());
-        }
-
-        const fallback = new Map<string, Object>();
-        const pointer = allocCopySafe(data);
-        if (pointer) {
-          fallback.set('pointer', pointer);
-        } else {
-          fallback.set('pointer', new Uint8Array(data));
-        }
-        fallback.set('length', data.byteLength);
-        return result.success(fallback);
-      }
+      return result.success(encoded);
     } catch (e) {
       if (state.cancelled) {
+        this.cleanupBuffer(state);
         return result.success(new Map<string, Object>());
       }
       return result.error(e as BusinessError);
@@ -144,34 +108,92 @@ export class RemoteImagesImpl extends RemoteImageApiOhos {
     }
   }
 
-  private async decodeBuffer(data: ArrayBuffer, sizeKind: string): Promise<Map<string, Object>> {
-    if (!data || data.byteLength === 0) {
-      throw new Error('detached buffer (input byteLength == 0)');
-    }
+  private async requestEncoded(
+    url: string,
+    state: RemoteRequestState,
+    options: http.HttpRequestOptions,
+  ): Promise<Map<string, Object>> {
+    let settled = false;
 
-    const input = data.slice(0);
-    const allowHdr = sizeKind === 'full';
-    const task: taskpool.Task = new taskpool.Task(decodeRemoteImageTask, input, allowHdr);
+    const streamDone = new Promise<void>((resolve, reject) => {
+      const rejectStream = (error: Error) => {
+        if (settled) {
+          return;
+        }
+        settled = true;
+        try {
+          state.request.destroy();
+        } catch (_) {}
+        reject(error);
+      };
+
+      state.request.on('dataReceive', (chunk: ArrayBuffer) => {
+        if (settled || state.cancelled) {
+          return;
+        }
+        try {
+          if (!chunk || chunk.byteLength === 0) {
+            return;
+          }
+          if (!state.buffer) {
+            state.buffer = new NativeByteBuffer(Math.max(chunk.byteLength, INITIAL_BUFFER_SIZE));
+          }
+          state.buffer.append(chunk, 'encoded remote image');
+        } catch (e) {
+          rejectStream(e as Error);
+        }
+      });
+
+      state.request.on('dataEnd', () => {
+        if (settled) {
+          return;
+        }
+        settled = true;
+        resolve();
+      });
+    });
+    streamDone.catch(() => {});
+
+    let responseCode = 0;
     try {
-      const priority = sizeKind === 'preview' ? taskpool.Priority.MEDIUM : taskpool.Priority.HIGH;
-      const executor = taskpool.execute(task, priority);
-      const processed = (await executor) as RemoteDecodeResult;
-
-      const resOut = new Map<string, Object>();
-      const pointer = allocCopySafe(processed.buffer);
-      if (pointer) {
-        resOut.set('pointer', pointer);
-      } else {
-        resOut.set('pointer', new Uint8Array(processed.buffer));
-      }
-      resOut.set('width', processed.width);
-      resOut.set('height', processed.height);
-      resOut.set('rowBytes', processed.rowBytes);
-      resOut.set('isHdr', processed.isHdr);
-      return resOut;
-    } finally {
-      taskpool.terminateTask(task);
+      responseCode = await state.request.requestInStream(url, options);
+    } catch (error) {
+      this.cleanupBuffer(state);
+      throw error as Error;
     }
+
+    if (responseCode < 200 || responseCode > 299) {
+      this.cleanupBuffer(state);
+      throw new Error(`HTTP ${responseCode}`);
+    }
+
+    try {
+      await streamDone;
+    } catch (error) {
+      this.cleanupBuffer(state);
+      throw error as Error;
+    }
+    if (state.cancelled) {
+      this.cleanupBuffer(state);
+      return new Map<string, Object>();
+    }
+
+    const buffer = state.buffer;
+    state.buffer = undefined;
+    if (!buffer || buffer.offset <= 0) {
+      try {
+        buffer?.free();
+      } catch (_) {}
+      throw new Error('HTTP result is empty/detached (byteLength == 0)');
+    }
+
+    const encoded = new Map<string, Object>();
+    encoded.set('pointer', buffer.pointer);
+    encoded.set('length', buffer.offset);
+    buffer.pointer = 0;
+    buffer.capacity = 0;
+    buffer.offset = 0;
+    return encoded;
   }
 
   override cancelRequest(requestId: number) {
@@ -183,6 +205,7 @@ export class RemoteImagesImpl extends RemoteImageApiOhos {
     try {
       state.request.destroy();
     } catch (_) {}
+    this.cleanupBuffer(state);
     this.requestMap.delete(requestId);
   }
 
@@ -193,14 +216,15 @@ export class RemoteImagesImpl extends RemoteImageApiOhos {
     result.success(clearedBytes);
   }
 
-  private getRemoteSizeKind(url: string): string {
-    if (url.includes('size=thumbnail')) {
-      return 'thumbnail';
+  private cleanupBuffer(state: RemoteRequestState) {
+    const buffer = state.buffer;
+    state.buffer = undefined;
+    if (!buffer) {
+      return;
     }
-    if (url.includes('size=preview')) {
-      return 'preview';
-    }
-    return 'full';
+    try {
+      buffer.free();
+    } catch (_) {}
   }
 
   private storeCache(url: string, data: ArrayBuffer) {

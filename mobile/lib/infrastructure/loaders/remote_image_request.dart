@@ -12,11 +12,14 @@ class RemoteImageRequest extends ImageRequest {
     }
 
     final info = await remoteImageApi.requestImage(uri, requestId: requestId, preferEncoded: false);
-    if (info == null) {
-      return null;
-    }
-
-    final frame = await _fromPlatformImage(info);
+    final frame = switch (info) {
+      {'pointer': int pointer, 'length': int length} => await _fromEncodedPlatformImage(pointer, length),
+      {'pointer': int pointer, 'width': int width, 'height': int height, 'rowBytes': int rowBytes, 'isHdr': bool isHdr} =>
+        await _fromDecodedPlatformImage(pointer, width, height, rowBytes, isHdr),
+      {'pointer': int pointer, 'width': int width, 'height': int height, 'rowBytes': int rowBytes} =>
+        await _fromDecodedPlatformImage(pointer, width, height, rowBytes),
+      _ => null,
+    };
     return frame == null ? null : ImageInfo(image: frame.image, scale: scale);
   }
 
@@ -29,13 +32,8 @@ class RemoteImageRequest extends ImageRequest {
     final info = await remoteImageApi.requestImage(uri, requestId: requestId, preferEncoded: true);
     if (info == null) return null;
 
-    final pointer = info['pointer'] as int?;
-    final length = info['length'] as int?;
-    if (pointer == null || length == null) {
-      return null;
-    }
-
-    final (codec, _) = await _codecFromEncodedPlatformImage(pointer, length) ?? (null, null);
+    final (codec, _) =
+        await _codecFromEncodedPlatformImage(info['pointer']! as int, info['length']! as int) ?? (null, null);
     return codec;
   }
 

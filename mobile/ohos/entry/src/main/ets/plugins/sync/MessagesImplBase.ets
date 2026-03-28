@@ -196,7 +196,7 @@ async function getAssetIdsForAlbumTask(
         predicates: predicates
       };
 
-      let fetchResultAlbum =
+      let fetchResultAlbum: photoAccessHelper.FetchResult<photoAccessHelper.Album> =
         await phAccessHelper.getAlbums(photoAccessHelper.AlbumType.USER, photoAccessHelper.AlbumSubtype.ANY, fetchOptions);
       let album: photoAccessHelper.Album | undefined;
       if (fetchResultAlbum.getCount() != 0) {
@@ -309,7 +309,7 @@ async function getAssetsForAlbumTask(
         predicates: predicatesAlbum
       };
 
-      let albumFetchResult =
+      let albumFetchResult: photoAccessHelper.FetchResult<photoAccessHelper.Album> =
         await phAccessHelper.getAlbums(photoAccessHelper.AlbumType.USER, photoAccessHelper.AlbumSubtype.ANY,
           albumFetchOptions);
       if (albumFetchResult.getCount() == 0 || albumFetchResult == undefined) {
@@ -888,16 +888,8 @@ export class MessagesImplBase extends NativeSyncApiOhos {
     try {
       const sendableCtx = sendableContextManager.convertFromContext(this.ctx);
       const task = new taskpool.Task(getAssetIdsForAlbumTask, sendableCtx, albumPath);
-      try {
-        const assetsUri = await taskpool.execute(task, taskpool.Priority.MEDIUM) as string[] | undefined;
-        result.success(assetsUri ?? []);
-      } finally {
-        try {
-          taskpool.terminateTask(task);
-        } catch (_) {
-          // ignore terminate errors
-        }
-      }
+      const assetsUri = await taskpool.execute(task, taskpool.Priority.MEDIUM) as string[] | undefined;
+      result.success(assetsUri ?? []);
     } catch (e) {
       console.error(`getAssetIdsForAlbum taskpool error for ${albumPath}`, e);
       result.success([]);
@@ -963,7 +955,7 @@ export class MessagesImplBase extends NativeSyncApiOhos {
           predicates: predicates_album
         };
 
-        let albumFetchResult =
+        let albumFetchResult: photoAccessHelper.FetchResult<photoAccessHelper.Album> =
           await phAccessHelper.getAlbums(photoAccessHelper.AlbumType.USER, photoAccessHelper.AlbumSubtype.USER_GENERIC,
             fetchOptions);
 
@@ -1221,34 +1213,26 @@ export class MessagesImplBase extends NativeSyncApiOhos {
       const task = !hasUpdatedTimeCond
         ? new taskpool.Task(getAssetsForAlbumTask, sendableCtx, albumId)
         : new taskpool.Task(getAssetsForAlbumTask, sendableCtx, albumId, updatedTimeCond);
-      try {
-        const assetInfos = await taskpool.execute(task, taskpool.Priority.MEDIUM) as AssetInfo[] | undefined;
-        for (const info of assetInfos ?? []) {
-          const asset: PlatformAsset = new PlatformAsset(
-            info.id,
-            info.name ?? "",
-            info.mediaType,
-            info.createdAt ?? 0,
-            info.modifiedAt ?? 0,
-            info.width ?? 0,
-            info.height ?? 0,
-            info.duration ?? 0,
-            info.orientation ?? 0,
-            info.isFavorite,
-            -1,
-            199.9,
-            199.9,
-            info.playbackStyle,
-          );
-          assetResult.push(asset);
-          snapshotRows.push({ uri: info.id, mtime: info.modifiedAt ?? 0, size: info.size ?? 0 });
-        }
-      } finally {
-        try {
-          taskpool.terminateTask(task);
-        } catch (_) {
-          // ignore terminate errors
-        }
+      const assetInfos = await taskpool.execute(task, taskpool.Priority.MEDIUM) as AssetInfo[] | undefined;
+      for (const info of assetInfos ?? []) {
+        const asset: PlatformAsset = new PlatformAsset(
+          info.id,
+          info.name ?? "",
+          info.mediaType,
+          info.createdAt ?? 0,
+          info.modifiedAt ?? 0,
+          info.width ?? 0,
+          info.height ?? 0,
+          info.duration ?? 0,
+          info.orientation ?? 0,
+          info.isFavorite,
+          -1,
+          199.9,
+          199.9,
+          info.playbackStyle,
+        );
+        assetResult.push(asset);
+        snapshotRows.push({ uri: info.id, mtime: info.modifiedAt ?? 0, size: info.size ?? 0 });
       }
     } catch (e) {
       console.error(`getAssetsForAlbum taskpool error for ${albumId}`, e);
