@@ -144,9 +144,7 @@ export class LocalImagesImpl extends LocalImageApiOhos {
     }
     try {
       taskpool.cancel(request);
-    } catch (e) {
-      const error = e as BusinessError;
-      console.error("image request task cancel error:" + error.message);
+    } catch (_) {
     } finally {
       this.requestMap.delete(requestId);
     }
