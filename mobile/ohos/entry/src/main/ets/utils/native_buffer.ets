@@ -1,4 +1,5 @@
 import nativeBuffer from 'libnative_buffer.so';
+import { deviceInfo } from '@kit.BasicServicesKit';
 
 export interface NativeBufferModule {
   alloc(size: number): number;
@@ -9,7 +10,7 @@ export interface NativeBufferModule {
 const module = nativeBuffer as NativeBufferModule;
 const isSupported = (() => {
   try {
-    return canIUse('api.version >= 10');
+    return deviceInfo.sdkApiVersion >= 10;
   } catch (_) {
     return false;
   }
