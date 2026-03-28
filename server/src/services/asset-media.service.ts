@@ -2,7 +2,7 @@ import { BadRequestException, Injectable, InternalServerErrorException, NotFound
 import { dirname, extname, join } from 'node:path';
 import sanitize from 'sanitize-filename';
 import { StorageCore } from 'src/cores/storage.core';
-import { Asset } from 'src/database';
+import { Asset, AuthSharedLink } from 'src/database';
 import {
   AssetBulkUploadCheckResponseDto,
   AssetMediaResponseDto,
@@ -154,7 +154,7 @@ export class AssetMediaService extends BaseService {
       const asset = await this.create(auth.user.id, dto, file, sidecarFile);
 
       if (auth.sharedLink) {
-        await this.sharedLinkRepository.addAssets(auth.sharedLink.id, [asset.id]);
+        await this.addToSharedLink(auth.sharedLink, asset.id);
       }
 
       await this.userRepository.updateUsage(auth.user.id, file.size);
@@ -341,6 +341,12 @@ export class AssetMediaService extends BaseService {
     };
   }
 
+  private async addToSharedLink(sharedLink: AuthSharedLink, assetId: string) {
+    await (sharedLink.albumId
+      ? this.albumRepository.addAssetIds(sharedLink.albumId, [assetId])
+      : this.sharedLinkRepository.addAssets(sharedLink.id, [assetId]));
+  }
+
   private async handleUploadError(
     error: any,
     auth: AuthDto,
@@ -362,9 +368,10 @@ export class AssetMediaService extends BaseService {
       }
 
       if (auth.sharedLink) {
-        await this.sharedLinkRepository.addAssets(auth.sharedLink.id, [duplicateId]);
+        await this.addToSharedLink(auth.sharedLink, duplicateId);
       }
 
+      this.logger.debug(`Duplicate asset upload rejected: existing asset ${duplicateId}`);
       return { status: AssetMediaStatus.DUPLICATE, id: duplicateId };
     }
 
