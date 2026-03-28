@@ -457,40 +457,10 @@ class BackgroundUploadService {
   }
 
   Map<String, String> _buildUploadHeaders(String url) {
-    final headers = <String, String>{...ApiService.getRequestHeaders()};
-
-    // OHOS background upload workers do not use the shared NetworkRepository client,
-    // so mirror the auth cookie/basic auth injection here for background tasks.
     if (Platform.isOhos) {
-      final token = Store.tryGet(StoreKey.accessToken);
-      if (token != null && token.isNotEmpty) {
-        final existingCookie = headers['Cookie'] ?? headers['cookie'];
-        final authCookie =
-            'immich_access_token=$token; immich_is_authenticated=true; immich_auth_type=password';
-        headers['Cookie'] = existingCookie != null && existingCookie.isNotEmpty
-            ? '$existingCookie; $authCookie'
-            : authCookie;
-        headers.remove('cookie');
-      }
-
-      if (!headers.containsKey('Authorization') && !headers.containsKey('authorization')) {
-        final basicAuth = _buildBasicAuthorization(url);
-        if (basicAuth != null) {
-          headers['Authorization'] = basicAuth;
-        }
-      }
+      return ApiService.getAuthenticatedRequestHeaders(url);
     }
 
-    return headers;
-  }
-
-  String? _buildBasicAuthorization(String url) {
-    final uri = Uri.tryParse(url);
-    final userInfo = uri?.userInfo;
-    if (userInfo == null || userInfo.isEmpty) {
-      return null;
-    }
-
-    return 'Basic ${base64Encode(utf8.encode(userInfo))}';
+    return ApiService.getRequestHeaders();
   }
 }

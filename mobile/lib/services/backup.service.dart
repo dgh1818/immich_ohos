@@ -327,6 +327,10 @@ class BackupService {
             onProgress: ((bytes, totalBytes) => onProgress(bytes, totalBytes)),
           );
 
+          if (Platform.isOhos) {
+            baseRequest.headers.addAll(ApiService.getAuthenticatedRequestHeaders(baseRequest.url.toString()));
+          }
+
           baseRequest.fields['deviceAssetId'] = asset.localId!;
           baseRequest.fields['deviceId'] = deviceId;
           baseRequest.fields['fileCreatedAt'] = asset.fileCreatedAt.toUtc().toIso8601String();
@@ -501,22 +505,26 @@ class BackupService {
       if (response.statusCode == 200 || response.statusCode == 201) {
         final json = jsonDecode(response.body);
         debugPrint('upload ok: ${json['id']}');
-        unawaited(Fluttertoast.showToast(
-          msg: 'Upload complete: $displayName',
-          toastLength: Toast.LENGTH_SHORT,
-          gravity: ToastGravity.BOTTOM,
-        ));
+        unawaited(
+          Fluttertoast.showToast(
+            msg: 'Upload complete: $displayName',
+            toastLength: Toast.LENGTH_SHORT,
+            gravity: ToastGravity.BOTTOM,
+          ),
+        );
       } else {
         final error = jsonDecode(response.body);
         throw Exception('upload failed: ${error['message']}');
       }
     } catch (e) {
       debugPrint('upload error: $e');
-      unawaited(Fluttertoast.showToast(
-        msg: 'Upload failed: $displayName',
-        toastLength: Toast.LENGTH_LONG,
-        gravity: ToastGravity.BOTTOM,
-      ));
+      unawaited(
+        Fluttertoast.showToast(
+          msg: 'Upload failed: $displayName',
+          toastLength: Toast.LENGTH_LONG,
+          gravity: ToastGravity.BOTTOM,
+        ),
+      );
       rethrow;
     }
   }
