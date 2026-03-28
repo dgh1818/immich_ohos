@@ -10,3 +10,6 @@
 [submodule "mobile/photo_manager_image_provider"]
 	path = mobile/photo_manager_image_provider
 	url = https://github.com/dgh1818/photo_manager_image_provider.git
+[submodule "mobile/third_party/jni"]
+	path = mobile/third_party/jni
+	url = ssh://git@ssh.github.com:443/dgh1818/immich_ohos_jni.git
