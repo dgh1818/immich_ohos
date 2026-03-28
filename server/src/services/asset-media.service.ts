@@ -2,7 +2,7 @@ import { BadRequestException, Injectable, InternalServerErrorException, NotFound
 import { dirname, extname, join } from 'node:path';
 import sanitize from 'sanitize-filename';
 import { StorageCore } from 'src/cores/storage.core';
-import { Asset, AssetFile, Exif } from 'src/database';
+import { Asset } from 'src/database';
 import {
   AssetBulkUploadCheckResponseDto,
   AssetMediaResponseDto,
@@ -503,7 +503,7 @@ export class AssetMediaService extends BaseService {
   }
 
   private async getCuvaIsoPath(
-    asset: Asset & { files?: AssetFile[]; exifInfo?: Exif | null },
+    asset: Pick<Asset, 'id' | 'ownerId' | 'originalPath'> & { exifInfo?: { make: string | null } | null },
   ): Promise<{ path: string; cleanup: () => Promise<void> } | null> {
     if (process.env.CUVA_TO_ISO_HDR !== 'true') {
       return null;
@@ -556,7 +556,7 @@ export class AssetMediaService extends BaseService {
   }
 
   private async findOrFail(id: string) {
-    const asset = await this.assetRepository.getById(id, { files: true, exifInfo: true });
+    const asset = await this.assetRepository.getById(id, { exifInfo: true });
     if (!asset) {
       throw new NotFoundException('Asset not found');
     }
