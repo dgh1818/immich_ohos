@@ -1,12 +1,7 @@
-import 'dart:async';
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:immich_mobile/domain/models/exif.model.dart';
-import 'package:immich_mobile/utils/debug_print.dart';
 import 'package:immich_mobile/widgets/map/map_thumbnail.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import 'package:immich_mobile/routing/router.dart';
 import 'package:auto_route/auto_route.dart';
@@ -32,7 +27,6 @@ class ExifMap extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final hasCoordinates = exifInfo.hasCoordinates;
     /*
     Future<Uri?> createCoordinatesUri() async {
       if (!hasCoordinates) {
@@ -80,7 +74,7 @@ class ExifMap extends StatelessWidget {
           assetMarkerRemoteId: markerId,
           assetThumbhash: markerAssetThumbhash,
           onReverseGeocoded: onReverseGeocoded,
-          onTap: (tapPosition, latLong) async {
+          onTap: (tapPosition, latLong) {
             context.pushRoute<LatLng?>(
               DriftMapRoute(
                 initialLocation: LatLng(exifInfo.latitude ?? 0, exifInfo.longitude ?? 0),

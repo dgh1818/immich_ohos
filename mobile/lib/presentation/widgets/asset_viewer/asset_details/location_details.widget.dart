@@ -7,9 +7,9 @@ import 'package:immich_mobile/extensions/build_context_extensions.dart';
 import 'package:immich_mobile/extensions/theme_extensions.dart';
 import 'package:immich_mobile/extensions/translate_extensions.dart';
 import 'package:immich_mobile/presentation/widgets/asset_viewer/sheet_tile.widget.dart';
+import 'package:immich_mobile/providers/asset_viewer/asset_viewer.provider.dart';
 import 'package:immich_mobile/providers/infrastructure/action.provider.dart';
 import 'package:immich_mobile/widgets/asset_viewer/detail_panel/exif_map.dart';
-import 'package:maplibre_gl/maplibre_gl.dart';
 
 class LocationDetails extends ConsumerStatefulWidget {
   final BaseAsset asset;
@@ -22,7 +22,6 @@ class LocationDetails extends ConsumerStatefulWidget {
 }
 
 class _LocationDetailsState extends ConsumerState<LocationDetails> {
-  MapLibreMapController? _mapController;
   String reverseText = '';
 
   String? _getLocationName(ExifInfo? exifInfo) {
@@ -39,10 +38,6 @@ class _LocationDetailsState extends ConsumerState<LocationDetails> {
     return null;
   }
 
-  void _onMapCreated(MapLibreMapController controller) {
-    _mapController = controller;
-  }
-
   void _onReverseGeocoded(String text) {
     setState(() {
       reverseText = text.trim();
@@ -53,10 +48,7 @@ class _LocationDetailsState extends ConsumerState<LocationDetails> {
   void didUpdateWidget(LocationDetails oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.exifInfo != oldWidget.exifInfo) {
-      final exif = widget.exifInfo;
-      if (exif != null && exif.hasCoordinates) {
-        _mapController?.moveCamera(CameraUpdate.newLatLng(LatLng(exif.latitude!, exif.longitude!)));
-      }
+      reverseText = '';
     }
   }
 
@@ -69,6 +61,7 @@ class _LocationDetailsState extends ConsumerState<LocationDetails> {
     final asset = widget.asset;
     final exifInfo = widget.exifInfo;
     final hasCoordinates = exifInfo?.hasCoordinates ?? false;
+    final showingDetails = ref.watch(assetViewerProvider.select((s) => s.showingDetails));
 
     // Guard local assets
     if (asset is! RemoteAsset) {
@@ -95,13 +88,14 @@ class _LocationDetailsState extends ConsumerState<LocationDetails> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  ExifMap(
-                    exifInfo: exifInfo!,
-                    markerId: asset.id,
-                    markerAssetThumbhash: asset.thumbHash,
-                    onMapCreated: _onMapCreated,
-                    onReverseGeocoded: _onReverseGeocoded,
-                  ),
+                  if (showingDetails)
+                    ExifMap(
+                      key: ValueKey('${asset.id}:${exifInfo!.latitude}:${exifInfo.longitude}'),
+                      exifInfo: exifInfo,
+                      markerId: asset.id,
+                      markerAssetThumbhash: asset.thumbHash,
+                      onReverseGeocoded: _onReverseGeocoded,
+                    ),
                   const SizedBox(height: 16),
                   if (locationName != null)
                     Padding(
