@@ -164,24 +164,24 @@ async function getAssetIdsForAlbumTask(
       '/Pictures/Screenrecords',
     ]);
     let ownerAlbumId: number | null = null;
-    // if (deviceInfo.sdkApiVersion >= 22 && specialAlbumLpaths.has(albumPath)) {
-    //   try {
-    //     ownerAlbumId = await phAccessHelper.getAlbumIdByLpath(albumPath);
-    //   } catch (e) {
-    //     console.error(`getAlbumIdByLpath failed for ${albumPath}`, e);
-    //   }
-    // }
+    if (deviceInfo.sdkApiVersion == 22 && specialAlbumLpaths.has(albumPath)) {
+      try {
+        ownerAlbumId = await phAccessHelper.getAlbumIdByLpath(albumPath);
+      } catch (e) {
+        console.error(`getAlbumIdByLpath failed for ${albumPath}`, e);
+      }
+    }
 
     let photoFetchResult: photoAccessHelper.FetchResult<photoAccessHelper.PhotoAsset> | undefined = undefined;
 
-    if (deviceInfo.sdkApiVersion >= 22 && ownerAlbumId !== null) {
-      // const photoPredicates = new dataSharePredicates.DataSharePredicates();
-      // photoPredicates.equalTo(photoAccessHelper.PhotoKeys.OWNER_ALBUM_ID, ownerAlbumId);
-      // const photoFetchOptions: photoAccessHelper.FetchOptions = {
-      //   fetchColumns: assetForAlbumfetchColumns,
-      //   predicates: photoPredicates
-      // };
-      // photoFetchResult = await phAccessHelper.getAssets(photoFetchOptions);
+    if (deviceInfo.sdkApiVersion == 22 && ownerAlbumId !== null) {
+      const photoPredicates = new dataSharePredicates.DataSharePredicates();
+      photoPredicates.equalTo(ownerAlbumIdKey, ownerAlbumId);
+      const photoFetchOptions: photoAccessHelper.FetchOptions = {
+        fetchColumns: assetForAlbumfetchColumns,
+        predicates: photoPredicates
+      };
+      photoFetchResult = await phAccessHelper.getAssets(photoFetchOptions);
     } else {
       const fetchColumns: string[] = [
         photoAccessHelper.AlbumKeys.URI,
@@ -281,16 +281,16 @@ async function getAssetsForAlbumTask(
       '/Pictures/Screenrecords',
     ]);
     let ownerAlbumId: number | null = null;
-    // if (deviceInfo.sdkApiVersion >= 22 && specialAlbumLpaths.has(albumId)) {
-    //   try {
-    //     ownerAlbumId = await phAccessHelper.getAlbumIdByLpath(albumId);
-    //   } catch (e) {
-    //     console.error(`getAlbumIdByLpath failed for ${albumId}`, e);
-    //   }
-    // }
+    if (deviceInfo.sdkApiVersion == 22 && specialAlbumLpaths.has(albumId)) {
+      try {
+        ownerAlbumId = await phAccessHelper.getAlbumIdByLpath(albumId);
+      } catch (e) {
+        console.error(`getAlbumIdByLpath failed for ${albumId}`, e);
+      }
+    }
     let photoFetchResult: photoAccessHelper.FetchResult<photoAccessHelper.PhotoAsset> | undefined = undefined;
 
-    if (deviceInfo.sdkApiVersion >= 22 && ownerAlbumId !== null) {
+    if (deviceInfo.sdkApiVersion == 22 && ownerAlbumId !== null) {
       const predicatesPhoto: dataSharePredicates.DataSharePredicates = new dataSharePredicates.DataSharePredicates();
       predicatesPhoto.equalTo(ownerAlbumIdKey, ownerAlbumId);
       const photoFetchOptions: photoAccessHelper.FetchOptions = {
@@ -801,44 +801,44 @@ export class MessagesImplBase extends NativeSyncApiOhos {
       albums.push(album);
     }
 
-    // if (deviceInfo.sdkApiVersion >= 22) {
-    //   const specialAlbumLpaths = [
-    //     '/DCIM/Camera',
-    //     '/Pictures/Screenshots',
-    //     '/Pictures/Screenrecords',
-    //   ];
-    //   for (const lpath of specialAlbumLpaths) {
-    //     let ownerAlbumId: number | null = null;
-    //     try {
-    //       ownerAlbumId = await phAccessHelper.getAlbumIdByLpath(lpath);
-    //     } catch (e) {
-    //       console.error(`getAlbumIdByLpath failed for ${lpath}`, e);
-    //     }
-    //     if (ownerAlbumId === null) {
-    //       continue;
-    //     }
-    //     let assetCount = 0;
-    //     try {
-    //       const predicates = new dataSharePredicates.DataSharePredicates();
-    //       predicates.equalTo(photoAccessHelper.PhotoKeys.OWNER_ALBUM_ID, ownerAlbumId);
-    //       const fetchOptions: photoAccessHelper.FetchOptions = {
-    //         fetchColumns: [
-    //           photoAccessHelper.PhotoKeys.URI,
-    //           photoAccessHelper.PhotoKeys.OWNER_ALBUM_ID,
-    //         ],
-    //         predicates: predicates
-    //       };
-    //       const fetchResult = await phAccessHelper.getAssets(fetchOptions);
-    //       assetCount = fetchResult.getCount();
-    //     } catch (e) {
-    //       console.error(`getAlbums owner_album_id count failed for ${lpath}`, e);
-    //     }
-    //     const lastSlash = lpath.lastIndexOf('/');
-    //     const name = lastSlash >= 0 && lastSlash + 1 < lpath.length ? lpath.substring(lastSlash + 1) : lpath;
-    //     const extraAlbum = new PlatformAlbum(lpath, name, -1, false, assetCount);
-    //     albums.push(extraAlbum);
-    //   }
-    // }
+    if (deviceInfo.sdkApiVersion == 22) {
+      const specialAlbumLpaths = [
+        '/DCIM/Camera',
+        '/Pictures/Screenshots',
+        '/Pictures/Screenrecords',
+      ];
+      for (const lpath of specialAlbumLpaths) {
+        let ownerAlbumId: number | null = null;
+        try {
+          ownerAlbumId = await phAccessHelper.getAlbumIdByLpath(lpath);
+        } catch (e) {
+          console.error(`getAlbumIdByLpath failed for ${lpath}`, e);
+        }
+        if (ownerAlbumId === null) {
+          continue;
+        }
+        let assetCount = 0;
+        try {
+          const predicates = new dataSharePredicates.DataSharePredicates();
+          predicates.equalTo('owner_album_id', ownerAlbumId);
+          const fetchOptions: photoAccessHelper.FetchOptions = {
+            fetchColumns: [
+              photoAccessHelper.PhotoKeys.URI,
+              'owner_album_id',
+            ],
+            predicates: predicates
+          };
+          const fetchResult = await phAccessHelper.getAssets(fetchOptions);
+          assetCount = fetchResult.getCount();
+        } catch (e) {
+          console.error(`getAlbums owner_album_id count failed for ${lpath}`, e);
+        }
+        const lastSlash = lpath.lastIndexOf('/');
+        const name = lastSlash >= 0 && lastSlash + 1 < lpath.length ? lpath.substring(lastSlash + 1) : lpath;
+        const extraAlbum = new PlatformAlbum(lpath, name, -1, false, assetCount);
+        albums.push(extraAlbum);
+      }
+    }
 
     // Sort albums by id to align with Android ordering expectations.
     albums.sort((a, b) => {
@@ -937,14 +937,14 @@ export class MessagesImplBase extends NativeSyncApiOhos {
         '/Pictures/Screenshots',
         '/Pictures/Screenrecords',
       ]);
-      // if (deviceInfo.sdkApiVersion >= 22 && specialAlbumLpaths.has(albumPath)) {
-      //   try {
-      //     ownerAlbumId = await phAccessHelper.getAlbumIdByLpath(albumPath);
-      //   } catch (e) {
-      //     console.error(`getAlbumIdByLpath failed for ${albumPath}`, e);
-      //   }
-      // }
-      if (deviceInfo.sdkApiVersion >= 22 && ownerAlbumId !== null) {
+      if (deviceInfo.sdkApiVersion == 22 && specialAlbumLpaths.has(albumPath)) {
+        try {
+          ownerAlbumId = await phAccessHelper.getAlbumIdByLpath(albumPath);
+        } catch (e) {
+          console.error(`getAlbumIdByLpath failed for ${albumPath}`, e);
+        }
+      }
+      if (deviceInfo.sdkApiVersion == 22 && ownerAlbumId !== null) {
         let predicates: dataSharePredicates.DataSharePredicates = new dataSharePredicates.DataSharePredicates();
         predicates.equalTo('owner_album_id', ownerAlbumId);
 
