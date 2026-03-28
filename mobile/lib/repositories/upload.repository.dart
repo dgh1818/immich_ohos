@@ -8,6 +8,7 @@ import 'package:immich_mobile/constants/constants.dart';
 import 'package:immich_mobile/domain/models/store.model.dart';
 import 'package:immich_mobile/entities/store.entity.dart';
 import 'package:immich_mobile/infrastructure/repositories/network.repository.dart';
+import 'package:immich_mobile/services/api.service.dart';
 import 'package:logging/logging.dart';
 import 'package:http/http.dart';
 import 'package:immich_mobile/utils/debug_print.dart';
@@ -102,14 +103,19 @@ class UploadRepository {
     required String logContext,
   }) async {
     final String savedEndpoint = Store.get(StoreKey.serverEndpoint);
+    final Uri uploadUri = Uri.parse('$savedEndpoint/assets');
     final baseRequest = ProgressMultipartRequest(
       'POST',
-      Uri.parse('$savedEndpoint/assets'),
+      uploadUri,
       abortTrigger: cancelToken?.future,
       onProgress: onProgress,
     );
 
     try {
+      if (Platform.isOhos) {
+        baseRequest.headers.addAll(ApiService.getAuthenticatedRequestHeaders(uploadUri.toString()));
+      }
+
       final fileStream = file.openRead();
       final assetRawUploadData = MultipartFile("assetData", fileStream, file.lengthSync(), filename: originalFileName);
 
