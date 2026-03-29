@@ -69,9 +69,13 @@ class AuthService {
     try {
       final urls = ApiService.getServerUrls();
       urls.add(url);
-      await NetworkRepository.setHeaders(ApiService.getRequestHeaders(), urls);
+      final accessToken = Store.tryGet(StoreKey.accessToken);
+      await NetworkRepository.setHeaders(ApiService.getRequestHeaders(), urls, token: accessToken);
       final uri = Uri.parse('$url/users/me');
-      final response = await NetworkRepository.client.get(uri);
+      final response = await NetworkRepository.client.get(
+        uri,
+        headers: ApiService.getAuthenticatedRequestHeaders(uri.toString()),
+      );
       if (response.statusCode == 200) {
         isValid = true;
       }
