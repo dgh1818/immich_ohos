@@ -2,6 +2,7 @@ import { Injectable, NotAcceptableException } from '@nestjs/common';
 import { Interval } from '@nestjs/schedule';
 import { NextFunction, Request, Response } from 'express';
 import { readFileSync } from 'node:fs';
+import { isIP } from 'node:net';
 import sanitizeHtml from 'sanitize-html';
 import { ONE_HOUR } from 'src/constants';
 import { ConfigRepository } from 'src/repositories/config.repository';
@@ -35,51 +36,93 @@ export const render = (index: string, meta: OpenGraphTags) => {
   return index.replace('<!-- metadata:tags -->', tags);
 };
 
-function isIPv4(ip: string): boolean {
-  // 拆分成四段
+function normalizeIp(ip?: string): string | undefined {
+  let normalized = ip?.trim();
+  if (!normalized) {
+    return undefined;
+  }
+
+  const bracketMatch = normalized.match(/^\[([^[\]]+)\](?::\d+)?$/);
+  if (bracketMatch) {
+    normalized = bracketMatch[1];
+  }
+
+  const ipv4WithPortMatch = normalized.match(/^(\d{1,3}(?:\.\d{1,3}){3}):\d+$/);
+  if (ipv4WithPortMatch) {
+    normalized = ipv4WithPortMatch[1];
+  }
+
+  const zoneIndex = normalized.indexOf('%');
+  if (zoneIndex !== -1) {
+    normalized = normalized.slice(0, zoneIndex);
+  }
+
+  return normalized.toLowerCase();
+}
+
+function getHeaderIp(value: string | string[] | undefined): string | undefined {
+  if (Array.isArray(value)) {
+    value = value[0];
+  }
+
+  return normalizeIp(value?.split(',')[0]);
+}
+
+function isPrivateIpv4(ip: string): boolean {
   const parts = ip.split('.');
-  if (parts.length !== 4) {
+  if (parts.length !== 4 || parts.some((part) => !/^\d+$/.test(part))) {
     return false;
   }
 
-  for (const part of parts) {
-    // 每段不能为空，且只能包含 0–9 数字
-    if (!/^\d+$/.test(part)) {
-      return false;
-    }
+  const [a, b] = parts.map((part) => Number(part));
 
-    // 转成数字，看是否在 0–255 范围内
-    const num = Number(part);
-    if (num < 0 || num > 255) {
-      return false;
-    }
+  if (a === 10) return true;
+  if (a === 172 && b >= 16 && b <= 31) return true;
+  if (a === 192 && b === 168) return true;
+  if (ip === '127.0.0.1') return true;
+  return false;
+}
 
-    // 防止 “01”、“001” 这种前导零的非标准写法（可选）
-    // 如果你允许 “01” 这种写法，可以把下面这一段注释掉
-    if (part.length > 1 && part.startsWith('0')) {
-      return false;
-    }
+function isPrivateIpv6(ip: string): boolean {
+  if (ip === '::1' || ip === '::') {
+    return true;
   }
 
-  return true;
+  const firstHextet = ip.split(':')[0];
+  if (firstHextet.startsWith('fc') || firstHextet.startsWith('fd')) {
+    return true;
+  }
+
+  if (/^fe[89ab]/.test(firstHextet)) {
+    return true;
+  }
+
+  return false;
+}
+
+function getClientIp(request: Request): string | undefined {
+  return getHeaderIp(request.headers['x-forwarded-for']) || normalizeIp(request.ip);
 }
 
 function isPrivateIp(ip?: string): boolean {
-  if (!ip) return false;
-  // 如果有 ipv4-mapped IPv6 前缀，先拆掉
-  if (ip.startsWith('::ffff:')) {
-    ip = ip.replace('::ffff:', '');
+  const normalized = normalizeIp(ip);
+  if (!normalized) {
+    return false;
   }
-  if (!isIPv4(ip)) return false;
-  const [a, b] = ip.split('.').map((n) => parseInt(n, 10));
-  // 10.0.0.0/8
-  if (a === 10) return true;
-  // 172.16.0.0/12
-  if (a === 172 && b >= 16 && b <= 31) return true;
-  // 192.168.0.0/16
-  if (a === 192 && b === 168) return true;
-  // localhost
-  if (ip === '127.0.0.1') return true;
+
+  if (normalized.startsWith('::ffff:')) {
+    return isPrivateIp(normalized.slice('::ffff:'.length));
+  }
+
+  const version = isIP(normalized);
+  if (version === 4) {
+    return isPrivateIpv4(normalized);
+  }
+
+  if (version === 6) {
+    return isPrivateIpv6(normalized);
+  }
+
   return false;
 }
 
@@ -112,13 +155,7 @@ export class ApiService {
 
     return async (request: Request, res: Response, next: NextFunction) => {
       const method = request.method.toLowerCase();
-
-      const forwarded = request.headers['x-forwarded-for'];
-      const realIp = request.headers['x-real-ip'];
-      const ip =
-        (typeof realIp === 'string' && realIp) ||
-        (typeof forwarded === 'string' && forwarded.split(',')[0].trim()) ||
-        request.ip;
+      const ip = getClientIp(request);
       if (
         request.url.startsWith('/api') ||
         (method !== 'get' && method !== 'head') ||
