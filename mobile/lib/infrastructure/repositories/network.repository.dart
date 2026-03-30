@@ -1,13 +1,12 @@
 import 'dart:io' as io;
 import 'dart:ffi';
 import 'dart:io';
-
 import 'package:cupertino_http/cupertino_http.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
-import 'package:http/io_client.dart';
 import 'package:immich_mobile/providers/infrastructure/platform.provider.dart';
 import 'package:ok_http/ok_http.dart';
+import 'package:ohos_http/ohos_http.dart';
 import 'package:web_socket/io_web_socket.dart' as io_ws;
 import 'package:web_socket/web_socket.dart';
 
@@ -16,23 +15,15 @@ class NetworkRepository {
   static Pointer<Void>? _clientPointer;
 
   static Future<void> init() async {
-    if (defaultTargetPlatform == TargetPlatform.ohos) {
-      if (_client != null && _clientPointer?.address == 0) {
-        return;
-      }
-      _clientPointer = Pointer<Void>.fromAddress(0);
-      _client?.close();
-      _client = IOClient(HttpClient());
-      return;
-    }
-
     final clientPointer = Pointer<Void>.fromAddress(await networkApi.getClientPointer());
-    if (clientPointer == _clientPointer) {
+    if (clientPointer == _clientPointer && _client != null) {
       return;
     }
     _clientPointer = clientPointer;
     _client?.close();
-    if (Platform.isIOS) {
+    if (defaultTargetPlatform == TargetPlatform.ohos) {
+      _client = OhosHttpClient();
+    } else if (Platform.isIOS) {
       final session = URLSession.fromRawPointer(clientPointer.cast());
       _client = CupertinoClient.fromSharedSession(session);
     } else {

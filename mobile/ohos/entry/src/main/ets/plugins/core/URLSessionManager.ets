@@ -15,7 +15,27 @@ export interface StoredClientCert {
 interface StoredRequestState {
   headers: Record<string, string>;
   serverUrls: string[];
-  token?: string;
+}
+
+interface StoredCookie {
+  name: string;
+  value: string;
+  domain: string;
+  path: string;
+  expiresAt?: number;
+  secure: boolean;
+  httpOnly: boolean;
+}
+
+interface ParsedServerUrl {
+  host: string;
+  secure: boolean;
+}
+
+interface ParsedRequestUrl {
+  host: string;
+  path: string;
+  secure: boolean;
 }
 
 export class URLSessionManager {
@@ -26,15 +46,25 @@ export class URLSessionManager {
   private static readonly KEY_KEY_PASSWORD = 'keyPassword';
   private static readonly KEY_HEADERS = 'requestHeaders';
   private static readonly KEY_SERVER_URLS = 'serverUrls';
-  private static readonly KEY_TOKEN = 'authToken';
+  private static readonly KEY_COOKIES = 'cookies';
+  private static readonly LEGACY_KEY_TOKEN = 'authToken';
+  private static readonly LEGACY_KEY_AUTH_COOKIE = 'authCookie';
   private static readonly ACCESS_TOKEN_COOKIE = 'immich_access_token';
   private static readonly IS_AUTHENTICATED_COOKIE = 'immich_is_authenticated';
   private static readonly AUTH_TYPE_COOKIE = 'immich_auth_type';
+  private static readonly COOKIE_EXPIRY_DAYS = 400;
+  private static readonly AUTH_COOKIE_NAMES = new Set<string>([
+    URLSessionManager.ACCESS_TOKEN_COOKIE,
+    URLSessionManager.IS_AUTHENTICATED_COOKIE,
+    URLSessionManager.AUTH_TYPE_COOKIE,
+  ]);
 
   private static cached: StoredClientCert | null = null;
   private static loaded = false;
   private static cachedRequestState: StoredRequestState = { headers: {}, serverUrls: [] };
   private static requestStateLoaded = false;
+  private static cachedCookies: StoredCookie[] = [];
+  private static cookiesLoaded = false;
 
   static applyToOptions(
     context: common.Context | undefined,
@@ -54,7 +84,11 @@ export class URLSessionManager {
     });
 
     const effectiveHeaders = requestUrl
-      ? URLSessionManager.applyAuthHeaders(mergedHeaders, requestState, requestUrl)
+      ? URLSessionManager.applyCookieHeaders(
+          mergedHeaders,
+          URLSessionManager.loadCookies(context),
+          requestUrl
+        )
       : mergedHeaders;
 
     if (Object.keys(effectiveHeaders).length > 0) {
@@ -76,6 +110,43 @@ export class URLSessionManager {
     options.clientCert = clientCert;
   }
 
+  static updateFromResponse(context: common.Context | undefined, requestUrl: string, headerObj?: Object): void {
+    if (!context || !headerObj) {
+      return;
+    }
+
+    const setCookieValues = URLSessionManager.extractHeaderValues(headerObj, 'set-cookie');
+    if (setCookieValues.length === 0) {
+      return;
+    }
+
+    const cookies = URLSessionManager.loadCookies(context).slice();
+    setCookieValues.forEach((value) => {
+      const parsed = URLSessionManager.parseSetCookie(requestUrl, value);
+      if (!parsed) {
+        return;
+      }
+
+      const existingIndex = cookies.findIndex((cookie) =>
+        cookie.name === parsed.name &&
+        cookie.domain === parsed.domain &&
+        cookie.path === parsed.path
+      );
+      if (existingIndex >= 0) {
+        cookies.splice(existingIndex, 1);
+      }
+      if (!URLSessionManager.isExpiredCookie(parsed) && parsed.value.length > 0) {
+        cookies.push(parsed);
+      }
+    });
+
+    const syncedCookies = URLSessionManager.syncAuthCookies(
+      URLSessionManager.removeExpiredCookies(cookies),
+      URLSessionManager.loadRequestState(context).serverUrls
+    );
+    URLSessionManager.persistCookies(context, syncedCookies);
+  }
+
   static hasCertificate(context: common.Context): boolean {
     return URLSessionManager.load(context) !== null;
   }
@@ -84,31 +155,28 @@ export class URLSessionManager {
     context: common.Context,
     headers: Map<string, string>,
     serverUrls: string[],
-    token?: string
+    token?: string | null
   ): void {
     const prefOptions: preferences.Options = { name: URLSessionManager.PREF_NAME };
     const pref = preferences.getPreferencesSync(context, prefOptions);
     const headerRecord = URLSessionManager.toHeaderRecord(headers);
     pref.putSync(URLSessionManager.KEY_HEADERS, JSON.stringify(headerRecord));
     pref.putSync(URLSessionManager.KEY_SERVER_URLS, JSON.stringify(serverUrls));
-
-    if (token !== undefined && token !== null) {
-      if (token.length > 0) {
-        pref.putSync(URLSessionManager.KEY_TOKEN, token);
-      } else {
-        pref.deleteSync(URLSessionManager.KEY_TOKEN);
-      }
-    }
-
+    pref.deleteSync(URLSessionManager.LEGACY_KEY_TOKEN);
+    pref.deleteSync(URLSessionManager.LEGACY_KEY_AUTH_COOKIE);
     pref.flushSync();
+
     URLSessionManager.cachedRequestState = {
       headers: headerRecord,
       serverUrls: Array.from(serverUrls),
-      token: token !== undefined && token !== null
-        ? (token.length > 0 ? token : undefined)
-        : URLSessionManager.cachedRequestState.token,
     };
     URLSessionManager.requestStateLoaded = true;
+
+    let cookies = URLSessionManager.syncAuthCookies(URLSessionManager.loadCookies(context), serverUrls);
+    if (token !== undefined && token !== null && token.length > 0) {
+      cookies = URLSessionManager.mergeCookies(cookies, URLSessionManager.createAuthCookies(serverUrls, token));
+    }
+    URLSessionManager.persistCookies(context, cookies);
   }
 
   static load(context: common.Context): StoredClientCert | null {
@@ -242,7 +310,6 @@ export class URLSessionManager {
     const pref = preferences.getPreferencesSync(context, prefOptions);
     const headersJson = pref.getSync(URLSessionManager.KEY_HEADERS, '') as string;
     const serverUrlsJson = pref.getSync(URLSessionManager.KEY_SERVER_URLS, '') as string;
-    const token = pref.getSync(URLSessionManager.KEY_TOKEN, '') as string;
 
     let headers: Record<string, string> = {};
     if (headersJson) {
@@ -266,21 +333,78 @@ export class URLSessionManager {
     URLSessionManager.cachedRequestState = {
       headers,
       serverUrls,
-      token: token.length > 0 ? token : undefined,
     };
     URLSessionManager.requestStateLoaded = true;
     return URLSessionManager.cachedRequestState;
   }
 
-  private static applyAuthHeaders(
+  private static loadCookies(context: common.Context): StoredCookie[] {
+    if (URLSessionManager.cookiesLoaded) {
+      return URLSessionManager.cachedCookies;
+    }
+
+    const prefOptions: preferences.Options = { name: URLSessionManager.PREF_NAME };
+    const pref = preferences.getPreferencesSync(context, prefOptions);
+    const cookiesJson = pref.getSync(URLSessionManager.KEY_COOKIES, '') as string;
+    let cookies: StoredCookie[] = [];
+
+    if (cookiesJson) {
+      try {
+        const parsed = JSON.parse(cookiesJson) as Array<StoredCookie>;
+        cookies = URLSessionManager.removeExpiredCookies(parsed);
+      } catch (_) {
+        cookies = [];
+      }
+    } else {
+      cookies = URLSessionManager.migrateLegacyCookies(context, pref);
+    }
+
+    URLSessionManager.cachedCookies = cookies;
+    URLSessionManager.cookiesLoaded = true;
+    return URLSessionManager.cachedCookies;
+  }
+
+  private static migrateLegacyCookies(
+    context: common.Context,
+    pref: preferences.Preferences
+  ): StoredCookie[] {
+    const requestState = URLSessionManager.loadRequestState(context);
+    const legacyToken = pref.getSync(URLSessionManager.LEGACY_KEY_TOKEN, '') as string;
+    if (legacyToken.length > 0) {
+      const cookies = URLSessionManager.createAuthCookies(requestState.serverUrls, legacyToken);
+      URLSessionManager.persistCookies(context, cookies);
+      return cookies;
+    }
+
+    const legacyAuthCookie = pref.getSync(URLSessionManager.LEGACY_KEY_AUTH_COOKIE, '') as string;
+    if (legacyAuthCookie.length > 0) {
+      const token = URLSessionManager.extractLegacyToken(legacyAuthCookie);
+      const cookies = token ? URLSessionManager.createAuthCookies(requestState.serverUrls, token) : [];
+      URLSessionManager.persistCookies(context, cookies);
+      return cookies;
+    }
+
+    return [];
+  }
+
+  private static persistCookies(context: common.Context, cookies: StoredCookie[]): void {
+    const prefOptions: preferences.Options = { name: URLSessionManager.PREF_NAME };
+    const pref = preferences.getPreferencesSync(context, prefOptions);
+    pref.putSync(URLSessionManager.KEY_COOKIES, JSON.stringify(cookies));
+    pref.deleteSync(URLSessionManager.LEGACY_KEY_TOKEN);
+    pref.deleteSync(URLSessionManager.LEGACY_KEY_AUTH_COOKIE);
+    pref.flushSync();
+    URLSessionManager.cachedCookies = cookies;
+    URLSessionManager.cookiesLoaded = true;
+  }
+
+  private static applyCookieHeaders(
     headers: Record<string, string>,
-    requestState: StoredRequestState,
+    cookies: StoredCookie[],
     requestUrl: string
   ): Record<string, string> {
     let effectiveHeaders = headers;
-    const cookie = URLSessionManager.shouldAttachAuthCookie(requestState.serverUrls, requestUrl)
-      ? URLSessionManager.buildAuthCookie(requestState.token)
-      : undefined;
+    const cookie = URLSessionManager.buildCookieHeader(cookies, requestUrl);
     if (cookie) {
       const existingCookie = headers['Cookie'] ?? headers['cookie'];
       effectiveHeaders = URLSessionManager.copyHeadersWithout(headers, 'cookie');
@@ -301,6 +425,304 @@ export class URLSessionManager {
     return effectiveHeaders;
   }
 
+  private static buildCookieHeader(cookies: StoredCookie[], requestUrl: string): string | undefined {
+    const parsed = URLSessionManager.parseRequestUrl(requestUrl);
+    if (!parsed) {
+      return undefined;
+    }
+
+    const now = Date.now();
+    const matches = cookies.filter((cookie) =>
+      !URLSessionManager.isExpiredCookie(cookie, now) &&
+      URLSessionManager.domainMatches(parsed.host, cookie.domain) &&
+      URLSessionManager.pathMatches(parsed.path, cookie.path) &&
+      (!cookie.secure || parsed.secure)
+    );
+    if (matches.length === 0) {
+      return undefined;
+    }
+
+    return matches.map((cookie) => `${cookie.name}=${cookie.value}`).join('; ');
+  }
+
+  private static mergeCookies(cookies: StoredCookie[], incoming: StoredCookie[]): StoredCookie[] {
+    const merged = cookies.slice();
+    incoming.forEach((cookie) => {
+      const index = merged.findIndex((existing) =>
+        existing.name === cookie.name &&
+        existing.domain === cookie.domain &&
+        existing.path === cookie.path
+      );
+      if (index >= 0) {
+        merged.splice(index, 1);
+      }
+      merged.push(cookie);
+    });
+    return URLSessionManager.removeExpiredCookies(merged);
+  }
+
+  private static syncAuthCookies(cookies: StoredCookie[], serverUrls: string[]): StoredCookie[] {
+    const parsedServerUrls: ParsedServerUrl[] = [];
+    serverUrls.forEach((serverUrl) => {
+      const parsed = URLSessionManager.parseServerUrl(serverUrl);
+      if (parsed) {
+        parsedServerUrls.push(parsed);
+      }
+    });
+    if (parsedServerUrls.length === 0) {
+      return cookies;
+    }
+
+    const serverHosts = new Set<string>(parsedServerUrls.map((serverUrl) => serverUrl.host));
+    const now = Date.now();
+    const sourceCookies = new Map<string, StoredCookie>();
+    cookies.forEach((cookie) => {
+      if (
+        URLSessionManager.AUTH_COOKIE_NAMES.has(cookie.name) &&
+        serverHosts.has(cookie.domain) &&
+        !URLSessionManager.isExpiredCookie(cookie, now)
+      ) {
+        sourceCookies.set(cookie.name, cookie);
+      }
+    });
+
+    const filteredCookies = cookies.filter((cookie) =>
+      !(URLSessionManager.AUTH_COOKIE_NAMES.has(cookie.name) && serverHosts.has(cookie.domain))
+    );
+
+    if (sourceCookies.size === 0) {
+      return filteredCookies;
+    }
+
+    parsedServerUrls.forEach((serverUrl) => {
+      sourceCookies.forEach((cookie) => {
+        filteredCookies.push({
+          name: cookie.name,
+          value: cookie.value,
+          domain: serverUrl.host,
+          path: '/',
+          expiresAt: cookie.expiresAt,
+          secure: serverUrl.secure,
+          httpOnly: cookie.httpOnly,
+        });
+      });
+    });
+
+    return filteredCookies;
+  }
+
+  private static createAuthCookies(serverUrls: string[], token: string): StoredCookie[] {
+    const expiry = Date.now() + URLSessionManager.COOKIE_EXPIRY_DAYS * 24 * 60 * 60 * 1000;
+    const authCookies: StoredCookie[] = [];
+
+    serverUrls.forEach((serverUrl) => {
+      const parsed = URLSessionManager.parseServerUrl(serverUrl);
+      if (!parsed) {
+        return;
+      }
+
+      authCookies.push({
+        name: URLSessionManager.ACCESS_TOKEN_COOKIE,
+        value: token,
+        domain: parsed.host,
+        path: '/',
+        expiresAt: expiry,
+        secure: parsed.secure,
+        httpOnly: true,
+      });
+      authCookies.push({
+        name: URLSessionManager.IS_AUTHENTICATED_COOKIE,
+        value: 'true',
+        domain: parsed.host,
+        path: '/',
+        expiresAt: expiry,
+        secure: parsed.secure,
+        httpOnly: false,
+      });
+      authCookies.push({
+        name: URLSessionManager.AUTH_TYPE_COOKIE,
+        value: 'password',
+        domain: parsed.host,
+        path: '/',
+        expiresAt: expiry,
+        secure: parsed.secure,
+        httpOnly: true,
+      });
+    });
+
+    return authCookies;
+  }
+
+  private static extractHeaderValues(headers: Object, targetHeader: string): string[] {
+    const values: string[] = [];
+    const target = targetHeader.toLowerCase();
+
+    const addValue = (value: Object) => {
+      if (value === undefined || value === null) {
+        return;
+      }
+
+      if (value instanceof Array) {
+        value.forEach((entry: Object) => {
+          if (entry !== undefined && entry !== null) {
+            values.push(`${entry}`);
+          }
+        });
+        return;
+      }
+
+      values.push(`${value}`);
+    };
+
+    if (headers instanceof Map) {
+      headers.forEach((value: Object, key: string) => {
+        if (key && key.toLowerCase() === target) {
+          addValue(value);
+        }
+      });
+      return values;
+    }
+
+    const record = headers as Record<string, Object>;
+    Object.keys(record).forEach((key) => {
+      if (key.toLowerCase() === target) {
+        addValue(record[key]);
+      }
+    });
+    return values;
+  }
+
+  private static parseSetCookie(requestUrl: string, rawValue: string): StoredCookie | undefined {
+    const request = URLSessionManager.parseRequestUrl(requestUrl);
+    if (!request) {
+      return undefined;
+    }
+
+    const parts = rawValue.split(';');
+    if (parts.length === 0) {
+      return undefined;
+    }
+
+    const nameValue = parts[0].trim();
+    const separatorIndex = nameValue.indexOf('=');
+    if (separatorIndex <= 0) {
+      return undefined;
+    }
+
+    const cookie: StoredCookie = {
+      name: nameValue.substring(0, separatorIndex).trim(),
+      value: nameValue.substring(separatorIndex + 1).trim(),
+      domain: request.host,
+      path: '/',
+      secure: false,
+      httpOnly: false,
+    };
+
+    for (let index = 1; index < parts.length; index++) {
+      const rawPart = parts[index].trim();
+      if (rawPart.length === 0) {
+        continue;
+      }
+
+      const lowerPart = rawPart.toLowerCase();
+      if (lowerPart === 'secure') {
+        cookie.secure = true;
+        continue;
+      }
+      if (lowerPart === 'httponly') {
+        cookie.httpOnly = true;
+        continue;
+      }
+
+      const attributeSeparator = rawPart.indexOf('=');
+      if (attributeSeparator <= 0) {
+        continue;
+      }
+
+      const attributeName = rawPart.substring(0, attributeSeparator).trim().toLowerCase();
+      const attributeValue = rawPart.substring(attributeSeparator + 1).trim();
+      switch (attributeName) {
+        case 'domain':
+          cookie.domain = attributeValue.startsWith('.') ? attributeValue.substring(1) : attributeValue;
+          break;
+        case 'path':
+          cookie.path = attributeValue.length > 0 ? attributeValue : '/';
+          break;
+        case 'max-age': {
+          const maxAge = Number(attributeValue);
+          if (!Number.isNaN(maxAge)) {
+            cookie.expiresAt = Date.now() + maxAge * 1000;
+          }
+          break;
+        }
+        case 'expires': {
+          const expiresAt = Date.parse(attributeValue);
+          if (!Number.isNaN(expiresAt)) {
+            cookie.expiresAt = expiresAt;
+          }
+          break;
+        }
+      }
+    }
+
+    return cookie;
+  }
+
+  private static extractLegacyToken(cookieHeader: string): string | undefined {
+    const cookies = cookieHeader.split(';');
+    for (let index = 0; index < cookies.length; index++) {
+      const value = cookies[index].trim();
+      if (value.startsWith(`${URLSessionManager.ACCESS_TOKEN_COOKIE}=`)) {
+        return value.substring(URLSessionManager.ACCESS_TOKEN_COOKIE.length + 1);
+      }
+    }
+    return undefined;
+  }
+
+  private static parseRequestUrl(
+    rawUrl: string
+  ): ParsedRequestUrl | undefined {
+    try {
+      const parsed = new uri.URI(rawUrl);
+      return {
+        host: parsed.host,
+        path: parsed.path.length > 0 ? parsed.path : '/',
+        secure: parsed.scheme.toLowerCase() === 'https',
+      };
+    } catch (_) {
+      return undefined;
+    }
+  }
+
+  private static parseServerUrl(rawUrl: string): ParsedServerUrl | undefined {
+    try {
+      const parsed = new uri.URI(rawUrl);
+      return {
+        host: parsed.host,
+        secure: parsed.scheme.toLowerCase() === 'https',
+      };
+    } catch (_) {
+      return undefined;
+    }
+  }
+
+  private static removeExpiredCookies(cookies: StoredCookie[]): StoredCookie[] {
+    const now = Date.now();
+    return cookies.filter((cookie) => !URLSessionManager.isExpiredCookie(cookie, now));
+  }
+
+  private static isExpiredCookie(cookie: StoredCookie, now: number = Date.now()): boolean {
+    return cookie.expiresAt !== undefined && cookie.expiresAt <= now;
+  }
+
+  private static domainMatches(host: string, domain: string): boolean {
+    return host === domain || host.endsWith(`.${domain}`);
+  }
+
+  private static pathMatches(requestPath: string, cookiePath: string): boolean {
+    return requestPath === cookiePath || requestPath.startsWith(cookiePath.endsWith('/') ? cookiePath : `${cookiePath}/`);
+  }
+
   private static copyHeadersWithout(
     headers: Record<string, string>,
     excludedKey: string
@@ -312,25 +734,6 @@ export class URLSessionManager {
       }
     });
     return copiedHeaders;
-  }
-
-  private static shouldAttachAuthCookie(serverUrls: string[], requestUrl: string): boolean {
-    const requestHost = URLSessionManager.getHost(requestUrl);
-    if (!requestHost) {
-      return false;
-    }
-
-    return serverUrls.some((url) => URLSessionManager.getHost(url) === requestHost);
-  }
-
-  private static buildAuthCookie(token?: string): string | undefined {
-    if (!token || token.length === 0) {
-      return undefined;
-    }
-
-    return `${URLSessionManager.ACCESS_TOKEN_COOKIE}=${token}; ` +
-      `${URLSessionManager.IS_AUTHENTICATED_COOKIE}=true; ` +
-      `${URLSessionManager.AUTH_TYPE_COOKIE}=password`;
   }
 
   private static buildBasicAuthorization(requestUrl: string): string | undefined {
@@ -346,14 +749,6 @@ export class URLSessionManager {
       return `Basic ${encoded}`;
     } catch (_) {
       return undefined;
-    }
-  }
-
-  private static getHost(rawUrl: string): string {
-    try {
-      return new uri.URI(rawUrl).host;
-    } catch (_) {
-      return '';
     }
   }
 

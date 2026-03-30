@@ -1341,6 +1341,13 @@ packages:
       url: "https://pub.flutter-io.cn"
     source: hosted
     version: "2.1.0"
+  ohos_http:
+    dependency: "direct main"
+    description:
+      path: "../../package_flutter/ohos_http"
+      relative: true
+    source: path
+    version: "0.1.0"
   ok_http:
     dependency: "direct main"
     description:

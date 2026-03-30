@@ -13,9 +13,6 @@ interface RemoteRequestState {
 
 export class RemoteImagesImpl extends RemoteImageApiOhos {
   private requestMap = new Map<number, RemoteRequestState>();
-  private cache = new Map<string, ArrayBuffer>();
-  private cacheBytes = 0;
-  private readonly maxCacheBytes = 64 * 1024 * 1024;
   private ctx?: common.Context;
 
   private static toNativeBuffer(buffer: ArrayBuffer, label: string): number {
@@ -54,21 +51,6 @@ export class RemoteImagesImpl extends RemoteImageApiOhos {
     preferEncoded: boolean,
     result: Result<Map<string, Object>>
   ) {
-    // 1) Cache hit
-    const cached = this.cache.get(url);
-    if (cached) {
-      if (cached.byteLength === 0) {
-        this.cache.delete(url);
-      } else {
-        const encoded = new Map<string, Object>();
-        const pointer = RemoteImagesImpl.toNativeBuffer(cached, 'cached encoded remote image');
-        encoded.set('pointer', pointer);
-        encoded.set('length', cached.byteLength);
-        return result.success(encoded);
-      }
-    }
-
-    // 2) HTTP request
     const request = http.createHttp();
     const state: RemoteRequestState = { request, cancelled: false };
     this.requestMap.set(requestId, state);
@@ -85,7 +67,9 @@ export class RemoteImagesImpl extends RemoteImageApiOhos {
       if (state.cancelled) {
         return result.success(new Map<string, Object>());
       }
-      const encoded = await this.requestEncoded(url, state, options);
+      const encoded = this.usesMtlsFetcher()
+        ? await this.requestEncodedInStream(url, state, options)
+        : await this.requestEncoded(url, state, options);
       if (state.cancelled) {
         const pointer = encoded.get('pointer') as number | undefined;
         if (pointer !== undefined && pointer !== 0) {
@@ -113,6 +97,40 @@ export class RemoteImagesImpl extends RemoteImageApiOhos {
     state: RemoteRequestState,
     options: http.HttpRequestOptions,
   ): Promise<Map<string, Object>> {
+    let responseCode = 0;
+    let resultBuffer: ArrayBuffer | undefined = undefined;
+    try {
+      const response = await state.request.request(url, options);
+      responseCode = response.responseCode;
+      URLSessionManager.updateFromResponse(this.ctx, url, response.header as Object | undefined);
+      resultBuffer = response.result as ArrayBuffer;
+    } catch (error) {
+      throw error as Error;
+    }
+
+    if (responseCode < 200 || responseCode > 299) {
+      throw new Error(`HTTP ${responseCode}`);
+    }
+    if (state.cancelled) {
+      return new Map<string, Object>();
+    }
+    if (!resultBuffer || resultBuffer.byteLength <= 0) {
+      throw new Error('HTTP result is empty/detached (byteLength == 0)');
+    }
+
+    const encoded = new Map<string, Object>();
+    encoded.set('pointer', RemoteImagesImpl.toNativeBuffer(resultBuffer, 'encoded remote image'));
+    encoded.set('length', resultBuffer.byteLength);
+    return encoded;
+  }
+
+  // Mirror upstream Android's OkHttpImageFetcher path for mTLS, which reads
+  // the response body incrementally instead of using the normal request().
+  private async requestEncodedInStream(
+    url: string,
+    state: RemoteRequestState,
+    options: http.HttpRequestOptions,
+  ): Promise<Map<string, Object>> {
     let settled = false;
 
     const streamDone = new Promise<void>((resolve, reject) => {
@@ -126,6 +144,13 @@ export class RemoteImagesImpl extends RemoteImageApiOhos {
         } catch (_) {}
         reject(error);
       };
+
+      state.request.on('headersReceive', (headerObj: Object) => {
+        if (settled || state.cancelled) {
+          return;
+        }
+        URLSessionManager.updateFromResponse(this.ctx, url, headerObj);
+      });
 
       state.request.on('dataReceive', (chunk: ArrayBuffer) => {
         if (settled || state.cancelled) {
@@ -210,10 +235,7 @@ export class RemoteImagesImpl extends RemoteImageApiOhos {
   }
 
   override clearCache(result: Result<number>) {
-    const clearedBytes = this.cacheBytes;
-    this.cache.clear();
-    this.cacheBytes = 0;
-    result.success(clearedBytes);
+    result.success(0);
   }
 
   private cleanupBuffer(state: RemoteRequestState) {
@@ -227,24 +249,8 @@ export class RemoteImagesImpl extends RemoteImageApiOhos {
     } catch (_) {}
   }
 
-  private storeCache(url: string, data: ArrayBuffer) {
-    const size = data.byteLength;
-    if (size <= 0 || size > this.maxCacheBytes) {
-      return;
-    }
-    while (this.cacheBytes + size > this.maxCacheBytes && this.cache.size > 0) {
-      const oldestKey: string | undefined = this.cache.keys().next().value as string | undefined;
-      if (oldestKey === undefined) {
-        break;
-      }
-      const oldest = this.cache.get(oldestKey);
-      if (oldest) {
-        this.cacheBytes -= oldest.byteLength;
-      }
-      this.cache.delete(oldestKey);
-    }
-    const copy = data.slice(0);
-    this.cache.set(url, copy);
-    this.cacheBytes += copy.byteLength;
+  private usesMtlsFetcher(): boolean {
+    const ctx = this.ctx;
+    return ctx !== undefined && URLSessionManager.hasCertificate(ctx);
   }
 }

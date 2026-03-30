@@ -92,7 +92,7 @@ export class NetworkApiImpl extends NetworkApi {
     return 0;
   }
 
-  override setRequestHeaders(headers: Map<string, string>, serverUrls: Array<string>, token: string): void {
+  override setRequestHeaders(headers: Map<string, string>, serverUrls: Array<string>, token: string | null): void {
     if (!this.ctx) {
       return;
     }

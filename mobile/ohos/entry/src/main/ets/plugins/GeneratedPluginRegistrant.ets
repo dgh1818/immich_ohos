@@ -9,6 +9,7 @@ import PathProviderPlugin from 'path_provider_ohos';
 import ReceiveSharingIntentOhosPlugin from 'receive_sharing_intent';
 import PhotoManagerPlugin from 'photo_manager';
 import PermissionHandlerPlugin from 'permission_handler_ohos';
+import OhosHttpPlugin from 'ohos_http';
 import NetworkInfoPlusOhosPlugin from 'network_info_plus_ohos';
 import NativeVideoPlayerPlugin from 'native_video_player';
 import MapLibreMapsPlugin from 'maplibre_gl';
@@ -50,6 +51,7 @@ export class GeneratedPluginRegistrant {
       flutterEngine.getPlugins()?.add(new ReceiveSharingIntentOhosPlugin());
       flutterEngine.getPlugins()?.add(new PhotoManagerPlugin());
       flutterEngine.getPlugins()?.add(new PermissionHandlerPlugin());
+      flutterEngine.getPlugins()?.add(new OhosHttpPlugin());
       flutterEngine.getPlugins()?.add(new NetworkInfoPlusOhosPlugin());
       flutterEngine.getPlugins()?.add(new NativeVideoPlayerPlugin());
       flutterEngine.getPlugins()?.add(new MapLibreMapsPlugin());

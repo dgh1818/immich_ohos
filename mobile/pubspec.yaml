@@ -2,7 +2,7 @@ name: immich_mobile
 description: Immich - selfhosted backup media file on mobile phone
 
 publish_to: 'none'
-version: 2.6.3+260030000
+version: 2.6.3+260030004
 
 environment:
   sdk: '>=3.8.0 <4.0.0'
@@ -103,6 +103,8 @@ dependencies:
       url: https://github.com/mertalev/http
       ref: '549c24b0a4d3881a9a44b70f4873450d43c1c4af' # https://github.com/dart-lang/http/pull/1877
       path: pkgs/ok_http/
+  ohos_http:
+    path: ../../package_flutter/ohos_http/
 
   video_compress: ^3.1.0
   video_player: ^2.9.2

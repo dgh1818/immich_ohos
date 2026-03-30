@@ -44,6 +44,7 @@
     "sqlite3_flutter_libs": "file:./har/sqlite3_flutter_libs.har",
     "video_compress": "file:./har/video_compress.har",
     "receive_sharing_intent": "file:./har/receive_sharing_intent.har",
-    "native_video_player": "file:./har/native_video_player.har"
+    "native_video_player": "file:./har/native_video_player.har",
+    "ohos_http": "file:./har/ohos_http.har"
   }
 }

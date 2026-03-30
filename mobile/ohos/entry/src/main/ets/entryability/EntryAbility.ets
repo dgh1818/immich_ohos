@@ -63,7 +63,6 @@ export default class EntryAbility extends FlutterAbility {
     
     //this.addPlugin(new HttpSSLOptionsPlugin());
 
-    let messenger = flutterEngine.dartExecutor.getBinaryMessenger();
     let nativeSyncApiImpl = new MessagesImplBase(super.getAbility().context);
     let localImageApiImpl = new LocalImagesImpl(super.getAbility().context);
     let remoteImageApiImpl = new RemoteImagesImpl(ctx.getApplicationContext());
@@ -71,6 +70,7 @@ export default class EntryAbility extends FlutterAbility {
     let connectivityApiImpl = new ConnectivityApiImpl(ctx.getApplicationContext());
     let backgroundEngineLock = new BackgroundEngineLock(ctx.getApplicationContext())
     let networkApiImpl = new NetworkApiImpl(super.getAbility().context);
+    let messenger = flutterEngine.dartExecutor.getBinaryMessenger();
     NativeSyncApiOhos.setup(messenger, nativeSyncApiImpl)
     LocalImageApiOhos.setup(messenger, localImageApiImpl);
     RemoteImageApiOhos.setup(messenger, remoteImageApiImpl);

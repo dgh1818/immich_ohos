@@ -226,7 +226,7 @@ export abstract class NetworkApi {
 
   abstract getClientPointer(): number;
 
-  abstract setRequestHeaders(headers: Map<string, string> , serverUrls: Array<string> , token: string ): void;
+  abstract setRequestHeaders(headers: Map<string, string> , serverUrls: Array<string> , token: string | null ): void;
   /** The codec used by NetworkApi. */
   static getCodec(): MessageCodec<Object>{
     return PigeonCodec.INSTANCE;
@@ -370,7 +370,7 @@ export abstract class NetworkApi {
               let args: Array<Object> = message as Array<Object>;
               let res: Array<Object> = [];
               try {
-                api!.setRequestHeaders(args[0] as Map<string, string>, args[1] as Array<string>, args[2] as string);
+                api!.setRequestHeaders(args[0] as Map<string, string>, args[1] as Array<string>, args[2] as string | null);
                 res.push(null);
               }
  catch (error) {
