@@ -15,15 +15,8 @@ import { notificationManager } from '@kit.NotificationKit';
 import { backgroundTaskManager } from '@kit.BackgroundTasksKit';
 import { deviceInfo } from '@kit.BasicServicesKit';
 
-import { relationalStore } from '@kit.ArkData';
 import util from '@ohos.util';
 import { vibrator } from '@kit.SensorServiceKit';
-
-interface MediaRecord {
-  uri: string;
-  mtime: number;
-  size: number;
-}
 
 interface AssetInfo {
   id: string;
@@ -45,15 +38,6 @@ interface HashAssetParams {
   isCloud: boolean;
   cacheDir: string;
 }
-
-const DB_NAME = 'media_snapshot.db';
-const TABLE = 'media';
-const CREATE_SQL = `
-  CREATE TABLE IF NOT EXISTS ${TABLE}(
-    uri TEXT PRIMARY KEY,
-    mtime INTEGER,
-    size INTEGER
-  )`;
 
 @Concurrent
 async function hashAssetTask(uri: string,
@@ -898,6 +882,10 @@ export class MessagesImplBase extends NativeSyncApiOhos {
 
   public override async getAssetsCountSince(albumPath: string, timestamp: number, result: Result<number>) {
     console.error("MessagesImplBase 7 ")
+    if (!this.ctx) {
+      result.success(0);
+      return;
+    }
     let atManager = abilityAccessCtrl.createAtManager();
     await atManager.requestPermissionsFromUser(this.ctx, ["ohos.permission.MEDIA_LOCATION","ohos.permission.READ_MEDIA","ohos.permission.WRITE_MEDIA"]).then((data) => {
       //console.info("data permissions:" + data.permissions);
@@ -973,9 +961,16 @@ export class MessagesImplBase extends NativeSyncApiOhos {
           }
         }
 
-
+        if (albumFetchResult == undefined || albumFetchResult.getCount() == 0) {
+          result.success(0);
+          return;
+        }
 
         let album_result = await albumFetchResult.getFirstObject();
+        if (album_result == undefined) {
+          result.success(0);
+          return;
+        }
         //console.error('7:albumFetchResult.getFirstObject() success')
 
         let predicates: dataSharePredicates.DataSharePredicates = new dataSharePredicates.DataSharePredicates();
@@ -993,6 +988,7 @@ export class MessagesImplBase extends NativeSyncApiOhos {
     } catch (err) {
       console.error(err);
       console.error('getAssetsCountSince undefined')
+      result.success(0);
       return;
     }
 
@@ -1206,7 +1202,6 @@ export class MessagesImplBase extends NativeSyncApiOhos {
       console.info("No UI context, skip permission request in getAssetsForAlbum");
     }
     let assetResult: Array<PlatformAsset> = [];
-    const snapshotRows: MediaRecord[] = [];
     try {
       const sendableCtx = sendableContextManager.convertFromContext(this.ctx);
       const hasUpdatedTimeCond = updatedTimeCond !== undefined && updatedTimeCond !== null;
@@ -1232,69 +1227,14 @@ export class MessagesImplBase extends NativeSyncApiOhos {
           info.playbackStyle,
         );
         assetResult.push(asset);
-        snapshotRows.push({ uri: info.id, mtime: info.modifiedAt ?? 0, size: info.size ?? 0 });
       }
     } catch (e) {
       console.error(`getAssetsForAlbum taskpool error for ${albumId}`, e);
       result.success([]);
       return;
     }
-    try {
-      if (!this.store && this.ctx) {
-        await this.initStore(this.ctx);
-      }
-      if (this.store) {
-        await this.replaceSnapshot(snapshotRows);
-      }
-    } catch (e) {
-      console.error(`${this.TAG} replaceSnapshot failed`, e);
-    }
     result.success(assetResult);
     return;
-  }
-
-  private store?: relationalStore.RdbStore;
-
-  public async initStore(ctx: Context) {
-    this.store = await new Promise((resolve, reject) => {
-      relationalStore.getRdbStore(
-        ctx,
-        { name: DB_NAME, securityLevel: relationalStore.SecurityLevel.S3 },
-        async (err, s) => {
-          if (err) return reject(err);
-          try { await s.execute(CREATE_SQL); } catch (e) { return reject(e); }
-          resolve(s);
-        },
-      );
-    });
-  }
-
-  public async replaceSnapshot(rows: MediaRecord[]) {
-    if (!this.store) throw new Error('store not init');
-    await this.store.execute(`DELETE FROM ${TABLE}`);
-    for (const row of rows) {
-      const values: relationalStore.ValuesBucket = {
-        uri: row.uri,
-        mtime: row.mtime,
-        size: row.size,
-      };
-      await this.store.insert(TABLE, values);
-    }
-  }
-
-  public async loadSnapshot(): Promise<Map<string, MediaRecord>> {
-    if (!this.store) throw new Error('store not init');
-    const rs = await this.store.querySql(`SELECT uri, mtime, size FROM ${TABLE}`);
-    const map = new Map<string, MediaRecord>();
-    while (rs.goToNextRow()) {
-      map.set(rs.getString(0), {
-        uri: rs.getString(0),
-        mtime: rs.getLong(1),
-        size: rs.getLong(2),
-      });
-    }
-    rs.close();
-    return map;
   }
 
   override getPathFromUri(uri: string, result: Result<string>): void {
