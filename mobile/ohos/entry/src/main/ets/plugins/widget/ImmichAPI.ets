@@ -85,6 +85,7 @@ export class ImmichAPI {
 
     try {
       const response = await request.request(url, options);
+      URLSessionManager.updateFromResponse(this.context, url, response.header as Object | undefined);
       if (response.responseCode < 200 || response.responseCode > 299) {
         throw new Error(`HTTP ${response.responseCode}`);
       }
@@ -107,6 +108,7 @@ export class ImmichAPI {
 
     try {
       const response = await request.request(url, options);
+      URLSessionManager.updateFromResponse(this.context, url, response.header as Object | undefined);
       if (response.responseCode < 200 || response.responseCode > 299) {
         throw new Error(`HTTP ${response.responseCode}`);
       }
