@@ -14,7 +14,7 @@ import preferences from "@ohos.data.preferences";
 import { BackgroundWorkerApiImpl } from "./BackgroundWorkerApiImpl";
 import { notificationManager } from '@kit.NotificationKit';
 import { DartEntrypoint } from '@ohos/flutter_ohos/src/main/ets/embedding/engine/dart/DartExecutor';
-import { GeneratedPluginRegistrant } from '../plugins/GeneratedPluginRegistrant';
+import { BackgroundGeneratedPluginRegistrant } from '../plugins/BackgroundGeneratedPluginRegistrant';
 import { BackgroundServicePlugin } from '../plugins/BackgroundServicePlugin';
 import { NativeSyncApiOhos } from '../plugins/sync/Messages_ohos.g';
 import { MessagesImplBase } from '../plugins/sync/MessagesImplBase';
@@ -81,7 +81,9 @@ class BackgroundWorker extends WorkSchedulerExtensionAbility {
   }
   private registerPlugins(flutterEngine: FlutterEngine) {
     this.ctx.getApplicationContext()
-    GeneratedPluginRegistrant.registerWith(flutterEngine);
+    // workScheduler cannot safely import UI/video plugins such as native_video_player
+    // on HarmonyOS 6, so the background engine uses a dedicated registrant.
+    BackgroundGeneratedPluginRegistrant.registerWith(flutterEngine);
     const messenger = flutterEngine.dartExecutor.getBinaryMessenger();
     BackgroundWorker.nativeSyncApiImpl = new MessagesImplBase(this.ctx.getApplicationContext());   //??????ability?????????y?????????
     BackgroundWorker.localImageApiImpl = new LocalImagesImpl(this.ctx.getApplicationContext());
