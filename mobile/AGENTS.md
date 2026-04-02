@@ -56,7 +56,7 @@
 
 ## Validation
 
-- If a build or check requires Huawei SDK, use:
+- If a build or check requires Huawei OHOS SDK, use:
   - `C:\Program Files\Huawei\DevEco Studio\sdk\default`
 - Before finishing, clearly report:
   - which files were changed
