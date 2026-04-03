@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:immich_mobile/domain/models/asset/base_asset.model.dart';
@@ -8,6 +9,7 @@ import 'package:immich_mobile/domain/services/setting.service.dart';
 import 'package:immich_mobile/entities/store.entity.dart';
 import 'package:immich_mobile/extensions/platform_extensions.dart';
 import 'package:immich_mobile/infrastructure/repositories/storage.repository.dart';
+import 'package:immich_mobile/platform/native_sync_api_ohos.g.dart';
 import 'package:immich_mobile/presentation/widgets/asset_viewer/video_viewer_controls.widget.dart';
 import 'package:immich_mobile/providers/asset_viewer/asset_viewer.provider.dart';
 import 'package:immich_mobile/providers/app_settings.provider.dart';
@@ -124,6 +126,12 @@ class _NativeVideoViewerState extends ConsumerState<NativeVideoViewer> with Widg
     try {
       if (videoAsset.hasLocal && videoAsset.livePhotoVideoId == null) {
         final id = videoAsset is LocalAsset ? videoAsset.id : (videoAsset as RemoteAsset).localId!;
+        if (Platform.isOhos) {
+          final path = await NativeSyncApiOhos().getPathFromUri(id);
+          if (!_canUseRef) return null;
+          return VideoSource.init(path: path, type: VideoSourceType.file);
+        }
+
         final file = await StorageRepository().getFileForAsset(id);
         if (!_canUseRef) return null;
 

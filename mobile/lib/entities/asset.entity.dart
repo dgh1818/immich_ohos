@@ -234,7 +234,7 @@ class Asset {
       return exifInfo.isFlipped;
     }
 
-    if (_didUpdateLocal && Platform.isAndroid) {
+    if (_didUpdateLocal && (Platform.isAndroid || Platform.isOhos)) {
       final local = this.local;
       if (local == null) {
         throw Exception('Asset $fileName has no local data');

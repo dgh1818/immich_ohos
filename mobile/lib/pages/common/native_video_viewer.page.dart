@@ -8,6 +8,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:immich_mobile/domain/models/store.model.dart';
 import 'package:immich_mobile/entities/asset.entity.dart';
 import 'package:immich_mobile/entities/store.entity.dart';
+import 'package:immich_mobile/platform/native_sync_api_ohos.g.dart';
 import 'package:immich_mobile/providers/app_settings.provider.dart';
 import 'package:immich_mobile/providers/asset_viewer/current_asset.provider.dart';
 import 'package:immich_mobile/providers/asset_viewer/is_motion_video_playing.provider.dart';
@@ -64,7 +65,12 @@ class NativeVideoViewerPage extends HookConsumerWidget {
       try {
         final local = asset.local;
         if (local != null && asset.livePhotoVideoId == null) {
-          final file = await local.file;
+          if (Platform.isOhos) {
+            final path = await NativeSyncApiOhos().getPathFromUri(local.id);
+            return VideoSource.init(path: path, type: VideoSourceType.file);
+          }
+
+          final file = await local.originFile;
           if (file == null) {
             throw Exception('No file found for the video');
           }
