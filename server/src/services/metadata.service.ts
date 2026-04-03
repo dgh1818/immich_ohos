@@ -290,10 +290,19 @@ export class MetadataService extends BaseService {
     this.logger.log(`Starting metadata extraction for asset ${asset.id}: ${asset.originalPath}`);
 
     try {
-      const [exifTags, stats] = await Promise.all([
-        this.getExifTags(asset),
-        this.storageRepository.stat(asset.originalPath),
-      ]);
+      this.logger.log(`Reading EXIF tags for asset ${asset.id}: ${asset.originalPath}`);
+      const exifTagsPromise = this.getExifTags(asset).then((result) => {
+        this.logger.log(`Finished reading EXIF tags for asset ${asset.id}: ${asset.originalPath}`);
+        return result;
+      });
+
+      this.logger.log(`Reading file stats for asset ${asset.id}: ${asset.originalPath}`);
+      const statsPromise = this.storageRepository.stat(asset.originalPath).then((result) => {
+        this.logger.log(`Finished reading file stats for asset ${asset.id}: ${asset.originalPath}`);
+        return result;
+      });
+
+      const [exifTags, stats] = await Promise.all([exifTagsPromise, statsPromise]);
       this.logger.verbose('Exif Tags', exifTags);
 
       const dates = this.getDates(asset, exifTags, stats);
@@ -389,7 +398,9 @@ export class MetadataService extends BaseService {
         },
       );
 
+      this.logger.log(`Checking OHOS live photo markers for asset ${asset.id}: ${asset.originalPath}`);
       const { hasOhosLivePhoto } = await this.checkOhosLivePhoto(asset.originalPath, asset.type);
+      this.logger.log(`Finished OHOS live photo check for asset ${asset.id}: ${asset.originalPath}`);
       if (hasOhosLivePhoto > 0) {
         this.logger.log(
           `Detected OHOS live photo variant ${hasOhosLivePhoto} for asset ${asset.id}: ${asset.originalPath}`,
