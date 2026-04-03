@@ -173,7 +173,7 @@ class TopControlAppBar extends HookConsumerWidget {
         if (asset.isLocal && !asset.isRemote) buildUploadButton(),
         if (asset.isRemote && !asset.isLocal && isOwner) buildDownloadButton(),
         if (asset.isRemote && (isOwner || isPartner) && !asset.isTrashed && !isInLockedView) buildAddToAlbumButton(),
-        if (asset.isRemote && asset.isVideo) buildCastButton(),
+        if (asset.isRemote && (asset.isVideo || asset.isImage)) buildCastButton(),
         if (asset.isTrashed) buildRestoreButton(),
         if (album != null && album.shared && !isInLockedView) buildActivitiesButton(),
         buildMoreInfoButton(),

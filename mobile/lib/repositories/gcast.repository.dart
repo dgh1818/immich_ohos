@@ -36,8 +36,20 @@ class GCastRepository {
     await _huaweiCast.startCast(assetId);
   }
 
-  FutureOr<dynamic> setMetadata(String contentUrl, String mediaImage, String title, int duration) async {
-    return await _huaweiCast.setMetadata(contentUrl, mediaImage, title, duration);
+  FutureOr<dynamic> setMetadata(
+    String contentUrl,
+    String mediaImage,
+    String title,
+    int duration, {
+    AVSessionType sessionType = AVSessionType.video,
+  }) async {
+    return await _huaweiCast.setMetadata(
+      contentUrl,
+      mediaImage,
+      title,
+      duration,
+      sessionType: sessionType,
+    );
   }
 
   FutureOr<dynamic> setCurrentPosition(int position, bool isPlaying) async {

@@ -101,7 +101,7 @@ class GCastService {
   }
 
   String? _currentRemoteVideoId(BaseAsset? asset) {
-    if (asset == null || !asset.isVideo) {
+    if (asset == null || asset.remoteId == null || (!asset.isVideo && !asset.isImage)) {
       return null;
     }
 
@@ -121,9 +121,11 @@ class GCastService {
 
   Future<void> _setMetadata({
     required String assetId,
-    String? mediaId,
     required String title,
     required int durationMs,
+    required AVSessionType sessionType,
+    required bool usePlaybackUrl,
+    required bool isEdited,
   }) async {
     if (!isSessionValid()) {
       sessionKey = await _sessionsApiService.createSession(
@@ -134,11 +136,18 @@ class GCastService {
     }
 
     final token = sessionKey!.token;
-    final resolvedMediaId = mediaId ?? assetId;
     final authenticatedThumbUrl = '${getThumbnailUrlForRemoteId(assetId)}&sessionKey=$token';
-    final authenticatedVideoUrl = '${getPlaybackUrlForRemoteId(resolvedMediaId)}sessionKey=$token';
+    final authenticatedContentUrl = usePlaybackUrl
+        ? '${getPlaybackUrlForRemoteId(assetId)}sessionKey=$token'
+        : '${getOriginalUrlForRemoteId(assetId, edited: isEdited)}&sessionKey=$token';
 
-    await _gCastRepository.setMetadata(authenticatedVideoUrl, authenticatedThumbUrl, title, durationMs);
+    await _gCastRepository.setMetadata(
+      authenticatedContentUrl,
+      authenticatedThumbUrl,
+      title,
+      durationMs,
+      sessionType: sessionType,
+    );
   }
 
   void setCurrentPlaybackAsset(BaseAsset? asset) {
@@ -190,9 +199,11 @@ class GCastService {
 
     await _setMetadata(
       assetId: asset.remoteId!,
-      mediaId: asset.livePhotoVideoId,
       title: asset.name,
       durationMs: asset.duration.inMilliseconds,
+      sessionType: asset.isImage ? AVSessionType.photo : AVSessionType.video,
+      usePlaybackUrl: asset.isVideo,
+      isEdited: asset.isEdited,
     );
     _preparedPlaybackAssetKey = assetKey;
   }
@@ -207,7 +218,14 @@ class GCastService {
       return (assetId, asset.duration);
     }
 
-    await _setMetadata(assetId: assetId, title: asset.name, durationMs: asset.duration.inMilliseconds);
+    await _setMetadata(
+      assetId: assetId,
+      title: asset.name,
+      durationMs: asset.duration.inMilliseconds,
+      sessionType: asset.isImage ? AVSessionType.photo : AVSessionType.video,
+      usePlaybackUrl: asset.isVideo,
+      isEdited: asset.isEdited,
+    );
 
     return (assetId, asset.duration);
   }

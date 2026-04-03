@@ -174,7 +174,7 @@ enum ActionButtonType {
             context.isOwner,
       ActionButtonType.cast =>
         context.asset.hasRemote && //
-            context.asset.isVideo,
+            (context.asset.isVideo || context.asset.isImage),
     };
   }
 
