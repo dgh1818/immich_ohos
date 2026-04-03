@@ -286,133 +286,153 @@ export class MetadataService extends BaseService {
       return;
     }
 
-    const [exifTags, stats] = await Promise.all([
-      this.getExifTags(asset),
-      this.storageRepository.stat(asset.originalPath),
-    ]);
-    this.logger.verbose('Exif Tags', exifTags);
+    const startedAt = Date.now();
+    this.logger.log(`Starting metadata extraction for asset ${asset.id}: ${asset.originalPath}`);
 
-    const dates = this.getDates(asset, exifTags, stats);
+    try {
+      const [exifTags, stats] = await Promise.all([
+        this.getExifTags(asset),
+        this.storageRepository.stat(asset.originalPath),
+      ]);
+      this.logger.verbose('Exif Tags', exifTags);
 
-    const { width, height } = this.getImageDimensions(exifTags);
-    let geo: ReverseGeocodeResult = { country: null, state: null, city: null },
-      latitude: number | null = null,
-      longitude: number | null = null;
-    if (this.hasGeo(exifTags)) {
-      latitude = Number(exifTags.GPSLatitude);
-      longitude = Number(exifTags.GPSLongitude);
-      if (reverseGeocoding.enabled) {
-        geo = await this.mapRepository.reverseGeocode({ latitude, longitude });
+      const dates = this.getDates(asset, exifTags, stats);
+
+      const { width, height } = this.getImageDimensions(exifTags);
+      let geo: ReverseGeocodeResult = { country: null, state: null, city: null },
+        latitude: number | null = null,
+        longitude: number | null = null;
+      if (this.hasGeo(exifTags)) {
+        latitude = Number(exifTags.GPSLatitude);
+        longitude = Number(exifTags.GPSLongitude);
+        if (reverseGeocoding.enabled) {
+          geo = await this.mapRepository.reverseGeocode({ latitude, longitude });
+        }
       }
+
+      const tags = this.getTagList(exifTags);
+
+      const exifData: Insertable<AssetExifTable> = {
+        assetId: asset.id,
+
+        // dates
+        dateTimeOriginal: dates.dateTimeOriginal,
+        modifyDate: stats.mtime,
+        timeZone: dates.timeZone,
+
+        // gps
+        latitude,
+        longitude,
+        country: geo.country,
+        state: geo.state,
+        city: geo.city,
+
+        // image/file
+        fileSizeInByte: stats.size,
+        exifImageHeight: validate(height),
+        exifImageWidth: validate(width),
+        orientation: validate(exifTags.Orientation)?.toString() ?? null,
+        projectionType: exifTags.ProjectionType ? String(exifTags.ProjectionType).toUpperCase() : null,
+        bitsPerSample: this.getBitsPerSample(exifTags),
+        colorspace: exifTags.ColorSpace === undefined ? null : String(exifTags.ColorSpace),
+
+        // camera
+        make:
+          exifTags.Make ??
+          exifTags.Device?.Manufacturer ??
+          exifTags.AndroidMake ??
+          (exifTags.DeviceManufacturer || null),
+        model:
+          exifTags.Model ?? exifTags.Device?.ModelName ?? exifTags.AndroidModel ?? (exifTags.DeviceModelName || null),
+        fps: validate(Number.parseFloat(exifTags.VideoFrameRate!)),
+        iso: validate(exifTags.ISO) as number,
+        exposureTime: exifTags.ExposureTime ?? null,
+        lensModel: getLensModel(exifTags),
+        fNumber: validate(exifTags.FNumber),
+        focalLength: validate(exifTags.FocalLength),
+
+        // comments
+        description: String(exifTags.ImageDescription || exifTags.Description || '').trim(),
+        profileDescription: exifTags.ProfileDescription || null,
+        rating: exifTags.Rating === 0 ? null : validateRange(exifTags.Rating, -1, 5),
+
+        // grouping
+        livePhotoCID: (exifTags.ContentIdentifier || exifTags.MediaGroupUUID) ?? null,
+        autoStackId: this.getAutoStackId(exifTags),
+
+        tags: tags.length > 0 ? tags : null,
+      };
+
+      const isSidewards = exifTags.Orientation && this.isOrientationSidewards(exifTags.Orientation);
+      const assetWidth = isSidewards ? validate(height) : validate(width);
+      const assetHeight = isSidewards ? validate(width) : validate(height);
+
+      const tasks = new Tasks();
+
+      tasks.push(
+        () =>
+          this.assetRepository.update({
+            id: asset.id,
+            duration: this.getDuration(exifTags),
+            localDateTime: dates.localDateTime,
+            fileCreatedAt: dates.dateTimeOriginal ?? undefined,
+            fileModifiedAt: stats.mtime,
+
+            // only update the dimensions if they don't already exist
+            // we don't want to overwrite width/height that are modified by edits
+            width: asset.width == null ? assetWidth : undefined,
+            height: asset.height == null ? assetHeight : undefined,
+          }),
+        async () => {
+          await this.assetRepository.upsertExif(exifData, { lockedPropertiesBehavior: 'skip' });
+          await this.applyTagList(asset);
+        },
+      );
+
+      const { hasOhosLivePhoto } = await this.checkOhosLivePhoto(asset.originalPath, asset.type);
+      if (hasOhosLivePhoto > 0) {
+        this.logger.log(
+          `Detected OHOS live photo variant ${hasOhosLivePhoto} for asset ${asset.id}: ${asset.originalPath}`,
+        );
+      }
+
+      if (this.isMotionPhoto(asset, exifTags) || hasOhosLivePhoto == 1) {
+        tasks.push(() => this.applyMotionPhotos(asset, exifTags, dates, stats));
+      }
+
+      if (isFaceImportEnabled(metadata) && this.hasTaggedFaces(exifTags)) {
+        tasks.push(() => this.applyTaggedFaces(asset, exifTags));
+      }
+
+      await tasks.all();
+
+      if (exifData.livePhotoCID) {
+        await this.linkLivePhotos(asset, exifData);
+      }
+
+      if (hasOhosLivePhoto == 2) {
+        this.logger.log(`Is Ohos Next livephoto (${asset.id})`);
+        await this.linkOhosLivePhotos(asset, exifData);
+      }
+
+      await this.assetRepository.upsertJobStatus({ assetId: asset.id, metadataExtractedAt: new Date() });
+
+      await this.eventRepository.emit('AssetMetadataExtracted', {
+        assetId: asset.id,
+        userId: asset.ownerId,
+        source: data.source,
+      });
+    } catch (error: Error | any) {
+      this.logger.error(
+        `Failed metadata extraction for asset ${asset.id}: ${asset.originalPath}: ${error}`,
+        error?.stack,
+      );
+      throw error;
+    } finally {
+      this.logger.log(
+        `Finished metadata extraction for asset ${asset.id}: ${asset.originalPath} (${Date.now() - startedAt} ms)`,
+      );
     }
-
-    const tags = this.getTagList(exifTags);
-
-    const exifData: Insertable<AssetExifTable> = {
-      assetId: asset.id,
-
-      // dates
-      dateTimeOriginal: dates.dateTimeOriginal,
-      modifyDate: stats.mtime,
-      timeZone: dates.timeZone,
-
-      // gps
-      latitude,
-      longitude,
-      country: geo.country,
-      state: geo.state,
-      city: geo.city,
-
-      // image/file
-      fileSizeInByte: stats.size,
-      exifImageHeight: validate(height),
-      exifImageWidth: validate(width),
-      orientation: validate(exifTags.Orientation)?.toString() ?? null,
-      projectionType: exifTags.ProjectionType ? String(exifTags.ProjectionType).toUpperCase() : null,
-      bitsPerSample: this.getBitsPerSample(exifTags),
-      colorspace: exifTags.ColorSpace === undefined ? null : String(exifTags.ColorSpace),
-
-      // camera
-      make:
-        exifTags.Make ?? exifTags.Device?.Manufacturer ?? exifTags.AndroidMake ?? (exifTags.DeviceManufacturer || null),
-      model:
-        exifTags.Model ?? exifTags.Device?.ModelName ?? exifTags.AndroidModel ?? (exifTags.DeviceModelName || null),
-      fps: validate(Number.parseFloat(exifTags.VideoFrameRate!)),
-      iso: validate(exifTags.ISO) as number,
-      exposureTime: exifTags.ExposureTime ?? null,
-      lensModel: getLensModel(exifTags),
-      fNumber: validate(exifTags.FNumber),
-      focalLength: validate(exifTags.FocalLength),
-
-      // comments
-      description: String(exifTags.ImageDescription || exifTags.Description || '').trim(),
-      profileDescription: exifTags.ProfileDescription || null,
-      rating: exifTags.Rating === 0 ? null : validateRange(exifTags.Rating, -1, 5),
-
-      // grouping
-      livePhotoCID: (exifTags.ContentIdentifier || exifTags.MediaGroupUUID) ?? null,
-      autoStackId: this.getAutoStackId(exifTags),
-
-      tags: tags.length > 0 ? tags : null,
-    };
-
-    const isSidewards = exifTags.Orientation && this.isOrientationSidewards(exifTags.Orientation);
-    const assetWidth = isSidewards ? validate(height) : validate(width);
-    const assetHeight = isSidewards ? validate(width) : validate(height);
-
-    const tasks = new Tasks();
-
-    tasks.push(
-      () =>
-        this.assetRepository.update({
-          id: asset.id,
-          duration: this.getDuration(exifTags),
-          localDateTime: dates.localDateTime,
-          fileCreatedAt: dates.dateTimeOriginal ?? undefined,
-          fileModifiedAt: stats.mtime,
-
-          // only update the dimensions if they don't already exist
-          // we don't want to overwrite width/height that are modified by edits
-          width: asset.width == null ? assetWidth : undefined,
-          height: asset.height == null ? assetHeight : undefined,
-        }),
-      async () => {
-        await this.assetRepository.upsertExif(exifData, { lockedPropertiesBehavior: 'skip' });
-        await this.applyTagList(asset);
-      },
-    );
-
-    const { hasOhosLivePhoto, ohosFileSize, ohosVideoOffset } = await this.checkOhosLivePhoto(
-      asset.originalPath,
-      asset.type,
-    );
-
-    if (this.isMotionPhoto(asset, exifTags) || hasOhosLivePhoto == 1) {
-      tasks.push(() => this.applyMotionPhotos(asset, exifTags, dates, stats));
-    }
-
-    if (isFaceImportEnabled(metadata) && this.hasTaggedFaces(exifTags)) {
-      tasks.push(() => this.applyTaggedFaces(asset, exifTags));
-    }
-
-    await tasks.all();
-
-    if (exifData.livePhotoCID) {
-      await this.linkLivePhotos(asset, exifData);
-    }
-
-    if (hasOhosLivePhoto == 2) {
-      this.logger.log(`Is Ohos Next livephoto (${asset.id})`);
-      await this.linkOhosLivePhotos(asset, exifData);
-    }
-
-    await this.assetRepository.upsertJobStatus({ assetId: asset.id, metadataExtractedAt: new Date() });
-
-    await this.eventRepository.emit('AssetMetadataExtracted', {
-      assetId: asset.id,
-      userId: asset.ownerId,
-      source: data.source,
-    });
   }
 
   @OnJob({ name: JobName.SidecarQueueAll, queue: QueueName.Sidecar })
@@ -1151,10 +1171,27 @@ export class MetadataService extends BaseService {
     return video;
   }
 
+  private isOhosLivePhotoCandidate(filePath: string, assetType: AssetType): boolean {
+    const extension = parse(filePath).ext.toLowerCase();
+    if (assetType === AssetType.Image) {
+      return ['.jpe', '.jpeg', '.jpg'].includes(extension);
+    }
+
+    if (assetType === AssetType.Video) {
+      return extension === '.mp4';
+    }
+
+    return false;
+  }
+
   private async checkOhosLivePhoto(
     filePath: string,
     assetType: AssetType,
   ): Promise<{ hasOhosLivePhoto: number; ohosFileSize: number; ohosVideoOffset: number }> {
+    if (!this.isOhosLivePhotoCandidate(filePath, assetType)) {
+      return { hasOhosLivePhoto: 0, ohosFileSize: 0, ohosVideoOffset: -1 };
+    }
+
     const stats = await fs.stat(filePath);
     const ohosFileSize = stats.size;
     let ohosLiveMetaDataOFFSET = 20;
