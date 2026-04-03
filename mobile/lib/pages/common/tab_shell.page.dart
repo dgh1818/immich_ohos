@@ -17,11 +17,9 @@ import 'package:immich_mobile/providers/infrastructure/readonly_mode.provider.da
 import 'package:immich_mobile/providers/search/search_input_focus.provider.dart';
 import 'package:immich_mobile/providers/tab.provider.dart';
 import 'package:immich_mobile/routing/router.dart';
+import 'package:immich_mobile/widgets/common/floating_glass_bottom_navigation_bar.dart';
 
 import 'package:flutter_svg/svg.dart';
-import 'package:immich_mobile/widgets/common/immich_sliver_app_bar.dart';
-import 'package:image_picker/image_picker.dart';
-import 'dart:ui';
 
 @RoutePage()
 class TabShellPage extends ConsumerStatefulWidget {
@@ -248,7 +246,7 @@ class _TabShellPageState extends ConsumerState<TabShellPage> with SingleTickerPr
                               borderRadius: BorderRadius.circular(12),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withOpacity(0.1),
+                                  color: Colors.black.withValues(alpha: 0.1),
                                   blurRadius: 4,
                                   offset: const Offset(0, 0),
                                 ),
@@ -307,7 +305,7 @@ void _onNavigationSelected(TabsRouter router, int index, WidgetRef ref) {
 class _BottomNavigationBar extends ConsumerStatefulWidget {
   const _BottomNavigationBar({required this.tabsRouter, required this.destinations});
 
-  final List<Widget> destinations;
+  final List<NavigationDestination> destinations;
   final TabsRouter tabsRouter;
 
   @override
@@ -344,6 +342,12 @@ class _BottomNavigationBarState extends ConsumerState<_BottomNavigationBar> {
       return const SizedBox.shrink();
     }
 
+    return FloatingGlassBottomNavigationBar(
+      destinations: widget.destinations,
+      selectedIndex: widget.tabsRouter.activeIndex,
+      onDestinationSelected: (index) => _onNavigationSelected(widget.tabsRouter, index, ref),
+    );
+    /*
     return Stack(
       children: [
         Positioned(
@@ -381,5 +385,6 @@ class _BottomNavigationBarState extends ConsumerState<_BottomNavigationBar> {
         ),
       ],
     );
+    */
   }
 }

@@ -11,10 +11,10 @@ import 'package:immich_mobile/providers/multiselect.provider.dart';
 import 'package:immich_mobile/providers/search/search_input_focus.provider.dart';
 import 'package:immich_mobile/providers/tab.provider.dart';
 import 'package:immich_mobile/routing/router.dart';
+import 'package:immich_mobile/widgets/common/floating_glass_bottom_navigation_bar.dart';
 
 import 'package:flutter_svg/svg.dart';
 import 'package:flutter_hooks/flutter_hooks.dart' hide Store;
-import 'dart:ui';
 
 @RoutePage()
 class TabControllerPage extends HookConsumerWidget {
@@ -112,6 +112,12 @@ class TabControllerPage extends HookConsumerWidget {
     ];
 
     Widget bottomNavigationBar(TabsRouter tabsRouter) {
+      return FloatingGlassBottomNavigationBar(
+        destinations: navigationDestinations,
+        selectedIndex: tabsRouter.activeIndex,
+        onDestinationSelected: (index) => onNavigationSelected(tabsRouter, index),
+      );
+      /*
       return Stack(
         children: [
           // 1. 毛玻璃背景 - 延伸到屏幕底部，使用IgnorePointer不拦截点击
@@ -146,7 +152,8 @@ class TabControllerPage extends HookConsumerWidget {
             ),
           ),
         ],
-      );
+        );
+      */
     }
 
     Widget buildLogo() {
@@ -229,7 +236,7 @@ class TabControllerPage extends HookConsumerWidget {
                               borderRadius: BorderRadius.circular(12),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withOpacity(0.1),
+                                  color: Colors.black.withValues(alpha: 0.1),
                                   blurRadius: 4,
                                   offset: const Offset(0, 0),
                                 ),
@@ -255,15 +262,7 @@ class TabControllerPage extends HookConsumerWidget {
 
                       // 3) 把底部导航栏作为 Stack 最上层的 Positioned（仅在未开启多选且竖屏时显示）
                       if (!multiselectEnabled)
-                        Positioned(
-                          left: 0,
-                          right: 0,
-                          bottom: 0,
-                          child: Container(
-                            height: 0.8 * kBottomNavigationBarHeight + MediaQuery.of(context).padding.bottom,
-                            child: bottomNavigationBar(tabsRouter),
-                          ),
-                        ),
+                        Positioned(left: 0, right: 0, bottom: 0, child: bottomNavigationBar(tabsRouter)),
                     ],
                   ),
             //bottomNavigationBar: multiselectEnabled || isScreenLandscape ? null : bottomNavigationBar(tabsRouter),
