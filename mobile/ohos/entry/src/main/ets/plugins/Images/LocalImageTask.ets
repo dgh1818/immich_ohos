@@ -68,6 +68,37 @@ export async function decodeLocalImageTask(
   sendableUiContext: sendableContextManager.SendableContext
 ): Promise<LocalDecodeResult> {
   const ctx = sendableContextManager.convertToUIAbilityContext(sendableUiContext);
+  const makeAspectFitThumbnailSize = (
+    requestWidth: number,
+    requestHeight: number,
+    assetWidth: number,
+    assetHeight: number,
+    orientation: number,
+  ): Size => {
+    const orientedWidth = orientation === 90 || orientation === 270
+      ? (assetHeight > 0 ? assetHeight : 1)
+      : (assetWidth > 0 ? assetWidth : 1);
+    const orientedHeight = orientation === 90 || orientation === 270
+      ? (assetWidth > 0 ? assetWidth : 1)
+      : (assetHeight > 0 ? assetHeight : 1);
+
+    let boundWidth = requestWidth > 0 ? requestWidth : 0;
+    let boundHeight = requestHeight > 0 ? requestHeight : 0;
+    if (boundWidth <= 0 && boundHeight <= 0) {
+      boundWidth = orientedWidth;
+      boundHeight = orientedHeight;
+    } else if (boundWidth <= 0) {
+      boundWidth = Math.round(boundHeight * orientedWidth / orientedHeight);
+    } else if (boundHeight <= 0) {
+      boundHeight = Math.round(boundWidth * orientedHeight / orientedWidth);
+    }
+
+    const scale = Math.min(boundWidth / orientedWidth, boundHeight / orientedHeight);
+    return {
+      width: Math.max(1, Math.round(orientedWidth * scale)),
+      height: Math.max(1, Math.round(orientedHeight * scale)),
+    };
+  };
   let pixelMap: PixelMap;
 
   if (isVideo) {
@@ -82,28 +113,17 @@ export async function decodeLocalImageTask(
     const photoAsset: photoAccessHelper.PhotoAsset = await videoFetchResult.getFirstObject();
     const widthKey: photoAccessHelper.PhotoKeys = photoAccessHelper.PhotoKeys.WIDTH;
     const heightKey: photoAccessHelper.PhotoKeys = photoAccessHelper.PhotoKeys.HEIGHT;
+    const orientationKey: photoAccessHelper.PhotoKeys = photoAccessHelper.PhotoKeys.ORIENTATION;
     const photoAssetWidth = (photoAsset.get(widthKey.toString()) as number) || 0;
     const photoAssetHeight = (photoAsset.get(heightKey.toString()) as number) || 0;
-
-    let targetHeight = height;
-    if (targetHeight <= 0) {
-      if (width > 0 && photoAssetWidth > 0) {
-        targetHeight = Math.round(width * photoAssetHeight / photoAssetWidth);
-      } else {
-        targetHeight = photoAssetHeight;
-      }
-    }
-    if (targetHeight <= 0) {
-      targetHeight = 1;
-    }
-    let targetWidth = photoAssetHeight > 0
-      ? Math.round(photoAssetWidth * targetHeight / photoAssetHeight)
-      : width;
-    if (targetWidth <= 0) {
-      targetWidth = 1;
-    }
-
-    const thumbnailSize: Size = { height: targetHeight, width: targetWidth };
+    const photoAssetOrientation = (photoAsset.get(orientationKey.toString()) as number) || 0;
+    const thumbnailSize = makeAspectFitThumbnailSize(
+      width,
+      height,
+      photoAssetWidth,
+      photoAssetHeight,
+      photoAssetOrientation,
+    );
     pixelMap = await photoAsset.getThumbnail(thumbnailSize);
   } else {
     const filePath = new fileUri.FileUri(assetId).path;
@@ -136,26 +156,19 @@ export async function decodeLocalImageTask(
           predicates: predicates
         });
       const photoAsset: photoAccessHelper.PhotoAsset = await fetchResult.getFirstObject();
-
-      let targetHeight = height;
-      if (targetHeight <= 0) {
-        if (width > 0 && imageInfo.size.width > 0) {
-          targetHeight = Math.round(width * imageInfo.size.height / imageInfo.size.width);
-        } else {
-          targetHeight = Math.round(imageInfo.size.height);
-        }
-      }
-      if (targetHeight <= 0) {
-        targetHeight = 1;
-      }
-      let targetWidth = imageInfo.size.height > 0
-        ? Math.round(imageInfo.size.width * targetHeight / imageInfo.size.height)
-        : width;
-      if (targetWidth <= 0) {
-        targetWidth = 1;
-      }
-
-      const thumbnailSize: Size = { height: targetHeight, width: targetWidth };
+      const widthKey: photoAccessHelper.PhotoKeys = photoAccessHelper.PhotoKeys.WIDTH;
+      const heightKey: photoAccessHelper.PhotoKeys = photoAccessHelper.PhotoKeys.HEIGHT;
+      const orientationKey: photoAccessHelper.PhotoKeys = photoAccessHelper.PhotoKeys.ORIENTATION;
+      const photoAssetWidth = (photoAsset.get(widthKey.toString()) as number) || Math.round(imageInfo.size.width);
+      const photoAssetHeight = (photoAsset.get(heightKey.toString()) as number) || Math.round(imageInfo.size.height);
+      const photoAssetOrientation = (photoAsset.get(orientationKey.toString()) as number) || 0;
+      const thumbnailSize = makeAspectFitThumbnailSize(
+        width,
+        height,
+        photoAssetWidth,
+        photoAssetHeight,
+        photoAssetOrientation,
+      );
       pixelMap = await photoAsset.getThumbnail(thumbnailSize);
     }
   }
