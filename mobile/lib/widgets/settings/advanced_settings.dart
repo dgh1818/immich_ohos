@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:easy_localization/easy_localization.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart' hide Store;
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -12,6 +13,7 @@ import 'package:immich_mobile/providers/infrastructure/platform.provider.dart';
 import 'package:immich_mobile/providers/infrastructure/readonly_mode.provider.dart';
 import 'package:immich_mobile/repositories/local_files_manager.repository.dart';
 import 'package:immich_mobile/services/app_settings.service.dart';
+import 'package:immich_mobile/services/hybrid_arkui_bridge.service.dart';
 import 'package:immich_mobile/utils/bytes_units.dart';
 import 'package:immich_mobile/utils/hooks/app_settings_update_hook.dart';
 import 'package:immich_mobile/widgets/settings/beta_timeline_list_tile.dart';
@@ -37,6 +39,7 @@ class AdvancedSettings extends HookConsumerWidget {
     final preferRemote = useAppSettingsState(AppSettingsEnum.preferRemoteImage);
     final useAlternatePMFilter = useAppSettingsState(AppSettingsEnum.photoManagerCustomFilter);
     final readonlyModeEnabled = useAppSettingsState(AppSettingsEnum.readonlyModeEnabled);
+    final hybridArkuiPhotos = useAppSettingsState(AppSettingsEnum.hybridArkuiPhotos);
 
     final logLevel = Level.LEVELS[levelId.value].name;
 
@@ -124,6 +127,40 @@ class AdvancedSettings extends HookConsumerWidget {
           subtitle: "advanced_settings_enable_alternate_media_filter_subtitle".tr(),
         ),
       if (!Store.isBetaTimelineEnabled) const BetaTimelineListTile(),
+      if (defaultTargetPlatform == TargetPlatform.ohos)
+        SettingsSwitchListTile(
+          valueNotifier: hybridArkuiPhotos,
+          title: "Use Hybrid ArkUI Photo Home",
+          subtitle:
+              "Switch between legacy Flutter home and the ArkUI photo grid. Restart the app after changing this setting.",
+          onChanged: (value) async {
+            try {
+              await HybridArkuiBridgeService.setLaunchModePreference(value);
+            } catch (error) {
+              hybridArkuiPhotos.value = !value;
+              context.scaffoldMessenger.showSnackBar(
+                SnackBar(
+                  duration: const Duration(seconds: 3),
+                  content: Text(
+                    "Failed to update the OHOS launch mode. Please try again.",
+                    style: context.textTheme.bodyLarge?.copyWith(color: context.primaryColor),
+                  ),
+                ),
+              );
+              return;
+            }
+
+            context.scaffoldMessenger.showSnackBar(
+              SnackBar(
+                duration: const Duration(seconds: 3),
+                content: Text(
+                  "Restart the app to apply the new launch mode.",
+                  style: context.textTheme.bodyLarge?.copyWith(color: context.primaryColor),
+                ),
+              ),
+            );
+          },
+        ),
       if (Store.isBetaTimelineEnabled)
         SettingsSwitchListTile(
           valueNotifier: readonlyModeEnabled,

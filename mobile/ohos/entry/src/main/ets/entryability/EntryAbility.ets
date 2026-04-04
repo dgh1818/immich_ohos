@@ -35,6 +35,7 @@ import HomeWidgetPlugin from '../plugins/widget/HomeWidgetPlugin';
 import { AbilityConstant, Want } from '@kit.AbilityKit';
 import { NetworkApi } from '../plugins/core/Network.g';
 import { NetworkApiImpl } from '../plugins/core/NetworkApiImpl';
+import { HybridFlutterBridge } from '../bridge/HybridFlutterBridge';
 
 export default class EntryAbility extends FlutterAbility {
   private pendingDeepLink: string | null = null;
@@ -54,6 +55,7 @@ export default class EntryAbility extends FlutterAbility {
     GeneratedPluginRegistrant.registerWith(flutterEngine)
 
     this.registerPlugins(super.getAbility().context,flutterEngine);
+    HybridFlutterBridge.attachEngine(flutterEngine, super.getAbility().context);
     this.dispatchPendingDeepLink();
   }
 

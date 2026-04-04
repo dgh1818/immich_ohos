@@ -95,7 +95,8 @@ enum StoreKey<T> {
   cleanupDefaultsInitialized<bool>._(1012),
   syncMigrationStatus<String>._(1013),
   imageHdr<bool>._(1014),
-  videoHdr<bool>._(1015);
+  videoHdr<bool>._(1015),
+  hybridArkuiPhotos<bool>._(1016);
 
   const StoreKey._(this.id);
   final int id;
