@@ -11,6 +11,10 @@ interface FetchPhotoPageArgs {
   limit: number;
 }
 
+interface OpenTimelineAssetViewerArgs {
+  index: number;
+}
+
 interface LaunchModePreferenceState {
   hybridArkuiPhotos: boolean;
   initialized: boolean;
@@ -46,6 +50,16 @@ export class HybridFlutterBridge {
       250,
     );
     return typeof result === 'string' ? result : '';
+  }
+
+  static async openTimelineAssetViewer(index: number): Promise<void> {
+    const args: OpenTimelineAssetViewerArgs = { index };
+    await HybridFlutterBridge.invokeMethodWithRetry(
+      'openTimelineAssetViewer',
+      args as ESObject,
+      12,
+      250,
+    );
   }
 
   private static async invokeMethodWithRetry(
@@ -129,6 +143,11 @@ class HybridFlutterBridgeMethodHandler implements MethodCallHandler {
         result.success(true);
         return;
       }
+      case 'setHybridSelectedPane': {
+        AppStorage.setOrCreate('hybridSelectedPane', this.readPaneIndex(call.args));
+        result.success(true);
+        return;
+      }
       default:
         result.notImplemented();
         return;
@@ -137,5 +156,12 @@ class HybridFlutterBridgeMethodHandler implements MethodCallHandler {
 
   private readHybridEnabled(args: ESObject): boolean {
     return args === true;
+  }
+
+  private readPaneIndex(args: ESObject): number {
+    if (typeof args === 'number' && Number.isFinite(args)) {
+      return args;
+    }
+    return 0;
   }
 }

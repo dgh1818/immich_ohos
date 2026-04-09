@@ -58,6 +58,13 @@
 
 - If a build or check requires Huawei OHOS SDK, use:
   - `C:\Program Files\Huawei\DevEco Studio\sdk\default`
+- For OHOS ArkTS or hybrid timeline changes, validate from:
+  - `F:\immich_ohos\mobile`
+- Default OHOS validation command:
+  - `flutter build hap --release`
+- If `flutter build hap --release` fails, clearly distinguish:
+  - code or ArkTS compilation failures
+  - signing, certificate, or local toolchain/environment failures
 - Before finishing, clearly report:
   - which files were changed
   - whether any file under the forbidden path was touched

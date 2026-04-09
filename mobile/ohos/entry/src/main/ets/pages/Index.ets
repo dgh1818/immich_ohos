@@ -29,9 +29,10 @@ struct Index {
   private context = getContext(this) as common.UIAbilityContext
   @LocalStorageLink('viewId') viewId: string = "";
   @State launchMode: string = LAUNCH_MODE_LEGACY;
-  @State selectedPane: number = 0;
+  @StorageLink('hybridSelectedPane') selectedPane: number = 0;
 
   aboutToAppear() {
+    AppStorage.setOrCreate('hybridSelectedPane', 0);
     const launchMode = HybridFlutterBridge.getSavedLaunchMode();
     this.launchMode = launchMode === LAUNCH_MODE_HYBRID ? LAUNCH_MODE_HYBRID : LAUNCH_MODE_LEGACY;
     this.selectedPane = 0;
@@ -42,7 +43,7 @@ struct Index {
       if (this.launchMode === LAUNCH_MODE_HYBRID) {
         Stack({ alignContent: Alignment.TopStart }) {
           if (this.selectedPane === 0) {
-            HybridPhotoGrid({ topInset: 64 })
+            HybridPhotoGrid({ topInset: 76 })
               .width('100%')
               .height('100%');
           } else {
@@ -79,10 +80,11 @@ struct Index {
           .padding(3)
           .backgroundColor(0xEAF8FAFC)
           .borderRadius(20)
-          .margin({ left: 12, top: 12 });
+          .margin({ left: 12, top: 20 });
         }
         .width('100%')
-        .height('100%');
+        .height('100%')
+        .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP]);
       } else {
         FlutterPage({ viewId: this.viewId })
           .layoutWeight(1);

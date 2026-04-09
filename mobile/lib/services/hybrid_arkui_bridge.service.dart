@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:immich_mobile/domain/models/asset/base_asset.model.dart';
 import 'package:immich_mobile/domain/models/store.model.dart';
 import 'package:immich_mobile/domain/models/timeline.model.dart';
@@ -10,6 +11,9 @@ import 'package:immich_mobile/domain/models/user.model.dart';
 import 'package:immich_mobile/entities/store.entity.dart';
 import 'package:immich_mobile/infrastructure/repositories/db.repository.dart';
 import 'package:immich_mobile/infrastructure/repositories/timeline.repository.dart';
+import 'package:immich_mobile/presentation/widgets/asset_viewer/asset_viewer.page.dart';
+import 'package:immich_mobile/providers/infrastructure/timeline.provider.dart';
+import 'package:immich_mobile/routing/router.dart';
 import 'package:immich_mobile/utils/image_url_builder.dart';
 import 'package:logging/logging.dart';
 
@@ -26,9 +30,16 @@ class HybridArkuiBridgeService {
 
   static const MethodChannel _channel = MethodChannel('immich/hybrid');
   static HybridArkuiBridgeService? _instance;
+  static AppRouter? _router;
+  static WidgetRef? _uiRef;
 
   final DriftTimelineRepository _timelineRepository;
   final Logger _log = Logger('HybridArkuiBridgeService');
+
+  static void bindUi({required AppRouter router, required WidgetRef ref}) {
+    _router = router;
+    _uiRef = ref;
+  }
 
   static Future<void> init(Drift drift) async {
     if (defaultTargetPlatform != TargetPlatform.ohos) {
@@ -59,6 +70,11 @@ class HybridArkuiBridgeService {
         final limit = requestedLimit.clamp(30, 180).toInt();
         final page = await _buildPhotoPage(offset: offset, limit: limit);
         return jsonEncode(page);
+      case 'openTimelineAssetViewer':
+        final args = (call.arguments as Map<Object?, Object?>?) ?? const {};
+        final index = (args['index'] as num?)?.toInt() ?? -1;
+        await _openTimelineAssetViewer(index);
+        return true;
       default:
         throw MissingPluginException('Unsupported hybrid bridge method: ${call.method}');
     }
@@ -201,6 +217,54 @@ class HybridArkuiBridgeService {
       }
     } catch (error, stackTrace) {
       debugPrint('Hybrid launch mode preference sync failed: $error\n$stackTrace');
+    }
+  }
+
+  Future<void> _openTimelineAssetViewer(int index) async {
+    if (index < 0) {
+      throw ArgumentError.value(index, 'index', 'Timeline asset index must be non-negative');
+    }
+
+    final router = _router;
+    final ref = _uiRef;
+    if (router == null || ref == null) {
+      throw StateError('Hybrid asset viewer is not ready');
+    }
+
+    final currentUser = Store.tryGet<UserDto>(StoreKey.currentUser);
+    if (currentUser == null) {
+      throw StateError('Missing current user for hybrid asset viewer');
+    }
+
+    final timelineUsers = await _resolveTimelineUserIds(currentUser.id);
+    final timelineService = ref.read(timelineFactoryProvider).main(timelineUsers);
+
+    try {
+      final asset = await timelineService.getAssetAsync(index);
+      if (asset == null) {
+        throw StateError('Timeline asset at index $index is unavailable');
+      }
+
+      AssetViewer.setAsset(ref, asset);
+      final routeFuture = router.push(AssetViewerRoute(initialIndex: index, timelineService: timelineService));
+      await _setHybridSelectedPane(1);
+      unawaited(
+        routeFuture.whenComplete(() async {
+          timelineService.dispose();
+          await _setHybridSelectedPane(0);
+        }),
+      );
+    } catch (_) {
+      timelineService.dispose();
+      rethrow;
+    }
+  }
+
+  Future<void> _setHybridSelectedPane(int pane) async {
+    try {
+      await _channel.invokeMethod<void>('setHybridSelectedPane', pane);
+    } catch (error, stackTrace) {
+      _log.warning('Failed to sync hybrid selected pane', error, stackTrace);
     }
   }
 }

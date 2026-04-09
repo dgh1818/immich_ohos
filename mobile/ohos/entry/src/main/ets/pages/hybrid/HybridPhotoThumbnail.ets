@@ -25,6 +25,10 @@ function toError(error: Object | string | number | boolean | undefined | null): 
 export class HybridThumbnailCache {
   private static entries: Map<string, HybridThumbnailCacheEntry> = new Map();
 
+  static hasReady(key: string): boolean {
+    return !!HybridThumbnailCache.entries.get(key)?.pixelMap;
+  }
+
   static acquire(key: string): PixelMap | undefined {
     const entry = HybridThumbnailCache.entries.get(key);
     if (!entry?.pixelMap) {
@@ -166,7 +170,7 @@ export class HybridThumbnailCache {
   static pruneOutsideKeys(keepKeys: Set<string>): void {
     const removableKeys: Array<string> = [];
     HybridThumbnailCache.entries.forEach((entry: HybridThumbnailCacheEntry, key: string) => {
-      if (keepKeys.has(key) || entry.refCount > 0 || entry.loadingPromise) {
+      if (keepKeys.has(resolveThumbnailCacheAssetId(key)) || entry.refCount > 0 || entry.loadingPromise) {
         return;
       }
       removableKeys.push(key);
@@ -260,6 +264,18 @@ export class HybridThumbnailCache {
   }
 }
 
+function resolveThumbnailCacheAssetId(key: string): string {
+  const separatorIndex = key.lastIndexOf('@');
+  if (separatorIndex <= 0) {
+    return key;
+  }
+  return key.slice(0, separatorIndex);
+}
+
+export function buildThumbnailCacheKey(assetId: string, requestSize: number): string {
+  return `${assetId}@${requestSize}`;
+}
+
 class HybridRemoteThumbnailWarmup {
   private static entries: Map<string, HybridRemoteCacheEntry> = new Map();
 
@@ -269,7 +285,7 @@ class HybridRemoteThumbnailWarmup {
     requestSize: number,
   ): void {
     if (!HYBRID_ENABLE_REMOTE_THUMBNAIL_DISK_WRITES) {
-      HybridThumbnailCache.prefetch(asset.id, () =>
+      HybridThumbnailCache.prefetch(buildThumbnailCacheKey(asset.id, requestSize), () =>
         loadThumbnailForPrefetchAsset(ctx, asset, requestSize)
       );
       return;
@@ -280,7 +296,7 @@ class HybridRemoteThumbnailWarmup {
     }
 
     if (Disk.hasRemoteThumbnailCache(ctx, asset.thumbnailUrl, requestSize)) {
-      HybridThumbnailCache.prefetch(asset.id, () =>
+      HybridThumbnailCache.prefetch(buildThumbnailCacheKey(asset.id, requestSize), () =>
         loadThumbnailForPrefetchAsset(ctx, asset, requestSize)
       );
       return;
@@ -297,7 +313,7 @@ class HybridRemoteThumbnailWarmup {
       Disk.ensureRemoteThumbnailCached(ctx, asset.thumbnailUrl as string, requestSize)
     )
       .then(() => {
-        HybridThumbnailCache.prefetch(asset.id, () =>
+        HybridThumbnailCache.prefetch(buildThumbnailCacheKey(asset.id, requestSize), () =>
           loadThumbnailForPrefetchAsset(ctx, asset, requestSize)
         );
       })
@@ -514,7 +530,7 @@ export function warmupAssetThumbnail(
   requestSize: number,
 ): void {
   if (asset.localId) {
-    HybridThumbnailCache.prefetch(asset.id, () =>
+    HybridThumbnailCache.prefetch(buildThumbnailCacheKey(asset.id, requestSize), () =>
       loadThumbnailForPrefetchAsset(ctx, asset, requestSize)
     );
     return;
@@ -538,8 +554,7 @@ export function prefetchAssetThumbnail(
   asset: HybridPhotoAsset,
   requestSize: number,
 ): void {
-  HybridThumbnailCache.prefetch(asset.id, () =>
+  HybridThumbnailCache.prefetch(buildThumbnailCacheKey(asset.id, requestSize), () =>
     loadThumbnailForPrefetchAsset(ctx, asset, requestSize)
   );
 }
-

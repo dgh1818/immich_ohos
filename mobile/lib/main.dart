@@ -288,6 +288,7 @@ class ImmichAppState extends ConsumerState<ImmichApp> with WidgetsBindingObserve
   Widget build(BuildContext context) {
     final router = ref.watch(appRouterProvider);
     final immichTheme = ref.watch(immichThemeProvider);
+    HybridArkuiBridgeService.bindUi(router: router, ref: ref);
 
     return ProviderScope(
       overrides: [localeProvider.overrideWithValue(context.locale)],
