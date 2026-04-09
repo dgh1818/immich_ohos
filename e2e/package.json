@@ -1,6 +1,6 @@
 {
   "name": "immich-e2e",
-  "version": "2.6.3",
+  "version": "2.7.2",
   "description": "",
   "main": "index.js",
   "type": "module",
@@ -32,10 +32,10 @@
     "@playwright/test": "^1.44.1",
     "@socket.io/component-emitter": "^3.1.2",
     "@types/luxon": "^3.4.2",
-    "@types/node": "^24.11.0",
+    "@types/node": "^24.12.0",
     "@types/pg": "^8.15.1",
     "@types/pngjs": "^6.0.4",
-    "@types/supertest": "^6.0.2",
+    "@types/supertest": "^7.0.0",
     "dotenv": "^17.2.3",
     "eslint": "^10.0.0",
     "eslint-config-prettier": "^10.1.8",
@@ -51,13 +51,13 @@
     "sharp": "^0.34.5",
     "socket.io-client": "^4.7.4",
     "supertest": "^7.0.0",
-    "typescript": "^5.3.3",
+    "typescript": "^6.0.0",
     "typescript-eslint": "^8.28.0",
     "utimes": "^5.2.1",
     "vite-tsconfig-paths": "^6.1.1",
     "vitest": "^4.0.0"
   },
   "volta": {
-    "node": "24.13.1"
+    "node": "24.14.1"
   }
 }
