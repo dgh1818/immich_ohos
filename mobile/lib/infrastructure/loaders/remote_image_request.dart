@@ -14,7 +14,13 @@ class RemoteImageRequest extends ImageRequest {
     final info = await remoteImageApi.requestImage(uri, requestId: requestId, preferEncoded: false);
     final frame = switch (info) {
       {'pointer': int pointer, 'length': int length} => await _fromEncodedPlatformImage(pointer, length),
-      {'pointer': int pointer, 'width': int width, 'height': int height, 'rowBytes': int rowBytes, 'isHdr': bool isHdr} =>
+      {
+        'pointer': int pointer,
+        'width': int width,
+        'height': int height,
+        'rowBytes': int rowBytes,
+        'isHdr': bool isHdr,
+      } =>
         await _fromDecodedPlatformImage(pointer, width, height, rowBytes, isHdr),
       {'pointer': int pointer, 'width': int width, 'height': int height, 'rowBytes': int rowBytes} =>
         await _fromDecodedPlatformImage(pointer, width, height, rowBytes),
