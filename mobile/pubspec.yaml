@@ -118,6 +118,7 @@ dependencies:
   coordtransform_dart: ^1.0.4
 
 dependency_overrides:
+  path_provider_android: 2.2.23
   native_video_player:
     path: ../../package_flutter/native_video_player_ohos
   local_auth:
