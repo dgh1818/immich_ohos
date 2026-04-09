@@ -10,9 +10,9 @@ Future<String> getUserAgentString() async {
   if (Platform.isAndroid) {
     platform = 'android';
   } else if (Platform.isIOS) {
-    platform = 'iOS';
+    platform = 'ios';
   } else if (defaultTargetPlatform == TargetPlatform.ohos) {
-    platform = 'iOS';
+    platform = 'ohos';
   } else {
     platform = 'unknown';
   }

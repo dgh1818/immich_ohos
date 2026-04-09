@@ -2,6 +2,7 @@ import { common } from '@kit.AbilityKit';
 import { preferences } from '@kit.ArkData';
 import { http } from '@kit.NetworkKit';
 import { uri } from '@kit.ArkTS';
+import bundleManager from '@ohos.bundle.bundleManager';
 import fs from '@ohos.file.fs';
 import util from '@ohos.util';
 
@@ -39,6 +40,7 @@ interface ParsedRequestUrl {
 }
 
 export class URLSessionManager {
+  private static readonly BUNDLE_INFO_FLAGS = bundleManager.BundleFlag.GET_BUNDLE_INFO_WITH_APPLICATION;
   private static readonly PREF_NAME = 'Immich::ClientCert';
   private static readonly KEY_CERT_PATH = 'certPath';
   private static readonly KEY_KEY_PATH = 'keyPath';
@@ -53,6 +55,7 @@ export class URLSessionManager {
   private static readonly IS_AUTHENTICATED_COOKIE = 'immich_is_authenticated';
   private static readonly AUTH_TYPE_COOKIE = 'immich_auth_type';
   private static readonly COOKIE_EXPIRY_DAYS = 400;
+  private static readonly USER_AGENT = URLSessionManager.buildUserAgent();
   private static readonly AUTH_COOKIE_NAMES = new Set<string>([
     URLSessionManager.ACCESS_TOKEN_COOKIE,
     URLSessionManager.IS_AUTHENTICATED_COOKIE,
@@ -82,6 +85,9 @@ export class URLSessionManager {
         mergedHeaders[key] = requestState.headers[key];
       }
     });
+    if (mergedHeaders['User-Agent'] === undefined && mergedHeaders['user-agent'] === undefined) {
+      mergedHeaders['User-Agent'] = URLSessionManager.USER_AGENT;
+    }
 
     const effectiveHeaders = requestUrl
       ? URLSessionManager.applyCookieHeaders(
@@ -774,6 +780,18 @@ export class URLSessionManager {
       }
     });
     return out;
+  }
+
+  private static buildUserAgent(): string {
+    try {
+      const bundleInfo = bundleManager.getBundleInfoForSelfSync(URLSessionManager.BUNDLE_INFO_FLAGS);
+      const version = bundleInfo.versionName && bundleInfo.versionName.length > 0
+        ? bundleInfo.versionName
+        : 'unknown';
+      return `immich-ohos/${version}`;
+    } catch (_) {
+      return 'immich-ohos/unknown';
+    }
   }
 
   private static normalizeExtension(extension?: string): string {

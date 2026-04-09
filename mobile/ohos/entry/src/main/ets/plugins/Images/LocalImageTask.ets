@@ -1,12 +1,12 @@
-import { buffer } from '@kit.ArkTS';
-import { sendableContextManager } from '@kit.AbilityKit';
-import { dataSharePredicates } from '@kit.ArkData';
-import { photoAccessHelper } from '@kit.MediaLibraryKit';
-import { image } from '@kit.ImageKit';
-import { fileUri } from '@kit.CoreFileKit';
-import fs from '@ohos.file.fs';
-import nativeBuffer from '../../utils/native_buffer';
-import { thumbHashToRGBA } from './Thumbhash';
+import { buffer } from "@kit.ArkTS";
+import { sendableContextManager } from "@kit.AbilityKit";
+import { dataSharePredicates } from "@kit.ArkData";
+import { photoAccessHelper } from "@kit.MediaLibraryKit";
+import { image } from "@kit.ImageKit";
+import { fileUri } from "@kit.CoreFileKit";
+import fs from "@ohos.file.fs";
+import nativeBuffer from "../../utils/native_buffer";
+import { thumbHashToRGBA } from "./Thumbhash";
 
 export interface LocalBufferResult {
   buffer: ArrayBuffer;
@@ -23,10 +23,9 @@ export interface LocalDecodeResult {
   rowBytes: number;
   isHdr: boolean;
 }
-
 @Concurrent
 export async function decodeThumbhashTask(thumbhash: string): Promise<LocalBufferResult> {
-  const inputBuffer = buffer.from(thumbhash, 'base64');
+  const inputBuffer = buffer.from(thumbhash, "base64");
   const bytes = new Uint8Array(inputBuffer.buffer);
   const imageOut = thumbHashToRGBA(bytes);
   return {
@@ -37,7 +36,6 @@ export async function decodeThumbhashTask(thumbhash: string): Promise<LocalBuffe
     isHdr: imageOut.isHdr,
   };
 }
-
 @Concurrent
 export async function readEncodedLocalAssetTask(assetId: string): Promise<ArrayBuffer> {
   const file = fs.openSync(assetId, fs.OpenMode.READ_ONLY);
@@ -58,14 +56,13 @@ export async function readEncodedLocalAssetTask(assetId: string): Promise<ArrayB
     fs.closeSync(file);
   }
 }
-
 @Concurrent
 export async function decodeLocalImageTask(
   assetId: string,
   width: number,
   height: number,
   isVideo: boolean,
-  sendableUiContext: sendableContextManager.SendableContext
+  sendableUiContext: sendableContextManager.SendableContext,
 ): Promise<LocalDecodeResult> {
   const ctx = sendableContextManager.convertToUIAbilityContext(sendableUiContext);
   const makeAspectFitThumbnailSize = (
@@ -75,12 +72,22 @@ export async function decodeLocalImageTask(
     assetHeight: number,
     orientation: number,
   ): Size => {
-    const orientedWidth = orientation === 90 || orientation === 270
-      ? (assetHeight > 0 ? assetHeight : 1)
-      : (assetWidth > 0 ? assetWidth : 1);
-    const orientedHeight = orientation === 90 || orientation === 270
-      ? (assetWidth > 0 ? assetWidth : 1)
-      : (assetHeight > 0 ? assetHeight : 1);
+    const orientedWidth =
+      orientation === 90 || orientation === 270
+        ? assetHeight > 0
+          ? assetHeight
+          : 1
+        : assetWidth > 0
+          ? assetWidth
+          : 1;
+    const orientedHeight =
+      orientation === 90 || orientation === 270
+        ? assetWidth > 0
+          ? assetWidth
+          : 1
+        : assetHeight > 0
+          ? assetHeight
+          : 1;
 
     let boundWidth = requestWidth > 0 ? requestWidth : 0;
     let boundHeight = requestHeight > 0 ? requestHeight : 0;
@@ -88,9 +95,9 @@ export async function decodeLocalImageTask(
       boundWidth = orientedWidth;
       boundHeight = orientedHeight;
     } else if (boundWidth <= 0) {
-      boundWidth = Math.round(boundHeight * orientedWidth / orientedHeight);
+      boundWidth = Math.round((boundHeight * orientedWidth) / orientedHeight);
     } else if (boundHeight <= 0) {
-      boundHeight = Math.round(boundWidth * orientedHeight / orientedWidth);
+      boundHeight = Math.round((boundWidth * orientedHeight) / orientedWidth);
     }
 
     const scale = Math.min(boundWidth / orientedWidth, boundHeight / orientedHeight);
@@ -103,12 +110,13 @@ export async function decodeLocalImageTask(
 
   if (isVideo) {
     const phAccessHelper = photoAccessHelper.getPhotoAccessHelper(ctx);
-    const predicates: dataSharePredicates.DataSharePredicates = new dataSharePredicates.DataSharePredicates();
-    predicates.equalTo('uri', assetId);
+    const predicates: dataSharePredicates.DataSharePredicates =
+      new dataSharePredicates.DataSharePredicates();
+    predicates.equalTo("uri", assetId);
     const videoFetchResult: photoAccessHelper.FetchResult<photoAccessHelper.PhotoAsset> =
       await phAccessHelper.getAssets({
-        fetchColumns: ['width', 'height', 'orientation'],
-        predicates: predicates
+        fetchColumns: ["width", "height", "orientation"],
+        predicates: predicates,
       });
     const photoAsset: photoAccessHelper.PhotoAsset = await videoFetchResult.getFirstObject();
     const widthKey: photoAccessHelper.PhotoKeys = photoAccessHelper.PhotoKeys.WIDTH;
@@ -128,13 +136,24 @@ export async function decodeLocalImageTask(
   } else {
     const filePath = new fileUri.FileUri(assetId).path;
     const imageSource: image.ImageSource = image.createImageSource(filePath);
-    const imageInfo = await imageSource.getImageInfo();
+    //const imageInfo = await imageSource.getImageInfo();
 
     if (width == 0 && height == 0) {
+      const phAccessHelper = photoAccessHelper.getPhotoAccessHelper(ctx);
+      const predicates: dataSharePredicates.DataSharePredicates =
+        new dataSharePredicates.DataSharePredicates();
+      predicates.equalTo("uri", assetId);
+      const videoFetchResult: photoAccessHelper.FetchResult<photoAccessHelper.PhotoAsset> =
+        await phAccessHelper.getAssets({
+          fetchColumns: [photoAccessHelper.PhotoKeys.DYNAMIC_RANGE_TYPE],
+          predicates: predicates,
+        });
+      const photoAsset: photoAccessHelper.PhotoAsset = await videoFetchResult.getFirstObject();
+      const isHdr = photoAsset.get(photoAccessHelper.PhotoKeys.DYNAMIC_RANGE_TYPE) as number;
       try {
         pixelMap = await imageSource.createPixelMap({
           editable: true,
-          desiredPixelFormat: imageInfo.isHdr
+          desiredPixelFormat: isHdr
             ? image.PixelMapFormat.RGBA_1010102
             : image.PixelMapFormat.RGBA_8888,
           desiredDynamicRange: image.DecodingDynamicRange.AUTO,
@@ -148,20 +167,19 @@ export async function decodeLocalImageTask(
       }
     } else {
       const phAccessHelper = photoAccessHelper.getPhotoAccessHelper(ctx);
-      const predicates: dataSharePredicates.DataSharePredicates = new dataSharePredicates.DataSharePredicates();
-      predicates.equalTo('uri', assetId);
+      const predicates: dataSharePredicates.DataSharePredicates =
+        new dataSharePredicates.DataSharePredicates();
+      predicates.equalTo("uri", assetId);
       const fetchResult: photoAccessHelper.FetchResult<photoAccessHelper.PhotoAsset> =
         await phAccessHelper.getAssets({
-          fetchColumns: ['width', 'height', 'orientation'],
-          predicates: predicates
+          fetchColumns: ["width", "height", "orientation"],
+          predicates: predicates,
         });
       const photoAsset: photoAccessHelper.PhotoAsset = await fetchResult.getFirstObject();
-      const widthKey: photoAccessHelper.PhotoKeys = photoAccessHelper.PhotoKeys.WIDTH;
-      const heightKey: photoAccessHelper.PhotoKeys = photoAccessHelper.PhotoKeys.HEIGHT;
-      const orientationKey: photoAccessHelper.PhotoKeys = photoAccessHelper.PhotoKeys.ORIENTATION;
-      const photoAssetWidth = (photoAsset.get(widthKey.toString()) as number) || Math.round(imageInfo.size.width);
-      const photoAssetHeight = (photoAsset.get(heightKey.toString()) as number) || Math.round(imageInfo.size.height);
-      const photoAssetOrientation = (photoAsset.get(orientationKey.toString()) as number) || 0;
+      const photoAssetWidth = photoAsset.get(photoAccessHelper.PhotoKeys.WIDTH) as number;
+      const photoAssetHeight = photoAsset.get(photoAccessHelper.PhotoKeys.HEIGHT) as number;
+      const photoAssetOrientation =
+        (photoAsset.get(photoAccessHelper.PhotoKeys.ORIENTATION) as number) ?? 0;
       const thumbnailSize = makeAspectFitThumbnailSize(
         width,
         height,
@@ -189,7 +207,7 @@ export async function decodeLocalImageTask(
     }
 
     console.info(
-      `LocalImageTask stride debug: reqW=${width} reqH=${height} w=${actualWidth} h=${actualHeight} rowBytes=${rowBytes} stride=${stride} rawStride=${pixelInfo.stride}`
+      `LocalImageTask stride debug: reqW=${width} reqH=${height} w=${actualWidth} h=${actualHeight} rowBytes=${rowBytes} stride=${stride} rawStride=${pixelInfo.stride}`,
     );
 
     if (stride < rowBytes) {
@@ -199,7 +217,9 @@ export async function decodeLocalImageTask(
     pixelMap.readPixelsToBufferSync(buffer);
     const length = buffer.byteLength;
     if (length <= 0) {
-      throw new Error(`decoded local image (${actualWidth}x${actualHeight}, stride=${stride}) buffer is empty`);
+      throw new Error(
+        `decoded local image (${actualWidth}x${actualHeight}, stride=${stride}) buffer is empty`,
+      );
     }
 
     const pointer = nativeBuffer.allocate(length);
