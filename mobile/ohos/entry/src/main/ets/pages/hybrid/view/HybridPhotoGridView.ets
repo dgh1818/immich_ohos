@@ -1,12 +1,12 @@
 import common from '@ohos.app.ability.common';
 import { HybridPhotoGridVm } from '../viewmodel/HybridPhotoGridVm';
 import * as Shared from '../HybridPhotoGridShared';
-import { HybridPhotoGridVc } from '../viewcontroller/HybridPhotoGridVc';
+import { HybridGridKind, HybridPhotoGridVc } from '../viewcontroller/HybridPhotoGridVc';
 import { HybridGridSnapshotVc } from '../viewcontroller/HybridGridSnapshotVc';
 import { HybridGridTitleBarMaskVc } from '../viewcontroller/HybridGridTitleBarMaskVc';
-import { HybridDayGridView } from './DayGridView';
-import { HybridDayPreviewGridView } from './DayPreviewGridView';
-import { HybridIdleShrinkGridView } from './DayIdleShrinkGridView';
+import { HybridDayGridA } from './DayGridView';
+import { HybridDayGridB } from './DayPreviewGridView';
+import { HybridDayGridC } from './DayGridC';
 import { HybridGridSnapshotView } from './common/GridSnapshotView';
 import { HybridGridNoDataView } from './GridNoDataView';
 import { HybridGridTitleBarMaskView } from './GridTitleBarMaskView';
@@ -95,50 +95,75 @@ export struct HybridPhotoGridView {
   @Builder
   private buildDayView() {
     Stack({ alignContent: Alignment.TopStart }) {
-      HybridIdleShrinkGridView({
-        columns: this.viewModel.idlePreviewColumns,
-        visible: this.viewModel.previewVisible && this.viewModel.useIdlePrebuiltPreview,
-        warmActive: this.viewModel.idlePreviewWarmActive,
-        requestSize: this.viewModel.resolveIdlePreviewRequestSize(),
-        opacityValue: this.viewModel.previewOpacity,
-        scaleValue: this.viewModel.previewScale,
+      HybridDayGridA({
+        columns: this.viewModel.gridColumnsA,
+        visible: this.viewModel.gridVisibleA,
+        interactive: this.viewModel.gridInteractiveA,
+        warmActive: this.viewModel.gridWarmActiveA,
+        hasMore: this.viewModel.hasMore,
+        requestSize: this.viewModel.resolveRequestSizeForKind(HybridGridKind.A),
+        scaleValue: this.viewModel.gridScaleA,
+        opacityValue: this.viewModel.gridOpacityA,
         centerX: this.viewModel.pinchCenterX,
         centerY: this.viewModel.pinchCenterY,
+        zIndexValue: this.viewModel.gridZIndexA,
+        attributeUpdater: this.viewModel.gridAttributeUpdaterA,
         scrollerAttachHandler: (scroller: Scroller): void => {
-          this.viewModel.bindIdlePreviewScroller(scroller);
+          this.viewModel.bindScrollerA(scroller);
         },
         gridDataSourceAttachHandler: (dataSource: Shared.HybridGridDataSource): void => {
-          this.viewModel.bindIdlePreviewGridDataSource(dataSource);
-        },
-        areaChangeHandler: (width: number, height: number): void => {
-          this.viewModel.onIdlePreviewAreaChange(width, height);
+          this.viewModel.bindDataSourceA(dataSource);
         },
         assetTapHandler: (asset: Shared.HybridPhotoAsset): void => {
           void this.viewModel.openPreviewAssetViewer(asset);
         },
+        areaChangeHandler: (width: number, height: number): void => {
+          this.viewModel.onGridAreaChange(width, height);
+        },
+        scrollStartHandler: (): void => {
+          this.viewModel.onScrollStart();
+        },
+        scrollStopHandler: (): void => {
+          this.viewModel.onScrollStop();
+        },
+        scrollIndexHandler: (start: number, end: number): void => {
+          this.viewModel.onScrollIndex(start, end);
+        },
+        pinchStartHandler: (centerX: number, centerY: number): void => {
+          this.viewModel.onPinchStart(centerX, centerY);
+        },
+        pinchUpdateHandler: (scale: number, centerX: number, centerY: number): void => {
+          this.viewModel.onPinchUpdate(scale, centerX, centerY);
+        },
+        pinchEndHandler: (): void => {
+          this.viewModel.onPinchEnd();
+        },
       });
 
-      HybridDayPreviewGridView({
-        columns: this.viewModel.previewColumns,
-        visible: this.viewModel.previewVisible && !this.viewModel.useIdlePrebuiltPreview,
-        interactive: this.viewModel.isPreviewLayerInteractive(),
-        warmActive: this.viewModel.previewWarmActive,
-        requestSize: this.viewModel.resolvePreviewRequestSize(),
-        opacityValue: this.viewModel.previewOpacity,
-        scaleValue: this.viewModel.previewScale,
-        translateX: this.viewModel.previewTranslateX,
-        translateY: this.viewModel.previewTranslateY,
+      HybridDayGridB({
+        columns: this.viewModel.gridColumnsB,
+        visible: this.viewModel.gridVisibleB,
+        interactive: this.viewModel.gridInteractiveB,
+        warmActive: this.viewModel.gridWarmActiveB,
+        hasMore: this.viewModel.hasMore,
+        requestSize: this.viewModel.resolveRequestSizeForKind(HybridGridKind.B),
+        scaleValue: this.viewModel.gridScaleB,
+        opacityValue: this.viewModel.gridOpacityB,
         centerX: this.viewModel.pinchCenterX,
         centerY: this.viewModel.pinchCenterY,
-        hasMore: this.viewModel.hasMore,
+        zIndexValue: this.viewModel.gridZIndexB,
+        attributeUpdater: this.viewModel.gridAttributeUpdaterB,
         scrollerAttachHandler: (scroller: Scroller): void => {
-          this.viewModel.bindPreviewScroller(scroller);
+          this.viewModel.bindScrollerB(scroller);
         },
         gridDataSourceAttachHandler: (dataSource: Shared.HybridGridDataSource): void => {
-          this.viewModel.bindPreviewGridDataSource(dataSource);
+          this.viewModel.bindDataSourceB(dataSource);
         },
         areaChangeHandler: (width: number, height: number): void => {
-          this.viewModel.onPreviewAreaChange(width, height);
+          this.viewModel.onGridAreaChange(width, height);
+        },
+        assetTapHandler: (asset: Shared.HybridPhotoAsset): void => {
+          void this.viewModel.openPreviewAssetViewer(asset);
         },
         scrollStartHandler: (): void => {
           this.viewModel.onPreviewScrollStart();
@@ -149,31 +174,41 @@ export struct HybridPhotoGridView {
         scrollIndexHandler: (start: number, end: number): void => {
           this.viewModel.onPreviewScrollIndex(start, end);
         },
-        assetTapHandler: (asset: Shared.HybridPhotoAsset): void => {
-          void this.viewModel.openPreviewAssetViewer(asset);
+        pinchStartHandler: (centerX: number, centerY: number): void => {
+          this.viewModel.onPinchStart(centerX, centerY);
+        },
+        pinchUpdateHandler: (scale: number, centerX: number, centerY: number): void => {
+          this.viewModel.onPinchUpdate(scale, centerX, centerY);
+        },
+        pinchEndHandler: (): void => {
+          this.viewModel.onPinchEnd();
         },
       });
 
-      HybridDayGridView({
-        columns: this.viewModel.gridColumns,
+      HybridDayGridC({
+        columns: this.viewModel.gridColumnsC,
+        visible: this.viewModel.gridVisibleC,
+        interactive: this.viewModel.gridInteractiveC,
+        warmActive: this.viewModel.gridWarmActiveC,
         hasMore: this.viewModel.hasMore,
-        requestSize: this.viewModel.resolveMainRequestSize(),
-        scaleValue: this.viewModel.mainGridScale,
-        opacityValue: this.viewModel.mainGridOpacity,
+        requestSize: this.viewModel.resolveRequestSizeForKind(HybridGridKind.C),
+        scaleValue: this.viewModel.gridScaleC,
+        opacityValue: this.viewModel.gridOpacityC,
         centerX: this.viewModel.pinchCenterX,
         centerY: this.viewModel.pinchCenterY,
-        isVisible: this.viewModel.isMainLayerVisible(),
+        zIndexValue: this.viewModel.gridZIndexC,
+        attributeUpdater: this.viewModel.gridAttributeUpdaterC,
         scrollerAttachHandler: (scroller: Scroller): void => {
-          this.viewModel.bindMainScroller(scroller);
+          this.viewModel.bindScrollerC(scroller);
         },
         gridDataSourceAttachHandler: (dataSource: Shared.HybridGridDataSource): void => {
-          this.viewModel.bindMainGridDataSource(dataSource);
-        },
-        assetTapHandler: (asset: Shared.HybridPhotoAsset): void => {
-          void this.viewModel.openPreviewAssetViewer(asset);
+          this.viewModel.bindDataSourceC(dataSource);
         },
         areaChangeHandler: (width: number, height: number): void => {
           this.viewModel.onGridAreaChange(width, height);
+        },
+        assetTapHandler: (asset: Shared.HybridPhotoAsset): void => {
+          void this.viewModel.openPreviewAssetViewer(asset);
         },
         scrollStartHandler: (): void => {
           this.viewModel.onScrollStart();

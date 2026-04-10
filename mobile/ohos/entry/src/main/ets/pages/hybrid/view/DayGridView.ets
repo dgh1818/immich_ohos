@@ -1,5 +1,6 @@
 import * as Shared from '../HybridPhotoGridShared';
 import { HybridPhotoTile, HybridPhotoTileReleasePolicy } from '../HybridPhotoTile';
+import { HybridGridAttributeUpdater } from '../viewcontroller/HybridDayGridVc';
 import { HybridPhotoGridViewId, HybridPhotoGridZIndex } from '../viewcontroller/HybridPhotoGridVc';
 
 type HybridGridItem = Shared.HybridGridItem;
@@ -9,7 +10,10 @@ const HYBRID_DAY_GRID_SCROLLER: Scroller = new Scroller();
 const HYBRID_DAY_GRID_DATA_SOURCE: Shared.HybridGridDataSource = new Shared.HybridGridDataSource();
 
 @Component
-export struct HybridDayGridView {
+export struct HybridDayGridA {
+  @Prop visible: boolean = false;
+  @Prop interactive: boolean = false;
+  @Prop warmActive: boolean = false;
   @Prop columns: number = Shared.HYBRID_GRID_COLUMNS;
   @Prop hasMore: boolean = true;
   @Prop requestSize: number = Shared.HYBRID_REQUEST_SIZE;
@@ -17,7 +21,8 @@ export struct HybridDayGridView {
   @Prop opacityValue: number = 1;
   @Prop centerX: number = 0;
   @Prop centerY: number = 0;
-  @Prop isVisible: boolean = true;
+  @Prop zIndexValue: number = HybridPhotoGridZIndex.DAY_GRID_A;
+  public attributeUpdater: HybridGridAttributeUpdater = new HybridGridAttributeUpdater();
   public scrollerAttachHandler: (scroller: Scroller) => void = (_scroller: Scroller): void => {};
   public gridDataSourceAttachHandler: (dataSource: Shared.HybridGridDataSource) => void =
     (_dataSource: Shared.HybridGridDataSource): void => {};
@@ -47,9 +52,10 @@ export struct HybridDayGridView {
         asset: asset,
         requestSize: this.requestSize,
         suppressRelease: false,
-        layerActive: this.isVisible && this.opacityValue > 0.01,
-        releasePolicy: HybridPhotoTileReleasePolicy.DELAYED,
-        invisibleReleaseDelayMs: 220,
+        layerActive: this.visible && this.opacityValue > 0.01,
+        warmActive: this.warmActive,
+        releasePolicy: this.interactive ? HybridPhotoTileReleasePolicy.DELAYED : HybridPhotoTileReleasePolicy.ACTIVE_ONLY,
+        invisibleReleaseDelayMs: this.interactive ? 220 : 0,
       })
         .width('100%')
         .height('100%')
@@ -58,6 +64,7 @@ export struct HybridDayGridView {
         });
     }
     .width('100%')
+    .clip(false)
     .aspectRatio(1);
   }
 
@@ -65,6 +72,7 @@ export struct HybridDayGridView {
   private buildPlaceholderCell() {
     Column() {}
       .width('100%')
+      .clip(false)
       .aspectRatio(1)
       .backgroundColor(Color.Transparent);
   }
@@ -81,30 +89,24 @@ export struct HybridDayGridView {
               this.buildPlaceholderCell();
             }
           }
+          .reuseId(item.kind === 'photo' ? 'photoTile' : 'placeholder');
         },
         (item: HybridGridItem) => item.id,
       );
     }
-      .id(HybridPhotoGridViewId.DAY_GRID)
-      .zIndex(HybridPhotoGridZIndex.DAY_GRID)
+      .id(HybridPhotoGridViewId.DAY_GRID_A)
+      .attributeModifier(this.attributeUpdater)
       .columnsTemplate(this.resolveColumnsTemplate())
       .rowsGap(Shared.HYBRID_GRID_GAP)
       .columnsGap(Shared.HYBRID_GRID_GAP)
       .cachedCount(Shared.HYBRID_LIST_CACHE_COUNT)
       .scrollBar(BarState.Off)
-      .edgeEffect(EdgeEffect.Spring)
+      .edgeEffect(this.interactive ? EdgeEffect.Spring : EdgeEffect.None)
       .clip(false)
       .width('100%')
       .height('100%')
       .backgroundColor(Color.Transparent)
-      .opacity(this.isVisible ? this.opacityValue : 0)
-      .hitTestBehavior(this.isVisible ? HitTestMode.Default : HitTestMode.None)
-      .scale({
-        x: this.scaleValue,
-        y: this.scaleValue,
-        centerX: this.centerX,
-        centerY: this.centerY,
-      })
+      .hitTestBehavior(this.visible && this.interactive ? HitTestMode.Default : HitTestMode.None)
       .onAreaChange((_oldValue: Area, newValue: Area): void => {
         this.areaChangeHandler(Number(newValue.width), Number(newValue.height));
       })

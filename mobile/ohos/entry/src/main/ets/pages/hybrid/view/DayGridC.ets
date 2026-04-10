@@ -6,11 +6,11 @@ import { HybridPhotoGridViewId, HybridPhotoGridZIndex } from '../viewcontroller/
 type HybridGridItem = Shared.HybridGridItem;
 type HybridPhotoAsset = Shared.HybridPhotoAsset;
 
-const HYBRID_DAY_PREVIEW_SCROLLER: Scroller = new Scroller();
-const HYBRID_DAY_PREVIEW_DATA_SOURCE: Shared.HybridGridDataSource = new Shared.HybridGridDataSource();
+const HYBRID_DAY_GRID_C_SCROLLER: Scroller = new Scroller();
+const HYBRID_DAY_GRID_C_DATA_SOURCE: Shared.HybridGridDataSource = new Shared.HybridGridDataSource();
 
 @Component
-export struct HybridDayGridB {
+export struct HybridDayGridC {
   @Prop visible: boolean = false;
   @Prop interactive: boolean = false;
   @Prop warmActive: boolean = false;
@@ -21,7 +21,7 @@ export struct HybridDayGridB {
   @Prop centerX: number = 0;
   @Prop centerY: number = 0;
   @Prop hasMore: boolean = true;
-  @Prop zIndexValue: number = HybridPhotoGridZIndex.DAY_GRID_B;
+  @Prop zIndexValue: number = HybridPhotoGridZIndex.DAY_GRID_C;
   public attributeUpdater: HybridGridAttributeUpdater = new HybridGridAttributeUpdater();
   public scrollerAttachHandler: (scroller: Scroller) => void = (_scroller: Scroller): void => {};
   public gridDataSourceAttachHandler: (dataSource: Shared.HybridGridDataSource) => void =
@@ -37,8 +37,8 @@ export struct HybridDayGridB {
   public pinchEndHandler: () => void = (): void => {};
 
   aboutToAppear(): void {
-    this.scrollerAttachHandler(HYBRID_DAY_PREVIEW_SCROLLER);
-    this.gridDataSourceAttachHandler(HYBRID_DAY_PREVIEW_DATA_SOURCE);
+    this.scrollerAttachHandler(HYBRID_DAY_GRID_C_SCROLLER);
+    this.gridDataSourceAttachHandler(HYBRID_DAY_GRID_C_DATA_SOURCE);
   }
 
   private resolveColumnsTemplate(): string {
@@ -77,9 +77,9 @@ export struct HybridDayGridB {
   }
 
   build() {
-    Grid(HYBRID_DAY_PREVIEW_SCROLLER) {
+    Grid(HYBRID_DAY_GRID_C_SCROLLER) {
       LazyForEach(
-        HYBRID_DAY_PREVIEW_DATA_SOURCE,
+        HYBRID_DAY_GRID_C_DATA_SOURCE,
         (item: HybridGridItem) => {
           GridItem() {
             if (item.kind === 'photo' && item.asset) {
@@ -90,10 +90,10 @@ export struct HybridDayGridB {
           }
           .reuseId(item.kind === 'photo' ? 'photoTile' : 'placeholder');
         },
-        (item: HybridGridItem) => `preview_${item.id}`,
+        (item: HybridGridItem) => `expand_${item.id}`,
       );
     }
-      .id(HybridPhotoGridViewId.DAY_GRID_B)
+      .id(HybridPhotoGridViewId.DAY_GRID_C)
       .attributeModifier(this.attributeUpdater)
       .columnsTemplate(this.resolveColumnsTemplate())
       .rowsGap(Shared.HYBRID_GRID_GAP)

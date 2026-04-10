@@ -25,6 +25,10 @@ function toError(error: Object | string | number | boolean | undefined | null): 
 export class HybridThumbnailCache {
   private static entries: Map<string, HybridThumbnailCacheEntry> = new Map();
 
+  static entryCount(): number {
+    return HybridThumbnailCache.entries.size;
+  }
+
   static hasReady(key: string): boolean {
     return !!HybridThumbnailCache.entries.get(key)?.pixelMap;
   }
@@ -170,7 +174,7 @@ export class HybridThumbnailCache {
   static pruneOutsideKeys(keepKeys: Set<string>): void {
     const removableKeys: Array<string> = [];
     HybridThumbnailCache.entries.forEach((entry: HybridThumbnailCacheEntry, key: string) => {
-      if (keepKeys.has(resolveThumbnailCacheAssetId(key)) || entry.refCount > 0 || entry.loadingPromise) {
+      if (keepKeys.has(key) || entry.refCount > 0 || entry.loadingPromise) {
         return;
       }
       removableKeys.push(key);
@@ -186,6 +190,16 @@ export class HybridThumbnailCache {
       } catch (_) {}
       HybridThumbnailCache.entries.delete(key);
     });
+  }
+
+  static touchRetainedKeys(keys: Array<string>): void {
+    const now = Date.now();
+    for (const key of keys) {
+      const entry = HybridThumbnailCache.entries.get(key);
+      if (entry?.pixelMap) {
+        entry.lastUsedAt = now;
+      }
+    }
   }
 
   private static prune(): void {
@@ -262,14 +276,6 @@ export class HybridThumbnailCache {
       HybridThumbnailCache.entries.delete(key);
     }
   }
-}
-
-function resolveThumbnailCacheAssetId(key: string): string {
-  const separatorIndex = key.lastIndexOf('@');
-  if (separatorIndex <= 0) {
-    return key;
-  }
-  return key.slice(0, separatorIndex);
 }
 
 export function buildThumbnailCacheKey(assetId: string, requestSize: number): string {

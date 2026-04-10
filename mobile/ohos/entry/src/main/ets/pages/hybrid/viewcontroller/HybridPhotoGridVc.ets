@@ -1,7 +1,14 @@
+export enum HybridGridKind {
+  A = 0,
+  B = 1,
+  C = 2,
+}
+
 export enum HybridPhotoGridViewId {
   CONTAINER = '__hybrid_photo_grid_container__',
-  DAY_GRID = '__hybrid_day_grid__',
-  DAY_PREVIEW_GRID = '__hybrid_day_preview_grid__',
+  DAY_GRID_A = '__hybrid_day_grid_a__',
+  DAY_GRID_B = '__hybrid_day_grid_b__',
+  DAY_GRID_C = '__hybrid_day_grid_c__',
   DAY_GRID_SNAPSHOT = '__hybrid_day_grid_snapshot__',
   TITLE_BAR_MASK = '__hybrid_title_bar_mask__',
   NO_DATA = '__hybrid_no_data__',
@@ -10,8 +17,9 @@ export enum HybridPhotoGridViewId {
 }
 
 export enum HybridPhotoGridZIndex {
-  DAY_GRID = 100,
-  DAY_PREVIEW_GRID = 90,
+  DAY_GRID_A = 100,
+  DAY_GRID_B = 90,
+  DAY_GRID_C = 80,
   DAY_GRID_SNAPSHOT = 220,
   IRREGULAR = 300,
   FIXED_IRREGULAR = 310,

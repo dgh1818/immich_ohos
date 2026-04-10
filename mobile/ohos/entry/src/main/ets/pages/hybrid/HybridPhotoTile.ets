@@ -8,6 +8,11 @@ export enum HybridPhotoTileReleasePolicy {
   ACTIVE_ONLY = 2,
 }
 
+export enum HybridPhotoTilePlaceholderMode {
+  GLASS = 0,
+  SOLID_LIGHT = 1,
+}
+
 const HYBRID_TILE_DELAYED_RELEASE_MS: number = 220;
 const HYBRID_TILE_AGGRESSIVE_RELEASE_MS: number = 48;
 
@@ -40,6 +45,9 @@ export struct HybridPhotoTile {
 
   @Prop
   invisibleReleaseDelayMs: number = HYBRID_TILE_DELAYED_RELEASE_MS;
+
+  @Prop
+  placeholderMode: HybridPhotoTilePlaceholderMode = HybridPhotoTilePlaceholderMode.GLASS;
 
   @Prop suppressRelease: boolean = false;
 
@@ -109,8 +117,7 @@ export struct HybridPhotoTile {
   private reloadForCurrentAsset(): void {
     this.cancelPendingRelease();
     this.loadVersion += 1;
-    this.releaseDisplayedAsset();
-    this.pixelMap = undefined;
+    // Keep stale pixelMap visible while new image loads to avoid white flash
     this.hasError = false;
     this.isLoading = true;
     this.ensureLoaded();
@@ -201,7 +208,8 @@ export struct HybridPhotoTile {
     if (!this.shouldKeepReady()) {
       return;
     }
-    if (this.pixelMap || this.hasError) {
+    // Skip if already displaying the correct asset and has no error
+    if (this.hasError) {
       return;
     }
 
@@ -209,6 +217,12 @@ export struct HybridPhotoTile {
     const assetId: string = asset.id;
     const requestSize: number = this.requestSize;
     const cacheKey = buildThumbnailCacheKey(assetId, requestSize);
+
+    // Already displaying this exact asset — nothing to do
+    if (this.pixelMap && this.displayedAssetId === cacheKey) {
+      this.isLoading = false;
+      return;
+    }
 
     const cachedPixelMap = HybridThumbnailCache.acquire(cacheKey);
     if (cachedPixelMap) {
@@ -221,6 +235,7 @@ export struct HybridPhotoTile {
     }
 
     const version = ++this.loadVersion;
+    // Keep stale pixelMap visible (isLoading=true but pixelMap stays)
     this.isLoading = true;
     this.hasError = false;
 
@@ -245,6 +260,9 @@ export struct HybridPhotoTile {
 
       this.isLoading = false;
       this.hasError = true;
+      // Clear stale pixelMap on error so error state shows
+      this.releaseDisplayedAsset();
+      this.pixelMap = undefined;
       console.error(`[HybridPhotoTile] load failed for ${assetId}: ${error}`);
     }
   }
@@ -304,6 +322,14 @@ export struct HybridPhotoTile {
     });
   }
 
+  @Builder
+  private buildSolidPlaceholder() {
+    Column() {}
+      .width("100%")
+      .height("100%")
+      .backgroundColor(0xffffffff);
+  }
+
   build() {
     Stack() {
       if (this.pixelMap) {
@@ -314,7 +340,11 @@ export struct HybridPhotoTile {
           .enableAnalyzer(false)
           .draggable(false);
       } else if (this.isLoading || !this.hasError) {
-        this.buildGlassPlaceholder();
+        if (this.placeholderMode === HybridPhotoTilePlaceholderMode.SOLID_LIGHT) {
+          this.buildSolidPlaceholder();
+        } else {
+          this.buildGlassPlaceholder();
+        }
       } else {
         Column() {
           Text("No preview")
@@ -325,7 +355,7 @@ export struct HybridPhotoTile {
         .height("100%")
         .justifyContent(FlexAlign.Center)
         .alignItems(HorizontalAlign.Center)
-        .backgroundColor(0xffe5e7eb);
+        .backgroundColor(0xfff1f5f9);
       }
 
       if (this.asset.isVideo) {
@@ -349,6 +379,6 @@ export struct HybridPhotoTile {
     .onVisibleAreaChange([0.0, 0.01], (isVisible: boolean, currentRatio: number) => {
       this.handleVisibleAreaChange(isVisible, currentRatio);
     })
-    .backgroundColor(0xffe5e7eb);
+    .backgroundColor(0xfff1f5f9);
   }
 }
