@@ -1,0 +1,16 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "build hap release",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-NoProfile",
+				"-Command",
+				"$env:DEVECO_SDK_HOME='C:\\Program Files\\Huawei\\DevEco Studio\\sdk\\default'; flutter build hap --release"
+			],
+			"isBackground": false
+		}
+	]
+}
