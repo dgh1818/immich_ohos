@@ -113,7 +113,7 @@ class MapStateNotifier extends Notifier<MapState> {
       includeArchived: appSettingsService.getSetting(AppSettingsEnum.mapIncludeArchived),
       withPartners: appSettingsService.getSetting(AppSettingsEnum.mapwithPartners),
       relativeDays: appSettingsService.getSetting(AppSettingsEnum.mapRelativeDate),
-      bounds: LatLngBounds(northeast: const LatLng(0, 0), southwest: const LatLng(0, 0)),
+      bounds: LatLngBounds(northeast: const LatLng(31.371944, 121.749722), southwest: const LatLng(30.971944, 121.349722)),
     );
   }
 }
