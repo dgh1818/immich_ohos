@@ -1,35 +1,38 @@
-import * as Shared from '../HybridPhotoGridShared';
-import { HybridPhotoTile, HybridPhotoTileReleasePolicy } from '../HybridPhotoTile';
-import { HybridGridAttributeUpdater } from '../viewcontroller/HybridDayGridVc';
-import { HybridPhotoGridViewId, HybridPhotoGridZIndex } from '../viewcontroller/HybridPhotoGridVc';
+import * as Shared from '../PhotoGridShared';
+import { GridAttributeUpdater } from '../viewcontroller/GridAttributeUpdater';
+import { PhotoGridViewId } from '../viewcontroller/PhotoGridViewController';
+import { PhotoTile, PhotoTileReleasePolicy } from '../PhotoTile';
+import { LazyLoadImg } from './LazyLoadImg';
 
-type HybridGridItem = Shared.HybridGridItem;
-type HybridPhotoAsset = Shared.HybridPhotoAsset;
+type GridItem = Shared.GridItem;
+type PhotoAsset = Shared.PhotoAsset;
 
-const HYBRID_DAY_GRID_SCROLLER: Scroller = new Scroller();
-const HYBRID_DAY_GRID_DATA_SOURCE: Shared.HybridGridDataSource = new Shared.HybridGridDataSource();
+const DAY_GRID_SCROLLER: Scroller = new Scroller();
+const DAY_GRID_DATA_SOURCE: Shared.GridDataSource = new Shared.GridDataSource();
 
 @Component
-export struct HybridDayGridA {
+export struct DayGridView {
   @Prop visible: boolean = false;
   @Prop interactive: boolean = false;
   @Prop warmActive: boolean = false;
-  @Prop columns: number = Shared.HYBRID_GRID_COLUMNS;
+  @Prop columns: number = Shared.GRID_COLUMNS;
+  @Prop cacheRows: number = Shared.LIST_CACHE_COUNT;
   @Prop hasMore: boolean = true;
-  @Prop requestSize: number = Shared.HYBRID_REQUEST_SIZE;
+  @Prop requestSize: number = Shared.REQUEST_SIZE;
+  @Prop touchScrollEnd: boolean = true;
   @Prop scaleValue: number = 1;
   @Prop opacityValue: number = 1;
   @Prop centerX: number = 0;
   @Prop centerY: number = 0;
-  @Prop zIndexValue: number = HybridPhotoGridZIndex.DAY_GRID_A;
-  public attributeUpdater: HybridGridAttributeUpdater = new HybridGridAttributeUpdater();
+  public attributeUpdater: GridAttributeUpdater = new GridAttributeUpdater();
   public scrollerAttachHandler: (scroller: Scroller) => void = (_scroller: Scroller): void => {};
-  public gridDataSourceAttachHandler: (dataSource: Shared.HybridGridDataSource) => void =
-    (_dataSource: Shared.HybridGridDataSource): void => {};
-  public assetTapHandler: (asset: HybridPhotoAsset) => void = (_asset: HybridPhotoAsset): void => {};
+  public gridDataSourceAttachHandler: (dataSource: Shared.GridDataSource) => void =
+    (_dataSource: Shared.GridDataSource): void => {};
+  public assetTapHandler: (asset: Shared.PhotoAsset) => void = (_asset: Shared.PhotoAsset): void => {};
   public areaChangeHandler: (width: number, height: number) => void = (_width: number, _height: number): void => {};
   public scrollStartHandler: () => void = (): void => {};
   public scrollStopHandler: () => void = (): void => {};
+  public touchStateHandler: (touching: boolean) => void = (_touching: boolean): void => {};
   public scrollIndexHandler: (start: number, end: number) => void = (_start: number, _end: number): void => {};
   public pinchStartHandler: (centerX: number, centerY: number) => void = (_centerX: number, _centerY: number): void => {};
   public pinchUpdateHandler: (scale: number, centerX: number, centerY: number) => void =
@@ -37,8 +40,8 @@ export struct HybridDayGridA {
   public pinchEndHandler: () => void = (): void => {};
 
   aboutToAppear(): void {
-    this.scrollerAttachHandler(HYBRID_DAY_GRID_SCROLLER);
-    this.gridDataSourceAttachHandler(HYBRID_DAY_GRID_DATA_SOURCE);
+    this.scrollerAttachHandler(DAY_GRID_SCROLLER);
+    this.gridDataSourceAttachHandler(DAY_GRID_DATA_SOURCE);
   }
 
   private resolveColumnsTemplate(): string {
@@ -46,22 +49,30 @@ export struct HybridDayGridA {
   }
 
   @Builder
-  private buildPhotoCell(asset: HybridPhotoAsset) {
+  private buildPhotoCell(asset: PhotoAsset) {
     Stack() {
-      HybridPhotoTile({
-        asset: asset,
-        requestSize: this.requestSize,
-        suppressRelease: false,
-        layerActive: this.visible && this.opacityValue > 0.01,
-        warmActive: this.warmActive,
-        releasePolicy: this.interactive ? HybridPhotoTileReleasePolicy.DELAYED : HybridPhotoTileReleasePolicy.ACTIVE_ONLY,
-        invisibleReleaseDelayMs: this.interactive ? 220 : 0,
-      })
+      LazyLoadImg({
+        touchScrollEnd: this.touchScrollEnd,
+      }) {
+        Stack() {
+          PhotoTile({
+            asset: asset,
+            requestSize: this.requestSize,
+            suppressRelease: false,
+            layerActive: this.visible && this.opacityValue > 0.01,
+            warmActive: this.warmActive,
+            releasePolicy: this.interactive ? PhotoTileReleasePolicy.DELAYED : PhotoTileReleasePolicy.ACTIVE_ONLY,
+            invisibleReleaseDelayMs: this.interactive ? 220 : 0,
+          })
+            .width('100%')
+            .height('100%')
+            .onClick((): void => {
+              this.assetTapHandler(asset);
+            });
+        }
         .width('100%')
-        .height('100%')
-        .onClick((): void => {
-          this.assetTapHandler(asset);
-        });
+        .height('100%');
+      }
     }
     .width('100%')
     .clip(false)
@@ -78,10 +89,10 @@ export struct HybridDayGridA {
   }
 
   build() {
-    Grid(HYBRID_DAY_GRID_SCROLLER) {
+    Grid(DAY_GRID_SCROLLER) {
       LazyForEach(
-        HYBRID_DAY_GRID_DATA_SOURCE,
-        (item: HybridGridItem) => {
+        DAY_GRID_DATA_SOURCE,
+        (item: GridItem) => {
           GridItem() {
             if (item.kind === 'photo' && item.asset) {
               this.buildPhotoCell(item.asset);
@@ -91,15 +102,15 @@ export struct HybridDayGridA {
           }
           .reuseId(item.kind === 'photo' ? 'photoTile' : 'placeholder');
         },
-        (item: HybridGridItem) => item.id,
+        (item: GridItem) => `day_${item.id}`,
       );
     }
-      .id(HybridPhotoGridViewId.DAY_GRID_A)
+      .id(PhotoGridViewId.DAY_GRID)
       .attributeModifier(this.attributeUpdater)
       .columnsTemplate(this.resolveColumnsTemplate())
-      .rowsGap(Shared.HYBRID_GRID_GAP)
-      .columnsGap(Shared.HYBRID_GRID_GAP)
-      .cachedCount(Shared.HYBRID_LIST_CACHE_COUNT)
+      .rowsGap(Shared.GRID_GAP)
+      .columnsGap(Shared.GRID_GAP)
+      .cachedCount(Math.max(1, this.cacheRows))
       .scrollBar(BarState.Off)
       .edgeEffect(this.interactive ? EdgeEffect.Spring : EdgeEffect.None)
       .clip(false)
@@ -115,6 +126,15 @@ export struct HybridDayGridA {
       })
       .onScrollStop((): void => {
         this.scrollStopHandler();
+      })
+      .onTouch((event: TouchEvent): void => {
+        if (event.type === TouchType.Down) {
+          this.touchStateHandler(true);
+          return;
+        }
+        if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+          this.touchStateHandler(false);
+        }
       })
       .onScrollIndex((start: number, end: number): void => {
         this.scrollIndexHandler(start, end);

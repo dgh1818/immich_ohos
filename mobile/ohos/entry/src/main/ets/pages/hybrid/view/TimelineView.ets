@@ -1,0 +1,345 @@
+import common from '@ohos.app.ability.common';
+import * as Shared from '../PhotoGridShared';
+import { GridSnapshotController } from '../viewcontroller/GridSnapshotController';
+import { GridTitleBarMaskController } from '../viewcontroller/GridTitleBarMaskController';
+import { PhotoGridViewController } from '../viewcontroller/PhotoGridViewController';
+import { PhotoGridViewModel } from '../viewmodel/PhotoGridViewModel';
+import { FixedIrregularView } from './FixedIrregularView';
+import { GridNoDataView } from './GridNoDataView';
+import { GridTitleBarMaskView } from './GridTitleBarMaskView';
+import { IrregularView } from './IrregularView';
+import { YearGridView } from './YearGridView';
+import { MonthGridView } from './MonthGridView';
+import { DayGridView } from './DayGridView';
+import { GroupGridView } from './GroupGridView';
+import { GridSnapshotView } from './common/GridSnapshotView';
+import { FormIndex } from '../statemanager/constants/GridDefine';
+
+@Component
+export struct TimelineView {
+  private readonly context = this.getUIContext().getHostContext() as common.UIAbilityContext;
+  @Prop topInset: number = 56;
+
+  @State private renderTick: number = 0;
+  @State private viewController: PhotoGridViewController = new PhotoGridViewController();
+  @State private snapshotController: GridSnapshotController = new GridSnapshotController();
+  @State private titleBarMaskController: GridTitleBarMaskController = new GridTitleBarMaskController();
+  @State private viewModel: PhotoGridViewModel = new PhotoGridViewModel(this.context);
+  private readonly stateListener: () => void = (): void => {
+    this.renderTick += 1;
+  };
+
+  aboutToAppear(): void {
+    this.viewController.updateTopInset(this.topInset);
+    this.titleBarMaskController.updateTopInset(this.topInset);
+    this.viewModel.bindSnapshotController(this.snapshotController);
+    this.viewModel.addStateListener(this.stateListener);
+    void this.viewModel.init();
+  }
+
+  aboutToDisappear(): void {
+    this.viewModel.removeStateListener(this.stateListener);
+    this.viewModel.release();
+  }
+
+  @Builder
+  private buildLoadingView() {
+    Column({ space: 12 }) {
+      LoadingProgress()
+        .width(28)
+        .height(28)
+        .color(0xFF111827);
+
+      Text('Loading photos...')
+        .fontSize(14)
+        .fontColor(0xFF475569);
+    }
+    .width('100%')
+    .height('100%')
+    .justifyContent(FlexAlign.Center)
+    .alignItems(HorizontalAlign.Center);
+  }
+
+  @Builder
+  private buildErrorView() {
+    Column({ space: 10 }) {
+      Text('ArkUI photo grid is unavailable')
+        .fontSize(16)
+        .fontWeight(FontWeight.Medium)
+        .fontColor(0xFF111827);
+
+      Text(this.viewModel.errorText)
+        .fontSize(12)
+        .fontColor(0xFF64748B)
+        .margin({ left: 24, right: 24 })
+        .textAlign(TextAlign.Center);
+
+      Button('Retry')
+        .margin({ top: 4 })
+        .onClick((): void => {
+          void this.viewModel.reload();
+        });
+    }
+    .width('100%')
+    .height('100%')
+    .justifyContent(FlexAlign.Center)
+    .alignItems(HorizontalAlign.Center);
+  }
+
+  @Builder
+  private buildGridLayers() {
+    Stack({ alignContent: Alignment.TopStart }) {
+      YearGridView({
+        visible: this.viewModel.yearGridState.visible,
+        interactive: this.viewModel.yearGridState.interactive,
+        warmActive: this.viewModel.yearGridState.warmActive,
+        columns: this.viewModel.yearGridState.columns,
+        cacheRows: this.viewModel.yearGridState.cacheRows,
+        requestSize: this.viewModel.resolveRequestSize(FormIndex.YEAR),
+        touchScrollEnd: this.viewModel.activeForm === FormIndex.YEAR ? this.viewModel.touchScrollEnd : true,
+        opacityValue: this.viewModel.yearGridState.opacityValue,
+        attributeUpdater: this.viewModel.yearGridState.attributeUpdater,
+        scrollerAttachHandler: (scroller: Scroller): void => {
+          this.viewModel.bindScroller(FormIndex.YEAR, scroller);
+        },
+        gridDataSourceAttachHandler: (dataSource: Shared.GridDataSource): void => {
+          this.viewModel.bindDataSource(FormIndex.YEAR, dataSource);
+        },
+        assetTapHandler: (asset: Shared.PhotoAsset): void => {
+          void this.viewModel.openPreviewAssetViewer(asset);
+        },
+        areaChangeHandler: (width: number, height: number): void => {
+          this.viewModel.onGridAreaChange(width, height);
+        },
+        scrollStartHandler: (): void => {
+          this.viewModel.onFormScrollStart(FormIndex.YEAR);
+        },
+        scrollStopHandler: (): void => {
+          this.viewModel.onFormScrollStop(FormIndex.YEAR);
+        },
+        touchStateHandler: (touching: boolean): void => {
+          this.viewModel.onFormTouchState(FormIndex.YEAR, touching);
+        },
+        scrollIndexHandler: (start: number, end: number): void => {
+          this.viewModel.onFormScrollIndex(FormIndex.YEAR, start, end);
+        },
+        pinchStartHandler: (centerX: number, centerY: number): void => {
+          this.viewModel.onPinchStart(centerX, centerY);
+        },
+        pinchUpdateHandler: (scale: number, centerX: number, centerY: number): void => {
+          this.viewModel.onPinchUpdate(scale, centerX, centerY);
+        },
+        pinchEndHandler: (): void => {
+          this.viewModel.onPinchEnd();
+        },
+      });
+
+      MonthGridView({
+        visible: this.viewModel.monthGridState.visible,
+        interactive: this.viewModel.monthGridState.interactive,
+        warmActive: this.viewModel.monthGridState.warmActive,
+        columns: this.viewModel.monthGridState.columns,
+        cacheRows: this.viewModel.monthGridState.cacheRows,
+        requestSize: this.viewModel.resolveRequestSize(FormIndex.MONTH),
+        touchScrollEnd: this.viewModel.activeForm === FormIndex.MONTH ? this.viewModel.touchScrollEnd : true,
+        opacityValue: this.viewModel.monthGridState.opacityValue,
+        attributeUpdater: this.viewModel.monthGridState.attributeUpdater,
+        scrollerAttachHandler: (scroller: Scroller): void => {
+          this.viewModel.bindScroller(FormIndex.MONTH, scroller);
+        },
+        gridDataSourceAttachHandler: (dataSource: Shared.GridDataSource): void => {
+          this.viewModel.bindDataSource(FormIndex.MONTH, dataSource);
+        },
+        assetTapHandler: (asset: Shared.PhotoAsset): void => {
+          void this.viewModel.openPreviewAssetViewer(asset);
+        },
+        areaChangeHandler: (width: number, height: number): void => {
+          this.viewModel.onGridAreaChange(width, height);
+        },
+        scrollStartHandler: (): void => {
+          this.viewModel.onFormScrollStart(FormIndex.MONTH);
+        },
+        scrollStopHandler: (): void => {
+          this.viewModel.onFormScrollStop(FormIndex.MONTH);
+        },
+        touchStateHandler: (touching: boolean): void => {
+          this.viewModel.onFormTouchState(FormIndex.MONTH, touching);
+        },
+        scrollIndexHandler: (start: number, end: number): void => {
+          this.viewModel.onFormScrollIndex(FormIndex.MONTH, start, end);
+        },
+        pinchStartHandler: (centerX: number, centerY: number): void => {
+          this.viewModel.onPinchStart(centerX, centerY);
+        },
+        pinchUpdateHandler: (scale: number, centerX: number, centerY: number): void => {
+          this.viewModel.onPinchUpdate(scale, centerX, centerY);
+        },
+        pinchEndHandler: (): void => {
+          this.viewModel.onPinchEnd();
+        },
+      });
+
+      DayGridView({
+        visible: this.viewModel.dayGridState.visible,
+        interactive: this.viewModel.dayGridState.interactive,
+        warmActive: this.viewModel.dayGridState.warmActive,
+        columns: this.viewModel.dayGridState.columns,
+        cacheRows: this.viewModel.dayGridState.cacheRows,
+        requestSize: this.viewModel.resolveRequestSize(FormIndex.DAY),
+        touchScrollEnd: this.viewModel.activeForm === FormIndex.DAY ? this.viewModel.touchScrollEnd : true,
+        opacityValue: this.viewModel.dayGridState.opacityValue,
+        attributeUpdater: this.viewModel.dayGridState.attributeUpdater,
+        scrollerAttachHandler: (scroller: Scroller): void => {
+          this.viewModel.bindScroller(FormIndex.DAY, scroller);
+        },
+        gridDataSourceAttachHandler: (dataSource: Shared.GridDataSource): void => {
+          this.viewModel.bindDataSource(FormIndex.DAY, dataSource);
+        },
+        assetTapHandler: (asset: Shared.PhotoAsset): void => {
+          void this.viewModel.openPreviewAssetViewer(asset);
+        },
+        areaChangeHandler: (width: number, height: number): void => {
+          this.viewModel.onGridAreaChange(width, height);
+        },
+        scrollStartHandler: (): void => {
+          this.viewModel.onFormScrollStart(FormIndex.DAY);
+        },
+        scrollStopHandler: (): void => {
+          this.viewModel.onFormScrollStop(FormIndex.DAY);
+        },
+        touchStateHandler: (touching: boolean): void => {
+          this.viewModel.onFormTouchState(FormIndex.DAY, touching);
+        },
+        scrollIndexHandler: (start: number, end: number): void => {
+          this.viewModel.onFormScrollIndex(FormIndex.DAY, start, end);
+        },
+        pinchStartHandler: (centerX: number, centerY: number): void => {
+          this.viewModel.onPinchStart(centerX, centerY);
+        },
+        pinchUpdateHandler: (scale: number, centerX: number, centerY: number): void => {
+          this.viewModel.onPinchUpdate(scale, centerX, centerY);
+        },
+        pinchEndHandler: (): void => {
+          this.viewModel.onPinchEnd();
+        },
+      });
+
+      GroupGridView({
+        visible: this.viewModel.groupDayGridState.visible,
+        interactive: this.viewModel.groupDayGridState.interactive,
+        warmActive: this.viewModel.groupDayGridState.warmActive,
+        columns: this.viewModel.groupDayGridState.columns,
+        cacheRows: this.viewModel.groupDayGridState.cacheRows,
+        requestSize: this.viewModel.resolveRequestSize(FormIndex.GROUP_DAY),
+        touchScrollEnd: this.viewModel.activeForm === FormIndex.GROUP_DAY ? this.viewModel.touchScrollEnd : true,
+        opacityValue: this.viewModel.groupDayGridState.opacityValue,
+        attributeUpdater: this.viewModel.groupDayGridState.attributeUpdater,
+        scrollerAttachHandler: (scroller: Scroller): void => {
+          this.viewModel.bindScroller(FormIndex.GROUP_DAY, scroller);
+        },
+        gridDataSourceAttachHandler: (dataSource: Shared.GridDataSource): void => {
+          this.viewModel.bindDataSource(FormIndex.GROUP_DAY, dataSource);
+        },
+        assetTapHandler: (asset: Shared.PhotoAsset): void => {
+          void this.viewModel.openPreviewAssetViewer(asset);
+        },
+        areaChangeHandler: (width: number, height: number): void => {
+          this.viewModel.onGridAreaChange(width, height);
+        },
+        scrollStartHandler: (): void => {
+          this.viewModel.onFormScrollStart(FormIndex.GROUP_DAY);
+        },
+        scrollStopHandler: (): void => {
+          this.viewModel.onFormScrollStop(FormIndex.GROUP_DAY);
+        },
+        touchStateHandler: (touching: boolean): void => {
+          this.viewModel.onFormTouchState(FormIndex.GROUP_DAY, touching);
+        },
+        scrollIndexHandler: (start: number, end: number): void => {
+          this.viewModel.onFormScrollIndex(FormIndex.GROUP_DAY, start, end);
+        },
+        pinchStartHandler: (centerX: number, centerY: number): void => {
+          this.viewModel.onPinchStart(centerX, centerY);
+        },
+        pinchUpdateHandler: (scale: number, centerX: number, centerY: number): void => {
+          this.viewModel.onPinchUpdate(scale, centerX, centerY);
+        },
+        pinchEndHandler: (): void => {
+          this.viewModel.onPinchEnd();
+        },
+      });
+
+      GridSnapshotView({
+        snapshotImage: this.snapshotController.snapshotImage,
+        visible: this.snapshotController.isVisible,
+        opacityValue: this.snapshotController.getSnapshotOpacity(),
+        offsetY: this.snapshotController.getSnapshotOffsetY(),
+      });
+    }
+    .width('100%')
+    .height('100%')
+    .clip(false)
+    .backgroundColor(Color.Transparent)
+    .alignRules({
+      top: { anchor: '__container__', align: VerticalAlign.Top },
+      bottom: { anchor: '__container__', align: VerticalAlign.Bottom },
+      start: { anchor: '__container__', align: HorizontalAlign.Start },
+      end: { anchor: '__container__', align: HorizontalAlign.End },
+    });
+  }
+
+  @Builder
+  private buildGrid() {
+    RelativeContainer() {
+      if (this.viewController.isIrregularViewInit) {
+        IrregularView({
+          title: this.viewModel.floatingSectionTitle,
+          count: this.viewModel.floatingSectionCount,
+          topInset: this.topInset,
+        });
+      }
+
+      if (this.viewController.isFixedIrregularViewInit) {
+        FixedIrregularView();
+      }
+
+      if (this.viewController.isNoDataViewInit) {
+        GridNoDataView({
+          visible: this.viewModel.isNoDataVisible(),
+        });
+      }
+
+      if (this.viewController.isPhotoGridInit) {
+        this.buildGridLayers();
+      }
+
+      if (this.viewController.isTitleBarMaskInit) {
+        GridTitleBarMaskView({
+          maskHeight: this.titleBarMaskController.height,
+          opacityValue: this.titleBarMaskController.opacityValue,
+        });
+      }
+    }
+    .id('__container__')
+    .width('100%')
+    .height('100%')
+    .clip(false)
+    .backgroundColor(Color.Transparent);
+  }
+
+  build() {
+    Stack({ alignContent: Alignment.TopStart }) {
+      if (this.renderTick >= 0 && this.viewModel.shouldShowInitialLoading()) {
+        this.buildLoadingView();
+      } else if (this.viewModel.shouldShowInitialError()) {
+        this.buildErrorView();
+      } else {
+        this.buildGrid();
+      }
+    }
+    .width('100%')
+    .height('100%')
+    .backgroundColor($r('sys.color.ohos_id_color_sub_background'))
+    .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP]);
+  }
+}

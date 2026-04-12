@@ -1,4 +1,6 @@
 import { common } from '@kit.AbilityKit';
+import { LengthMetrics } from '@kit.ArkUI';
+import curves from '@ohos.curves';
 import * as Shared from '../HybridPhotoGridShared';
 import * as Thumbnail from '../HybridPhotoThumbnail';
 import { DataLoadListener, HybridDayGridVm, HybridGridColumnsCommitState } from './HybridDayGridVm';
@@ -24,12 +26,18 @@ type HybridTimelineItem = Shared.HybridTimelineItem;
 const PINCH_RESET_DURATION_MS: number = 160;
 const PINCH_STAGE_ONE_DURATION_MS: number = 90;
 const PINCH_STAGE_TWO_DURATION_MS: number = 150;
+const PINCH_SPRING_RESPONSE: number = 0.38;
+const PINCH_SPRING_DAMPING: number = 0.75;
+const PINCH_RESET_SPRING_RESPONSE: number = 0.30;
+const PINCH_RESET_SPRING_DAMPING: number = 0.99;
 const PINCH_COMMIT_FADE_DURATION_MS: number = 90;
 const PINCH_COMMIT_RETRY_DELAY_MS: number = 16;
 const PINCH_COMMIT_MAX_RETRIES: number = 24;
 const PINCH_COMMIT_OFFSET_TOLERANCE: number = 1.5;
 const PINCH_COMMIT_MAX_DURATION_MS: number = 160;
-const IDLE_PREBUILD_DELAY_MS: number = 120;
+const IDLE_PREBUILD_DELAY_MS: number = 800;
+const IDLE_PREBUILD_FAST_FLING_DELAY_MS: number = 1600;
+const FAST_FLING_VELOCITY_THRESHOLD: number = 8000;
 const IDLE_PREBUILD_READY_RETRY_DELAY_MS: number = 32;
 const IDLE_PREBUILD_OFFSET_TOLERANCE: number = 1.5;
 const FADE_START_SCALE_DOWN: number = 1.06;
@@ -102,6 +110,8 @@ export class HybridPhotoGridVm {
   private idlePrebuildTargetAnchorPhotoIndex: number = 0;
   private idlePrebuildTargetFirstRowIndex: number = 0;
   private idlePrebuildTargetAnchorRowIndex: number = 0;
+  private idlePrebuildAnchorItemIndex: number = 0;
+  private idlePrebuildExtraOffset: number = 0;
   private idlePrebuildResolvedFocusX: number = 0;
   private idlePrebuildResolvedFocusY: number = 0;
   private idlePrebuildTargetBaseScale: number = 1;
@@ -122,6 +132,8 @@ export class HybridPhotoGridVm {
   private idleExpandTargetAnchorPhotoIndex: number = 0;
   private idleExpandTargetFirstRowIndex: number = 0;
   private idleExpandTargetAnchorRowIndex: number = 0;
+  private idleExpandAnchorItemIndex: number = 0;
+  private idleExpandExtraOffset: number = 0;
   private idleExpandResolvedFocusX: number = 0;
   private idleExpandResolvedFocusY: number = 0;
   private idleExpandTargetBaseScale: number = 1;
@@ -133,6 +145,8 @@ export class HybridPhotoGridVm {
   private idleExpandInvalidatedByScroll: boolean = false;
   private idleExpandGridItems: Array<HybridGridItem> = [];
   private lastIdleExpandVisiblePrefetchKey: string = '';
+  private lastScrollVelocity: number = 0;
+  private lastScrollStopTimestamp: number = 0;
   private pendingCommit?: HybridGridColumnsCommitState;
   private pendingCommitRetryCount: number = 0;
   private pendingCommitScrollOffset: number = 0;
@@ -159,6 +173,8 @@ export class HybridPhotoGridVm {
   private latchedTargetAnchorPhotoIndex: number = 0;
   private latchedTargetFirstRowIndex: number = 0;
   private latchedTargetAnchorRowIndex: number = 0;
+  private latchedTargetAnchorItemIndex: number = 0;
+  private latchedTargetExtraOffset: number = 0;
   private latchedResolvedFocusX: number = 0;
   private latchedResolvedFocusY: number = 0;
   private latchedTargetBaseScale: number = 1;
@@ -202,6 +218,7 @@ export class HybridPhotoGridVm {
   @Track public gridWarmActiveA: boolean = false;
   @Track public gridInteractiveA: boolean = false;
   @Track public gridZIndexA: number = 100;
+  @Track public gridCacheRowsA: number = Shared.resolveListCacheCount(Shared.HYBRID_GRID_COLUMNS);
   // Grid B (initial role: currentGrid — active)
   @Track public gridColumnsB: number = Shared.HYBRID_GRID_COLUMNS;
   @Track public gridScaleB: number = 1;
@@ -210,6 +227,7 @@ export class HybridPhotoGridVm {
   @Track public gridWarmActiveB: boolean = false;
   @Track public gridInteractiveB: boolean = true;
   @Track public gridZIndexB: number = 200;
+  @Track public gridCacheRowsB: number = Shared.resolveListCacheCount(Shared.HYBRID_GRID_COLUMNS);
   // Grid C (initial role: expandTarget — dormant)
   @Track public gridColumnsC: number = 0;
   @Track public gridScaleC: number = 1;
@@ -218,11 +236,13 @@ export class HybridPhotoGridVm {
   @Track public gridWarmActiveC: boolean = false;
   @Track public gridInteractiveC: boolean = false;
   @Track public gridZIndexC: number = 100;
+  @Track public gridCacheRowsC: number = 1;
 
   // ── Role tracking ──
   @Track public currentGridKind: HybridGridKind = HybridGridKind.B;
   public shrinkTargetKind: HybridGridKind = HybridGridKind.A;
   public expandTargetKind: HybridGridKind = HybridGridKind.C;
+  private lastPromotedDirection: HybridPinchTargetDirection = HybridPinchTargetDirection.NONE;
   @Track public readonly gridAttributeUpdaterA: HybridGridAttributeUpdater = new HybridGridAttributeUpdater();
   @Track public readonly gridAttributeUpdaterB: HybridGridAttributeUpdater = new HybridGridAttributeUpdater();
   @Track public readonly gridAttributeUpdaterC: HybridGridAttributeUpdater = new HybridGridAttributeUpdater();
@@ -254,6 +274,7 @@ export class HybridPhotoGridVm {
     this.dataVm = new HybridDayGridVm(context, 0);
     this.initializeGridAttributeUpdaters();
     this.refreshGridRoleZIndices();
+    this.refreshGridCacheRows();
   }
 
   public bindSnapshotController(snapshotController: HybridGridSnapshotVc): void {
@@ -265,6 +286,7 @@ export class HybridPhotoGridVm {
     this.timelineDataSource.replaceAll(this.currentItems.slice());
     this.timelineInitialized = true;
     this.lastAppliedColumns = this.getActiveColumns();
+    Thumbnail.HybridThumbnailCache.setActiveColumns(this.getActiveColumns());
   }
 
   public addStateListener(listener: () => void): void {
@@ -373,6 +395,7 @@ export class HybridPhotoGridVm {
     this.listWidth = width;
     this.listHeight = height;
     this.syncDataVmRequestSize();
+    this.refreshGridCacheRows();
 
     if (widthChanged || heightChanged) {
       this.updateFloatingSection(this.resolveVisibleTimelineRowIndex());
@@ -399,6 +422,10 @@ export class HybridPhotoGridVm {
       clearTimeout(this.idleExpandTimeoutId);
       this.idleExpandTimeoutId = undefined;
     }
+    // Clear dormant grids to avoid maintaining 10K+ component nodes during scroll
+    this.evictDormantGridsDuringScroll();
+    Thumbnail.HybridThumbnailRequestLimiter.setScrollActive(true);
+    Thumbnail.HybridThumbnailRequestLimiter.drainStalePrefetchWaiters();
     this.dataVm.onScrollStart();
   }
 
@@ -408,8 +435,10 @@ export class HybridPhotoGridVm {
     }
     this.syncCurrentScrollOffset();
     this.dataVm.onScrollStop();
-    this.scheduleIdleShrinkPrebuild(IDLE_PREBUILD_DELAY_MS);
-    this.scheduleIdleExpandPrebuild(IDLE_PREBUILD_DELAY_MS);
+    Thumbnail.HybridThumbnailRequestLimiter.setScrollActive(false);
+    const delay = this.resolveIdlePrebuildDelayForFlingPattern();
+    this.scheduleIdleShrinkPrebuild(delay);
+    this.scheduleIdleExpandPrebuild(delay);
     this.logMemoryDebug('scroll-stop');
   }
 
@@ -454,6 +483,9 @@ export class HybridPhotoGridVm {
       clearTimeout(this.idleExpandTimeoutId);
       this.idleExpandTimeoutId = undefined;
     }
+    this.evictDormantGridsDuringScroll();
+    Thumbnail.HybridThumbnailRequestLimiter.setScrollActive(true);
+    Thumbnail.HybridThumbnailRequestLimiter.drainStalePrefetchWaiters();
     this.dataVm.onScrollStart();
   }
 
@@ -463,8 +495,10 @@ export class HybridPhotoGridVm {
     }
     this.syncCurrentScrollOffset();
     this.dataVm.onScrollStop();
-    this.scheduleIdleShrinkPrebuild(IDLE_PREBUILD_DELAY_MS);
-    this.scheduleIdleExpandPrebuild(IDLE_PREBUILD_DELAY_MS);
+    Thumbnail.HybridThumbnailRequestLimiter.setScrollActive(false);
+    const delay = this.resolveIdlePrebuildDelayForFlingPattern();
+    this.scheduleIdleShrinkPrebuild(delay);
+    this.scheduleIdleExpandPrebuild(delay);
   }
 
   public onPreviewScrollIndex(start: number, end: number): void {
@@ -586,20 +620,10 @@ export class HybridPhotoGridVm {
         this.refreshGridRoleZIndices(this.expandTargetKind);
         if (!this.isDormantLayerPreparedForTarget(this.pinchState)) {
           if (
-            this.idleExpandStructureReady &&
-            this.idleExpandColumns === this.pinchState.targetColumns &&
-            this.idleExpandGridItems.length > this.pinchState.fillPosition
+            this.isIdleExpandPrebuildSynced(this.pinchState) &&
+            this.idleExpandGridItems.length > 0
           ) {
-            const dormantScroller = this.resolveExpandTargetScroller();
-            const dormantDataSource = this.resolveExpandTargetDataSource();
-            if (dormantScroller && dormantDataSource) {
-              dormantDataSource.updateAllIfChanged(this.idleExpandGridItems);
-              try {
-                dormantScroller.scrollTo({ xOffset: 0, yOffset: this.idleExpandTargetScrollOffset });
-              } catch (_error) {}
-              this.setExpandTargetColumns(this.pinchState.targetColumns);
-              this.setExpandTargetWarmActive(true);
-            }
+            this.setExpandTargetWarmActive(true);
           } else {
             this.buildTargetGridOnDormantLayer(this.pinchState);
           }
@@ -739,10 +763,7 @@ export class HybridPhotoGridVm {
 
   public resolveRequestSizeForKind(kind: HybridGridKind): number {
     const cols = Math.max(1, this.resolveColumns(kind) > 0 ? this.resolveColumns(kind) : this.getCurrentColumns());
-    const role = kind === this.currentGridKind
-      ? Shared.HybridThumbnailLayerRole.ACTIVE
-      : Shared.HybridThumbnailLayerRole.WARM;
-    return Shared.resolveHybridRequestSizeBucket(cols, this.listWidth, role);
+    return Shared.resolveHybridRequestSizeBucket(cols, this.listWidth, Shared.HybridThumbnailLayerRole.ACTIVE);
   }
 
   private resolveActiveRequestSize(): number {
@@ -797,7 +818,16 @@ export class HybridPhotoGridVm {
       return false;
     }
     const dormantDataSource = this.resolveTargetDataSourceForDirection(state.targetDirection);
-    return (dormantDataSource?.totalCount() ?? 0) > state.fillPosition;
+    if ((dormantDataSource?.totalCount() ?? 0) <= 0) {
+      return false;
+    }
+    if (state.targetDirection === HybridPinchTargetDirection.SHRINK) {
+      return this.isIdlePrebuildStructureSynced(state);
+    }
+    if (state.targetDirection === HybridPinchTargetDirection.EXPAND) {
+      return this.isIdleExpandPrebuildSynced(state);
+    }
+    return false;
   }
 
   private buildTargetGridOnDormantLayer(state: HybridPinchStateInfo): void {
@@ -806,21 +836,81 @@ export class HybridPhotoGridVm {
       state.targetColumns,
       0,
       this.hasMore,
-      state.fillPosition,
+      0,
       true,
     );
-
     const dormantScroller = this.resolveTargetScrollerForDirection(state.targetDirection);
     const dormantDataSource = this.resolveTargetDataSourceForDirection(state.targetDirection);
     if (!dormantScroller || !dormantDataSource) {
       return;
     }
-    dormantDataSource.updateAllIfChanged(previewGridItems);
-    try {
-      dormantScroller.scrollTo({ xOffset: 0, yOffset: state.targetScrollOffset });
-    } catch (_error) {}
+    // Clear data source BEFORE changing columns so "cross count change" operates on 0 items (instant).
+    dormantDataSource.updateAllIfChanged([]);
     this.setTargetColumnsForDirection(state.targetDirection, state.targetColumns);
+    dormantDataSource.updateAllIfChanged(previewGridItems);
+    if (state.targetDirection === HybridPinchTargetDirection.SHRINK) {
+      this.idlePrebuildColumns = state.targetColumns;
+      this.idlePrebuildFillPosition = 0;
+      this.idlePrebuildTargetScrollOffset = state.targetScrollOffset;
+      this.idlePrebuildTargetFirstPhotoIndex = state.targetFirstPhotoIndex;
+      this.idlePrebuildTargetAnchorPhotoIndex = state.targetAnchorPhotoIndex;
+      this.idlePrebuildTargetFirstRowIndex = state.targetFirstRowIndex;
+      this.idlePrebuildTargetAnchorRowIndex = state.targetAnchorRowIndex;
+      this.idlePrebuildAnchorItemIndex = state.anchorItemIndex;
+      this.idlePrebuildExtraOffset = state.extraOffset;
+      this.idlePrebuildResolvedFocusX = state.resolvedFocusX;
+      this.idlePrebuildResolvedFocusY = state.resolvedFocusY;
+      this.idlePrebuildTargetBaseScale = state.targetBaseScale;
+      this.idlePrebuildVersion = this.renderedGridVersion;
+      this.idlePrebuildStructureReady = true;
+      this.idlePrebuildBaselineScrollOffset = state.targetScrollOffset;
+      this.idlePrebuildInvalidatedByScroll = false;
+      this.idlePrebuildVisibleRowsWarm = false;
+      this.idlePrebuildReady = false;
+    } else if (state.targetDirection === HybridPinchTargetDirection.EXPAND) {
+      this.idleExpandColumns = state.targetColumns;
+      this.idleExpandFillPosition = 0;
+      this.idleExpandTargetScrollOffset = state.targetScrollOffset;
+      this.idleExpandTargetFirstPhotoIndex = state.targetFirstPhotoIndex;
+      this.idleExpandTargetAnchorPhotoIndex = state.targetAnchorPhotoIndex;
+      this.idleExpandTargetFirstRowIndex = state.targetFirstRowIndex;
+      this.idleExpandTargetAnchorRowIndex = state.targetAnchorRowIndex;
+      this.idleExpandAnchorItemIndex = state.anchorItemIndex;
+      this.idleExpandExtraOffset = state.extraOffset;
+      this.idleExpandResolvedFocusX = state.resolvedFocusX;
+      this.idleExpandResolvedFocusY = state.resolvedFocusY;
+      this.idleExpandTargetBaseScale = state.targetBaseScale;
+      this.idleExpandVersion = this.renderedGridVersion;
+      this.idleExpandStructureReady = true;
+      this.idleExpandBaselineScrollOffset = this.currentScrollOffsetY;
+      this.idleExpandInvalidatedByScroll = false;
+      this.idleExpandVisibleRowsWarm = false;
+      this.idleExpandReady = false;
+      this.idleExpandGridItems = previewGridItems.slice();
+    }
     this.setTargetWarmActiveForDirection(state.targetDirection, true);
+    this.scrollStateToAnchor(dormantScroller, state);
+
+    // Eagerly prefetch thumbnails for the target viewport so the transition is not blank
+    const assets = this.dataAdapter.flattenAssets(this.sections);
+    if (assets.length > 0) {
+      const targetRequestSize = Shared.resolveHybridRequestSizeBucket(
+        Math.max(1, state.targetColumns),
+        this.listWidth,
+        Shared.HybridThumbnailLayerRole.ACTIVE,
+      );
+      const prefetchRange = this.resolvePhotoRangeForOffsetWithOverscan(
+        state.targetColumns,
+        0,
+        state.targetScrollOffset,
+        assets.length,
+        Shared.HYBRID_IDLE_PREVIEW_OVERSCAN_ABOVE_SCREEN_MULTIPLIER
+          * this.resolveViewportRowsForColumns(state.targetColumns),
+        Shared.HYBRID_IDLE_PREVIEW_OVERSCAN_BELOW_SCREEN_MULTIPLIER
+          * this.resolveViewportRowsForColumns(state.targetColumns),
+      );
+      this.prefetchPhotoRange(assets, prefetchRange, targetRequestSize);
+    }
   }
 
   private syncDataVmRequestSize(): void {
@@ -845,6 +935,8 @@ export class HybridPhotoGridVm {
     this.latchedTargetAnchorPhotoIndex = 0;
     this.latchedTargetFirstRowIndex = 0;
     this.latchedTargetAnchorRowIndex = 0;
+    this.latchedTargetAnchorItemIndex = 0;
+    this.latchedTargetExtraOffset = 0;
     this.latchedResolvedFocusX = 0;
     this.latchedResolvedFocusY = 0;
     this.latchedTargetBaseScale = 1;
@@ -868,6 +960,8 @@ export class HybridPhotoGridVm {
     this.idlePrebuildTargetAnchorPhotoIndex = 0;
     this.idlePrebuildTargetFirstRowIndex = 0;
     this.idlePrebuildTargetAnchorRowIndex = 0;
+    this.idlePrebuildAnchorItemIndex = 0;
+    this.idlePrebuildExtraOffset = 0;
     this.idlePrebuildResolvedFocusX = 0;
     this.idlePrebuildResolvedFocusY = 0;
     this.idlePrebuildTargetBaseScale = 1;
@@ -890,7 +984,8 @@ export class HybridPhotoGridVm {
     }
   }
 
-  private clearIdleExpandPrebuildState(): void {
+  private clearIdleExpandPrebuildState(clearDataSource: boolean = true): void {
+    const hadIdleDormantColumns = this.idleExpandColumns > 0;
     if (this.idleExpandTimeoutId !== undefined) {
       clearTimeout(this.idleExpandTimeoutId);
       this.idleExpandTimeoutId = undefined;
@@ -907,6 +1002,8 @@ export class HybridPhotoGridVm {
     this.idleExpandTargetAnchorPhotoIndex = 0;
     this.idleExpandTargetFirstRowIndex = 0;
     this.idleExpandTargetAnchorRowIndex = 0;
+    this.idleExpandAnchorItemIndex = 0;
+    this.idleExpandExtraOffset = 0;
     this.idleExpandResolvedFocusX = 0;
     this.idleExpandResolvedFocusY = 0;
     this.idleExpandTargetBaseScale = 1;
@@ -919,7 +1016,41 @@ export class HybridPhotoGridVm {
     this.idleExpandGridItems = [];
     this.lastIdleExpandVisiblePrefetchKey = '';
     this.setExpandTargetWarmActive(false);
-    this.resolveExpandTargetDataSource()?.updateAllIfChanged([]);
+    if (clearDataSource) {
+      if (hadIdleDormantColumns) {
+        this.setExpandTargetColumns(0);
+      }
+      this.resolveExpandTargetDataSource()?.updateAllIfChanged([]);
+    }
+  }
+
+  private evictDormantGridsDuringScroll(): void {
+    if (this.idlePrebuildStructureReady) {
+      this.idlePrebuildStructureReady = false;
+      this.idlePrebuildReady = false;
+      this.idlePrebuildVisibleRowsWarm = false;
+      this.setShrinkTargetWarmActive(false);
+      this.resolveShrinkTargetDataSource()?.updateAllIfChanged([]);
+    }
+    if (this.idleExpandStructureReady) {
+      this.idleExpandStructureReady = false;
+      this.idleExpandReady = false;
+      this.idleExpandVisibleRowsWarm = false;
+      this.idleExpandGridItems = [];
+      this.setExpandTargetWarmActive(false);
+      this.resolveExpandTargetDataSource()?.updateAllIfChanged([]);
+    }
+  }
+
+  private resolveIdlePrebuildDelayForFlingPattern(): number {
+    const now = Date.now();
+    const elapsed = now - this.lastScrollStopTimestamp;
+    this.lastScrollStopTimestamp = now;
+    // If rapid fling sequence (consecutive scroll-stops within 2 seconds), use longer delay
+    if (elapsed < 2000) {
+      return IDLE_PREBUILD_FAST_FLING_DELAY_MS;
+    }
+    return IDLE_PREBUILD_DELAY_MS;
   }
 
   private resetPrefetchKeys(): void {
@@ -971,7 +1102,9 @@ export class HybridPhotoGridVm {
       this.idlePrebuildTargetFirstPhotoIndex === state.targetFirstPhotoIndex &&
       this.idlePrebuildTargetAnchorPhotoIndex === state.targetAnchorPhotoIndex &&
       this.idlePrebuildTargetFirstRowIndex === state.targetFirstRowIndex &&
-      this.idlePrebuildTargetAnchorRowIndex === state.targetAnchorRowIndex;
+      this.idlePrebuildTargetAnchorRowIndex === state.targetAnchorRowIndex &&
+      this.idlePrebuildAnchorItemIndex === state.anchorItemIndex &&
+      Math.abs(this.idlePrebuildExtraOffset - state.extraOffset) <= 0.5;
   }
 
   private isIdlePrebuildStateCompatible(
@@ -981,9 +1114,10 @@ export class HybridPhotoGridVm {
   ): boolean {
     return this.idlePrebuildVersion === this.renderedGridVersion &&
       this.idlePrebuildColumns === state.targetColumns &&
-      this.idlePrebuildFillPosition === state.fillPosition &&
       Math.abs(this.idlePrebuildTargetScrollOffset - state.targetScrollOffset) <= offsetTolerance &&
-      Math.abs(this.idlePrebuildTargetAnchorPhotoIndex - state.targetAnchorPhotoIndex) <= anchorTolerance;
+      Math.abs(this.idlePrebuildTargetAnchorPhotoIndex - state.targetAnchorPhotoIndex) <= anchorTolerance &&
+      this.idlePrebuildAnchorItemIndex === state.anchorItemIndex &&
+      Math.abs(this.idlePrebuildExtraOffset - state.extraOffset) <= 0.5;
   }
 
   private invalidateIdlePrebuildForScrollOffset(): boolean {
@@ -1023,34 +1157,39 @@ export class HybridPhotoGridVm {
       return false;
     }
 
+    const offsetChanged = Math.abs(this.idlePrebuildTargetScrollOffset - state.targetScrollOffset) > 0.5;
+    const didRebuildStructure = refreshDataSource ||
+      !this.idlePrebuildStructureReady ||
+      this.idlePrebuildVersion !== this.renderedGridVersion ||
+      this.idlePrebuildColumns !== state.targetColumns ||
+      this.idlePrebuildFillPosition !== 0 ||
+      offsetChanged;
+
+    this.idlePrebuildColumns = state.targetColumns;
+    // Clear data source BEFORE changing columns so "cross count change" operates on 0 items.
+    if (refreshDataSource && this.getShrinkTargetColumns() !== state.targetColumns) {
+      dormantDataSource.updateAllIfChanged([]);
+    }
+    this.setShrinkTargetColumns(state.targetColumns);
     if (refreshDataSource) {
       const previewGridItems = this.dataAdapter.buildGridItemsForColumns(
         this.sections,
         state.targetColumns,
         0,
         this.hasMore,
-        state.fillPosition,
+        0,
         true,
       );
       dormantDataSource.updateAllIfChanged(previewGridItems);
     }
-
-    const offsetChanged = Math.abs(this.idlePrebuildTargetScrollOffset - state.targetScrollOffset) > 0.5;
-    const didRebuildStructure = refreshDataSource ||
-      !this.idlePrebuildStructureReady ||
-      this.idlePrebuildVersion !== this.renderedGridVersion ||
-      this.idlePrebuildColumns !== state.targetColumns ||
-      this.idlePrebuildFillPosition !== state.fillPosition ||
-      offsetChanged;
-
-    this.idlePrebuildColumns = state.targetColumns;
-  this.setShrinkTargetColumns(state.targetColumns);
-    this.idlePrebuildFillPosition = state.fillPosition;
+    this.idlePrebuildFillPosition = 0;
     this.idlePrebuildTargetScrollOffset = state.targetScrollOffset;
     this.idlePrebuildTargetFirstPhotoIndex = state.targetFirstPhotoIndex;
     this.idlePrebuildTargetAnchorPhotoIndex = state.targetAnchorPhotoIndex;
     this.idlePrebuildTargetFirstRowIndex = state.targetFirstRowIndex;
     this.idlePrebuildTargetAnchorRowIndex = state.targetAnchorRowIndex;
+    this.idlePrebuildAnchorItemIndex = state.anchorItemIndex;
+    this.idlePrebuildExtraOffset = state.extraOffset;
     this.idlePrebuildResolvedFocusX = state.resolvedFocusX;
     this.idlePrebuildResolvedFocusY = state.resolvedFocusY;
     this.idlePrebuildTargetBaseScale = state.targetBaseScale;
@@ -1063,9 +1202,7 @@ export class HybridPhotoGridVm {
       this.idlePrebuildReady = false;
     }
 
-    try {
-      dormantScroller.scrollTo({ xOffset: 0, yOffset: this.idlePrebuildTargetScrollOffset });
-    } catch (_error) {}
+    this.scrollStateToAnchor(dormantScroller, state);
 
     const assets = this.dataAdapter.flattenAssets(this.sections);
     if (assets.length <= 0) {
@@ -1076,14 +1213,14 @@ export class HybridPhotoGridVm {
 
     const previewRange = this.resolveIdlePreviewPhotoRange(
       state.targetColumns,
-      state.fillPosition,
+      0,
       state.targetScrollOffset,
       assets.length,
     );
     const visibleKey = this.buildPrefetchRangeKey(
       'idle_preview',
       state.targetColumns,
-      state.fillPosition,
+      0,
       state.targetScrollOffset,
       previewRange,
     );
@@ -1235,6 +1372,48 @@ export class HybridPhotoGridVm {
       case HybridGridKind.B: this.gridColumnsB = value; break;
       case HybridGridKind.C: this.gridColumnsC = value; break;
     }
+    this.refreshGridCacheRows();
+  }
+
+  private resolveActiveGridCacheRows(columns: number): number {
+    return Shared.resolveListCacheCount(columns);
+  }
+
+  private resolveDormantGridCacheRows(columns: number): number {
+    return Math.max(1, this.resolveViewportRowsForColumns(columns));
+  }
+
+  private resolveGridCacheRows(kind: HybridGridKind): number {
+    const columns = Math.max(1, this.resolveColumns(kind));
+    if (kind === this.currentGridKind) {
+      return this.resolveActiveGridCacheRows(columns);
+    }
+    return this.resolveDormantGridCacheRows(columns);
+  }
+
+  private refreshGridCacheRows(): void {
+    this.gridCacheRowsA = this.resolveGridCacheRows(HybridGridKind.A);
+    this.gridCacheRowsB = this.resolveGridCacheRows(HybridGridKind.B);
+    this.gridCacheRowsC = this.resolveGridCacheRows(HybridGridKind.C);
+  }
+
+  private scrollScrollerToAnchor(scroller: Scroller | undefined, anchorItemIndex: number, extraOffset: number): void {
+    try {
+      scroller?.scrollToIndex(
+        Math.max(0, anchorItemIndex),
+        false,
+        ScrollAlign.START,
+        { extraOffset: LengthMetrics.vp(extraOffset) },
+      );
+    } catch (_error) {}
+  }
+
+  private scrollStateToAnchor(scroller: Scroller | undefined, state: HybridPinchStateInfo): void {
+    this.scrollScrollerToAnchor(scroller, state.anchorItemIndex, state.extraOffset);
+  }
+
+  private scrollCommitToAnchor(scroller: Scroller | undefined, commitState: HybridGridColumnsCommitState): void {
+    this.scrollScrollerToAnchor(scroller, commitState.anchorItemIndex, commitState.extraOffset);
   }
 
   public setScale(kind: HybridGridKind, value: number): void {
@@ -1585,6 +1764,8 @@ export class HybridPhotoGridVm {
     if (
       this.pinchActive ||
       this.pendingCommit !== undefined ||
+      !this.resolveExpandTargetScroller() ||
+      !this.resolveExpandTargetDataSource() ||
       this.listWidth <= 0 ||
       this.listHeight <= 0
     ) {
@@ -1624,13 +1805,31 @@ export class HybridPhotoGridVm {
 
   private isIdleExpandPrebuildReusable(state: HybridPinchStateInfo): boolean {
     return this.idleExpandStructureReady &&
+      !this.idleExpandInvalidatedByScroll &&
+      !!this.resolveExpandTargetScroller() &&
+      !!this.resolveExpandTargetDataSource() &&
+      state.targetDirection === HybridPinchTargetDirection.EXPAND &&
       this.idleExpandVersion === this.renderedGridVersion &&
       this.idleExpandColumns === state.targetColumns &&
-      this.idleExpandFillPosition === state.fillPosition;
+      this.idleExpandAnchorItemIndex === state.anchorItemIndex &&
+      Math.abs(this.idleExpandExtraOffset - state.extraOffset) <= 0.5;
+  }
+
+  private isIdleExpandPrebuildSynced(state: HybridPinchStateInfo): boolean {
+    return this.isIdleExpandPrebuildReusable(state) &&
+      Math.abs(this.idleExpandTargetScrollOffset - state.targetScrollOffset) <= 0.5 &&
+      this.idleExpandTargetFirstPhotoIndex === state.targetFirstPhotoIndex &&
+      this.idleExpandTargetAnchorPhotoIndex === state.targetAnchorPhotoIndex &&
+      this.idleExpandTargetFirstRowIndex === state.targetFirstRowIndex &&
+      this.idleExpandTargetAnchorRowIndex === state.targetAnchorRowIndex;
   }
 
   private applyIdleExpandPrebuildState(state: HybridPinchStateInfo): void {
+    const expandScroller = this.resolveExpandTargetScroller();
+    const expandDataSource = this.resolveExpandTargetDataSource();
     if (
+      !expandScroller ||
+      !expandDataSource ||
       state.targetDirection !== HybridPinchTargetDirection.EXPAND ||
       state.targetColumns === this.getActiveColumns()
     ) {
@@ -1644,7 +1843,7 @@ export class HybridPhotoGridVm {
         state.targetColumns,
         0,
         this.hasMore,
-        state.fillPosition,
+        0,
         true,
       );
     }
@@ -1653,16 +1852,18 @@ export class HybridPhotoGridVm {
     const didRebuild = needsRebuild ||
       this.idleExpandVersion !== this.renderedGridVersion ||
       this.idleExpandColumns !== state.targetColumns ||
-      this.idleExpandFillPosition !== state.fillPosition ||
+      this.idleExpandFillPosition !== 0 ||
       offsetChanged;
 
     this.idleExpandColumns = state.targetColumns;
-    this.idleExpandFillPosition = state.fillPosition;
+    this.idleExpandFillPosition = 0;
     this.idleExpandTargetScrollOffset = state.targetScrollOffset;
     this.idleExpandTargetFirstPhotoIndex = state.targetFirstPhotoIndex;
     this.idleExpandTargetAnchorPhotoIndex = state.targetAnchorPhotoIndex;
     this.idleExpandTargetFirstRowIndex = state.targetFirstRowIndex;
     this.idleExpandTargetAnchorRowIndex = state.targetAnchorRowIndex;
+    this.idleExpandAnchorItemIndex = state.anchorItemIndex;
+    this.idleExpandExtraOffset = state.extraOffset;
     this.idleExpandResolvedFocusX = state.resolvedFocusX;
     this.idleExpandResolvedFocusY = state.resolvedFocusY;
     this.idleExpandTargetBaseScale = state.targetBaseScale;
@@ -1676,16 +1877,14 @@ export class HybridPhotoGridVm {
     }
 
     if (didRebuild && this.idleExpandGridItems.length > 0) {
-      const expandDataSource = this.resolveExpandTargetDataSource();
-      const expandScroller = this.resolveExpandTargetScroller();
-      if (expandDataSource) {
-        expandDataSource.updateAllIfChanged(this.idleExpandGridItems);
+      // Clear data source BEFORE changing columns so "cross count change" operates on 0 items.
+      if (this.getExpandTargetColumns() !== state.targetColumns) {
+        expandDataSource.updateAllIfChanged([]);
       }
       this.setExpandTargetColumns(state.targetColumns);
+      expandDataSource.updateAllIfChanged(this.idleExpandGridItems);
       this.setExpandTargetWarmActive(true);
-      try {
-        expandScroller?.scrollTo({ xOffset: 0, yOffset: state.targetScrollOffset });
-      } catch (_error) {}
+      this.scrollStateToAnchor(expandScroller, state);
     }
 
     const assets = this.dataAdapter.flattenAssets(this.sections);
@@ -1698,14 +1897,14 @@ export class HybridPhotoGridVm {
     const expandRequestSize = this.resolveIdleExpandRequestSize(state.targetColumns);
     const previewRange = this.resolveIdlePreviewPhotoRange(
       state.targetColumns,
-      state.fillPosition,
+      0,
       state.targetScrollOffset,
       assets.length,
     );
     const visibleKey = this.buildPrefetchRangeKey(
       'idle_expand',
       state.targetColumns,
-      state.fillPosition,
+      0,
       state.targetScrollOffset,
       previewRange,
     );
@@ -1722,7 +1921,7 @@ export class HybridPhotoGridVm {
     return Shared.resolveHybridRequestSizeBucket(
       Math.max(1, targetColumns),
       this.listWidth,
-      Shared.HybridThumbnailLayerRole.WARM,
+      Shared.HybridThumbnailLayerRole.ACTIVE,
     );
   }
 
@@ -1950,6 +2149,8 @@ export class HybridPhotoGridVm {
     this.latchedTargetAnchorPhotoIndex = state.targetAnchorPhotoIndex;
     this.latchedTargetFirstRowIndex = state.targetFirstRowIndex;
     this.latchedTargetAnchorRowIndex = state.targetAnchorRowIndex;
+    this.latchedTargetAnchorItemIndex = state.anchorItemIndex;
+    this.latchedTargetExtraOffset = state.extraOffset;
     this.latchedResolvedFocusX = state.resolvedFocusX;
     this.latchedResolvedFocusY = state.resolvedFocusY;
     this.latchedTargetBaseScale = state.targetBaseScale;
@@ -1965,6 +2166,8 @@ export class HybridPhotoGridVm {
     state.targetAnchorPhotoIndex = this.latchedTargetAnchorPhotoIndex;
     state.targetFirstRowIndex = this.latchedTargetFirstRowIndex;
     state.targetAnchorRowIndex = this.latchedTargetAnchorRowIndex;
+    state.anchorItemIndex = this.latchedTargetAnchorItemIndex;
+    state.extraOffset = this.latchedTargetExtraOffset;
     state.resolvedFocusX = this.latchedResolvedFocusX;
     state.resolvedFocusY = this.latchedResolvedFocusY;
     state.sharedCenterX = this.latchedResolvedFocusX;
@@ -2241,7 +2444,7 @@ export class HybridPhotoGridVm {
     this.refreshGridRoleZIndices(targetKind);
     this.setActiveVisible(true);
     this.setTargetVisibleForDirection(state.targetDirection, true);
-    this.animateFastOutSlowIn(PINCH_STAGE_TWO_DURATION_MS, (): void => {
+    this.animateSpring(PINCH_SPRING_RESPONSE, PINCH_SPRING_DAMPING, (): void => {
       this.setActiveScale(1);
       this.setActiveOpacity(0);
       this.setTargetScaleForDirection(state.targetDirection, 1);
@@ -2256,13 +2459,23 @@ export class HybridPhotoGridVm {
   private promoteGridLayer(state: HybridPinchStateInfo): void {
     const previousCurrentKind = this.currentGridKind;
     const targetKind = this.resolveTargetKindForDirection(state.targetDirection);
-    const promotedGridItems = this.resolveDataSource(targetKind)?.getItemsSnapshot() ?? [];
     const finalScrollOffset = this.anchorAdapter.resolveFinalScrollOffset(state);
     const remainingKinds = this.resolveOtherKinds(targetKind);
     const carryOverKind = remainingKinds.find((kind: HybridGridKind) => kind === previousCurrentKind);
     const idleRebuildKind = remainingKinds.find((kind: HybridGridKind) => kind !== carryOverKind) ?? remainingKinds[0];
 
+    const commitState = new HybridGridColumnsCommitState();
+    commitState.columns = state.targetColumns;
+    commitState.targetFirstRowIndex = state.targetFirstRowIndex;
+    commitState.targetAnchorRowIndex = state.targetAnchorRowIndex;
+    commitState.targetFirstPhotoIndex = state.targetFirstPhotoIndex;
+    commitState.targetAnchorPhotoIndex = state.targetAnchorPhotoIndex;
+    commitState.targetScrollOffset = finalScrollOffset;
+    commitState.anchorItemIndex = state.anchorItemIndex;
+    commitState.extraOffset = state.extraOffset;
+
     this.currentGridKind = targetKind;
+    this.lastPromotedDirection = state.targetDirection;
     if (state.targetDirection === HybridPinchTargetDirection.SHRINK) {
       this.expandTargetKind = carryOverKind ?? remainingKinds[0];
       this.shrinkTargetKind = idleRebuildKind;
@@ -2270,6 +2483,7 @@ export class HybridPhotoGridVm {
       this.shrinkTargetKind = carryOverKind ?? remainingKinds[0];
       this.expandTargetKind = idleRebuildKind;
     }
+    this.refreshGridCacheRows();
     this.committedLayerKind = this.currentGridKind === HybridGridKind.B
       ? HybridCommittedLayerKind.PREVIEW
       : HybridCommittedLayerKind.MAIN;
@@ -2277,21 +2491,27 @@ export class HybridPhotoGridVm {
     this.pinchCenterX = state.sharedCenterX;
     this.pinchCenterY = state.sharedCenterY;
     this.committedFillPosition = 0;
-    this.pendingCommit = undefined;
-    this.hasPendingCommit = false;
+    this.pendingCommit = commitState;
+    this.hasPendingCommit = true;
     this.pendingCommitRetryCount = 0;
     this.pendingCommitScrollOffset = finalScrollOffset;
     this.mainGridCommitReady = false;
-    this.commitPhase = HybridPinchCommitPhase.IDLE;
-    this.commitAlignPhase = HybridCommitAlignPhase.FINALIZED;
-    this.commitStartedAt = 0;
-    this.commitDeadlineMs = 0;
+    this.commitPhase = HybridPinchCommitPhase.SETTLING;
+    this.commitAlignPhase = HybridCommitAlignPhase.INITIAL_ALIGN;
+    this.commitStartedAt = Date.now();
+    this.commitDeadlineMs = this.commitStartedAt + PINCH_COMMIT_MAX_DURATION_MS;
     this.mainVisibleStartIndex = -1;
     this.mainVisibleEndIndex = -1;
     this.previewVisibleStartIndex = -1;
     this.previewVisibleEndIndex = -1;
-    this.dataVm.silentSetGridColumns(state.targetColumns);
+    this.dataVm.silentSetGridColumns(state.targetColumns, commitState);
+    // Reuse prebuild items (same fillPosition) so updateAllIfChanged() detects no change
+    // and skips onDataReloaded, avoiding expensive Grid re-layout.
+    // Read directly from the target dormant grid's data source to avoid race between
+    // shrink/expand idle prebuilds overwriting a shared field.
+    const promotedGridItems = this.resolveDataSource(targetKind)?.getItemsSnapshot();
     this.syncSilentColumnsFromDataVm(promotedGridItems);
+    this.scrollCommitToAnchor(this.resolveCommittedScroller(), commitState);
     this.setVisible(HybridGridKind.A, false);
     this.setVisible(HybridGridKind.B, false);
     this.setVisible(HybridGridKind.C, false);
@@ -2311,9 +2531,9 @@ export class HybridPhotoGridVm {
     this.setCurrentOpacity(1);
     this.setCurrentScale(1);
     this.setCurrentInteractive(true);
-    this.resolveDataSource(this.shrinkTargetKind)?.updateAllIfChanged([]);
-    this.resolveDataSource(this.expandTargetKind)?.updateAllIfChanged([]);
+    // Defer dormant grid clearing to finalizePendingCommit to avoid RSNode avalanche
     this.setColumns(this.currentGridKind, state.targetColumns);
+    Thumbnail.HybridThumbnailCache.setActiveColumns(state.targetColumns);
     this.refreshGridRoleZIndices();
     this.idlePrebuildReady = false;
     this.idlePrebuildVisibleRowsWarm = false;
@@ -2332,11 +2552,12 @@ export class HybridPhotoGridVm {
     this.clearIdleExpandPrebuildState();
     this.scheduleIdleShrinkPrebuild(IDLE_PREBUILD_DELAY_MS);
     this.scheduleIdleExpandPrebuild(IDLE_PREBUILD_DELAY_MS);
+    this.schedulePendingCommitSync(0);
     this.notifyStateChanged();
   }
 
   private animateResetToCurrentGrid(): void {
-    this.animateEaseOut(PINCH_RESET_DURATION_MS, (): void => {
+    this.animateSpring(PINCH_RESET_SPRING_RESPONSE, PINCH_RESET_SPRING_DAMPING, (): void => {
       this.setActiveScale(1);
       this.setActiveOpacity(1);
       this.setShrinkTargetOpacity(0);
@@ -2404,10 +2625,18 @@ export class HybridPhotoGridVm {
     }
     const arrivalLiveScale = 1.0 / state.targetBaseScale;
     if (state.targetDirection === HybridPinchTargetDirection.EXPAND) {
-      return Math.min(state.liveScale, arrivalLiveScale);
+      if (state.liveScale <= arrivalLiveScale) {
+        return state.liveScale;
+      }
+      // Rubber-band: overshoot decays with 0.3 friction
+      return arrivalLiveScale + (state.liveScale - arrivalLiveScale) * 0.3;
     }
     if (state.targetDirection === HybridPinchTargetDirection.SHRINK) {
-      return Math.max(state.liveScale, arrivalLiveScale);
+      if (state.liveScale >= arrivalLiveScale) {
+        return state.liveScale;
+      }
+      // Rubber-band: overshoot decays with 0.3 friction
+      return arrivalLiveScale + (state.liveScale - arrivalLiveScale) * 0.3;
     }
     return state.liveScale;
   }
@@ -2707,18 +2936,14 @@ export class HybridPhotoGridVm {
 
     if (this.commitPhase === HybridPinchCommitPhase.SETTLING) {
       if (!offsetReady && this.commitAlignPhase === HybridCommitAlignPhase.INITIAL_ALIGN) {
-        try {
-          this.resolveCommittedScroller()?.scrollTo({ xOffset: 0, yOffset: this.pendingCommitScrollOffset });
-        } catch (_error) {}
+        this.scrollCommitToAnchor(this.resolveCommittedScroller(), pendingCommit);
         this.commitAlignPhase = HybridCommitAlignPhase.CORRECTIVE_ALIGN;
         this.schedulePendingCommitSync(PINCH_COMMIT_RETRY_DELAY_MS);
         return;
       }
 
       if (!offsetReady && this.commitAlignPhase === HybridCommitAlignPhase.CORRECTIVE_ALIGN) {
-        try {
-          this.resolveCommittedScroller()?.scrollTo({ xOffset: 0, yOffset: this.pendingCommitScrollOffset });
-        } catch (_error) {}
+        this.scrollCommitToAnchor(this.resolveCommittedScroller(), pendingCommit);
         this.commitAlignPhase = HybridCommitAlignPhase.WAITING_READY;
         this.commitPhase = HybridPinchCommitPhase.SETTLED_WAIT_MAIN_READY;
         this.schedulePendingCommitSync(PINCH_COMMIT_RETRY_DELAY_MS);
@@ -2813,6 +3038,20 @@ export class HybridPhotoGridVm {
       this.stageTwoTimeoutId = undefined;
       this.committedLayerKind = HybridCommittedLayerKind.MAIN;
       this.committedFillPosition = 0;
+      // Only clear the idle-rebuild dormant grid; keep the carryOver grid so a quick
+      // reverse pinch finds pre-populated items instead of a blank grid.
+      if (this.lastPromotedDirection === HybridPinchTargetDirection.SHRINK) {
+        // After shrink: shrinkTarget is idle-rebuild, expandTarget is carryOver
+        this.resolveDataSource(this.shrinkTargetKind)?.updateAllIfChanged([]);
+      } else if (this.lastPromotedDirection === HybridPinchTargetDirection.EXPAND) {
+        // After expand: expandTarget is idle-rebuild, shrinkTarget is carryOver
+        this.resolveDataSource(this.expandTargetKind)?.updateAllIfChanged([]);
+      } else {
+        // Fallback: clear both
+        this.resolveDataSource(this.shrinkTargetKind)?.updateAllIfChanged([]);
+        this.resolveDataSource(this.expandTargetKind)?.updateAllIfChanged([]);
+      }
+      this.refreshGridCacheRows();
       this.pendingCommit = undefined;
       this.hasPendingCommit = false;
       this.pendingCommitRetryCount = 0;
@@ -2836,7 +3075,9 @@ export class HybridPhotoGridVm {
       this.suppressDeferredDataVmSyncCount = this.dataVm.endPinchFreeze();
       this.snapshotController?.hideSnapshot();
       this.forcePruneVisibleThumbnailCache();
-      this.clearIdleExpandPrebuildState();
+      // After shrink, expand target is the carryOver — keep its data source for quick reverse pinch.
+      const clearExpandDataSource = this.lastPromotedDirection !== HybridPinchTargetDirection.SHRINK;
+      this.clearIdleExpandPrebuildState(clearExpandDataSource);
       this.scheduleIdleShrinkPrebuild(IDLE_PREBUILD_DELAY_MS);
       this.scheduleIdleExpandPrebuild(IDLE_PREBUILD_DELAY_MS);
       this.notifyStateChanged();
@@ -2880,6 +3121,20 @@ export class HybridPhotoGridVm {
         {
           duration: duration,
           curve: Curve.EaseOut,
+        },
+        action,
+      );
+      return;
+    }
+    action();
+  }
+
+  private animateSpring(response: number, damping: number, action: () => void): void {
+    const uiContext = AppStorage.get<UIContext>('uiContext');
+    if (uiContext) {
+      uiContext.animateTo(
+        {
+          curve: curves.springMotion(response, damping),
         },
         action,
       );

@@ -3,15 +3,18 @@ import { dataSharePredicates } from '@kit.ArkData';
 import { photoAccessHelper } from '@kit.MediaLibraryKit';
 import {
   HYBRID_ENABLE_REMOTE_THUMBNAIL_DISK_WRITES,
-  HYBRID_MAX_CONCURRENT_PREFETCH_REQUESTS,
-  HYBRID_MAX_CONCURRENT_REMOTE_WARMUP_DOWNLOADS,
+  HYBRID_GRID_COLUMNS,
   HYBRID_MAX_CONCURRENT_THUMBNAIL_REQUESTS,
+  HYBRID_REMOTE_THUMBNAIL_CACHE_TRIM_TARGET_BYTES,
   HYBRID_REQUEST_SIZE,
-  HYBRID_THUMBNAIL_CACHE_LIMIT,
   HYBRID_THUMBNAIL_RELEASE_DELAY_MS,
   HybridPhotoAsset,
+  HybridPrefetchRuntimeMode,
   HybridRemoteCacheEntry,
   HybridThumbnailCacheEntry,
+  resolveHybridPrefetchConcurrency,
+  resolveAdaptiveCacheLimit,
+  setHybridPrefetchRuntimeMode,
 } from './HybridPhotoGridShared';
 import * as Disk from './HybridPhotoThumbnailDisk';
 
@@ -24,6 +27,11 @@ function toError(error: Object | string | number | boolean | undefined | null): 
 
 export class HybridThumbnailCache {
   private static entries: Map<string, HybridThumbnailCacheEntry> = new Map();
+  private static activeColumns: number = HYBRID_GRID_COLUMNS;
+
+  static setActiveColumns(columns: number): void {
+    HybridThumbnailCache.activeColumns = columns;
+  }
 
   static entryCount(): number {
     return HybridThumbnailCache.entries.size;
@@ -203,45 +211,8 @@ export class HybridThumbnailCache {
   }
 
   private static prune(): void {
-    const now = Date.now();
-    const removableKeys: Array<string> = [];
-    HybridThumbnailCache.entries.forEach((entry: HybridThumbnailCacheEntry, key: string) => {
-      const idleFor = now - entry.lastUsedAt;
-      if (
-        entry.refCount <= 0 &&
-        !!entry.pixelMap &&
-        !entry.loadingPromise &&
-        idleFor >= HYBRID_THUMBNAIL_RELEASE_DELAY_MS
-      ) {
-        removableKeys.push(key);
-      }
-    });
-
-    removableKeys.sort((leftKey: string, rightKey: string) => {
-      const leftEntry = HybridThumbnailCache.entries.get(leftKey);
-      const rightEntry = HybridThumbnailCache.entries.get(rightKey);
-      const leftUsedAt = leftEntry?.lastUsedAt ?? 0;
-      const rightUsedAt = rightEntry?.lastUsedAt ?? 0;
-      return leftUsedAt - rightUsedAt;
-    });
-
-    while (removableKeys.length > 0) {
-      const key = removableKeys.shift();
-      if (!key) {
-        break;
-      }
-
-      const entry = HybridThumbnailCache.entries.get(key);
-      if (!entry || entry.refCount > 0 || entry.loadingPromise) {
-        continue;
-      }
-      try {
-        entry?.pixelMap?.release();
-      } catch (_) {}
-      HybridThumbnailCache.entries.delete(key);
-    }
-
-    if (HybridThumbnailCache.entries.size <= HYBRID_THUMBNAIL_CACHE_LIMIT) {
+    const cacheLimit = resolveAdaptiveCacheLimit(HybridThumbnailCache.activeColumns);
+    if (HybridThumbnailCache.entries.size <= cacheLimit) {
       return;
     }
 
@@ -260,7 +231,7 @@ export class HybridThumbnailCache {
       return leftUsedAt - rightUsedAt;
     });
 
-    while (HybridThumbnailCache.entries.size > HYBRID_THUMBNAIL_CACHE_LIMIT && overflowKeys.length > 0) {
+    while (HybridThumbnailCache.entries.size > cacheLimit && overflowKeys.length > 0) {
       const key = overflowKeys.shift();
       if (!key) {
         break;
@@ -360,7 +331,7 @@ class HybridRemoteWarmupLimiter {
   }
 
   private static tryAcquire(): boolean {
-    if (HybridRemoteWarmupLimiter.activeCount >= HYBRID_MAX_CONCURRENT_REMOTE_WARMUP_DOWNLOADS) {
+    if (HybridRemoteWarmupLimiter.activeCount >= resolveHybridPrefetchConcurrency()) {
       return false;
     }
 
@@ -383,11 +354,13 @@ class HybridRemoteWarmupLimiter {
   }
 }
 
-class HybridThumbnailRequestLimiter {
+export class HybridThumbnailRequestLimiter {
   private static activeCount: number = 0;
   private static activePrefetchCount: number = 0;
   private static visibleWaiters: Array<() => void> = [];
   private static prefetchWaiters: Array<() => void> = [];
+  private static scrollActive: boolean = false;
+  private static readonly SCROLL_THUMBNAIL_LIMIT: number = 4;
 
   static async run(task: () => Promise<PixelMap>, isPrefetch: boolean): Promise<PixelMap> {
     await HybridThumbnailRequestLimiter.acquire(isPrefetch);
@@ -396,6 +369,38 @@ class HybridThumbnailRequestLimiter {
     } finally {
       HybridThumbnailRequestLimiter.release(isPrefetch);
     }
+  }
+
+  static setScrollActive(active: boolean): void {
+    HybridThumbnailRequestLimiter.scrollActive = active;
+    // When scroll stops, resume any held-back waiters
+    if (!active) {
+      HybridThumbnailRequestLimiter.resumeNext();
+    }
+  }
+
+  static drainStalePrefetchWaiters(): void {
+    // Drop all queued prefetch waiters on scroll start — their viewport targets are stale.
+    // Resolve each promise so the caller's async chain finishes (the limiter never acquired
+    // a slot for them, so no release is needed). The prefetch loader will run but the cache
+    // entry will be pruned later if it falls outside the keep range.
+    const stale = HybridThumbnailRequestLimiter.prefetchWaiters.splice(0);
+    for (const waiter of stale) {
+      waiter();
+    }
+  }
+
+  /**
+   * Returns true when the system is under visible-request pressure:
+   * scrolling actively OR many in-flight visible requests.
+   * Background predownloads should yield when this returns true.
+   */
+  static isUnderPressure(): boolean {
+    if (HybridThumbnailRequestLimiter.scrollActive) {
+      return true;
+    }
+    // If more than half the idle capacity is consumed by visible requests, back off
+    return HybridThumbnailRequestLimiter.activeCount >= Math.floor(HYBRID_MAX_CONCURRENT_THUMBNAIL_REQUESTS / 2);
   }
 
   private static async acquire(isPrefetch: boolean): Promise<void> {
@@ -413,13 +418,18 @@ class HybridThumbnailRequestLimiter {
   }
 
   private static tryAcquire(isPrefetch: boolean): boolean {
-    if (HybridThumbnailRequestLimiter.activeCount >= HYBRID_MAX_CONCURRENT_THUMBNAIL_REQUESTS) {
+    const thumbnailLimit = HybridThumbnailRequestLimiter.scrollActive
+      ? HybridThumbnailRequestLimiter.SCROLL_THUMBNAIL_LIMIT
+      : HYBRID_MAX_CONCURRENT_THUMBNAIL_REQUESTS;
+    const prefetchLimit = resolveHybridPrefetchConcurrency();
+
+    if (HybridThumbnailRequestLimiter.activeCount >= thumbnailLimit) {
       return false;
     }
 
     if (
       isPrefetch &&
-      HybridThumbnailRequestLimiter.activePrefetchCount >= HYBRID_MAX_CONCURRENT_PREFETCH_REQUESTS
+      HybridThumbnailRequestLimiter.activePrefetchCount >= prefetchLimit
     ) {
       return false;
     }
@@ -563,4 +573,37 @@ export function prefetchAssetThumbnail(
   HybridThumbnailCache.prefetch(buildThumbnailCacheKey(asset.id, requestSize), () =>
     loadThumbnailForPrefetchAsset(ctx, asset, requestSize)
   );
+}
+
+export function setPrefetchRuntimeMode(mode: HybridPrefetchRuntimeMode): void {
+  setHybridPrefetchRuntimeMode(mode);
+}
+
+export function setRuntimeScrollActive(active: boolean): void {
+  HybridThumbnailRequestLimiter.setScrollActive(active);
+  Disk.HybridScrollState.isScrolling = active;
+}
+
+export async function backgroundPredownloadRemoteThumbnail(
+  ctx: common.UIAbilityContext,
+  url: string,
+  requestSize: number,
+): Promise<void> {
+  await Disk.HybridRemoteThumbnailBackgroundPredownload.predownload(ctx, url, requestSize);
+}
+
+export function flushDeferredThumbnailWritesIfIdle(): void {
+  Disk.flushDeferredThumbnailWritesIfIdle();
+}
+
+export function trimRemoteThumbnailCacheIfNeeded(
+  ctx: common.UIAbilityContext,
+  force: boolean = false,
+): void {
+  Disk.HybridRemoteThumbnailCachePruner.trimIfNeeded(ctx, force);
+}
+
+export function shouldContinueBackgroundPredownload(ctx: common.UIAbilityContext): boolean {
+  return Disk.HybridRemoteThumbnailCacheIndex.totalTrackedBytes(ctx, true) <
+    HYBRID_REMOTE_THUMBNAIL_CACHE_TRIM_TARGET_BYTES;
 }

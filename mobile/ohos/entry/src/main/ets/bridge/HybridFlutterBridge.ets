@@ -6,12 +6,12 @@ import MethodChannel, {
 } from '@ohos/flutter_ohos/src/main/ets/plugin/common/MethodChannel';
 import { HybridLaunchModePreferences } from './HybridLaunchModePreferences';
 
-interface FetchPhotoPageArgs {
+interface FetchTimelineWindowArgs {
   offset: number;
   limit: number;
 }
 
-interface OpenTimelineAssetViewerArgs {
+interface OpenTimelineAssetViewerAtArgs {
   index: number;
 }
 
@@ -41,10 +41,10 @@ export class HybridFlutterBridge {
       : 'legacy_flutter';
   }
 
-  static async fetchPhotoPage(offset: number, limit: number): Promise<string> {
-    const args: FetchPhotoPageArgs = { offset, limit };
+  static async fetchTimelineWindow(offset: number, limit: number): Promise<string> {
+    const args: FetchTimelineWindowArgs = { offset, limit };
     const result: ESObject | undefined = await HybridFlutterBridge.invokeMethodWithRetry(
-      'fetchPhotoPage',
+      'fetchTimelineWindow',
       args as ESObject,
       12,
       250,
@@ -52,10 +52,10 @@ export class HybridFlutterBridge {
     return typeof result === 'string' ? result : '';
   }
 
-  static async openTimelineAssetViewer(index: number): Promise<void> {
-    const args: OpenTimelineAssetViewerArgs = { index };
+  static async openTimelineAssetViewerAt(index: number): Promise<void> {
+    const args: OpenTimelineAssetViewerAtArgs = { index };
     await HybridFlutterBridge.invokeMethodWithRetry(
-      'openTimelineAssetViewer',
+      'openTimelineAssetViewerAt',
       args as ESObject,
       12,
       250,

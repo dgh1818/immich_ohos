@@ -1,5 +1,7 @@
 import * as Shared from '../HybridPhotoGridShared';
+import { PINCH_SPEED_THRESHOLD } from '../statemanager/constants/PinchDefine';
 import { AnchorInfo, HybridSwitchCalc, SwitchCalcParams } from '../viewmodel/HybridSwitchCalc';
+import { AnimationDuration, AnimationScale } from './animation/AnimationDefine';
 
 export class PinchState {
   public isActive: boolean = false;
@@ -13,20 +15,30 @@ export class PinchState {
   public gridWidth: number = 0;
   public gridHeight: number = 0;
   public topInset: number = 0;
+  public lastScale: number = 1.0;
+  public lastTimestamp: number = 0;
+  public velocity: number = 0;
+  public standardScales: number[] = [];
+  public minAllowedScale: number = 1.0;
+  public maxAllowedScale: number = 1.0;
 }
 
 export class PinchAnimationConfig {
-  public quickPinchDuration: number = 200;
-  public slowPinchDuration: number = 400;
-  public switchDuration: number = 200;
-  public minScale: number = 0.97;
-  public maxScale: number = 1.05;
+  public pinchSpeedThreshold: number = PINCH_SPEED_THRESHOLD;
+  public quickPinchDuration: number = AnimationDuration.QUICK_PINCH;
+  public slowPinchDuration: number = AnimationDuration.SLOW_PINCH;
+  public switchDuration: number = AnimationDuration.SWITCH;
+  public minScale: number = AnimationScale.MIN_SCALE;
+  public maxScale: number = AnimationScale.MAX_SCALE;
   public scaleThreshold: number = 0.02;
 }
 
 export class PinchEndResult {
   public columns: number = 0;
   public scrollOffset: number = 0;
+  public anchorItemIndex: number = 0;
+  public extraOffset: number = 0;
+  public isQuickPinch: boolean = false;
 }
 
 export const DEFAULT_PINCH_CONFIG: PinchAnimationConfig = new PinchAnimationConfig();
@@ -82,6 +94,12 @@ export class HybridPinchGestureHandler {
     state.gridWidth = gridWidth;
     state.gridHeight = gridHeight;
     state.topInset = topInset;
+    state.lastScale = 1.0;
+    state.lastTimestamp = Date.now();
+    state.velocity = 0;
+    state.standardScales = this.createStandardScales(currentColumns);
+    state.minAllowedScale = this.resolveMinAllowedScale(state.standardScales);
+    state.maxAllowedScale = this.resolveMaxAllowedScale(state.standardScales);
 
     this.state = state;
     console.log(
@@ -102,11 +120,24 @@ export class HybridPinchGestureHandler {
       return null;
     }
 
-    const clampedScale = Math.max(0.5, Math.min(2.0, scale));
+    const clampedScale = Math.max(this.state.minAllowedScale, Math.min(this.state.maxAllowedScale, scale));
+    const timestamp = Date.now();
+    const deltaTime = Math.max(0, timestamp - this.state.lastTimestamp);
+    const deltaScale = clampedScale - this.state.lastScale;
+    if (deltaTime > 0 && Math.abs(deltaScale) > 0.0001) {
+      this.state.velocity = (deltaScale * 100000) / deltaTime;
+    }
+    this.state.lastScale = clampedScale;
+    this.state.lastTimestamp = timestamp;
     this.state.centerX = pinchCenterX;
     this.state.centerY = pinchCenterY;
     this.state.currentScale = clampedScale;
-    this.state.targetColumns = this.calculateTargetColumns(this.state.startColumns, clampedScale, gridWidth);
+    this.state.targetColumns = this.calculateTargetColumns(
+      this.state.startColumns,
+      clampedScale,
+      this.state.standardScales,
+      this.state.targetColumns,
+    );
 
     this.onScaleUpdate?.(
       clampedScale,
@@ -132,12 +163,24 @@ export class HybridPinchGestureHandler {
     calcParams.topInset = this.state.topInset;
 
     const calcResult = HybridSwitchCalc.calcSwitch(calcParams);
+    const scrollToIndexParams = HybridSwitchCalc.calcScrollToIndexParams(
+      this.state.anchor,
+      this.state.targetColumns,
+      this.state.startScrollOffset,
+      this.state.gridWidth,
+      this.state.topInset,
+    );
     const result = new PinchEndResult();
     result.columns = this.state.targetColumns;
     result.scrollOffset = calcResult.scrollOffset;
+    result.anchorItemIndex = scrollToIndexParams.itemIndex;
+    result.extraOffset = scrollToIndexParams.extraOffset;
+    result.isQuickPinch = Math.abs(this.state.velocity) > this.config.pinchSpeedThreshold;
 
     console.log(
-      `[${this.tag}] Pinch ended: columns=${result.columns}, offset=${result.scrollOffset}, centerX=${calcResult.anchorCenterX}`,
+      `[${this.tag}] Pinch ended: columns=${result.columns}, offset=${result.scrollOffset}, ` +
+        `index=${result.anchorItemIndex}, extraOffset=${result.extraOffset}, ` +
+        `velocity=${this.state.velocity}, quick=${result.isQuickPinch}, centerX=${calcResult.anchorCenterX}`,
     );
 
     this.state = null;
@@ -147,17 +190,69 @@ export class HybridPinchGestureHandler {
   private calculateTargetColumns(
     startColumns: number,
     scale: number,
-    gridWidth: number,
+    standardScales: number[],
+    currentTargetColumns: number,
   ): number {
-    let targetColumns = startColumns;
+    let targetColumns = Math.max(this.minColumns, Math.min(this.maxColumns, currentTargetColumns || startColumns));
+    let closestDistance = Number.MAX_VALUE;
 
-    if (scale < 1.0 - this.config.scaleThreshold) {
-      targetColumns = Math.min(this.maxColumns, Math.ceil(startColumns / scale));
-    } else if (scale > 1.0 + this.config.scaleThreshold) {
-      targetColumns = Math.max(this.minColumns, Math.floor(startColumns / scale));
+    for (let columns = this.minColumns; columns <= this.maxColumns; columns++) {
+      const standardScale = standardScales[columns];
+      if (standardScale <= 0) {
+        continue;
+      }
+
+      const distance = Math.abs(scale - standardScale);
+      if (distance + 0.000001 < closestDistance) {
+        closestDistance = distance;
+        targetColumns = columns;
+        continue;
+      }
+
+      if (Math.abs(distance - closestDistance) <= 0.000001 && columns === currentTargetColumns) {
+        targetColumns = columns;
+      }
     }
 
     return Math.max(this.minColumns, Math.min(this.maxColumns, targetColumns));
+  }
+
+  private createStandardScales(startColumns: number): number[] {
+    const standardScales: number[] = [];
+    for (let columns = this.minColumns; columns <= this.maxColumns; columns++) {
+      standardScales[columns] = startColumns / columns;
+    }
+    return standardScales;
+  }
+
+  private resolveMinAllowedScale(standardScales: number[]): number {
+    let minStandardScale = Number.MAX_VALUE;
+    for (let columns = this.minColumns; columns <= this.maxColumns; columns++) {
+      const standardScale = standardScales[columns];
+      if (standardScale > 0 && standardScale < minStandardScale) {
+        minStandardScale = standardScale;
+      }
+    }
+
+    if (minStandardScale === Number.MAX_VALUE) {
+      return this.config.minScale;
+    }
+    return minStandardScale * this.config.minScale;
+  }
+
+  private resolveMaxAllowedScale(standardScales: number[]): number {
+    let maxStandardScale = 0;
+    for (let columns = this.minColumns; columns <= this.maxColumns; columns++) {
+      const standardScale = standardScales[columns];
+      if (standardScale > maxStandardScale) {
+        maxStandardScale = standardScale;
+      }
+    }
+
+    if (maxStandardScale <= 0) {
+      return this.config.maxScale;
+    }
+    return maxStandardScale * this.config.maxScale;
   }
 
   public getState(): PinchState | null {

@@ -128,48 +128,52 @@ export async function decodeLocalImageTask(
   } else {
     const filePath = new fileUri.FileUri(assetId).path;
     const imageSource: image.ImageSource = image.createImageSource(filePath);
-    const imageInfo = await imageSource.getImageInfo();
+    try {
+      const imageInfo = await imageSource.getImageInfo();
 
-    if (width == 0 && height == 0) {
-      try {
-        pixelMap = await imageSource.createPixelMap({
-          editable: true,
-          desiredPixelFormat: imageInfo.isHdr
-            ? image.PixelMapFormat.RGBA_1010102
-            : image.PixelMapFormat.RGBA_8888,
-          desiredDynamicRange: image.DecodingDynamicRange.AUTO,
-        });
-      } catch (_) {
-        pixelMap = await imageSource.createPixelMap({
-          editable: true,
-          desiredPixelFormat: image.PixelMapFormat.RGBA_8888,
-          desiredDynamicRange: image.DecodingDynamicRange.AUTO,
-        });
+      if (width == 0 && height == 0) {
+        try {
+          pixelMap = await imageSource.createPixelMap({
+            editable: true,
+            desiredPixelFormat: imageInfo.isHdr
+              ? image.PixelMapFormat.RGBA_1010102
+              : image.PixelMapFormat.RGBA_8888,
+            desiredDynamicRange: image.DecodingDynamicRange.AUTO,
+          });
+        } catch (_) {
+          pixelMap = await imageSource.createPixelMap({
+            editable: true,
+            desiredPixelFormat: image.PixelMapFormat.RGBA_8888,
+            desiredDynamicRange: image.DecodingDynamicRange.AUTO,
+          });
+        }
+      } else {
+        const phAccessHelper = photoAccessHelper.getPhotoAccessHelper(ctx);
+        const predicates: dataSharePredicates.DataSharePredicates = new dataSharePredicates.DataSharePredicates();
+        predicates.equalTo('uri', assetId);
+        const fetchResult: photoAccessHelper.FetchResult<photoAccessHelper.PhotoAsset> =
+          await phAccessHelper.getAssets({
+            fetchColumns: ['width', 'height', 'orientation'],
+            predicates: predicates
+          });
+        const photoAsset: photoAccessHelper.PhotoAsset = await fetchResult.getFirstObject();
+        const widthKey: photoAccessHelper.PhotoKeys = photoAccessHelper.PhotoKeys.WIDTH;
+        const heightKey: photoAccessHelper.PhotoKeys = photoAccessHelper.PhotoKeys.HEIGHT;
+        const orientationKey: photoAccessHelper.PhotoKeys = photoAccessHelper.PhotoKeys.ORIENTATION;
+        const photoAssetWidth = (photoAsset.get(widthKey.toString()) as number) || Math.round(imageInfo.size.width);
+        const photoAssetHeight = (photoAsset.get(heightKey.toString()) as number) || Math.round(imageInfo.size.height);
+        const photoAssetOrientation = (photoAsset.get(orientationKey.toString()) as number) || 0;
+        const thumbnailSize = makeAspectFitThumbnailSize(
+          width,
+          height,
+          photoAssetWidth,
+          photoAssetHeight,
+          photoAssetOrientation,
+        );
+        pixelMap = await photoAsset.getThumbnail(thumbnailSize);
       }
-    } else {
-      const phAccessHelper = photoAccessHelper.getPhotoAccessHelper(ctx);
-      const predicates: dataSharePredicates.DataSharePredicates = new dataSharePredicates.DataSharePredicates();
-      predicates.equalTo('uri', assetId);
-      const fetchResult: photoAccessHelper.FetchResult<photoAccessHelper.PhotoAsset> =
-        await phAccessHelper.getAssets({
-          fetchColumns: ['width', 'height', 'orientation'],
-          predicates: predicates
-        });
-      const photoAsset: photoAccessHelper.PhotoAsset = await fetchResult.getFirstObject();
-      const widthKey: photoAccessHelper.PhotoKeys = photoAccessHelper.PhotoKeys.WIDTH;
-      const heightKey: photoAccessHelper.PhotoKeys = photoAccessHelper.PhotoKeys.HEIGHT;
-      const orientationKey: photoAccessHelper.PhotoKeys = photoAccessHelper.PhotoKeys.ORIENTATION;
-      const photoAssetWidth = (photoAsset.get(widthKey.toString()) as number) || Math.round(imageInfo.size.width);
-      const photoAssetHeight = (photoAsset.get(heightKey.toString()) as number) || Math.round(imageInfo.size.height);
-      const photoAssetOrientation = (photoAsset.get(orientationKey.toString()) as number) || 0;
-      const thumbnailSize = makeAspectFitThumbnailSize(
-        width,
-        height,
-        photoAssetWidth,
-        photoAssetHeight,
-        photoAssetOrientation,
-      );
-      pixelMap = await photoAsset.getThumbnail(thumbnailSize);
+    } finally {
+      try { imageSource.release(); } catch (_) {}
     }
   }
 

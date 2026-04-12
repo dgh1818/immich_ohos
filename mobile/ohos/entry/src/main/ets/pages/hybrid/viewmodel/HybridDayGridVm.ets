@@ -19,6 +19,8 @@ import { FormIndex, FORM_SIZE } from '../statemanager/constants/GridDefine';
 import { PinchAction } from '../statemanager/constants/PinchDefine';
 
 type HybridPhotoAsset = Shared.HybridPhotoAsset;
+type HybridBucketInfo = Shared.HybridBucketInfo;
+type HybridGroupInfo = Shared.HybridGroupInfo;
 type HybridPhotoSection = Shared.HybridPhotoSection;
 type HybridTimelineItem = Shared.HybridTimelineItem;
 
@@ -38,6 +40,8 @@ export class HybridGridColumnsCommitState {
   public targetFirstPhotoIndex: number = 0;
   public targetAnchorPhotoIndex: number = 0;
   public targetScrollOffset: number = 0;
+  public anchorItemIndex: number = 0;
+  public extraOffset: number = 0;
 }
 
 class HybridPinchFreezeState {
@@ -77,8 +81,13 @@ export class HybridDayGridVm {
   private readonly context: common.UIAbilityContext;
 
   // ========== 数据管理 ==========
+  private yearBuckets: Array<HybridBucketInfo> = [];
+  private monthBuckets: Array<HybridBucketInfo> = [];
+  private groupDayGroups: Array<HybridGroupInfo> = [];
   private sections: Array<HybridPhotoSection> = [];
   private allTimelineItems: Array<HybridTimelineItem> = [];
+  private windowStartOffset: number = 0;
+  private windowEndOffset: number = 0;
   private nextOffset: number = 0;
   private hasMore: boolean = true;
   private isLoading: boolean = false;
@@ -113,6 +122,7 @@ export class HybridDayGridVm {
   private backgroundPredownloadRunning: boolean = false;
   private idleWorkToken: number = 0;
   private pendingWarmupSections: Array<HybridPhotoSection> = [];
+  private prefetchOwnedByActiveRuntime: boolean = false;
 
   // ========== 工具类 ==========
   private readonly timelineBuilder: HybridPhotoTimelineBuilder = new HybridPhotoTimelineBuilder();
@@ -170,6 +180,8 @@ export class HybridDayGridVm {
   public async reload(): Promise<void> {
     this.backgroundPredownloadToken += 1;
     this.backgroundPredownloadRunning = false;
+    this.yearBuckets = [];
+    this.monthBuckets = [];
     this.sections = [];
     this.allTimelineItems = [];
     this.nextOffset = 0;
@@ -292,7 +304,7 @@ export class HybridDayGridVm {
    */
   private async loadPage(reset: boolean): Promise<void> {
     try {
-      const payload = await HybridFlutterBridge.fetchPhotoPage(
+      const payload = await HybridFlutterBridge.fetchTimelineWindow(
         reset ? 0 : this.nextOffset,
         this.pageSize,
       );
@@ -306,6 +318,17 @@ export class HybridDayGridVm {
       }
 
       this.errorText = '';
+      if (reset || page.yearBuckets.length > 0) {
+        this.yearBuckets = page.yearBuckets.slice();
+      }
+      if (reset || page.monthBuckets.length > 0) {
+        this.monthBuckets = page.monthBuckets.slice();
+      }
+      if (reset || page.groupDayGroups.length > 0) {
+        this.groupDayGroups = page.groupDayGroups.slice();
+      }
+      this.windowStartOffset = page.windowStartOffset;
+      this.windowEndOffset = page.windowEndOffset;
       this.nextOffset = page.nextOffset;
       this.hasMore = page.hasMore;
       const previousItemCount = this.allTimelineItems.length;
@@ -328,11 +351,19 @@ export class HybridDayGridVm {
         this.notifyDataLoaded(timelineItems, this.hasMore);
 
         // 预取缩略图
-        if (timelineItems.length > 0) {
-          const initialRows = reset ? Shared.HYBRID_INITIAL_PREFETCH_ROWS : Shared.HYBRID_THUMBNAIL_PREFETCH_ROWS;
+        if (!this.prefetchOwnedByActiveRuntime && timelineItems.length > 0) {
+          const initialRows = reset
+            ? Shared.resolveInitialPrefetchRows(this.gridColumns)
+            : Shared.resolveIncrementalPrefetchRows(this.gridColumns);
           this.prefetchTimelineRows(0, Math.min(timelineItems.length - 1, initialRows));
         }
-        this.pruneThumbnailCacheAroundViewport(0, Math.min(timelineItems.length - 1, Shared.HYBRID_INITIAL_PREFETCH_ROWS), true);
+        if (!this.prefetchOwnedByActiveRuntime) {
+          this.pruneThumbnailCacheAroundViewport(
+            0,
+            Math.min(timelineItems.length - 1, Shared.resolveInitialPrefetchRows(this.gridColumns)),
+            true,
+          );
+        }
       } else {
         // 增量加载
         const normalizedSections = this.timelineBuilder.reflowSections(page.sections, this.gridColumns);
@@ -362,18 +393,20 @@ export class HybridDayGridVm {
           // 通知数据加载完成
           this.notifyDataLoaded(this.allTimelineItems, this.hasMore);
 
-          const totalCount = this.allTimelineItems.length;
-          if (totalCount > 0) {
-            const prefetchStart = Math.max(0, tailUpdate.startIndex - 1);
-            const prefetchEnd = Math.min(totalCount - 1, prefetchStart + Shared.HYBRID_THUMBNAIL_PREFETCH_ROWS);
-            this.prefetchTimelineRows(prefetchStart, prefetchEnd);
+          if (!this.prefetchOwnedByActiveRuntime) {
+            const totalCount = this.allTimelineItems.length;
+            if (totalCount > 0) {
+              const prefetchStart = Math.max(0, tailUpdate.startIndex - 1);
+              const prefetchEnd = Math.min(totalCount - 1, prefetchStart + Shared.HYBRID_THUMBNAIL_PREFETCH_ROWS);
+              this.prefetchTimelineRows(prefetchStart, prefetchEnd);
+            }
+            this.pruneThumbnailCacheAroundViewport(this.lastVisibleStart, this.lastVisibleEnd, true);
           }
-          this.pruneThumbnailCacheAroundViewport(this.lastVisibleStart, this.lastVisibleEnd, true);
         }
       }
 
       // 后台预下载
-      if (!reset && Shared.HYBRID_ENABLE_REMOTE_THUMBNAIL_DISK_WRITES) {
+      if (!this.prefetchOwnedByActiveRuntime && !reset && Shared.HYBRID_ENABLE_REMOTE_THUMBNAIL_DISK_WRITES) {
         if (ThumbnailDisk.HybridScrollState.isScrolling) {
           this.pendingWarmupSections = page.sections.slice();
           this.scheduleIdleWork();
@@ -419,7 +452,7 @@ export class HybridDayGridVm {
       this.hasMore &&
       !this.isLoading &&
       !this.isLoadingMore &&
-      this.loadedPhotoRowCount < this.resolveRunwayTargetRows();
+      this.allTimelineItems.length - this.lastVisibleEnd < this.resolveRunwayTargetRows();
   }
 
   private async ensureLoadedRunway(): Promise<void> {
@@ -478,6 +511,22 @@ export class HybridDayGridVm {
    */
   public getSlidingWindowRange(): [number, number] {
     return [this.windowStartIndex, this.windowEndIndex];
+  }
+
+  public getLastVisibleStart(): number {
+    return this.lastVisibleStart;
+  }
+
+  public getLastVisibleEnd(): number {
+    return this.lastVisibleEnd;
+  }
+
+  public getVisibleRowCapacity(): number {
+    return this.visibleRowCapacity;
+  }
+
+  public isPinchFreezeActive(): boolean {
+    return this.pinchFreezeState.active;
   }
 
   // ========== 增量更新 ==========
@@ -545,12 +594,14 @@ export class HybridDayGridVm {
       this.scrollStateListeners.forEach(listener => listener.onScrollStop?.());
       return;
     }
-    this.pruneThumbnailCacheAroundViewport(this.lastVisibleStart, this.lastVisibleEnd, true);
-    this.prefetchTimelineRows(
-      this.lastVisibleStart,
-      this.resolveScrollStopPrefetchEnd(this.lastVisibleEnd, this.allTimelineItems.length),
-    );
-    this.scheduleIdleWork();
+    if (!this.prefetchOwnedByActiveRuntime) {
+      this.pruneThumbnailCacheAroundViewport(this.lastVisibleStart, this.lastVisibleEnd, true);
+      this.prefetchTimelineRows(
+        this.lastVisibleStart,
+        this.resolveScrollStopPrefetchEnd(this.lastVisibleEnd, this.allTimelineItems.length),
+      );
+      this.scheduleIdleWork();
+    }
     void this.ensureLoadedRunway();
 
     // 通知监听器
@@ -580,7 +631,9 @@ export class HybridDayGridVm {
     this.maybeLoadMore(lastIndex);
 
     // 预取缩略图
-    this.prefetchAheadWhileScrolling(previousStart, previousEnd, firstIndex, lastIndex);
+    if (!this.prefetchOwnedByActiveRuntime) {
+      this.prefetchAheadWhileScrolling(previousStart, previousEnd, firstIndex, lastIndex);
+    }
 
     // 通知监听器
     this.scrollStateListeners.forEach(listener => listener.onScrollIndex?.(firstIndex, lastIndex));
@@ -594,8 +647,8 @@ export class HybridDayGridVm {
       return;
     }
 
-    const loadedRows = this.loadedPhotoRowCount;
-    if (loadedRows <= 0) {
+    const loadedItems = this.allTimelineItems.length;
+    if (loadedItems <= 0) {
       return;
     }
 
@@ -603,7 +656,7 @@ export class HybridDayGridVm {
       Shared.HYBRID_LOAD_MORE_AHEAD_MIN_ROWS,
       Math.max(1, this.visibleRowCapacity) * Shared.HYBRID_LOAD_MORE_VIEWPORT_MULTIPLIER,
     );
-    if (loadedRows - endIndex > threshold) {
+    if (loadedItems - endIndex > threshold) {
       return;
     }
 
@@ -694,6 +747,10 @@ export class HybridDayGridVm {
   }
 
   private prefetchTimelineRowsInternal(startIndex: number, endIndex: number, allowWhileScrolling: boolean): void {
+    if (this.pinchFreezeState.active) {
+      return;
+    }
+
     if (ThumbnailDisk.HybridScrollState.isScrolling && !allowWhileScrolling) {
       return;
     }
@@ -759,6 +816,11 @@ export class HybridDayGridVm {
   }
 
   private pruneThumbnailCacheAroundViewport(startIndex: number, endIndex: number, force: boolean = false): void {
+    // Skip cache pruning during pinch to protect PixelMaps needed by both grids
+    if (this.pinchFreezeState.active) {
+      return;
+    }
+
     const totalCount = this.allTimelineItems.length;
     if (totalCount <= 0) {
       return;
@@ -840,6 +902,10 @@ export class HybridDayGridVm {
 
     const assets = this.timelineBuilder.collectPredownloadAssets(sections, includeAllAssets);
     for (let index = 0; index < assets.length; index += Shared.HYBRID_BACKGROUND_PREDOWNLOAD_BATCH_SIZE) {
+      // Back off while visible requests are in-flight
+      while (Thumbnail.HybridThumbnailRequestLimiter.isUnderPressure()) {
+        await Shared.delay(Shared.HYBRID_BACKGROUND_PREDOWNLOAD_YIELD_MS * 2);
+      }
       const batch = assets.slice(index, index + Shared.HYBRID_BACKGROUND_PREDOWNLOAD_BATCH_SIZE);
       await Promise.all(
         batch.map((asset: HybridPhotoAsset) =>
@@ -859,7 +925,8 @@ export class HybridDayGridVm {
       return;
     }
 
-    if (ThumbnailDisk.HybridScrollState.isScrolling || this.backgroundPredownloadRunning || !this.shouldContinueBackgroundPredownload()) {
+    if (ThumbnailDisk.HybridScrollState.isScrolling || this.backgroundPredownloadRunning || !this.shouldContinueBackgroundPredownload()
+      || Thumbnail.HybridThumbnailRequestLimiter.isUnderPressure()) {
       return;
     }
 
@@ -877,8 +944,13 @@ export class HybridDayGridVm {
     let offset = startOffset;
 
     while (token === this.backgroundPredownloadToken && this.shouldContinueBackgroundPredownload()) {
+      // Pause when the system is under visible-request pressure
+      if (Thumbnail.HybridThumbnailRequestLimiter.isUnderPressure()) {
+        await Shared.delay(Shared.HYBRID_BACKGROUND_PREDOWNLOAD_YIELD_MS * 4);
+        continue;
+      }
       try {
-        const payload = await HybridFlutterBridge.fetchPhotoPage(offset, Shared.HYBRID_BACKGROUND_PREDOWNLOAD_PAGE_SIZE);
+        const payload = await HybridFlutterBridge.fetchTimelineWindow(offset, Shared.HYBRID_BACKGROUND_PREDOWNLOAD_PAGE_SIZE);
         const page = this.timelineBuilder.parsePageResult(payload);
         if (!page.ready || page.sections.length === 0) {
           break;
@@ -1018,10 +1090,38 @@ export class HybridDayGridVm {
     this.requestSize = Math.max(96, requestSize);
   }
 
+  public setPrefetchOwnedByActiveRuntime(enabled: boolean): void {
+    this.prefetchOwnedByActiveRuntime = enabled;
+  }
+
   // ========== Getter ==========
 
   public getSections(): Array<HybridPhotoSection> {
     return this.sections;
+  }
+
+  public getYearBuckets(): Array<HybridBucketInfo> {
+    return this.yearBuckets;
+  }
+
+  public getMonthBuckets(): Array<HybridBucketInfo> {
+    return this.monthBuckets;
+  }
+
+  public getGroupDayGroups(): Array<HybridGroupInfo> {
+    return this.groupDayGroups;
+  }
+
+  public getWindowStartOffset(): number {
+    return this.windowStartOffset;
+  }
+
+  public getWindowEndOffset(): number {
+    return this.windowEndOffset;
+  }
+
+  public getNextOffset(): number {
+    return this.nextOffset;
   }
 
   public getAllTimelineItems(): Array<HybridTimelineItem> {
@@ -1102,9 +1202,14 @@ export class HybridDayGridVm {
     this.idleWorkToken += 1;
     this.pinchFreezeState.active = false;
     this.runwayTopUpInFlight = false;
+    this.yearBuckets = [];
+    this.monthBuckets = [];
+    this.groupDayGroups = [];
     this.sections = [];
     this.allTimelineItems = [];
     this.pendingWarmupSections = [];
+    this.windowStartOffset = 0;
+    this.windowEndOffset = 0;
     this.nextOffset = 0;
     this.hasMore = true;
     this.isLoading = false;

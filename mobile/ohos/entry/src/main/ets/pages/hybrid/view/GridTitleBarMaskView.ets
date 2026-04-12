@@ -1,14 +1,14 @@
-import { HybridPhotoGridViewId, HybridPhotoGridZIndex } from '../viewcontroller/HybridPhotoGridVc';
+import { PhotoGridViewId, PhotoGridZIndex } from '../viewcontroller/PhotoGridViewController';
 
 @Component
-export struct HybridGridTitleBarMaskView {
+export struct GridTitleBarMaskView {
   @Prop maskHeight: number = 72;
   @Prop opacityValue: number = 1;
 
   build() {
     Column() {}
-      .id(HybridPhotoGridViewId.TITLE_BAR_MASK)
-      .zIndex(HybridPhotoGridZIndex.TITLE_BAR_MASK)
+      .id(PhotoGridViewId.TITLE_BAR_MASK)
+      .zIndex(PhotoGridZIndex.TITLE_BAR_MASK)
       .width('100%')
       .height(this.maskHeight)
       .opacity(this.opacityValue)

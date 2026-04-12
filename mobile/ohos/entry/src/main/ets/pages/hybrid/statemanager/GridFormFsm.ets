@@ -286,6 +286,18 @@ export class FormEventTypeUtils {
     }
     return SWITCH_EVENT | (0x1 << (formIndex + EVENT_TARGET_OFFSET));
   }
+
+  /**
+   * 从事件中解析目标形态
+   */
+  public static getTargetFormFromEvent(eventType: FormEventType): FormIndex {
+    for (let formIndex = 0; formIndex < FORM_SIZE; formIndex += 1) {
+      if ((eventType & (0x1 << (formIndex + EVENT_TARGET_OFFSET))) !== 0) {
+        return formIndex as FormIndex;
+      }
+    }
+    return FormIndex.INVALID;
+  }
 }
 
 /**
@@ -315,6 +327,14 @@ class InitState extends AbstractFormState {
       case FormEventType.DATA_LOADED:
         return FormStateType.DAY_STATE;
     }
+
+    if (FormEventTypeUtils.isSwitchEvent(eventType)) {
+      const targetForm = FormEventTypeUtils.getTargetFormFromEvent(eventType);
+      if (targetForm >= 0) {
+        return FormStateTypeUtils.getStateTypeFromForm(targetForm);
+      }
+    }
+
     return this.stateType;
   }
 }
@@ -337,6 +357,20 @@ abstract class AbstractHasDataFormState extends AbstractFormState {
  */
 abstract class AbstractNotFollowHandState extends AbstractHasDataFormState {
   public override handleEvent(eventType: FormEventType): FormStateType {
+    if (FormEventTypeUtils.isSwitchEvent(eventType)) {
+      const targetForm = FormEventTypeUtils.getTargetFormFromEvent(eventType);
+      if (targetForm >= 0) {
+        return FormStateTypeUtils.getStateTypeFromForm(targetForm);
+      }
+    }
+
+    if (eventType === FormEventType.PINCH_START) {
+      const currentForm = FormStateTypeUtils.getFormFromStateType(this.stateType);
+      if (currentForm >= 0) {
+        return FormStateTypeUtils.getStateTypeFromForm(currentForm, true);
+      }
+    }
+
     return super.handleEvent(eventType);
   }
 }
@@ -346,6 +380,23 @@ abstract class AbstractNotFollowHandState extends AbstractHasDataFormState {
  */
 abstract class AbstractFollowHandState extends AbstractHasDataFormState {
   public override handleEvent(eventType: FormEventType): FormStateType {
+    if (FormEventTypeUtils.isPinchEvent(eventType)) {
+      const targetForm = FormEventTypeUtils.getTargetFormFromEvent(eventType);
+      const nextForm = targetForm >= 0
+        ? targetForm
+        : FormStateTypeUtils.getFormFromStateType(this.stateType);
+      if (nextForm >= 0) {
+        return FormStateTypeUtils.getStateTypeFromForm(nextForm, FormEventTypeUtils.isToFollowHandEvent(eventType));
+      }
+    }
+
+    if (FormEventTypeUtils.isSwitchEvent(eventType)) {
+      const targetForm = FormEventTypeUtils.getTargetFormFromEvent(eventType);
+      if (targetForm >= 0) {
+        return FormStateTypeUtils.getStateTypeFromForm(targetForm);
+      }
+    }
+
     return super.handleEvent(eventType);
   }
 }
@@ -354,108 +405,48 @@ abstract class AbstractFollowHandState extends AbstractHasDataFormState {
  * 年视图态
  */
 class YearState extends AbstractNotFollowHandState {
-  public override handleEvent(eventType: FormEventType): FormStateType {
-    switch (eventType) {
-      case FormEventType.PINCH_START:
-        return FormStateType.YEAR_FOLLOW_HAND_STATE;
-    }
-    return super.handleEvent(eventType);
-  }
 }
 
 /**
  * 年跟手态
  */
 class YearFollowHandState extends AbstractFollowHandState {
-  public override handleEvent(eventType: FormEventType): FormStateType {
-    switch (eventType) {
-      case FormEventType.PINCH_END:
-      case FormEventType.PINCH_END_QUICK:
-        return FormStateType.YEAR_STATE;
-    }
-    return super.handleEvent(eventType);
-  }
 }
 
 /**
  * 月视图态
  */
 class MonthState extends AbstractNotFollowHandState {
-  public override handleEvent(eventType: FormEventType): FormStateType {
-    switch (eventType) {
-      case FormEventType.PINCH_START:
-        return FormStateType.MONTH_FOLLOW_HAND_STATE;
-    }
-    return super.handleEvent(eventType);
-  }
 }
 
 /**
  * 月跟手态
  */
 class MonthFollowHandState extends AbstractFollowHandState {
-  public override handleEvent(eventType: FormEventType): FormStateType {
-    switch (eventType) {
-      case FormEventType.PINCH_END:
-      case FormEventType.PINCH_END_QUICK:
-        return FormStateType.MONTH_STATE;
-    }
-    return super.handleEvent(eventType);
-  }
 }
 
 /**
  * 日视图态
  */
 class DayState extends AbstractNotFollowHandState {
-  public override handleEvent(eventType: FormEventType): FormStateType {
-    switch (eventType) {
-      case FormEventType.PINCH_START:
-        return FormStateType.DAY_FOLLOW_HAND_STATE;
-    }
-    return super.handleEvent(eventType);
-  }
 }
 
 /**
  * 日跟手态
  */
 class DayFollowHandState extends AbstractFollowHandState {
-  public override handleEvent(eventType: FormEventType): FormStateType {
-    switch (eventType) {
-      case FormEventType.PINCH_END:
-      case FormEventType.PINCH_END_QUICK:
-        return FormStateType.DAY_STATE;
-    }
-    return super.handleEvent(eventType);
-  }
 }
 
 /**
  * 日分组视图态
  */
 class GroupDayState extends AbstractNotFollowHandState {
-  public override handleEvent(eventType: FormEventType): FormStateType {
-    switch (eventType) {
-      case FormEventType.PINCH_START:
-        return FormStateType.GROUP_DAY_FOLLOW_HAND_STATE;
-    }
-    return super.handleEvent(eventType);
-  }
 }
 
 /**
  * 日分组跟手态
  */
 class GroupDayFollowHandState extends AbstractFollowHandState {
-  public override handleEvent(eventType: FormEventType): FormStateType {
-    switch (eventType) {
-      case FormEventType.PINCH_END:
-      case FormEventType.PINCH_END_QUICK:
-        return FormStateType.GROUP_DAY_STATE;
-    }
-    return super.handleEvent(eventType);
-  }
 }
 
 /**

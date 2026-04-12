@@ -97,6 +97,7 @@ export struct HybridPhotoGridView {
     Stack({ alignContent: Alignment.TopStart }) {
       HybridDayGridA({
         columns: this.viewModel.gridColumnsA,
+        cacheRows: this.viewModel.gridCacheRowsA,
         visible: this.viewModel.gridVisibleA,
         interactive: this.viewModel.gridInteractiveA,
         warmActive: this.viewModel.gridWarmActiveA,
@@ -142,6 +143,7 @@ export struct HybridPhotoGridView {
 
       HybridDayGridB({
         columns: this.viewModel.gridColumnsB,
+        cacheRows: this.viewModel.gridCacheRowsB,
         visible: this.viewModel.gridVisibleB,
         interactive: this.viewModel.gridInteractiveB,
         warmActive: this.viewModel.gridWarmActiveB,
@@ -187,6 +189,7 @@ export struct HybridPhotoGridView {
 
       HybridDayGridC({
         columns: this.viewModel.gridColumnsC,
+        cacheRows: this.viewModel.gridCacheRowsC,
         visible: this.viewModel.gridVisibleC,
         interactive: this.viewModel.gridInteractiveC,
         warmActive: this.viewModel.gridWarmActiveC,

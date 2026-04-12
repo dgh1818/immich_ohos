@@ -16,7 +16,7 @@
 import common from '@ohos.app.ability.common';
 import { FlutterPage } from '@ohos/flutter_ohos'
 import { HybridFlutterBridge } from '../bridge/HybridFlutterBridge';
-import { HybridPhotoGrid } from './hybrid/HybridPhotoGrid';
+import { PhotoGridPage } from './hybrid/PhotoGridPage';
 
 let storage = LocalStorage.getShared()
 const EVENT_BACK_PRESS = 'EVENT_BACK_PRESS'
@@ -43,7 +43,7 @@ struct Index {
       if (this.launchMode === LAUNCH_MODE_HYBRID) {
         Stack({ alignContent: Alignment.TopStart }) {
           if (this.selectedPane === 0) {
-            HybridPhotoGrid({ topInset: 76 })
+            PhotoGridPage({ topInset: 76 })
               .width('100%')
               .height('100%');
           } else {

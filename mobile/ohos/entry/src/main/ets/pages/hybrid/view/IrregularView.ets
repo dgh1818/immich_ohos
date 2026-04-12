@@ -1,7 +1,7 @@
-import { HybridPhotoGridViewId, HybridPhotoGridZIndex } from '../viewcontroller/HybridPhotoGridVc';
+import { PhotoGridViewId, PhotoGridZIndex } from '../viewcontroller/PhotoGridViewController';
 
 @Component
-export struct HybridIrregularView {
+export struct IrregularView {
   @Prop title: string = '';
   @Prop count: number = 0;
   @Prop topInset: number = 56;
@@ -18,8 +18,8 @@ export struct HybridIrregularView {
           .fontSize(10)
           .fontColor(0xFF64748B);
       }
-      .id(HybridPhotoGridViewId.IRREGULAR)
-      .zIndex(HybridPhotoGridZIndex.IRREGULAR)
+      .id(PhotoGridViewId.IRREGULAR)
+      .zIndex(PhotoGridZIndex.IRREGULAR)
       .padding({ left: 12, right: 12, top: 10, bottom: 10 })
       .backgroundColor($r('sys.color.ohos_id_color_sub_background'))
       .borderRadius(18)

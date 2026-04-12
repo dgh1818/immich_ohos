@@ -92,13 +92,26 @@ export class StateTransferProcessor<S, E> extends ObserverManager<StateTransferA
     action.prepareAction?.(oldState, newState, event);
     const animateParam: AnimateParam | undefined = action.animationParam?.(oldState, newState, event);
     if ((!action.isNeedAnimation || action.isNeedAnimation()) && animateParam) {
-      if (action.isAnimateImmediately?.(oldState, newState, event) === true) {
-        animateToImmediately(animateParam, () => action.targetAction?.(oldState, newState, event));
-      } else {
-        animateTo(animateParam, () => action.targetAction?.(oldState, newState, event));
-      }
+      this.runAnimateAction(
+        animateParam,
+        () => action.targetAction?.(oldState, newState, event),
+        action.isAnimateImmediately?.(oldState, newState, event) === true,
+      );
     } else {
       action.targetAction?.(oldState, newState, event);
     }
+  }
+
+  private runAnimateAction(
+    animateParam: AnimateParam,
+    action: () => void,
+    isImmediate: boolean,
+  ): void {
+    if (isImmediate) {
+      animateToImmediately(animateParam, action);
+      return;
+    }
+
+    animateTo(animateParam, action);
   }
 }

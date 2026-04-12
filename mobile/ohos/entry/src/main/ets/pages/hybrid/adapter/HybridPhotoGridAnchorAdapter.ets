@@ -50,6 +50,8 @@ export class HybridPinchStateInfo {
   targetAnchorRowIndex: number = 0;
   targetVisibleAnchorOffsetY: number = 0;
   fillPosition: number = 0;
+  anchorItemIndex: number = 0;
+  extraOffset: number = 0;
   targetDirection: HybridPinchTargetDirection = HybridPinchTargetDirection.NONE;
 }
 
@@ -112,7 +114,24 @@ export class HybridPhotoGridAnchorAdapter {
     state.pinchCenterY = pinchCenterY;
     state.liveScale = clampedScale;
     state.targetForm = this.resolveTargetForm(clampedScale, state.startColumns);
-    state.targetColumns = getColumnsByFormIndex(state.targetForm);
+    state.targetColumns = Math.min(
+      Shared.HYBRID_GRID_MAX_COLUMNS,
+      getColumnsByFormIndex(state.targetForm),
+    );
+
+    // When at a clamped column count (e.g. 6, clamped from MONTH=8), expanding should
+    // first return to the current form's natural column count (DAY=4) before jumping to
+    // the next form (GROUP_DAY=3). Without this, 6→3 skips 4 entirely.
+    const currentFormColumns = getColumnsByFormIndex(getFormIndexByColumns(state.startColumns));
+    if (
+      state.targetColumns < state.startColumns &&
+      currentFormColumns < state.startColumns &&
+      currentFormColumns > state.targetColumns
+    ) {
+      state.targetColumns = currentFormColumns;
+      state.targetForm = getFormIndexByColumns(currentFormColumns);
+    }
+
     state.targetDirection = this.resolveTargetDirection(state);
     state.desiredFocusX = pinchCenterX;
     state.desiredFocusY = pinchCenterY;
@@ -129,6 +148,14 @@ export class HybridPhotoGridAnchorAdapter {
     state.progress = progress;
 
     if (state.targetColumns === state.startColumns || state.gridWidth <= 0) {
+      const scrollToIndexParams = HybridSwitchCalc.calcScrollToIndexParams(
+        state.anchor,
+        Math.max(1, state.targetColumns),
+        state.startScrollOffset,
+        state.gridWidth,
+        state.topInset,
+        Shared.HYBRID_GRID_GAP,
+      );
       state.targetBaseScale = 1;
       state.targetVisualScale = 1;
       state.targetAnchorX = state.pinchCenterX;
@@ -144,12 +171,22 @@ export class HybridPhotoGridAnchorAdapter {
       state.targetFirstRowIndex = state.targetAnchorRowIndex;
       state.targetVisibleAnchorOffsetY = state.anchor.anchorCenterY - state.startScrollOffset;
       state.fillPosition = 0;
+      state.anchorItemIndex = scrollToIndexParams.itemIndex;
+      state.extraOffset = scrollToIndexParams.extraOffset;
       return;
     }
 
     const currentItemSize = HybridSwitchCalc.calcItemSize(state.startColumns, state.gridWidth);
     const targetItemSize = HybridSwitchCalc.calcItemSize(state.targetColumns, state.gridWidth);
     if (currentItemSize <= 0 || targetItemSize <= 0) {
+      const scrollToIndexParams = HybridSwitchCalc.calcScrollToIndexParams(
+        state.anchor,
+        Math.max(1, state.targetColumns),
+        state.startScrollOffset,
+        state.gridWidth,
+        state.topInset,
+        Shared.HYBRID_GRID_GAP,
+      );
       state.targetBaseScale = 1;
       state.targetVisualScale = 1;
       state.targetAnchorX = state.pinchCenterX;
@@ -165,6 +202,8 @@ export class HybridPhotoGridAnchorAdapter {
       state.targetFirstRowIndex = state.targetAnchorRowIndex;
       state.targetVisibleAnchorOffsetY = state.anchor.anchorCenterY - state.startScrollOffset;
       state.fillPosition = 0;
+      state.anchorItemIndex = scrollToIndexParams.itemIndex;
+      state.extraOffset = scrollToIndexParams.extraOffset;
       return;
     }
 
@@ -178,16 +217,22 @@ export class HybridPhotoGridAnchorAdapter {
     switchParams.topInset = state.topInset;
     switchParams.gap = Shared.HYBRID_GRID_GAP;
     const switchResult = HybridSwitchCalc.calcSwitch(switchParams);
-    const fillPosition = Math.max(0, switchResult?.fillPosition ?? 0);
     const safeTargetAnchorPhotoIndex = this.clamp(
       state.anchor.itemIndex,
       0,
       Math.max(0, state.totalPhotoCount - 1),
     );
-    const targetIndex = safeTargetAnchorPhotoIndex + fillPosition;
+    const scrollToIndexParams = HybridSwitchCalc.calcScrollToIndexParams(
+      state.anchor,
+      Math.max(1, state.targetColumns),
+      state.startScrollOffset,
+      state.gridWidth,
+      state.topInset,
+      Shared.HYBRID_GRID_GAP,
+    );
     const targetStep = targetItemSize + Shared.HYBRID_GRID_GAP;
-    const targetRow = Math.max(0, Math.floor(targetIndex / Math.max(1, state.targetColumns)));
-    const targetColumn = Math.max(0, targetIndex % Math.max(1, state.targetColumns));
+    const targetRow = Math.max(0, Math.floor(safeTargetAnchorPhotoIndex / Math.max(1, state.targetColumns)));
+    const targetColumn = Math.max(0, safeTargetAnchorPhotoIndex % Math.max(1, state.targetColumns));
     const targetAnchorX = targetColumn * targetStep + state.anchor.xProgress * targetItemSize;
     const targetAnchorContentY = targetRow * targetStep + state.anchor.yProgress * targetItemSize;
     const targetAnchorY = state.topInset + targetAnchorContentY;
@@ -196,18 +241,19 @@ export class HybridPhotoGridAnchorAdapter {
     const desiredFocusY = pinchCenterY;
     const resolvedFocusX = this.clamp(desiredFocusX, 0, state.gridWidth);
     const resolvedFocusY = this.clamp(desiredFocusY, state.topInset, Math.max(state.topInset, state.gridHeight));
-    const focusViewportY = this.clamp(resolvedFocusY - state.topInset, 0, state.gridHeight);
-    const contentRows = Math.max(
-      1,
-      Math.ceil((fillPosition + Math.max(0, state.totalPhotoCount)) / Math.max(1, state.targetColumns)),
-    );
+    const contentRows = Math.max(1, Math.ceil(Math.max(0, state.totalPhotoCount) / Math.max(1, state.targetColumns)));
     const contentHeight =
       contentRows * targetItemSize +
       Math.max(0, contentRows - 1) * Shared.HYBRID_GRID_GAP;
     const maxScrollOffset = Math.max(0, contentHeight - state.gridHeight);
-    const targetScrollOffset = this.clamp(targetAnchorContentY - focusViewportY, 0, maxScrollOffset);
+    const targetScrollOffset = this.clamp(
+      Math.floor(scrollToIndexParams.itemIndex / Math.max(1, state.targetColumns)) * targetStep -
+        scrollToIndexParams.extraOffset,
+      0,
+      maxScrollOffset,
+    );
     const targetFirstPhotoIndex = this.clamp(
-      state.targetColumns * Math.floor(targetScrollOffset / Math.max(1, targetStep)) - fillPosition,
+      state.targetColumns * Math.floor(targetScrollOffset / Math.max(1, targetStep)),
       0,
       Math.max(0, state.totalPhotoCount - 1),
     );
@@ -216,13 +262,15 @@ export class HybridPhotoGridAnchorAdapter {
     state.targetVisualScale = targetBaseScale * clampedScale;
     state.targetAnchorX = targetAnchorX;
     state.targetAnchorY = targetAnchorY;
-    state.fillPosition = fillPosition;
+    state.fillPosition = 0;
     state.targetScrollOffset = targetScrollOffset;
     state.targetFirstPhotoIndex = targetFirstPhotoIndex;
     state.targetAnchorPhotoIndex = safeTargetAnchorPhotoIndex;
     state.targetFirstRowIndex = Math.floor(targetFirstPhotoIndex / Math.max(1, state.targetColumns));
     state.targetAnchorRowIndex = Math.floor(safeTargetAnchorPhotoIndex / Math.max(1, state.targetColumns));
     state.targetVisibleAnchorOffsetY = targetAnchorContentY - targetScrollOffset;
+    state.anchorItemIndex = scrollToIndexParams.itemIndex;
+    state.extraOffset = scrollToIndexParams.extraOffset;
     state.desiredFocusX = desiredFocusX;
     state.desiredFocusY = desiredFocusY;
     state.resolvedFocusX = resolvedFocusX;

@@ -4,6 +4,10 @@
 
 - Huawei DevEco Studio SDK path:
   - `C:\Program Files\Huawei\DevEco Studio\sdk\default`
+- `DEVECO_SDK_HOME` must point to:
+  - `C:\Program Files\Huawei\DevEco Studio\sdk`
+- Do not point `DEVECO_SDK_HOME` to:
+  - `C:\Program Files\Huawei\DevEco Studio\sdk\default`
 
 ## Plugin source of truth
 
@@ -26,6 +30,8 @@
 
 - When modifying Flutter plugins, avoid changing shared or common cross-platform code unless it is absolutely necessary.
 - Prefer limiting changes to the ArkTS implementation whenever possible.
+- Use explicit types instead of `any` or `unknown` to satisfy `arkts-no-any-unknown`.
+- Do not use destructuring in ArkTS code. Avoid object destructuring, array destructuring, and destructured parameters.
 - Do not modify the public Dart API, platform interface, or shared plugin logic unless the task explicitly requires it.
 - If a fix can be implemented only in the ArkTS layer, do it there instead of changing common code.
 - Only change shared code when the issue cannot be solved safely in the ArkTS implementation alone.
@@ -60,6 +66,8 @@
   - `C:\Program Files\Huawei\DevEco Studio\sdk\default`
 - For OHOS ArkTS or hybrid timeline changes, validate from:
   - `F:\immich_ohos\mobile`
+- Before using `codegenie_mcp` to check ArkTS syntax, `git add` every newly created `.ets` file first.
+  - Newly added untracked `.ets` files may be skipped by `codegenie_mcp` until they are staged.
 - Default OHOS validation command:
   - `flutter build hap --release`
 - If `flutter build hap --release` fails, clearly distinguish:

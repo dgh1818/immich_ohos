@@ -19,7 +19,7 @@ export class HybridPhotoGridActionAdapter {
     }
 
     try {
-      await HybridFlutterBridge.openTimelineAssetViewer(index);
+      await HybridFlutterBridge.openTimelineAssetViewerAt(index);
     } catch (error) {
       console.error(`[HybridPhotoGridActionAdapter] open asset viewer failed: ${error}`);
     }

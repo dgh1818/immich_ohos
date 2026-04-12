@@ -2,34 +2,36 @@ import { common } from '@kit.AbilityKit';
 export const HYBRID_GRID_COLUMNS = 4;
 export const HYBRID_GRID_GAP = 0;
 export const HYBRID_GRID_MIN_COLUMNS = 3;
-export const HYBRID_GRID_MAX_COLUMNS = 8;
+export const HYBRID_GRID_MAX_COLUMNS = 16;
 export const HYBRID_GRID_MIN_TILE_WIDTH = 96;
-export const HYBRID_PAGE_SIZE = 120;
+export const HYBRID_PAGE_SIZE = 360;
 export const HYBRID_REQUEST_SIZE = 180;
-export const HYBRID_LIST_CACHE_COUNT = 20;
+export const HYBRID_LIST_CACHE_COUNT = 50;
 export const HYBRID_PREFETCH_ROW_THRESHOLD = 32;
-export const HYBRID_INITIAL_PREFETCH_ROWS = 8;
-export const HYBRID_THUMBNAIL_PREFETCH_ROWS = 16;
-export const HYBRID_SCROLL_THUMBNAIL_PREFETCH_ROWS = 32;
-export const HYBRID_SECTION_LEAD_LOOKAHEAD = 3;
-export const HYBRID_THUMBNAIL_CACHE_LIMIT = 300;
+export const HYBRID_INITIAL_PREFETCH_ROWS = 16;
+export const HYBRID_THUMBNAIL_PREFETCH_ROWS = 32;
+export const HYBRID_SCROLL_THUMBNAIL_PREFETCH_ROWS = 48;
+export const HYBRID_SECTION_LEAD_LOOKAHEAD = 5;
+export const HYBRID_THUMBNAIL_CACHE_LIMIT = 1200;
 export const HYBRID_ACTIVE_ROW_KEEP_BEHIND = 12;
 export const HYBRID_ACTIVE_ROW_KEEP_AHEAD = 40;
-export const HYBRID_MAX_CONCURRENT_THUMBNAIL_REQUESTS = 8;
-export const HYBRID_MAX_CONCURRENT_PREFETCH_REQUESTS = 5;
+export const HYBRID_MAX_CONCURRENT_THUMBNAIL_REQUESTS = 12;
+export const HYBRID_MAX_CONCURRENT_PREFETCH_REQUESTS = 8;
 export const HYBRID_MAX_CONCURRENT_REMOTE_WARMUP_DOWNLOADS = 2;
 export const HYBRID_MAX_CONCURRENT_BACKGROUND_PREDOWNLOADS = 1;
+export const HYBRID_PREFETCH_CONCURRENCY_NORMAL = 4;
+export const HYBRID_PREFETCH_CONCURRENCY_CONSTRAINED = 2;
 export const HYBRID_BACKGROUND_PREDOWNLOAD_PAGE_SIZE = 180;
 export const HYBRID_BACKGROUND_PREDOWNLOAD_BATCH_SIZE = 12;
 export const HYBRID_SMALL_SECTION_WARMUP_ASSET_LIMIT = 8;
 export const HYBRID_LARGE_SECTION_WARMUP_ASSET_LIMIT = 12;
 export const HYBRID_WINDOW_BEHIND_ROWS = 32;
-export const HYBRID_WINDOW_AHEAD_ROWS = 80;
-export const HYBRID_WINDOW_MIN_ROWS = 112;
+export const HYBRID_WINDOW_AHEAD_ROWS = 120;
+export const HYBRID_WINDOW_MIN_ROWS = 160;
 export const HYBRID_WINDOW_SHIFT_THRESHOLD = 16;
 export const HYBRID_WINDOW_EMERGENCY_MARGIN = 4;
 export const HYBRID_THUMBNAIL_RELEASE_DELAY_MS = 220;
-export const HYBRID_LOAD_MORE_THROTTLE_MS = 220;
+export const HYBRID_LOAD_MORE_THROTTLE_MS = 100;
 export const HYBRID_FLOATING_HEADER_HEIGHT = 56;
 export const HYBRID_REMOTE_THUMBNAIL_CACHE_DIR = 'hybrid_photos';
 export const HYBRID_REMOTE_THUMBNAIL_CACHE_MAX_BYTES = 2 * 1024 * 1024 * 1024;
@@ -37,20 +39,20 @@ export const HYBRID_REMOTE_THUMBNAIL_CACHE_TRIM_TARGET_BYTES = 1800 * 1024 * 102
 export const HYBRID_REMOTE_THUMBNAIL_CACHE_TRIM_INTERVAL_MS = 10000;
 export const HYBRID_BACKGROUND_PREDOWNLOAD_YIELD_MS = 80;
 export const HYBRID_SCROLL_IDLE_DELAY_MS = 240;
-export const HYBRID_SCROLL_PREFETCH_INTERVAL_MS = 90;
+export const HYBRID_SCROLL_PREFETCH_INTERVAL_MS = 50;
 export const HYBRID_DISK_IDLE_DELAY_MS = 900;
 export const HYBRID_DEFERRED_REMOTE_WRITE_LIMIT = 24;
 export const HYBRID_ENABLE_REMOTE_THUMBNAIL_DISK_WRITES = true;
 export const HYBRID_VIEWPORT_CACHE_PRUNE_INTERVAL_MS = 180;
-export const HYBRID_MIN_RUNWAY_ROWS = 64;
-export const HYBRID_RUNWAY_MULTIPLIER = 8;
-export const HYBRID_LOAD_MORE_AHEAD_MIN_ROWS = 32;
-export const HYBRID_LOAD_MORE_VIEWPORT_MULTIPLIER = 4;
+export const HYBRID_MIN_RUNWAY_ROWS = 160;
+export const HYBRID_RUNWAY_MULTIPLIER = 12;
+export const HYBRID_LOAD_MORE_AHEAD_MIN_ROWS = 64;
+export const HYBRID_LOAD_MORE_VIEWPORT_MULTIPLIER = 6;
 export const HYBRID_KEEP_ABOVE_SCREEN_MULTIPLIER = 2;
-export const HYBRID_KEEP_BELOW_SCREEN_MULTIPLIER = 6;
-export const HYBRID_SCROLL_FORWARD_PREFETCH_SCREEN_MULTIPLIER = 6;
+export const HYBRID_KEEP_BELOW_SCREEN_MULTIPLIER = 4;
+export const HYBRID_SCROLL_FORWARD_PREFETCH_SCREEN_MULTIPLIER = 4;
 export const HYBRID_SCROLL_BACKWARD_PREFETCH_SCREEN_MULTIPLIER = 2;
-export const HYBRID_SCROLL_STOP_PREFETCH_SCREEN_MULTIPLIER = 6;
+export const HYBRID_SCROLL_STOP_PREFETCH_SCREEN_MULTIPLIER = 4;
 export const HYBRID_IDLE_PREVIEW_VISIBLE_SCREEN_MULTIPLIER = 1;
 export const HYBRID_IDLE_PREVIEW_OVERSCAN_ABOVE_SCREEN_MULTIPLIER = 1.0;
 export const HYBRID_IDLE_PREVIEW_OVERSCAN_BELOW_SCREEN_MULTIPLIER = 1.0;
@@ -59,6 +61,76 @@ export enum HybridThumbnailLayerRole {
   ACTIVE = 0,
   PREVIEW = 1,
   WARM = 2,
+}
+
+export enum HybridPrefetchRuntimeMode {
+  NORMAL = 0,
+  CONSTRAINED = 1,
+}
+
+let hybridPrefetchRuntimeMode: HybridPrefetchRuntimeMode = HybridPrefetchRuntimeMode.NORMAL;
+
+export function setHybridPrefetchRuntimeMode(mode: HybridPrefetchRuntimeMode): void {
+  hybridPrefetchRuntimeMode = mode;
+}
+
+export function getHybridPrefetchRuntimeMode(): HybridPrefetchRuntimeMode {
+  return hybridPrefetchRuntimeMode;
+}
+
+export function resolveHybridPrefetchConcurrency(): number {
+  return hybridPrefetchRuntimeMode === HybridPrefetchRuntimeMode.CONSTRAINED
+    ? HYBRID_PREFETCH_CONCURRENCY_CONSTRAINED
+    : HYBRID_PREFETCH_CONCURRENCY_NORMAL;
+}
+
+/**
+ * Column-density multiplier for row-based prefetch/runway counts.
+ * Dense grids (7-8 cols) get more rows prefetched because each row is cheaper to decode.
+ */
+export function resolveColumnDensityMultiplier(columns: number): number {
+  if (columns >= 7) {
+    return 2.0;
+  }
+  if (columns >= 5) {
+    return 1.5;
+  }
+  return 1.0;
+}
+
+/**
+ * Adaptive initial prefetch rows scaled by column density.
+ */
+export function resolveInitialPrefetchRows(columns: number): number {
+  return Math.ceil(HYBRID_INITIAL_PREFETCH_ROWS * resolveColumnDensityMultiplier(columns));
+}
+
+/**
+ * Adaptive incremental prefetch rows scaled by column density.
+ */
+export function resolveIncrementalPrefetchRows(columns: number): number {
+  return Math.ceil(HYBRID_THUMBNAIL_PREFETCH_ROWS * resolveColumnDensityMultiplier(columns));
+}
+
+/**
+ * Adaptive cache limit: dense grids need more entries because each row has more tiles.
+ * Ensures the cache can hold at least the full keep range (above + viewport + below).
+ */
+export function resolveAdaptiveCacheLimit(columns: number): number {
+  const screenRows = columns >= 7 ? 18 : (columns >= 5 ? 12 : 8);
+  const keepRows = (HYBRID_KEEP_ABOVE_SCREEN_MULTIPLIER + 1 + HYBRID_KEEP_BELOW_SCREEN_MULTIPLIER) * screenRows;
+  const keepTiles = keepRows * columns;
+  return Math.max(HYBRID_THUMBNAIL_CACHE_LIMIT, Math.ceil(keepTiles * 1.5));
+}
+
+/**
+ * Adaptive UI cachedCount: dense grids need more component cache.
+ */
+export function resolveListCacheCount(columns: number): number {
+  if (columns >= 5) {
+    return 60;
+  }
+  return HYBRID_LIST_CACHE_COUNT;
 }
 
 const HYBRID_REQUEST_SIZE_BUCKETS: Array<number> = [96, 128, 160, 192, 224];
@@ -112,11 +184,18 @@ export function resolveHybridRequestSizeBucket(
   const tileWidth = safeWidth > 0
     ? Math.max(0, (safeWidth - totalGap) / safeColumns)
     : resolveFallbackTileWidth(safeColumns);
-  let requestedSize = Math.ceil(tileWidth * 1.1);
+  const bufferMultiplier = safeColumns >= 7 ? 1.0 : 1.1;
+  let requestedSize = Math.ceil(tileWidth * bufferMultiplier);
   if (requestedSize <= 0) {
     requestedSize = resolveFallbackTileWidth(safeColumns);
   }
   let bucket = clampRequestSizeBucket(requestedSize);
+  if (safeColumns >= 8) {
+    // 8列: 强制最小 bucket (96px), DMA ≈ 36KB/张
+    bucket = HYBRID_REQUEST_SIZE_BUCKETS[0];
+  } else if (safeColumns >= 7) {
+    bucket = Math.max(HYBRID_REQUEST_SIZE_BUCKETS[0], downgradeRequestSizeBucket(bucket));
+  }
   if (layerRole === HybridThumbnailLayerRole.WARM) {
     bucket = Math.max(HYBRID_REQUEST_SIZE_BUCKETS[0], downgradeRequestSizeBucket(bucket));
   }
@@ -130,8 +209,12 @@ export interface HybridPhotoAsset {
   storage?: string;
   thumbnailUrl?: string;
   thumbHash?: string;
+  createdAt?: string;
   isVideo: boolean;
   durationInSeconds: number;
+  width?: number;
+  height?: number;
+  isFavorite?: boolean;
 }
 
 export interface HybridPhotoSection {
@@ -140,11 +223,30 @@ export interface HybridPhotoSection {
   rows: Array<Array<HybridPhotoAsset>>;
 }
 
+export interface HybridBucketInfo {
+  date: string;
+  count: number;
+  offset: number;
+}
+
+export interface HybridGroupInfo {
+  key: string;
+  title: string;
+  count: number;
+  offset: number;
+}
+
 export interface HybridPhotoPageResult {
   ready: boolean;
+  offset: number;
   hasMore: boolean;
   nextOffset: number;
+  windowStartOffset: number;
+  windowEndOffset: number;
   sections: Array<HybridPhotoSection>;
+  groupDayGroups: Array<HybridGroupInfo>;
+  yearBuckets: Array<HybridBucketInfo>;
+  monthBuckets: Array<HybridBucketInfo>;
   reason?: string;
 }
 
@@ -165,13 +267,13 @@ export interface HybridTimelineItem {
 // Grid 数据结构：每个 GridItem 是单张照片或标题头
 export interface HybridGridItem {
   id: string;
-  kind: 'photo' | 'header' | 'spacer' | 'tail' | 'placeholder';
+  kind: 'photo' | 'header' | 'spacer' | 'tail' | 'placeholder' | 'groupHeader';
   sourceIndex?: number;
-  asset?: HybridPhotoAsset;  // 照片项
-  headerText?: string;       // 标题头文本
-  headerCount?: number;      // 标题头数量
-  spacerHeight?: number;     // 占位高度
-  sectionKey: string;        // 所属 section
+  headerText?: string;
+  headerCount?: number;
+  spacerHeight?: number;
+  asset?: HybridPhotoAsset;
+  sectionKey: string;
 }
 
 export interface HybridThumbnailCacheEntry {

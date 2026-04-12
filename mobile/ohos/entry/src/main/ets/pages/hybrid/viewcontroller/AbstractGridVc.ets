@@ -1,10 +1,11 @@
-import { StateTransferProcessor, StateTransferAction } from '../common/model/StateTransferProcessor';
+import { StateTransferProcessor } from '../common/model/StateTransferProcessor';
 import { AnimationCurve, AnimationDuration, AnimationOpacity } from './animation/AnimationDefine';
-import { AbstractVc, GridAttributeUpdater } from './AbstractVc';
-import { FormIndex, getColumnsByFormIndex } from '../statemanager/constants/GridDefine';
+import { AbstractFormVc } from './AbstractFormVc';
+import { GridAttributeUpdater } from './GridAttributeUpdater';
+import { FormIndex } from '../statemanager/constants/GridDefine';
 import { PinchStateManager, PinchEventListener, PinchObserverProxy } from '../statemanager/PinchStateManager';
 import { GridFormFsm, FormStateType, FormEventType, FormStateTypeUtils, FormEventTypeUtils } from '../statemanager/GridFormFsm';
-import { SwitchStartInfo, SwitchType } from '../statemanager/common/SwitchStartInfo';
+import { PinchAction, PinchDirection } from '../statemanager/constants/PinchDefine';
 
 /**
  * 抽象宫格控制器
@@ -14,11 +15,10 @@ import { SwitchStartInfo, SwitchType } from '../statemanager/common/SwitchStartI
  * 2. 使用 StateTransferProcessor 注册状态转换动作
  * 3. 协调 scale/opacity/zIndex 动画
  */
-export abstract class AbstractGridVc extends AbstractVc implements PinchEventListener {
+export abstract class AbstractGridVc extends AbstractFormVc implements PinchEventListener {
   /**
    * 宫格形态
    */
-  protected readonly gridForm: FormIndex;
 
   /**
    * 状态机
@@ -50,17 +50,19 @@ export abstract class AbstractGridVc extends AbstractVc implements PinchEventLis
    */
   protected isInitialized: boolean = false;
 
+  protected switchAnimationEndCallback?: (gridForm: FormIndex) => void;
+
   public constructor(
     gridForm: FormIndex,
     formFsm: GridFormFsm,
-    pinchStateManager: PinchStateManager
+    pinchStateManager: PinchStateManager,
+    attributeUpdater?: GridAttributeUpdater
   ) {
-    super(`AbstractGridVc_${FormIndex[gridForm]}`);
-    this.gridForm = gridForm;
+    super(gridForm, `AbstractGridVc_${FormIndex[gridForm]}`);
     this.formFsm = formFsm;
     this.pinchStateManager = pinchStateManager;
     this.pinchObserverProxy = new PinchObserverProxy(pinchStateManager);
-    this.attributeUpdater = new GridAttributeUpdater();
+    this.attributeUpdater = attributeUpdater ?? new GridAttributeUpdater();
     this.formStp = new StateTransferProcessor<FormStateType, FormEventType>();
   }
 
@@ -73,17 +75,12 @@ export abstract class AbstractGridVc extends AbstractVc implements PinchEventLis
     }
     this.isInitialized = true;
 
-    // 注册状态机监听
-    this.formFsm.registerObserver(this.formStp, true);
-
-    // 注册捏合状态监听
-    this.pinchStateManager.addListener(this);
-
-    // 注册状态转换动作
+    // 先注册动作，避免初始状态同步时丢失 transition 处理
     this.registerActions();
-
-    // 注册动画监听
     this.registerAnimationListeners();
+
+    this.formFsm.registerObserver(this.formStp, true);
+    this.pinchStateManager.addListener(this);
   }
 
   /**
@@ -117,18 +114,21 @@ export abstract class AbstractGridVc extends AbstractVc implements PinchEventLis
     this.formStp.registerObserver({
       actionName: 'FollowHandArrive',
       isStateTransferMatched: (oldState, newState, event) => {
-        return !FormStateTypeUtils.isInFormState(oldState, this.gridForm) &&
+         return FormEventTypeUtils.isPinchEvent(event) &&
+           !FormStateTypeUtils.isInFormState(oldState, this.gridForm) &&
                FormStateTypeUtils.isInFormState(newState, this.gridForm) &&
                FormStateTypeUtils.isInFollowHandState(newState);
       },
       isAnimateImmediately: () => true,
-      animationParam: (oldState, newState, event) => ({
+      animationParam: (_oldState, _newState, event) => ({
+        finishCallbackType: FinishCallbackType.LOGICALLY,
         curve: AnimationCurve.SHARP_CURVE,
         duration: FormEventTypeUtils.isQuickPinchEvent(event) ?
           AnimationDuration.QUICK_PINCH : AnimationDuration.SLOW_PINCH,
       }),
       prepareAction: () => {
         this.attributeUpdater.restoreZIndex();
+        this.attributeUpdater.updateHitTestMode(HitTestMode.Default);
         this.attributeUpdater.updateShowBackground(true);
       },
       targetAction: () => {
@@ -144,13 +144,15 @@ export abstract class AbstractGridVc extends AbstractVc implements PinchEventLis
     this.formStp.registerObserver({
       actionName: 'FollowHandLeave',
       isStateTransferMatched: (oldState, newState, event) => {
-        return FormStateTypeUtils.isInFormState(oldState, this.gridForm) &&
+         return FormEventTypeUtils.isPinchEvent(event) &&
+           FormStateTypeUtils.isInFormState(oldState, this.gridForm) &&
                FormStateTypeUtils.isInFollowHandState(oldState) &&
                !FormStateTypeUtils.isInFormState(newState, this.gridForm) &&
                FormStateTypeUtils.isInFollowHandState(newState);
       },
       isAnimateImmediately: () => true,
-      animationParam: (oldState, newState, event) => ({
+      animationParam: (_oldState, _newState, event) => ({
+        finishCallbackType: FinishCallbackType.LOGICALLY,
         curve: AnimationCurve.SHARP_CURVE,
         duration: FormEventTypeUtils.isQuickPinchEvent(event) ?
           AnimationDuration.QUICK_PINCH : AnimationDuration.SLOW_PINCH,
@@ -172,19 +174,29 @@ export abstract class AbstractGridVc extends AbstractVc implements PinchEventLis
     this.formStp.registerObserver({
       actionName: 'LeaveHand',
       isStateTransferMatched: (oldState, newState, event) => {
-        return FormStateTypeUtils.isInFollowHandState(oldState) &&
+         return FormEventTypeUtils.isPinchEvent(event) &&
+           FormStateTypeUtils.isInFormState(oldState, this.gridForm) &&
+           FormStateTypeUtils.isInFollowHandState(oldState) &&
                !FormStateTypeUtils.isInFollowHandState(newState);
       },
-      animationParam: (oldState, newState, event) => ({
+      isAnimateImmediately: () => true,
+      animationParam: (_oldState, newState, _event) => ({
+        finishCallbackType: FinishCallbackType.LOGICALLY,
         curve: AnimationCurve.LEAVE_HAND_CURVE,
-        duration: FormEventTypeUtils.isQuickPinchEvent(event) ?
-          AnimationDuration.QUICK_PINCH : AnimationDuration.SLOW_PINCH,
         onFinish: () => {
           if (FormStateTypeUtils.isInFormState(newState, this.gridForm)) {
             this.onPinchAnimationEnd();
           }
+          this.attributeUpdater.updateShowBackground(false);
         },
       }),
+      prepareAction: (oldState, newState) => {
+        if (!FormStateTypeUtils.isInFormState(oldState, this.gridForm) &&
+          FormStateTypeUtils.isInFormState(newState, this.gridForm)) {
+          this.attributeUpdater.restoreZIndex();
+          this.updateGridOpacity(true);
+        }
+      },
       targetAction: () => {
         this.updateScaleToTarget();
       },
@@ -198,13 +210,17 @@ export abstract class AbstractGridVc extends AbstractVc implements PinchEventLis
     this.formStp.registerObserver({
       actionName: 'SwitchArriveScale',
       isStateTransferMatched: (oldState, newState, event) => {
-        return !FormStateTypeUtils.isInFormState(oldState, this.gridForm) &&
+         return FormEventTypeUtils.isSwitchEvent(event) &&
+           !FormStateTypeUtils.isInFormState(oldState, this.gridForm) &&
                FormStateTypeUtils.isInFormState(newState, this.gridForm) &&
                !FormStateTypeUtils.isInFollowHandState(newState);
       },
       animationParam: () => ({
-        curve: AnimationCurve.SHARP_CURVE,
-        duration: AnimationDuration.SWITCH,
+        finishCallbackType: FinishCallbackType.LOGICALLY,
+        curve: AnimationCurve.LEAVE_HAND_CURVE,
+        onFinish: () => {
+          this.onSwitchAnimationEnd();
+        },
       }),
       targetAction: () => {
         this.updateScaleToTarget();
@@ -219,16 +235,19 @@ export abstract class AbstractGridVc extends AbstractVc implements PinchEventLis
     this.formStp.registerObserver({
       actionName: 'SwitchArriveOpacity',
       isStateTransferMatched: (oldState, newState, event) => {
-        return !FormStateTypeUtils.isInFormState(oldState, this.gridForm) &&
+         return FormEventTypeUtils.isSwitchEvent(event) &&
+           !FormStateTypeUtils.isInFormState(oldState, this.gridForm) &&
                FormStateTypeUtils.isInFormState(newState, this.gridForm) &&
                !FormStateTypeUtils.isInFollowHandState(newState);
       },
       animationParam: () => ({
+        finishCallbackType: FinishCallbackType.LOGICALLY,
         curve: AnimationCurve.SHARP_CURVE,
         duration: AnimationDuration.SWITCH,
       }),
       prepareAction: () => {
         this.attributeUpdater.restoreZIndex();
+        this.attributeUpdater.updateHitTestMode(HitTestMode.Default);
         this.attributeUpdater.updateShowBackground(true);
       },
       targetAction: () => {
@@ -244,13 +263,14 @@ export abstract class AbstractGridVc extends AbstractVc implements PinchEventLis
     this.formStp.registerObserver({
       actionName: 'SwitchLeaveScale',
       isStateTransferMatched: (oldState, newState, event) => {
-        return FormStateTypeUtils.isInFormState(oldState, this.gridForm) &&
+         return FormEventTypeUtils.isSwitchEvent(event) &&
+           FormStateTypeUtils.isInFormState(oldState, this.gridForm) &&
                !FormStateTypeUtils.isInFormState(newState, this.gridForm) &&
                !FormStateTypeUtils.isInFollowHandState(newState);
       },
       animationParam: () => ({
-        curve: AnimationCurve.SHARP_CURVE,
-        duration: AnimationDuration.SWITCH,
+        finishCallbackType: FinishCallbackType.LOGICALLY,
+        curve: AnimationCurve.LEAVE_HAND_CURVE,
       }),
       targetAction: () => {
         this.updateScaleToTarget();
@@ -265,11 +285,13 @@ export abstract class AbstractGridVc extends AbstractVc implements PinchEventLis
     this.formStp.registerObserver({
       actionName: 'SwitchLeaveOpacity',
       isStateTransferMatched: (oldState, newState, event) => {
-        return FormStateTypeUtils.isInFormState(oldState, this.gridForm) &&
+         return FormEventTypeUtils.isSwitchEvent(event) &&
+           FormStateTypeUtils.isInFormState(oldState, this.gridForm) &&
                !FormStateTypeUtils.isInFormState(newState, this.gridForm) &&
                !FormStateTypeUtils.isInFollowHandState(newState);
       },
       animationParam: () => ({
+        finishCallbackType: FinishCallbackType.LOGICALLY,
         curve: AnimationCurve.SHARP_CURVE,
         duration: AnimationDuration.SWITCH,
         onFinish: () => {
@@ -293,7 +315,8 @@ export abstract class AbstractGridVc extends AbstractVc implements PinchEventLis
     this.formStp.registerObserver({
       actionName: 'SwitchOver',
       isStateTransferMatched: (oldState, newState, event) => {
-        return FormStateTypeUtils.isInFormState(oldState, this.gridForm) &&
+         return FormEventTypeUtils.isSwitchEvent(event) &&
+           FormStateTypeUtils.isInFormState(oldState, this.gridForm) &&
                !FormStateTypeUtils.isInFormState(newState, this.gridForm) &&
                !FormStateTypeUtils.isInFollowHandState(newState);
       },
@@ -361,35 +384,41 @@ export abstract class AbstractGridVc extends AbstractVc implements PinchEventLis
     this.pinchStateManager.notifyAnimationFinished(this.gridForm);
   }
 
+  /**
+   * Switch 动画结束回调
+   */
+  protected onSwitchAnimationEnd(): void {
+    this.pinchStateManager.notifyAnimationFinished(this.gridForm);
+    this.switchAnimationEndCallback?.(this.gridForm);
+  }
+
   // ========== PinchEventListener 实现 ==========
 
   /**
    * 捏合状态变化回调
    */
-  public onPinchStateChange?(pinchState: PinchAction): void {
+  public onPinchStateChange?(_pinchState: PinchAction): void {
     // 子类可重写
   }
 
   /**
    * 形态即将到达回调
    */
-  public onPinchWillArrive?(formIndex: FormIndex, direction?: PinchDirection): void {
+  public onPinchWillArrive?(_formIndex: FormIndex, _direction?: PinchDirection): void {
     // 子类可重写
   }
 
   /**
    * 捏合动画结束回调
    */
-  public onPinchEndAnimation?(formIndex: FormIndex): void {
+  public onPinchEndAnimation?(_formIndex: FormIndex): void {
     // 子类可重写
   }
 
   /**
    * 形态切换前动作
    */
-  public onPreFromSwitch?(targetForm: FormIndex): void {
+  public onPreFromSwitch?(_targetForm: FormIndex): void {
     // 子类可重写
   }
 }
-
-import { PinchAction, PinchDirection } from '../statemanager/constants/PinchDefine';

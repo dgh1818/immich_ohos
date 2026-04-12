@@ -2,6 +2,7 @@ import { common } from '@kit.AbilityKit';
 import { HybridFlutterBridge } from '../../bridge/HybridFlutterBridge';
 import * as Shared from './HybridPhotoGridShared';
 import * as ThumbnailDisk from './HybridPhotoThumbnailDisk';
+import { HybridThumbnailCache, buildThumbnailCacheKey, prefetchAssetThumbnail } from './HybridPhotoThumbnail';
 import { HybridPhotoTile } from './HybridPhotoTile';
 import { HybridPhotoTimelineBuilder } from './HybridPhotoTimeline';
 import { HybridDayGridVm } from './viewmodel/HybridDayGridVm';
@@ -67,6 +68,17 @@ export struct HybridPhotoGridNew {
   private allGridItems: Array<Shared.HybridGridItem> = [];
   private targetGridItems: Array<Shared.HybridGridItem> = [];
 
+  // ========== Pre-built adjacent grids for instant pinch switching ==========
+  private readonly prebuiltZoomInDataSource: Shared.HybridGridDataSource = new Shared.HybridGridDataSource();
+  private readonly prebuiltZoomOutDataSource: Shared.HybridGridDataSource = new Shared.HybridGridDataSource();
+  private readonly prebuiltZoomInScroller: Scroller = new Scroller();
+  private readonly prebuiltZoomOutScroller: Scroller = new Scroller();
+  @State private prebuiltZoomInColumns: number = 0;
+  @State private prebuiltZoomOutColumns: number = 0;
+  private prebuiltZoomInGridItems: Array<Shared.HybridGridItem> = [];
+  private prebuiltZoomOutGridItems: Array<Shared.HybridGridItem> = [];
+  private prebuildToken: number = 0;
+
   aboutToAppear(): void {
     this.viewModel.setGridColumns(this.gridColumns);
     this.updateColumnsTemplate();
@@ -108,9 +120,11 @@ export struct HybridPhotoGridNew {
     this.viewModel.addScrollStateListener({
       onScrollStart: (): void => {
         ThumbnailDisk.HybridScrollState.isScrolling = true;
+        this.invalidatePrebuilds();
       },
       onScrollStop: (): void => {
         ThumbnailDisk.HybridScrollState.isScrolling = false;
+        this.startPrebuiltGrids();
       },
       onScrollIndex: (firstIndex: number, _lastIndex: number): void => {
         this.updateFloatingSection(firstIndex);
@@ -343,7 +357,14 @@ export struct HybridPhotoGridNew {
     this.targetGridScale = 1;
     this.targetGridOpacity = 1;
 
-    this.targetGridItems = this.buildGridItemsForColumns(state.targetColumns);
+    // Reuse pre-built grid items if available for the target column count
+    const prebuiltItems = this.getPrebuiltGridItemsForColumns(state.targetColumns);
+    if (prebuiltItems !== null) {
+      this.targetGridItems = prebuiltItems;
+      console.info(`[HybridPhotoGridNew] pinchStart: reusing prebuilt grid for ${state.targetColumns} cols`);
+    } else {
+      this.targetGridItems = this.buildGridItemsForColumns(state.targetColumns);
+    }
     this.targetGridDataSource.updateAll(this.targetGridItems);
     this.syncTargetGridScroll(scrollOffset);
     this.viewModel.handlePinchStart(centerX, centerY);
@@ -361,7 +382,13 @@ export struct HybridPhotoGridNew {
 
     if (state.targetColumns !== this.pinchTargetColumns) {
       this.pinchTargetColumns = state.targetColumns;
-      this.targetGridItems = this.buildGridItemsForColumns(state.targetColumns);
+      const prebuiltItems = this.getPrebuiltGridItemsForColumns(state.targetColumns);
+      if (prebuiltItems !== null) {
+        this.targetGridItems = prebuiltItems;
+        console.info(`[HybridPhotoGridNew] pinchUpdate: reusing prebuilt grid for ${state.targetColumns} cols`);
+      } else {
+        this.targetGridItems = this.buildGridItemsForColumns(state.targetColumns);
+      }
       this.targetGridDataSource.updateAll(this.targetGridItems);
     }
 
@@ -409,6 +436,8 @@ export struct HybridPhotoGridNew {
 
     setTimeout((): void => {
       this.resetPinchState();
+      this.touchRetainedKeysForViewport();
+      this.startPrebuiltGrids();
     }, duration + 10);
   }
 
@@ -443,6 +472,184 @@ export struct HybridPhotoGridNew {
     this.showTargetGrid = false;
     this.targetGridOpacity = 0;
     this.targetGridScale = 1;
+  }
+
+  private touchRetainedKeysForViewport(): void {
+    const items = this.viewModel.getAllTimelineItems();
+    if (items.length <= 0) {
+      return;
+    }
+
+    const screenRows = Math.max(1, this.viewModel.getVisibleRowCapacity());
+    const keepStart = Math.max(0, this.viewModel.getLastVisibleStart() - screenRows * 2);
+    const keepEnd = Math.min(items.length - 1, this.viewModel.getLastVisibleEnd() + screenRows * 4);
+    const retainKeys: Array<string> = [];
+    for (let index = keepStart; index <= keepEnd; index += 1) {
+      const item = items[index];
+      if (item && item.assets) {
+        item.assets.forEach((asset: Shared.HybridPhotoAsset) => {
+          if (asset.id) {
+            retainKeys.push(buildThumbnailCacheKey(asset.id, Shared.HYBRID_REQUEST_SIZE));
+          }
+        });
+      }
+    }
+
+    if (retainKeys.length > 0) {
+      HybridThumbnailCache.touchRetainedKeys(retainKeys);
+    }
+  }
+
+  // ========== Pre-built adjacent grids ==========
+
+  private invalidatePrebuilds(): void {
+    this.prebuildToken += 1;
+    this.prebuiltZoomInColumns = 0;
+    this.prebuiltZoomOutColumns = 0;
+    this.prebuiltZoomInGridItems = [];
+    this.prebuiltZoomOutGridItems = [];
+  }
+
+  private startPrebuiltGrids(): void {
+    this.invalidatePrebuilds();
+
+    const currentColumns = this.gridColumns;
+    const items = this.viewModel.getAllTimelineItems();
+    if (items.length <= 0) {
+      return;
+    }
+
+    const token = this.prebuildToken;
+
+    // Calculate adjacent column counts
+    const zoomInColumns = currentColumns > Shared.HYBRID_GRID_MIN_COLUMNS ? currentColumns - 1 : 0;
+    const zoomOutColumns = currentColumns < Shared.HYBRID_GRID_MAX_COLUMNS ? currentColumns + 1 : 0;
+
+    // Build zoom-in grid (fewer columns = zoom in / enlarge)
+    if (zoomInColumns > 0) {
+      this.prebuiltZoomInGridItems = this.buildGridItemsForColumns(zoomInColumns);
+      this.prebuiltZoomInColumns = zoomInColumns;
+      this.prebuiltZoomInDataSource.updateAll(this.prebuiltZoomInGridItems);
+
+      // Scroll pre-built grid to matching position
+      this.syncPrebuiltGridScroll(this.prebuiltZoomInScroller, zoomInColumns);
+
+      // Prefetch thumbnails for the pre-built grid viewport
+      this.prefetchPrebuiltGridThumbnails(items, zoomInColumns, token);
+    }
+
+    // Build zoom-out grid (more columns = zoom out / shrink)
+    if (zoomOutColumns > 0) {
+      this.prebuiltZoomOutGridItems = this.buildGridItemsForColumns(zoomOutColumns);
+      this.prebuiltZoomOutColumns = zoomOutColumns;
+      this.prebuiltZoomOutDataSource.updateAll(this.prebuiltZoomOutGridItems);
+
+      // Scroll pre-built grid to matching position
+      this.syncPrebuiltGridScroll(this.prebuiltZoomOutScroller, zoomOutColumns);
+
+      // Prefetch thumbnails for the pre-built grid viewport
+      this.prefetchPrebuiltGridThumbnails(items, zoomOutColumns, token);
+    }
+
+    console.info(
+      `[HybridPhotoGridNew] startPrebuiltGrids: current=${currentColumns}, ` +
+      `zoomIn=${zoomInColumns}(${this.prebuiltZoomInGridItems.length} items), ` +
+      `zoomOut=${zoomOutColumns}(${this.prebuiltZoomOutGridItems.length} items)`,
+    );
+  }
+
+  private syncPrebuiltGridScroll(scroller: Scroller, targetColumns: number): void {
+    if (this.listWidth <= 0 || targetColumns <= 0) {
+      return;
+    }
+
+    // Calculate scroll offset for the target column layout based on current viewport position
+    const currentTileSize = this.getTimelineRowHeightForColumns(this.gridColumns);
+    const targetTileSize = this.getTimelineRowHeightForColumns(targetColumns);
+    if (currentTileSize <= 0 || targetTileSize <= 0) {
+      return;
+    }
+
+    // Approximate: convert current scroll offset proportionally
+    const currentRow = this.currentScrollOffsetY / (currentTileSize + Shared.HYBRID_GRID_GAP);
+    const currentItemIndex = Math.floor(currentRow) * this.gridColumns;
+    const targetRow = Math.floor(currentItemIndex / targetColumns);
+    const targetOffset = Math.max(0, targetRow * (targetTileSize + Shared.HYBRID_GRID_GAP));
+
+    setTimeout((): void => {
+      try {
+        scroller.scrollTo({ xOffset: 0, yOffset: targetOffset });
+      } catch (_) {}
+    }, 0);
+  }
+
+  private prefetchPrebuiltGridThumbnails(
+    items: Array<HybridTimelineItem>,
+    targetColumns: number,
+    token: number,
+  ): void {
+    if (items.length <= 0 || targetColumns <= 0) {
+      return;
+    }
+
+    const screenRows = Math.max(1, this.viewModel.getVisibleRowCapacity());
+    const prefetchScreens = Shared.HYBRID_SCROLL_STOP_PREFETCH_SCREEN_MULTIPLIER;
+    const prefetchRows = screenRows * prefetchScreens;
+
+    // Calculate the item range in the target grid layout
+    const currentTileSize = this.getTimelineRowHeightForColumns(this.gridColumns);
+    const targetTileSize = this.getTimelineRowHeightForColumns(targetColumns);
+    if (currentTileSize <= 0 || targetTileSize <= 0) {
+      return;
+    }
+
+    // Map current viewport center to target grid row
+    const viewportCenter = this.currentScrollOffsetY + this.listHeight / 2;
+    const currentRow = viewportCenter / (currentTileSize + Shared.HYBRID_GRID_GAP);
+    const currentItemIndex = Math.floor(currentRow) * this.gridColumns;
+    const targetCenterRow = Math.floor(currentItemIndex / targetColumns);
+
+    // Prefetch range in timeline item index space
+    const prefetchStartRow = Math.max(0, targetCenterRow - prefetchRows);
+    const prefetchEndRow = targetCenterRow + prefetchRows;
+
+    // Convert row range to flat item indices, then map to timeline items
+    const startItemIndex = prefetchStartRow * targetColumns;
+    const endItemIndex = Math.min(items.length - 1, prefetchEndRow * targetColumns + targetColumns - 1);
+
+    // Flatten timeline item assets and prefetch
+    let prefetchCount = 0;
+    for (let timelineIndex = 0; timelineIndex < items.length && prefetchCount <= endItemIndex; timelineIndex += 1) {
+      if (token !== this.prebuildToken) {
+        return; // Token changed, abort
+      }
+
+      const item = items[timelineIndex];
+      for (const asset of item.assets) {
+        if (prefetchCount >= startItemIndex && prefetchCount <= endItemIndex) {
+          prefetchAssetThumbnail(this.context, asset, Shared.HYBRID_REQUEST_SIZE);
+        }
+        prefetchCount += 1;
+        if (prefetchCount > endItemIndex) {
+          break;
+        }
+      }
+    }
+
+    console.info(
+      `[HybridPhotoGridNew] prefetchPrebuiltGrid: cols=${targetColumns}, ` +
+      `rows=[${prefetchStartRow},${prefetchEndRow}], items=[${startItemIndex},${endItemIndex}]`,
+    );
+  }
+
+  private getPrebuiltGridItemsForColumns(columns: number): Array<Shared.HybridGridItem> | null {
+    if (columns === this.prebuiltZoomInColumns && this.prebuiltZoomInGridItems.length > 0) {
+      return this.prebuiltZoomInGridItems;
+    }
+    if (columns === this.prebuiltZoomOutColumns && this.prebuiltZoomOutGridItems.length > 0) {
+      return this.prebuiltZoomOutGridItems;
+    }
+    return null;
   }
 
   private syncTargetGridScroll(fallbackScrollOffset?: number): void {
@@ -495,7 +702,7 @@ export struct HybridPhotoGridNew {
     }
 
     try {
-      await HybridFlutterBridge.openTimelineAssetViewer(index);
+      await HybridFlutterBridge.openTimelineAssetViewerAt(index);
     } catch (error) {
       console.error(`[HybridPhotoGridNew] Open asset viewer failed for ${asset.id}: ${error}`);
     }
@@ -526,7 +733,7 @@ export struct HybridPhotoGridNew {
       HybridPhotoTile({
         asset: asset,
         requestSize: Shared.HYBRID_REQUEST_SIZE,
-        suppressRelease: false,
+        suppressRelease: this.pinchActive,
       })
         .width('100%')
         .height('100%')
@@ -639,6 +846,62 @@ export struct HybridPhotoGridNew {
   }
 
   @Builder
+  private buildPrebuiltZoomInGrid() {
+    Grid(this.prebuiltZoomInScroller) {
+      LazyForEach(
+        this.prebuiltZoomInDataSource,
+        (item: Shared.HybridGridItem, index: number) => {
+          GridItem() {
+            if (item.kind === 'photo') {
+              this.buildPhotoTile(item.asset!, index);
+            }
+          }
+        },
+        (item: Shared.HybridGridItem) => `preZI_${item.id}`,
+      )
+    }
+    .columnsTemplate('1fr '.repeat(this.prebuiltZoomInColumns).trim())
+    .rowsGap(Shared.HYBRID_GRID_GAP)
+    .columnsGap(Shared.HYBRID_GRID_GAP)
+    .cachedCount(Shared.HYBRID_LIST_CACHE_COUNT)
+    .padding({ top: this.getGridContentTopInsetHeight() })
+    .scrollBar(BarState.Off)
+    .edgeEffect(EdgeEffect.None)
+    .width('100%')
+    .height('100%')
+    .hitTestBehavior(HitTestMode.None)
+    .opacity(0)
+  }
+
+  @Builder
+  private buildPrebuiltZoomOutGrid() {
+    Grid(this.prebuiltZoomOutScroller) {
+      LazyForEach(
+        this.prebuiltZoomOutDataSource,
+        (item: Shared.HybridGridItem, index: number) => {
+          GridItem() {
+            if (item.kind === 'photo') {
+              this.buildPhotoTile(item.asset!, index);
+            }
+          }
+        },
+        (item: Shared.HybridGridItem) => `preZO_${item.id}`,
+      )
+    }
+    .columnsTemplate('1fr '.repeat(this.prebuiltZoomOutColumns).trim())
+    .rowsGap(Shared.HYBRID_GRID_GAP)
+    .columnsGap(Shared.HYBRID_GRID_GAP)
+    .cachedCount(Shared.HYBRID_LIST_CACHE_COUNT)
+    .padding({ top: this.getGridContentTopInsetHeight() })
+    .scrollBar(BarState.Off)
+    .edgeEffect(EdgeEffect.None)
+    .width('100%')
+    .height('100%')
+    .hitTestBehavior(HitTestMode.None)
+    .opacity(0)
+  }
+
+  @Builder
   private buildTargetGrid() {
     Stack({ alignContent: Alignment.TopStart }) {
       Grid(this.targetScroller) {
@@ -689,6 +952,15 @@ export struct HybridPhotoGridNew {
 
   build() {
     Stack() {
+      // Hidden pre-built grids: force ArkUI to instantiate tiles so PixelMaps
+      // are already cached when pinch starts.
+      if (this.prebuiltZoomInColumns > 0) {
+        this.buildPrebuiltZoomInGrid();
+      }
+      if (this.prebuiltZoomOutColumns > 0) {
+        this.buildPrebuiltZoomOutGrid();
+      }
+
       if (this.showTargetGrid) {
         this.buildTargetGrid();
       }

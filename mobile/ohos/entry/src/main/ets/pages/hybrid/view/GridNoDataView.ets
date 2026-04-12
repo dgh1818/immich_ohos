@@ -1,7 +1,7 @@
-import { HybridPhotoGridViewId, HybridPhotoGridZIndex } from '../viewcontroller/HybridPhotoGridVc';
+import { PhotoGridViewId, PhotoGridZIndex } from '../viewcontroller/PhotoGridViewController';
 
 @Component
-export struct HybridGridNoDataView {
+export struct GridNoDataView {
   @Prop visible: boolean = false;
 
   build() {
@@ -16,8 +16,8 @@ export struct HybridGridNoDataView {
           .fontSize(13)
           .fontColor(0xFF64748B);
       }
-      .id(HybridPhotoGridViewId.NO_DATA)
-      .zIndex(HybridPhotoGridZIndex.NO_DATA)
+      .id(PhotoGridViewId.NO_DATA)
+      .zIndex(PhotoGridZIndex.NO_DATA)
       .width('100%')
       .height('100%')
       .justifyContent(FlexAlign.Center)

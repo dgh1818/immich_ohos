@@ -63,17 +63,17 @@ class HybridArkuiBridgeService {
     switch (call.method) {
       case 'getLaunchMode':
         return _getLaunchMode().value;
-      case 'fetchPhotoPage':
+      case 'fetchTimelineWindow':
         final args = (call.arguments as Map<Object?, Object?>?) ?? const {};
         final offset = (args['offset'] as num?)?.toInt() ?? 0;
         final requestedLimit = (args['limit'] as num?)?.toInt() ?? 90;
-        final limit = requestedLimit.clamp(30, 180).toInt();
-        final page = await _buildPhotoPage(offset: offset, limit: limit);
-        return jsonEncode(page);
-      case 'openTimelineAssetViewer':
+        final limit = requestedLimit.clamp(30, 360).toInt();
+        final timelineWindow = await _buildTimelineWindowPayload(offset: offset, limit: limit);
+        return jsonEncode(timelineWindow);
+      case 'openTimelineAssetViewerAt':
         final args = (call.arguments as Map<Object?, Object?>?) ?? const {};
         final index = (args['index'] as num?)?.toInt() ?? -1;
-        await _openTimelineAssetViewer(index);
+        await _openTimelineAssetViewerAt(index);
         return true;
       default:
         throw MissingPluginException('Unsupported hybrid bridge method: ${call.method}');
@@ -94,7 +94,7 @@ class HybridArkuiBridgeService {
     return OhosLaunchMode.hybridArkuiPhotos;
   }
 
-  Future<Map<String, Object?>> _buildPhotoPage({required int offset, required int limit}) async {
+  Future<Map<String, Object?>> _buildTimelineWindowPayload({required int offset, required int limit}) async {
     if (_getLaunchMode() != OhosLaunchMode.hybridArkuiPhotos) {
       return _unavailablePage('Hybrid ArkUI photos mode is disabled');
     }
@@ -108,14 +108,88 @@ class HybridArkuiBridgeService {
     final userIds = await _resolveTimelineUserIds(currentUser.id);
     final assets = await _timelineRepository.main(userIds, GroupAssetsBy.day).assetSource(offset, limit);
     final sections = _chunkIntoSections(assets);
+    final bucketMetadata = offset == 0
+        ? await _buildBucketMetadata(userIds)
+        : const _HybridBucketMetadata.empty();
+    final groupDayGroups = _buildGroupDayGroups(sections, offset);
 
     return {
       'ready': true,
       'offset': offset,
       'nextOffset': offset + assets.length,
       'hasMore': assets.length >= limit,
+      'windowStartOffset': offset,
+      'windowEndOffset': offset + assets.length,
       'sections': sections,
+      'groupDayGroups': groupDayGroups,
+      'yearBuckets': bucketMetadata.yearBuckets,
+      'monthBuckets': bucketMetadata.monthBuckets,
     };
+  }
+
+  Future<_HybridBucketMetadata> _buildBucketMetadata(List<String> userIds) async {
+    try {
+      final monthBuckets = await _timelineRepository
+          .main(userIds, GroupAssetsBy.month)
+          .bucketSource()
+          .first
+          .timeout(const Duration(seconds: 2), onTimeout: () => const <Bucket>[]);
+      final timeBuckets = monthBuckets.whereType<TimeBucket>().toList(growable: false);
+      if (timeBuckets.isEmpty) {
+        return const _HybridBucketMetadata.empty();
+      }
+
+      final monthBucketPayload = <Map<String, Object?>>[];
+      final yearBucketPayload = <Map<String, Object?>>[];
+      String? currentYear;
+      int currentYearOffset = 0;
+      int currentYearCount = 0;
+      int runningOffset = 0;
+
+      for (final bucket in timeBuckets) {
+        final localBucketDate = bucket.date.toLocal();
+        final monthKey = _formatMonthDate(localBucketDate);
+        final yearKey = _formatYearDate(localBucketDate);
+        monthBucketPayload.add({
+          'date': monthKey,
+          'count': bucket.assetCount,
+          'offset': runningOffset,
+        });
+
+        if (currentYear != null && currentYear != yearKey) {
+          yearBucketPayload.add({
+            'date': currentYear,
+            'count': currentYearCount,
+            'offset': currentYearOffset,
+          });
+          currentYearCount = 0;
+        }
+
+        if (currentYear != yearKey) {
+          currentYear = yearKey;
+          currentYearOffset = runningOffset;
+        }
+
+        currentYearCount += bucket.assetCount;
+        runningOffset += bucket.assetCount;
+      }
+
+      if (currentYear != null) {
+        yearBucketPayload.add({
+          'date': currentYear,
+          'count': currentYearCount,
+          'offset': currentYearOffset,
+        });
+      }
+
+      return _HybridBucketMetadata(
+        yearBuckets: yearBucketPayload,
+        monthBuckets: monthBucketPayload,
+      );
+    } catch (error, stackTrace) {
+      _log.warning('Failed to build hybrid timeline bucket metadata', error, stackTrace);
+      return const _HybridBucketMetadata.empty();
+    }
   }
 
   Future<List<String>> _resolveTimelineUserIds(String userId) async {
@@ -131,7 +205,44 @@ class HybridArkuiBridgeService {
   }
 
   Map<String, Object?> _unavailablePage(String reason) {
-    return {'ready': false, 'hasMore': false, 'nextOffset': 0, 'sections': const <Object?>[], 'reason': reason};
+    return {
+      'ready': false,
+      'offset': 0,
+      'hasMore': false,
+      'nextOffset': 0,
+      'windowStartOffset': 0,
+      'windowEndOffset': 0,
+      'sections': const <Object?>[],
+      'groupDayGroups': const <Object?>[],
+      'yearBuckets': const <Object?>[],
+      'monthBuckets': const <Object?>[],
+      'reason': reason,
+    };
+  }
+
+  List<Map<String, Object?>> _buildGroupDayGroups(
+    List<Map<String, Object?>> sections,
+    int windowStartOffset,
+  ) {
+    final groups = <Map<String, Object?>>[];
+    int runningOffset = windowStartOffset;
+    for (final section in sections) {
+      final rows = (section['rows'] as List<Object?>?) ?? const <Object?>[];
+      int count = 0;
+      for (final row in rows) {
+        if (row is List<Object?>) {
+          count += row.length;
+        }
+      }
+      groups.add({
+        'key': section['key'],
+        'title': section['title'],
+        'count': count,
+        'offset': runningOffset,
+      });
+      runningOffset += count;
+    }
+    return groups;
   }
 
   List<Map<String, Object?>> _chunkIntoSections(List<BaseAsset> assets) {
@@ -173,13 +284,24 @@ class HybridArkuiBridgeService {
   }
 
   String _formatSectionTitle(DateTime dateTime) {
-    return '${dateTime.year}年${dateTime.month}月${dateTime.day}日';
+    return _formatSectionDate(dateTime);
+  }
+
+  String _formatMonthDate(DateTime dateTime) {
+    final year = dateTime.year.toString().padLeft(4, '0');
+    final month = dateTime.month.toString().padLeft(2, '0');
+    return '$year-$month';
+  }
+
+  String _formatYearDate(DateTime dateTime) {
+    return dateTime.year.toString().padLeft(4, '0');
   }
 
   Map<String, Object?> _serializeAsset(BaseAsset asset) {
     final remoteId = asset.remoteId;
     final localId = asset.localId;
     final thumbHash = asset is RemoteAsset ? asset.thumbHash : null;
+    final localCreatedAt = asset.createdAt.toLocal();
 
     return {
       'id': remoteId ?? localId ?? '${asset.createdAt.microsecondsSinceEpoch}_${asset.name}',
@@ -190,7 +312,7 @@ class HybridArkuiBridgeService {
       'thumbHash': thumbHash,
       'isVideo': asset.isVideo,
       'durationInSeconds': asset.durationInSeconds ?? 0,
-      'createdAt': asset.createdAt.toIso8601String(),
+      'createdAt': localCreatedAt.toIso8601String(),
       'width': asset.width,
       'height': asset.height,
       'isFavorite': asset.isFavorite,
@@ -220,7 +342,7 @@ class HybridArkuiBridgeService {
     }
   }
 
-  Future<void> _openTimelineAssetViewer(int index) async {
+  Future<void> _openTimelineAssetViewerAt(int index) async {
     if (index < 0) {
       throw ArgumentError.value(index, 'index', 'Timeline asset index must be non-negative');
     }
@@ -250,12 +372,12 @@ class HybridArkuiBridgeService {
       await _setHybridSelectedPane(1);
       unawaited(
         routeFuture.whenComplete(() async {
-          timelineService.dispose();
+          await timelineService.dispose();
           await _setHybridSelectedPane(0);
         }),
       );
     } catch (_) {
-      timelineService.dispose();
+      await timelineService.dispose();
       rethrow;
     }
   }
@@ -275,4 +397,18 @@ class _PhotoSectionAccumulator {
   final String key;
   final String title;
   final List<Map<String, Object?>> assets = <Map<String, Object?>>[];
+}
+
+class _HybridBucketMetadata {
+  const _HybridBucketMetadata({
+    required this.yearBuckets,
+    required this.monthBuckets,
+  });
+
+  const _HybridBucketMetadata.empty()
+      : yearBuckets = const <Map<String, Object?>>[],
+        monthBuckets = const <Map<String, Object?>>[];
+
+  final List<Map<String, Object?>> yearBuckets;
+  final List<Map<String, Object?>> monthBuckets;
 }

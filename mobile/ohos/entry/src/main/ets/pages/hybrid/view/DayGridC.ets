@@ -15,6 +15,7 @@ export struct HybridDayGridC {
   @Prop interactive: boolean = false;
   @Prop warmActive: boolean = false;
   @Prop columns: number = Shared.HYBRID_GRID_COLUMNS;
+  @Prop cacheRows: number = Shared.HYBRID_LIST_CACHE_COUNT;
   @Prop requestSize: number = Shared.HYBRID_REQUEST_SIZE;
   @Prop opacityValue: number = 1;
   @Prop scaleValue: number = 1;
@@ -98,7 +99,7 @@ export struct HybridDayGridC {
       .columnsTemplate(this.resolveColumnsTemplate())
       .rowsGap(Shared.HYBRID_GRID_GAP)
       .columnsGap(Shared.HYBRID_GRID_GAP)
-      .cachedCount(Shared.HYBRID_LIST_CACHE_COUNT)
+      .cachedCount(Math.max(1, this.cacheRows))
       .scrollBar(BarState.Off)
       .edgeEffect(this.interactive ? EdgeEffect.Spring : EdgeEffect.None)
       .clip(false)

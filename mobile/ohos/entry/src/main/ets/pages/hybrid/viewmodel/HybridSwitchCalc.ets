@@ -67,6 +67,11 @@ export class SwitchCalcResult {
   public firstIndex: number = 0;
 }
 
+export class ScrollToIndexParams {
+  public itemIndex: number = 0;
+  public extraOffset: number = 0;
+}
+
 /**
  * 切换计算工具类
  */
@@ -202,6 +207,27 @@ export class HybridSwitchCalc {
     result.anchorCenterY = anchor.anchorCenterY;
     result.fillPosition = fillPosition;
     result.firstIndex = firstIndex;
+
+    return result;
+  }
+
+  public static calcScrollToIndexParams(
+    anchor: AnchorInfo,
+    targetColumns: number,
+    startScrollOffset: number,
+    gridWidth: number,
+    topInset: number,
+    gap: number = Shared.HYBRID_GRID_GAP,
+  ): ScrollToIndexParams {
+    const result = new ScrollToIndexParams();
+    const safeTargetColumns = Math.max(1, targetColumns);
+    const safePhotoIndex = Math.max(0, anchor.itemIndex);
+    const targetRow = Math.floor(safePhotoIndex / safeTargetColumns);
+    const itemHeight = HybridSwitchCalc.calcItemSize(safeTargetColumns, gridWidth, gap);
+    const anchorViewportY = Math.max(topInset, anchor.anchorCenterY - startScrollOffset);
+
+    result.itemIndex = Math.max(0, targetRow * safeTargetColumns);
+    result.extraOffset = anchorViewportY - anchor.yProgress * itemHeight;
 
     return result;
   }

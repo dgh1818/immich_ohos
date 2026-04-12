@@ -1,12 +1,32 @@
 import * as Shared from "./HybridPhotoGridShared";
+import { FormIndex, getFormIndexByColumns } from './statemanager/constants/GridDefine';
 
 type HybridPhotoAsset = Shared.HybridPhotoAsset;
+type HybridBucketInfo = Shared.HybridBucketInfo;
+type HybridGroupInfo = Shared.HybridGroupInfo;
 type HybridPhotoPageResult = Shared.HybridPhotoPageResult;
 type HybridPhotoSection = Shared.HybridPhotoSection;
 type HybridSectionMergeResult = Shared.HybridSectionMergeResult;
 type HybridTimelineAssetEntry = Shared.HybridTimelineAssetEntry;
 type HybridTimelineItem = Shared.HybridTimelineItem;
 type HybridTimelineTailUpdate = Shared.HybridTimelineTailUpdate;
+
+class HybridSectionBucket {
+  key: string = '';
+  title: string = '';
+  assets: Array<HybridPhotoAsset> = [];
+}
+
+class HybridSectionDescriptor {
+  key: string = '';
+  title: string = '';
+}
+
+class HybridDateParts {
+  year: number = 0;
+  month: number = 0;
+  day: number = 0;
+}
 
 export class HybridPhotoTimelineBuilder {
   private nextTimelineLayoutId: number = 0;
@@ -19,9 +39,15 @@ export class HybridPhotoTimelineBuilder {
     if (!raw) {
       return {
         ready: false,
+        offset: 0,
         hasMore: false,
         nextOffset: 0,
+        windowStartOffset: 0,
+        windowEndOffset: 0,
         sections: [],
+        groupDayGroups: [],
+        yearBuckets: [],
+        monthBuckets: [],
         reason: "Empty response",
       };
     }
@@ -30,13 +56,28 @@ export class HybridPhotoTimelineBuilder {
     const sectionsRaw = Array.isArray(parsed["sections"])
       ? (parsed["sections"] as Array<Record<string, Object>>)
       : [];
+    const yearBucketsRaw = Array.isArray(parsed["yearBuckets"])
+      ? (parsed["yearBuckets"] as Array<Record<string, Object>>)
+      : [];
+    const monthBucketsRaw = Array.isArray(parsed["monthBuckets"])
+      ? (parsed["monthBuckets"] as Array<Record<string, Object>>)
+      : [];
+    const groupDayGroupsRaw = Array.isArray(parsed["groupDayGroups"])
+      ? (parsed["groupDayGroups"] as Array<Record<string, Object>>)
+      : [];
 
     return {
       ready: parsed["ready"] === true,
+      offset: Number(parsed["offset"] ?? 0),
       hasMore: parsed["hasMore"] === true,
       nextOffset: Number(parsed["nextOffset"] ?? 0),
+      windowStartOffset: Number(parsed["windowStartOffset"] ?? parsed["offset"] ?? 0),
+      windowEndOffset: Number(parsed["windowEndOffset"] ?? parsed["nextOffset"] ?? 0),
       reason: typeof parsed["reason"] === "string" ? parsed["reason"] : undefined,
       sections: sectionsRaw.map((section) => this.parseSection(section)),
+      groupDayGroups: groupDayGroupsRaw.map((group) => this.parseGroupInfo(group)),
+      yearBuckets: yearBucketsRaw.map((bucket) => this.parseBucketInfo(bucket)),
+      monthBuckets: monthBucketsRaw.map((bucket) => this.parseBucketInfo(bucket)),
     };
   }
 
@@ -248,11 +289,14 @@ export class HybridPhotoTimelineBuilder {
     sections: Array<HybridPhotoSection>,
     columns: number = Shared.HYBRID_GRID_COLUMNS,
   ): Array<HybridPhotoSection> {
-    return sections.map((section: HybridPhotoSection) =>
+    const safeColumns = Math.max(1, columns);
+    const form = getFormIndexByColumns(safeColumns);
+    const buckets = this.bucketSectionsByForm(sections, form);
+    return buckets.map((bucket: HybridSectionBucket) =>
       this.createSection(
-        section.key,
-        section.title,
-        this.chunkAssets(this.flattenRows(section.rows), columns),
+        bucket.key,
+        bucket.title,
+        this.chunkAssets(bucket.assets, safeColumns),
       ),
     );
   }
@@ -268,6 +312,23 @@ export class HybridPhotoTimelineBuilder {
     };
   }
 
+  private parseBucketInfo(raw: Record<string, Object>): HybridBucketInfo {
+    return {
+      date: typeof raw["date"] === "string" ? raw["date"] : "",
+      count: Number(raw["count"] ?? 0),
+      offset: Number(raw["offset"] ?? 0),
+    };
+  }
+
+  private parseGroupInfo(raw: Record<string, Object>): HybridGroupInfo {
+    return {
+      key: typeof raw["key"] === "string" ? raw["key"] : "",
+      title: typeof raw["title"] === "string" ? raw["title"] : "",
+      count: Number(raw["count"] ?? 0),
+      offset: Number(raw["offset"] ?? 0),
+    };
+  }
+
   private parseAsset(raw: Record<string, Object>): HybridPhotoAsset {
     return {
       id: typeof raw["id"] === "string" ? raw["id"] : "",
@@ -276,9 +337,104 @@ export class HybridPhotoTimelineBuilder {
       storage: typeof raw["storage"] === "string" ? raw["storage"] : undefined,
       thumbnailUrl: typeof raw["thumbnailUrl"] === "string" ? raw["thumbnailUrl"] : undefined,
       thumbHash: typeof raw["thumbHash"] === "string" ? raw["thumbHash"] : undefined,
+      createdAt: typeof raw["createdAt"] === "string" ? raw["createdAt"] : undefined,
       isVideo: raw["isVideo"] === true,
       durationInSeconds: Number(raw["durationInSeconds"] ?? 0),
+      width: typeof raw["width"] === "number" ? Number(raw["width"]) : undefined,
+      height: typeof raw["height"] === "number" ? Number(raw["height"]) : undefined,
+      isFavorite: raw["isFavorite"] === true,
     };
+  }
+
+  private bucketSectionsByForm(
+    sections: Array<HybridPhotoSection>,
+    form: FormIndex,
+  ): Array<HybridSectionBucket> {
+    const buckets: Array<HybridSectionBucket> = [];
+    const bucketIndexByKey: Map<string, number> = new Map();
+
+    sections.forEach((section: HybridPhotoSection) => {
+      this.flattenRows(section.rows).forEach((asset: HybridPhotoAsset) => {
+        const descriptor = this.resolveSectionDescriptor(asset, section, form);
+        const existingIndex = bucketIndexByKey.get(descriptor.key);
+        if (existingIndex !== undefined) {
+          buckets[existingIndex].assets.push(asset);
+          return;
+        }
+
+        const bucket = new HybridSectionBucket();
+        bucket.key = descriptor.key;
+        bucket.title = descriptor.title;
+        bucket.assets.push(asset);
+        bucketIndexByKey.set(bucket.key, buckets.length);
+        buckets.push(bucket);
+      });
+    });
+
+    return buckets;
+  }
+
+  private resolveSectionDescriptor(
+    asset: HybridPhotoAsset,
+    fallbackSection: HybridPhotoSection,
+    form: FormIndex,
+  ): HybridSectionDescriptor {
+    const dateParts = this.resolveAssetDateParts(asset, fallbackSection);
+    const descriptor = new HybridSectionDescriptor();
+    if (!dateParts) {
+      const fallbackKey = fallbackSection.key || fallbackSection.title || asset.id;
+      descriptor.key = fallbackKey;
+      descriptor.title = fallbackSection.title || fallbackKey;
+      return descriptor;
+    }
+
+    if (form === FormIndex.YEAR) {
+      descriptor.key = `${dateParts.year}`;
+      descriptor.title = descriptor.key;
+      return descriptor;
+    }
+
+    if (form === FormIndex.MONTH) {
+      descriptor.key = `${dateParts.year}-${this.pad2(dateParts.month)}`;
+      descriptor.title = descriptor.key;
+      return descriptor;
+    }
+
+    descriptor.key = `${dateParts.year}-${this.pad2(dateParts.month)}-${this.pad2(dateParts.day)}`;
+    descriptor.title = fallbackSection.title || descriptor.key;
+    return descriptor;
+  }
+
+  private resolveAssetDateParts(
+    asset: HybridPhotoAsset,
+    fallbackSection: HybridPhotoSection,
+  ): HybridDateParts | undefined {
+    if (asset.createdAt) {
+      const createdAt = new Date(asset.createdAt);
+      if (!Number.isNaN(createdAt.getTime())) {
+        const dateParts = new HybridDateParts();
+        dateParts.year = createdAt.getFullYear();
+        dateParts.month = createdAt.getMonth() + 1;
+        dateParts.day = createdAt.getDate();
+        return dateParts;
+      }
+    }
+
+    const fallbackText = fallbackSection.key || fallbackSection.title || '';
+    const matched = fallbackText.match(/(\d{4})(?:-(\d{2}))?(?:-(\d{2}))?/);
+    if (!matched) {
+      return undefined;
+    }
+
+    const dateParts = new HybridDateParts();
+    dateParts.year = Number(matched[1]);
+    dateParts.month = Number(matched[2] ?? '1');
+    dateParts.day = Number(matched[3] ?? '1');
+    return dateParts;
+  }
+
+  private pad2(value: number): string {
+    return `${value}`.padStart(2, '0');
   }
 
   private isSameVisualSection(left: HybridPhotoSection, right: HybridPhotoSection): boolean {

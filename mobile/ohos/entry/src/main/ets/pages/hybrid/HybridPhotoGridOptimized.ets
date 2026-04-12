@@ -1,8 +1,10 @@
+import { LengthMetrics } from '@kit.ArkUI';
 import { HybridFlutterBridge } from '../../bridge/HybridFlutterBridge';
 import * as Shared from './HybridPhotoGridShared';
 import * as ThumbnailDisk from './HybridPhotoThumbnailDisk';
 import { HybridPhotoTile } from './HybridPhotoTile';
 import { HybridPhotoTimelineBuilder } from './HybridPhotoTimeline';
+import { AnimationCurve } from './viewcontroller/animation/AnimationDefine';
 import { HybridPinchGestureHandler } from './viewcontroller/HybridPinchGestureHandler';
 
 type HybridPhotoAsset = Shared.HybridPhotoAsset;
@@ -118,7 +120,7 @@ export struct HybridPhotoGridOptimized {
 
   private async loadPage(reset: boolean): Promise<void> {
     try {
-      const payload = await HybridFlutterBridge.fetchPhotoPage(
+      const payload = await HybridFlutterBridge.fetchTimelineWindow(
         reset ? 0 : this.nextOffset,
         this.pageSize,
       );
@@ -383,35 +385,43 @@ export struct HybridPhotoGridOptimized {
     }
 
     const shouldApplyColumns = result.columns !== previousColumns;
-    const duration = shouldApplyColumns ? 200 : 160;
+    const scaleDuration = this.pinchHandler.getAnimationDuration(result.isQuickPinch);
+    const opacityDuration = scaleDuration;
     this.pinchTargetColumns = result.columns;
 
     if (shouldApplyColumns) {
-      this.applyNewColumns(result.columns, result.scrollOffset);
+      this.applyNewColumns(result.columns, result.anchorItemIndex, result.extraOffset);
       this.pinchScale = previousColumns / result.columns;
-      this.targetGridScale = 1;
-      this.targetGridOpacity = 1;
     }
 
     this.getUIContext().animateTo(
       {
-        duration: duration,
-        curve: this.pinchHandler.getAnimationCurve(),
+        duration: scaleDuration,
+        curve: AnimationCurve.LEAVE_HAND_CURVE,
       },
       (): void => {
         this.pinchScale = 1;
         this.targetGridScale = 1;
-        this.targetGridOpacity = 0;
         this.pinchProgress = 0;
+      },
+    );
+
+    this.getUIContext().animateTo(
+      {
+        duration: opacityDuration,
+        curve: AnimationCurve.SHARP_CURVE,
+      },
+      (): void => {
+        this.targetGridOpacity = 0;
       },
     );
 
     setTimeout((): void => {
       this.resetPinchState();
-    }, duration + 10);
+    }, Math.max(scaleDuration, opacityDuration) + 20);
   }
 
-  private applyNewColumns(columns: number, scrollOffset: number): void {
+  private applyNewColumns(columns: number, anchorItemIndex: number, extraOffset: number): void {
     if (columns === this.gridColumns) {
       return;
     }
@@ -420,16 +430,17 @@ export struct HybridPhotoGridOptimized {
     this.updateColumnsTemplate();
     this.updateGridData();
 
-    setTimeout((): void => {
-      try {
-        const nextOffset = Math.max(0, scrollOffset);
-        this.scroller.scrollTo({
-          xOffset: 0,
-          yOffset: nextOffset,
-        });
-        this.currentScrollOffsetY = nextOffset;
-      } catch (_) {}
-    }, 0);
+    try {
+      const maxPhotoIndex = Math.max(0, this.allGridItems.length - 2);
+      const safeAnchorItemIndex = Math.max(0, Math.min(anchorItemIndex, maxPhotoIndex));
+      this.scroller.scrollToIndex(
+        safeAnchorItemIndex,
+        false,
+        ScrollAlign.START,
+        { extraOffset: LengthMetrics.vp(extraOffset) },
+      );
+      this.currentScrollOffsetY = Math.max(0, this.scroller.currentOffset().yOffset);
+    } catch (_) {}
   }
 
   private resetPinchState(): void {
@@ -492,7 +503,7 @@ export struct HybridPhotoGridOptimized {
     }
 
     try {
-      await HybridFlutterBridge.openTimelineAssetViewer(index);
+      await HybridFlutterBridge.openTimelineAssetViewerAt(index);
     } catch (error) {
       console.error(`[HybridPhotoGridOptimized] Open asset viewer failed for ${asset.id}: ${error}`);
     }
@@ -556,7 +567,7 @@ export struct HybridPhotoGridOptimized {
     .columnsTemplate(this.columnsTemplate)
     .rowsGap(Shared.HYBRID_GRID_GAP)
     .columnsGap(Shared.HYBRID_GRID_GAP)
-    .cachedCount(Shared.HYBRID_LIST_CACHE_COUNT)
+    .cachedCount(Shared.resolveListCacheCount(this.gridColumns))
     .padding({
       top: this.getBaseTopInsetHeight(),
     })
@@ -648,10 +659,12 @@ export struct HybridPhotoGridOptimized {
           }
           this.handlePinchUpdate(event.scale, event.pinchCenterX, event.pinchCenterY);
         })
-        .onActionEnd((_event: GestureEvent): void => {
+        .onActionEnd((event: GestureEvent): void => {
+          this.handlePinchUpdate(event.scale, event.pinchCenterX, event.pinchCenterY);
           this.handlePinchEnd();
         })
-        .onActionCancel((_event: GestureEvent): void => {
+        .onActionCancel((event: GestureEvent): void => {
+          this.handlePinchUpdate(event.scale, event.pinchCenterX, event.pinchCenterY);
           this.handlePinchEnd();
         }),
     );
@@ -680,7 +693,7 @@ export struct HybridPhotoGridOptimized {
       .columnsTemplate('1fr '.repeat(this.pinchTargetColumns).trim())
       .rowsGap(Shared.HYBRID_GRID_GAP)
       .columnsGap(Shared.HYBRID_GRID_GAP)
-      .cachedCount(Shared.HYBRID_LIST_CACHE_COUNT)
+      .cachedCount(Shared.resolveListCacheCount(this.pinchTargetColumns))
       .padding({
         top: this.getBaseTopInsetHeight(),
       })

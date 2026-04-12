@@ -8,13 +8,13 @@ import {
   HYBRID_BACKGROUND_PREDOWNLOAD_YIELD_MS,
   HYBRID_DEFERRED_REMOTE_WRITE_LIMIT,
   HYBRID_ENABLE_REMOTE_THUMBNAIL_DISK_WRITES,
-  HYBRID_MAX_CONCURRENT_BACKGROUND_PREDOWNLOADS,
   HYBRID_REMOTE_THUMBNAIL_CACHE_DIR,
   HYBRID_REMOTE_THUMBNAIL_CACHE_MAX_BYTES,
   HYBRID_REMOTE_THUMBNAIL_CACHE_TRIM_INTERVAL_MS,
   HYBRID_REMOTE_THUMBNAIL_CACHE_TRIM_TARGET_BYTES,
   HybridDeferredRemoteWriteEntry,
   HybridRemoteCacheEntry,
+  resolveHybridPrefetchConcurrency,
 } from './HybridPhotoGridShared';
 
 function hashString(input: string): string {
@@ -377,6 +377,7 @@ class HybridDeferredRemoteThumbnailWriter {
     if (ctx && !HybridScrollState.isScrolling) {
       HybridRemoteThumbnailCachePruner.trimIfNeeded(ctx);
     }
+    HybridDeferredRemoteThumbnailWriter.lastCtx = undefined;
   }
 }
 
@@ -611,7 +612,7 @@ class HybridBackgroundPredownloadLimiter {
   }
 
   private static tryAcquire(): boolean {
-    if (HybridBackgroundPredownloadLimiter.activeCount >= HYBRID_MAX_CONCURRENT_BACKGROUND_PREDOWNLOADS) {
+    if (HybridBackgroundPredownloadLimiter.activeCount >= resolveHybridPrefetchConcurrency()) {
       return false;
     }
 
