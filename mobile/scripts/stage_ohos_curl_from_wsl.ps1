@@ -1,6 +1,8 @@
 param(
     [string]$LyciumRoot = '/home/dgh18/work/tpc_c_cplusplus/lycium',
     [string[]]$Architectures = @('arm64-v8a', 'armeabi-v7a'),
+    [string]$PluginRoot = 'F:\package_flutter\ohos_http\ohos',
+    [string]$OhpmRoot,
     [switch]$SkipNativeCacheReset
 )
 
@@ -10,6 +12,9 @@ $ErrorActionPreference = 'Stop'
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $entryLibsRoot = Join-Path $repoRoot 'ohos\entry\libs'
 $curlHeadersRoot = Join-Path $repoRoot 'ohos\entry\src\main\cpp\thirdparty\curl'
+if ([string]::IsNullOrWhiteSpace($OhpmRoot)) {
+    $OhpmRoot = Join-Path $repoRoot 'ohos\oh_modules\.ohpm'
+}
 
 $wslDistroName = (& wsl.exe sh -lc 'printf %s "$WSL_DISTRO_NAME"' | Select-Object -Last 1).Trim()
 if ([string]::IsNullOrWhiteSpace($wslDistroName)) {
@@ -100,25 +105,64 @@ function Reset-NativeBuildState {
     }
 }
 
+function Remove-RuntimeClosure {
+    param(
+        [string]$Directory,
+        [object[]]$Libraries
+    )
+
+    if (-not (Test-Path $Directory)) {
+        return
+    }
+
+    foreach ($library in $Libraries) {
+        foreach ($outputName in $library.OutputNames) {
+            $candidate = Join-Path $Directory $outputName
+            if (Test-Path $candidate) {
+                Remove-Item -Path $candidate -Force
+            }
+        }
+    }
+}
+
+$ohpmPackageRoots = @()
+if (Test-Path $OhpmRoot) {
+    $ohpmPackageRoots = @(Get-ChildItem -Path $OhpmRoot -Directory -Filter 'ohos_http@*=*' |
+        ForEach-Object { Join-Path $_.FullName 'oh_modules\ohos_http' } |
+        Where-Object { Test-Path $_ })
+}
+
 foreach ($arch in $Architectures) {
     $headerSource = "$LyciumRoot/usr/curl/$arch/include"
     $headerDestination = Join-Path $curlHeadersRoot "$arch\include"
     Copy-WslDirectory -LinuxSource $headerSource -WindowsDestination $headerDestination
 
-    $archLibRoot = Join-Path $entryLibsRoot $arch
-    New-Item -ItemType Directory -Path $archLibRoot -Force | Out-Null
+    $pluginLibRoot = Join-Path (Join-Path $PluginRoot 'libs') $arch
+    New-Item -ItemType Directory -Path $pluginLibRoot -Force | Out-Null
 
     foreach ($library in $libraries) {
         $versionedSource = "$LyciumRoot/usr/$($library.Package)/$arch/lib/$($library.VersionedName)"
         foreach ($outputName in $library.OutputNames) {
-            $outputPath = Join-Path $archLibRoot $outputName
+            $outputPath = Join-Path $pluginLibRoot $outputName
             Copy-WslFile -LinuxSource $versionedSource -WindowsDestination $outputPath
+
+            foreach ($ohpmPackageRoot in $ohpmPackageRoots) {
+                $ohpmArchLibRoot = Join-Path (Join-Path $ohpmPackageRoot 'libs') $arch
+                $ohpmOutputPath = Join-Path $ohpmArchLibRoot $outputName
+                Copy-WslFile -LinuxSource $versionedSource -WindowsDestination $ohpmOutputPath
+            }
         }
     }
+
+    Remove-RuntimeClosure -Directory (Join-Path $entryLibsRoot $arch) -Libraries $libraries
 }
 
 if (-not $SkipNativeCacheReset) {
     Reset-NativeBuildState
 }
 
-Write-Host "Staged curl prebuilts into $entryLibsRoot and $curlHeadersRoot"
+Write-Host "Staged curl prebuilts into $(Join-Path $PluginRoot 'libs') and $curlHeadersRoot"
+if ($ohpmPackageRoots.Count -gt 0) {
+    Write-Host "Mirrored curl prebuilts into generated OHPM packages under $OhpmRoot"
+}
+Write-Host "Removed duplicate curl runtime libraries from $entryLibsRoot"

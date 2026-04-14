@@ -23,7 +23,10 @@ class NetworkRepository {
     _clientPointer = clientPointer;
     _client?.close();
     if (defaultTargetPlatform == TargetPlatform.ohos) {
-      _client = OhosHttpClient();
+      _client = OhosHttpClient(
+        connectTimeout:Duration(seconds: 30),
+        readTimeout: Duration(seconds: 60),
+      );
     } else if (Platform.isIOS) {
       final session = URLSession.fromRawPointer(clientPointer.cast());
       _client = CupertinoClient.fromSharedSession(session);

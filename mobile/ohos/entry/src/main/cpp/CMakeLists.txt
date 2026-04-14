@@ -36,45 +36,11 @@ immich_dedupe_linker_flags(CMAKE_SHARED_LINKER_FLAGS "Global shared linker flags
 immich_dedupe_linker_flags(CMAKE_MODULE_LINKER_FLAGS "Global module linker flags")
 immich_dedupe_linker_flags(CMAKE_EXE_LINKER_FLAGS "Global executable linker flags")
 
-set(IMMICH_ENTRY_LIBS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../../libs/${OHOS_ARCH}")
-set(IMMICH_THIRDPARTY_DIR "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty")
-set(IMMICH_LIBCURL_LIBRARY "${IMMICH_ENTRY_LIBS_DIR}/libcurl.so")
-set(IMMICH_LIBCURL_INCLUDE_DIR "${IMMICH_THIRDPARTY_DIR}/curl/${OHOS_ARCH}/include")
-
-function(immich_enable_optional_libcurl target_name)
-    if(EXISTS "${IMMICH_LIBCURL_LIBRARY}" AND EXISTS "${IMMICH_LIBCURL_INCLUDE_DIR}")
-        message(STATUS "Enabling optional libcurl for ${target_name}")
-        target_include_directories(${target_name} PRIVATE
-            "${IMMICH_LIBCURL_INCLUDE_DIR}"
-        )
-        target_link_libraries(${target_name} PRIVATE
-            "${IMMICH_LIBCURL_LIBRARY}"
-        )
-        target_compile_definitions(${target_name} PRIVATE IMMICH_OHOS_HAS_LIBCURL=1)
-    endif()
-endfunction()
-
 add_library(native_buffer SHARED
     native_buffer.cpp
-)
-
-add_library(ohos_http_ffi SHARED
-    ../../../../../../../package_flutter/ohos_http/ohos/src/main/cpp/ohos_http_ffi.cpp
-    ../../../../../third_party/jni/src/include/dart_api_dl.c
-)
-
-target_include_directories(ohos_http_ffi PRIVATE
-    ../../../../../third_party/jni/src/include
 )
 
 # N-API (ArkTS) bridge library
 target_link_libraries(native_buffer PUBLIC
     ace_napi.z
 )
-
-# N-API (ArkTS) bridge library
-target_link_libraries(ohos_http_ffi PUBLIC
-    ace_napi.z
-)
-
-immich_enable_optional_libcurl(ohos_http_ffi)

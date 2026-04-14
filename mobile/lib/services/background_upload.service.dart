@@ -236,6 +236,13 @@ class BackgroundUploadService {
         return;
       }
 
+      final normalizedPath = path.replaceAll('\\', '/');
+      if (!normalizedPath.contains('/cache/photo_manager/')) {
+        // Only clean plugin-created cache files. Backup tasks on OHOS now prefer direct media
+        // paths, and deleting the task file here would delete the original asset.
+        return;
+      }
+
       final file = File(path);
       if (await file.exists()) {
         await file.delete();

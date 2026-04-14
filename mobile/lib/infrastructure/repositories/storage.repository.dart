@@ -2,30 +2,47 @@ import 'dart:io';
 
 import 'package:immich_mobile/domain/models/asset/base_asset.model.dart';
 import 'package:immich_mobile/extensions/platform_extensions.dart';
+import 'package:immich_mobile/platform/native_sync_api_ohos.g.dart';
 import 'package:logging/logging.dart';
 import 'package:photo_manager/photo_manager.dart';
 
 class StorageRepository {
   final log = Logger('StorageRepository');
+  final NativeSyncApiOhos _nativeSyncApi;
 
-  StorageRepository();
+  StorageRepository({NativeSyncApiOhos? nativeSyncApi}) : _nativeSyncApi = nativeSyncApi ?? NativeSyncApiOhos();
 
   Future<File?> getFileForAsset(String assetId) async {
     File? file;
     final log = Logger('StorageRepository');
 
     try {
-      final entity = await AssetEntity.fromId(assetId);
-      file = await entity?.originFile;
+      if (Platform.isOhos) {
+        final path = await _nativeSyncApi.getPathFromUri(assetId);
+        if (path.isEmpty) {
+          log.warning("Cannot resolve path for OHOS asset $assetId");
+          return null;
+        }
+        file = File(path);
+      } else {
+        final entity = await AssetEntity.fromId(assetId);
+        file = await entity?.originFile;
+      }
+
       if (file == null) {
         log.warning("Cannot get file for asset $assetId");
         return null;
       }
 
-      final exists = await file.exists();
-      if (!exists) {
-        log.warning("File for asset $assetId does not exist");
-        return null;
+      // On OHOS the path is only accessible from ArkTS (media library virtual
+      // path), so Dart's dart:io File cannot check existence. The native side
+      // validates the file via fs.statSync() before uploading.
+      if (!Platform.isOhos) {
+        final exists = await file.exists();
+        if (!exists) {
+          log.warning("File for asset $assetId does not exist");
+          return null;
+        }
       }
     } catch (error, stackTrace) {
       log.warning("Error getting file for asset $assetId", error, stackTrace);

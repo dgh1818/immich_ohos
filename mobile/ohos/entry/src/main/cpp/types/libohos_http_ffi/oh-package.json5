@@ -1,0 +1,6 @@
+{
+  "name": "libohos_http_ffi.so",
+  "types": "./Index.d.ts",
+  "version": "1.0.0",
+  "description": "Type declarations for libohos_http_ffi.so"
+}

@@ -157,6 +157,14 @@ export class URLSessionManager {
     return URLSessionManager.load(context) !== null;
   }
 
+  static buildTransportHeaders(headers?: Object): Record<string, string> {
+    const headerRecord = URLSessionManager.toHeaderRecord(headers);
+    if (headerRecord['User-Agent'] === undefined && headerRecord['user-agent'] === undefined) {
+      headerRecord['User-Agent'] = URLSessionManager.USER_AGENT;
+    }
+    return headerRecord;
+  }
+
   static setRequestHeaders(
     context: common.Context,
     headers: Map<string, string>,
