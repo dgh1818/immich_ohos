@@ -44,3 +44,4 @@ build/
 .build/
 
 **/oh_modules/**
+node_modules
