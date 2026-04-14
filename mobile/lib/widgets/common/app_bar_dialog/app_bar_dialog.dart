@@ -13,6 +13,7 @@ import 'package:immich_mobile/providers/auth.provider.dart';
 import 'package:immich_mobile/providers/backup/backup.provider.dart';
 import 'package:immich_mobile/providers/backup/manual_upload.provider.dart';
 import 'package:immich_mobile/providers/infrastructure/readonly_mode.provider.dart';
+import 'package:immich_mobile/providers/infrastructure/timeline.provider.dart';
 import 'package:immich_mobile/providers/locale_provider.dart';
 import 'package:immich_mobile/providers/user.provider.dart';
 import 'package:immich_mobile/providers/websocket.provider.dart';
@@ -132,6 +133,8 @@ class ImmichAppBarDialog extends HookConsumerWidget {
                     ref.read(backupProvider.notifier).cancelBackup();
                     unawaited(ref.read(assetProvider.notifier).clearAllAssets());
                     ref.read(websocketProvider.notifier).disconnect();
+                    ref.invalidate(timelineUsersProvider);
+                    ref.invalidate(timelineServiceProvider);
                     unawaited(context.replaceRoute(const LoginRoute()));
                   },
                 );
