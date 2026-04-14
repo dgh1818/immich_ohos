@@ -357,6 +357,10 @@ async function getAssetsForAlbumTask(
       const height = currentAsset.get(photoAccessHelper.PhotoKeys.HEIGHT).valueOf() as number;
       const duration = Math.floor((currentAsset.get(photoAccessHelper.PhotoKeys.DURATION).valueOf() as number) / 1000);
       const orientation = currentAsset.get(photoAccessHelper.PhotoKeys.ORIENTATION).valueOf() as number;
+      const isFlipped = orientation === 90 || orientation === 270;
+      const normalizedWidth = isFlipped ? height : width;
+      const normalizedHeight = isFlipped ? width : height;
+      const normalizedOrientation = isFlipped ? 0 : orientation;
       const isFavorite =
         (currentAsset.get(photoAccessHelper.PhotoKeys.FAVORITE).valueOf() as number) > 0 ? true : false;
       let subtype: number | undefined = undefined;
@@ -380,10 +384,10 @@ async function getAssetsForAlbumTask(
         mediaType: mediaType,
         createdAt: createdAt ?? 0,
         modifiedAt: modifiedAt ?? 0,
-        width: width ?? 0,
-        height: height ?? 0,
+        width: normalizedWidth,
+        height: normalizedHeight,
         duration: duration ?? 0,
-        orientation: orientation ?? 0,
+        orientation: normalizedOrientation,
         isFavorite: isFavorite,
         size: size ?? 0,
         playbackStyle: playbackStyle,

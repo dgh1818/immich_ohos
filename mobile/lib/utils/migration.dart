@@ -109,6 +109,9 @@ Future<void> migrateDatabaseIfNeeded(Isar db, Drift drift) async {
 
   if (version < 24 && Store.isBetaTimelineEnabled) {
     await _applyLocalAssetOrientation(drift);
+    if (Platform.isOhos) {
+      await Store.put(StoreKey.ohosLocalAssetOrientationBackfill, true);
+    }
   }
 
   if (version < 25) {
@@ -119,6 +122,17 @@ Future<void> migrateDatabaseIfNeeded(Isar db, Drift drift) async {
         await NetworkRepository.setHeaders(ApiService.getRequestHeaders(), serverUrls, token: accessToken);
       }
     }
+  }
+
+  // Backfill already-upgraded beta timeline databases after OHOS local asset
+  // metadata normalization moved into the native sync layer.
+  if (
+    Platform.isOhos &&
+    Store.isBetaTimelineEnabled &&
+    !Store.get(StoreKey.ohosLocalAssetOrientationBackfill, false)
+  ) {
+    await _applyLocalAssetOrientation(drift);
+    await Store.put(StoreKey.ohosLocalAssetOrientationBackfill, true);
   }
 
   if (version < 22 && !Store.isBetaTimelineEnabled) {
