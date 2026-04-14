@@ -1,8 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:immich_mobile/domain/models/asset/base_asset.model.dart';
-import 'package:immich_mobile/domain/models/store.model.dart';
-import 'package:immich_mobile/entities/store.entity.dart';
 import 'package:immich_mobile/infrastructure/loaders/image_request.dart';
 import 'package:immich_mobile/presentation/widgets/images/animated_image_stream_completer.dart';
 import 'package:immich_mobile/presentation/widgets/images/image_provider.dart';
@@ -43,13 +41,13 @@ class LocalThumbProvider extends CancellableImageProvider<LocalThumbProvider>
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
     if (other is LocalThumbProvider) {
-      return id == other.id;
+      return id == other.id && size == other.size && assetType == other.assetType;
     }
     return false;
   }
 
   @override
-  int get hashCode => id.hashCode;
+  int get hashCode => Object.hash(id, size, assetType);
 }
 
 class LocalFullImageProvider extends CancellableImageProvider<LocalFullImageProvider>
@@ -110,11 +108,7 @@ class LocalFullImageProvider extends CancellableImageProvider<LocalFullImageProv
       size: Size(size.width * devicePixelRatio, size.height * devicePixelRatio),
       assetType: key.assetType,
     );
-    yield* loadRequest(request, decode);
-
-    if (!Store.get(StoreKey.loadOriginal, true)) {
-      return;
-    }
+    yield* loadRequest(request, decode, evictOnError: false);
 
     if (isCancelled) {
       PaintingBinding.instance.imageCache.evict(this);
@@ -140,7 +134,7 @@ class LocalFullImageProvider extends CancellableImageProvider<LocalFullImageProv
       size: Size(size.width * devicePixelRatio, size.height * devicePixelRatio),
       assetType: key.assetType,
     );
-    yield* loadRequest(previewRequest, decode);
+    yield* loadRequest(previewRequest, decode, evictOnError: false);
 
     if (isCancelled) {
       PaintingBinding.instance.imageCache.evict(this);
@@ -160,11 +154,14 @@ class LocalFullImageProvider extends CancellableImageProvider<LocalFullImageProv
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
     if (other is LocalFullImageProvider) {
-      return id == other.id && size == other.size && isAnimated == other.isAnimated;
+      return id == other.id &&
+          size == other.size &&
+          assetType == other.assetType &&
+          isAnimated == other.isAnimated;
     }
     return false;
   }
 
   @override
-  int get hashCode => id.hashCode ^ size.hashCode ^ isAnimated.hashCode;
+  int get hashCode => Object.hash(id, size, assetType, isAnimated);
 }
