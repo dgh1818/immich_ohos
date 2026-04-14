@@ -54,6 +54,12 @@
 - Prefer fixing the root cause over adding fallback paths.
 - Avoid silent failure handling unless upstream already does so.
 
+## ArkTS language constraints
+
+- Object literals cannot be used as type declarations in ArkTS (`arkts-no-obj-literals-as-types`).
+  - Instead of `(info: { receiveSize: number; totalSize: number })`, define a named `interface` and use that.
+- Always define named interfaces for callback parameter types, function return shapes, and structured objects.
+
 ## Validation
 
 - If a build or check requires Huawei OHOS SDK, use:
