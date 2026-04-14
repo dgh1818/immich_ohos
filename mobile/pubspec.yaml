@@ -2,7 +2,7 @@ name: immich_mobile
 description: Immich - selfhosted backup media file on mobile phone
 
 publish_to: 'none'
-version: 2.6.3+260030007
+version: 2.7.5+270050001
 
 environment:
   sdk: '>=3.8.0 <4.0.0'
@@ -118,6 +118,7 @@ dependencies:
   coordtransform_dart: ^1.0.4
 
 dependency_overrides:
+  path_provider_android: 2.2.23
   native_video_player:
     path: ../../package_flutter/native_video_player_ohos
   local_auth:

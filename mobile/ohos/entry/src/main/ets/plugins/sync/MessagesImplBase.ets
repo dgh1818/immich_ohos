@@ -357,6 +357,10 @@ async function getAssetsForAlbumTask(
       const height = currentAsset.get(photoAccessHelper.PhotoKeys.HEIGHT).valueOf() as number;
       const duration = Math.floor((currentAsset.get(photoAccessHelper.PhotoKeys.DURATION).valueOf() as number) / 1000);
       const orientation = currentAsset.get(photoAccessHelper.PhotoKeys.ORIENTATION).valueOf() as number;
+      const isFlipped = orientation === 90 || orientation === 270;
+      const normalizedWidth = isFlipped ? height : width;
+      const normalizedHeight = isFlipped ? width : height;
+      const normalizedOrientation = isFlipped ? 0 : orientation;
       const isFavorite =
         (currentAsset.get(photoAccessHelper.PhotoKeys.FAVORITE).valueOf() as number) > 0 ? true : false;
       let subtype: number | undefined = undefined;
@@ -380,10 +384,10 @@ async function getAssetsForAlbumTask(
         mediaType: mediaType,
         createdAt: createdAt ?? 0,
         modifiedAt: modifiedAt ?? 0,
-        width: width ?? 0,
-        height: height ?? 0,
+        width: normalizedWidth,
+        height: normalizedHeight,
         duration: duration ?? 0,
-        orientation: orientation ?? 0,
+        orientation: normalizedOrientation,
         isFavorite: isFavorite,
         size: size ?? 0,
         playbackStyle: playbackStyle,
@@ -565,6 +569,7 @@ export class MessagesImplBase extends NativeSyncApiOhos {
   private ctx?: common.Context;
   private readonly TAG = "NativeSyncApiBase";
   private liveNotificationId: number = -1;
+  private lastLiveNotificationUpdatedAt: number = 0;
   private continuousTaskId: number = 0;
 
   constructor(context: common.Context) {
@@ -1077,6 +1082,7 @@ export class MessagesImplBase extends NativeSyncApiOhos {
               result.success(0);
               return;
             }
+            this.lastLiveNotificationUpdatedAt = 0;
             result.success(this.liveNotificationId);
           }).catch((error: BusinessError) => {
             console.error(`Operation startBackgroundRunning failed. code is ${error.code} message is ${error.message}`);
@@ -1096,6 +1102,7 @@ export class MessagesImplBase extends NativeSyncApiOhos {
                 return;
               }
               this.liveNotificationId = 100;
+              this.lastLiveNotificationUpdatedAt = 0;
               console.info("Succeeded in startBackgroundRunning.");
               result.success(this.liveNotificationId);
             }
@@ -1123,6 +1130,13 @@ export class MessagesImplBase extends NativeSyncApiOhos {
       result.success();
       return;
     }
+    const now = Date.now();
+    if (now - this.lastLiveNotificationUpdatedAt < 1000) {
+      result.success();
+      return;
+    }
+    this.lastLiveNotificationUpdatedAt = now;
+    const integerProgress = Math.trunc(progress);
 
     let request: notificationManager.NotificationRequest = {
       id: targetId,
@@ -1131,13 +1145,13 @@ export class MessagesImplBase extends NativeSyncApiOhos {
         normal: {
           title: title,
           text: fileName,
-          additionalText: progress.toString(),
+          additionalText: integerProgress.toString(),
         }
       },
       // 构造进度条模板，name字段当前需要固定配置为downloadTemplate
       template: {
         name: 'downloadTemplate',
-        data: { title: title, fileName: fileName, progressValue: progress }
+        data: { title: title, fileName: fileName, progressValue: integerProgress, progressMaxValue: 100, isProgressIndeterminate: false }
       },
       notificationSlotType:notificationManager.SlotType.OTHER_TYPES
     }
@@ -1158,6 +1172,7 @@ export class MessagesImplBase extends NativeSyncApiOhos {
   public override async stopBackgroundTransfer(result: Result<void>) {
     if (!this.ctx) {
       this.liveNotificationId = -1;
+      this.lastLiveNotificationUpdatedAt = 0;
       this.continuousTaskId = 0;
       result.success();
       return;
@@ -1178,6 +1193,7 @@ export class MessagesImplBase extends NativeSyncApiOhos {
       // Ignore repeated stop and verification errors.
     } finally {
       this.liveNotificationId = -1;
+      this.lastLiveNotificationUpdatedAt = 0;
       this.continuousTaskId = 0;
     }
     result.success();

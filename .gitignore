@@ -28,6 +28,8 @@ vite.config.js.timestamp-*
 .pnpm-store
 .devcontainer/library
 .devcontainer/.env*
+*.tsbuildinfo
+*.tsbuildInfo
 
 # # ignore any directory named cache
 # cache/
@@ -42,3 +44,4 @@ build/
 .build/
 
 **/oh_modules/**
+node_modules

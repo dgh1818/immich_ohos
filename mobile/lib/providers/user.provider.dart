@@ -10,7 +10,7 @@ import 'package:immich_mobile/services/timeline.service.dart';
 class CurrentUserProvider extends StateNotifier<UserDto?> {
   CurrentUserProvider(this._userService) : super(null) {
     state = _userService.tryGetMyUser();
-    streamSub = _userService.watchMyUser().listen((user) => state = user ?? state);
+    streamSub = _userService.watchMyUser().listen((user) => state = user);
   }
 
   final UserService _userService;

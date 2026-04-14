@@ -27,10 +27,11 @@ import {
   AssetStatus,
   AssetVisibility,
   CacheControl,
+  ChecksumAlgorithm,
   ImageFormat,
   JobName,
   Permission,
-  StorageFolder
+  StorageFolder,
 } from 'src/enum';
 import { AuthRequest } from 'src/middleware/auth.guard';
 import { BaseService } from 'src/services/base.service';
@@ -271,7 +272,9 @@ export class AssetMediaService extends BaseService {
       throw new NotFoundException('Asset media not found');
     }
 
-    const fileName = `${getFileNameWithoutExtension(originalFileName)}_${size}${getFilenameExtension(path)}`;
+    const fileNameBase =
+      auth.sharedLink && !auth.sharedLink.showExif ? id : getFileNameWithoutExtension(originalFileName);
+    const fileName = `${fileNameBase}_${size}${getFilenameExtension(path)}`;
 
     return new ImmichFileResponse({
       fileName,
@@ -440,6 +443,7 @@ export class AssetMediaService extends BaseService {
       deviceId: asset.deviceId,
       type: asset.type,
       checksum: asset.checksum,
+      checksumAlgorithm: asset.checksumAlgorithm,
       fileCreatedAt: asset.fileCreatedAt,
       localDateTime: asset.localDateTime,
       fileModifiedAt: asset.fileModifiedAt,
@@ -461,6 +465,7 @@ export class AssetMediaService extends BaseService {
       libraryId: null,
 
       checksum: file.checksum,
+      checksumAlgorithm: ChecksumAlgorithm.sha1File,
       originalPath: file.originalPath,
 
       deviceAssetId: dto.deviceAssetId,

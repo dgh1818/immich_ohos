@@ -12,6 +12,7 @@ import 'package:immich_mobile/services/api.service.dart';
 import 'package:logging/logging.dart';
 import 'package:http/http.dart';
 import 'package:immich_mobile/utils/debug_print.dart';
+import 'package:ohos_http/ohos_http.dart';
 
 final uploadRepositoryProvider = Provider((ref) => UploadRepository());
 
@@ -104,25 +105,50 @@ class UploadRepository {
   }) async {
     final String savedEndpoint = Store.get(StoreKey.serverEndpoint);
     final Uri uploadUri = Uri.parse('$savedEndpoint/assets');
-    final baseRequest = ProgressMultipartRequest(
-      'POST',
-      uploadUri,
-      abortTrigger: cancelToken?.future,
-      onProgress: onProgress,
-    );
 
     try {
+      final StreamedResponse response;
+
       if (Platform.isOhos) {
-        baseRequest.headers.addAll(ApiService.getAuthenticatedRequestHeaders(uploadUri.toString()));
+        // Use native multipart upload that passes filePath directly to OHOS
+        // NetworkKit, avoiding loading entire file into memory.
+        final ohosRequest = OhosMultipartRequest('POST', uploadUri);
+        ohosRequest.headers.addAll(ApiService.getAuthenticatedRequestHeaders(uploadUri.toString()));
+        ohosRequest.fields.addAll(fields);
+        ohosRequest.files.add(
+          OhosMultipartFile(
+            field: 'assetData',
+            filePath: file.path,
+            filename: originalFileName,
+            contentType: 'application/octet-stream',
+          ),
+        );
+        ohosRequest.onProgress = onProgress;
+        ohosRequest.abortTrigger = cancelToken?.future;
+
+        response = await NetworkRepository.client.send(ohosRequest);
+      } else {
+        final baseRequest = ProgressMultipartRequest(
+          'POST',
+          uploadUri,
+          abortTrigger: cancelToken?.future,
+          onProgress: onProgress,
+        );
+
+        final fileStream = file.openRead();
+        final assetRawUploadData = MultipartFile(
+          "assetData",
+          fileStream,
+          file.lengthSync(),
+          filename: originalFileName,
+        );
+
+        baseRequest.fields.addAll(fields);
+        baseRequest.files.add(assetRawUploadData);
+
+        response = await NetworkRepository.client.send(baseRequest);
       }
 
-      final fileStream = file.openRead();
-      final assetRawUploadData = MultipartFile("assetData", fileStream, file.lengthSync(), filename: originalFileName);
-
-      baseRequest.fields.addAll(fields);
-      baseRequest.files.add(assetRawUploadData);
-
-      final response = await NetworkRepository.client.send(baseRequest);
       final responseBodyString = await response.stream.bytesToString();
 
       if (![200, 201].contains(response.statusCode)) {

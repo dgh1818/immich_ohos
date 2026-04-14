@@ -33,14 +33,17 @@ class ImmichThumbnail extends HookConsumerWidget {
       return RemoteImageProvider.thumbnail(assetId: assetId!, thumbhash: "");
     }
 
-    final ratio = (asset.width != null && asset.height != null && asset.height != 0)
-        ? asset.width! / asset.height!
-        : null;
+    final assetType = switch (asset.type) {
+      AssetType.image => base_asset.AssetType.image,
+      AssetType.video => base_asset.AssetType.video,
+      AssetType.audio => base_asset.AssetType.audio,
+      AssetType.other => base_asset.AssetType.other,
+    };
 
     if (ImmichImage.useLocal(asset)) {
       return LocalThumbProvider(
         id: asset.localId!,
-        assetType: base_asset.AssetType.video,
+        assetType: assetType,
         size: Size(thumbnailSize.toDouble(), thumbnailSize.toDouble()),
       );
     } else {

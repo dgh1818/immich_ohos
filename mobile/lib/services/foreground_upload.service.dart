@@ -421,9 +421,19 @@ class ForegroundUploadService {
       _logger.severe(() => "Error backup asset: ${error.toString()}", stackTrace);
       callbacks.onError?.call(asset.localId!, error.toString());
     } finally {
-      if (Platform.isIOS || Platform.isOhos) {
+      if (Platform.isIOS) {
         try {
           await file?.delete();
+          await livePhotoFile?.delete();
+        } catch (error, stackTrace) {
+          _logger.severe(() => "ERROR deleting file: ${error.toString()}", stackTrace);
+        }
+      }
+      // On OHOS the file path points to the media library and is not accessible
+      // from Dart's dart:io. The media library manages its own lifecycle, so
+      // there is nothing to clean up here.
+      if (Platform.isOhos) {
+        try {
           await livePhotoFile?.delete();
         } catch (error, stackTrace) {
           _logger.severe(() => "ERROR deleting file: ${error.toString()}", stackTrace);

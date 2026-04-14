@@ -56,7 +56,7 @@ class ImmichToast {
           bottom: gravity == ToastGravity.BOTTOM ? 150 : null,
           left: MediaQuery.of(context).size.width / 2 - 150,
           right: MediaQuery.of(context).size.width / 2 - 150,
-          child: child,
+          child: IgnorePointer(child: child),
         );
       },
       gravity: gravity,

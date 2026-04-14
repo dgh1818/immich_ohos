@@ -74,6 +74,7 @@ class DriftMap extends ConsumerStatefulWidget {
 }
 
 class _DriftMapState extends ConsumerState<DriftMap> {
+
   MapLibreMapController? mapController;
   final _reloadMutex = AsyncMutex();
   final _debouncer = Debouncer(interval: const Duration(milliseconds: 500), maxWaitTime: const Duration(seconds: 2));
@@ -81,9 +82,14 @@ class _DriftMapState extends ConsumerState<DriftMap> {
   final ValueNotifier<_MapSelectedMarker?> _pinnedMarker = ValueNotifier(null);
   final ValueNotifier<_MapSelectedMarker?> _selectedMarker = ValueNotifier(null);
   StreamSubscription? _eventSubscription;
+
   DriftMapSelectedAsset? _pinnedAsset;
   DriftMapSelectedAsset? _pendingSelectedAsset;
   DriftMapSelectedAsset? _selectedAsset;
+  
+  final _sheetCameraDebouncer = Debouncer(interval: const Duration(milliseconds: 120));
+  static const double _selectedMarkerSize = 100;
+  bool _isReanchoring = false;
 
   @override
   void initState() {
@@ -91,11 +97,13 @@ class _DriftMapState extends ConsumerState<DriftMap> {
     _eventSubscription = EventStream.shared.listen<MapMarkerReloadEvent>(_onEvent);
     _pinnedAsset = widget.pinnedAsset;
     widget.selectedAssetListenable?.addListener(_onSelectedAssetChanged);
+    bottomSheetOffset.addListener(() => _sheetCameraDebouncer.run(_reanchorActiveAssetForViewport));
   }
 
   @override
   void dispose() {
     _debouncer.dispose();
+    _sheetCameraDebouncer.dispose();
     bottomSheetOffset.dispose();
     _pinnedMarker.dispose();
     _selectedMarker.dispose();
@@ -118,6 +126,9 @@ class _DriftMapState extends ConsumerState<DriftMap> {
     if (oldWidget.selectedAssetListenable != widget.selectedAssetListenable) {
       oldWidget.selectedAssetListenable?.removeListener(_onSelectedAssetChanged);
       widget.selectedAssetListenable?.addListener(_onSelectedAssetChanged);
+    }
+    if (oldWidget.showTimelineSheet != widget.showTimelineSheet) {
+      unawaited(_reanchorActiveAssetForViewport());
     }
   }
 
@@ -174,6 +185,7 @@ class _DriftMapState extends ConsumerState<DriftMap> {
     controller.addListener(onMapMoved);
     unawaited(_updatePinnedMarkerPosition(shouldAnimate: false));
     unawaited(_updateSelectedMarkerPosition(shouldAnimate: false));
+    unawaited(_reanchorActiveAssetForViewport());
   }
 
   void onMapMoved() {
@@ -181,9 +193,11 @@ class _DriftMapState extends ConsumerState<DriftMap> {
       return;
     }
 
-    _debouncer.run(setBounds);
-    unawaited(_updatePinnedMarkerPosition(shouldAnimate: false));
-    unawaited(_updateSelectedMarkerPosition(shouldAnimate: false));
+    if (!_isReanchoring) {
+      _debouncer.run(setBounds);
+    }
+    unawaited(_updatePinnedMarkerPosition(shouldAnimate: false, checkBounds: false));
+    unawaited(_updateSelectedMarkerPosition(shouldAnimate: false, checkBounds: false));
   }
 
   LatLngBounds _toWgs84Bounds(LatLngBounds bounds) {
@@ -260,6 +274,81 @@ class _DriftMapState extends ConsumerState<DriftMap> {
       return;
     }
     unawaited(_updateSelectedMarkerPosition(shouldAnimate: true));
+  }
+
+  // OHOS adaptation: the timeline only covers the map instead of resizing it,
+  // so we compute the center of the still-visible map area here to keep the marker from being hidden.
+  // OHOS 适配：时间线只是遮挡地图，并不会缩小地图控件本身，
+  // 所以这里计算当前仍然可见的地图区域中心，避免 marker 被时间线遮住。
+  double _visibleMapCenterY() {
+    final top = max(_selectedMarkerSize / 2, context.padding.top + 96.0);
+    final bottom = (!widget.showTimelineSheet || !context.isMobile) ? context.height : context.height * (1.0 - bottomSheetOffset.value);
+    return bottom <= top ? top : (top + bottom) / 2;
+  }
+
+  // OHOS adaptation: when the sheet moves, we re-anchor the active asset toward the visible map center
+  // so the marker stays readable instead of being occluded by the timeline.
+  // OHOS 适配：当底部时间线位置变化时，需要把当前资产重新锚定到可见地图中心附近，
+  // 这样 marker 不会被时间线遮挡住。
+  Future<void> _reanchorActiveAssetForViewport() async {
+    final controller = mapController;
+    final asset = _pendingSelectedAsset ?? _selectedAsset ?? _pinnedAsset;
+    if (!mounted || controller == null) {
+      return;
+    }
+
+    late final LatLng processed;
+    if (asset != null) {
+      processed = _toMapCoordinate(asset.location);
+    } else {
+      final bounds = await controller.getVisibleRegion();
+      processed = LatLng(
+        (bounds.southwest.latitude + bounds.northeast.latitude) / 2,
+        (bounds.southwest.longitude + bounds.northeast.longitude) / 2,
+      );
+    }
+
+    // Get current screen position of the marker (physical pixels on non-iOS)
+    final point = await controller.toScreenLocation(processed);
+    final markerLogicalY = point.y.toDouble() / (Platform.isIOS ? 1.0 : context.devicePixelRatio);
+    final targetCenterY = _visibleMapCenterY();
+    // On OHOS, scrollBy positive y moves content DOWN on screen (camera north).
+    // To move the marker UP on screen when it's below the visible center,
+    // we need negative scrollBy y (camera moves south = content moves up = marker screen pos moves up).
+    // markerLogicalY > targetCenterY means marker is below center → need negative scroll.
+    final scrollDy = targetCenterY - markerLogicalY;
+
+    if (scrollDy.abs() < 1) {
+      return;
+    }
+
+    _isReanchoring = true;
+    await controller.animateCamera(
+      CameraUpdate.scrollBy(0, scrollDy),
+      duration: const Duration(milliseconds: 300),
+    );
+    // Delay reset to cover trailing onMapMoved callbacks, then refresh timeline bounds
+    Future.delayed(const Duration(milliseconds: 500), () {
+      _isReanchoring = false;
+      if (mounted) {
+        _debouncer.run(setBounds);
+      }
+    });
+
+    // Update marker screen position after camera moved
+    final newPoint = await controller.toScreenLocation(processed);
+    if (!mounted || asset == null) {
+      return;
+    }
+
+    if (_selectedAsset != null || _pendingSelectedAsset != null) {
+      _selectedMarker.value = _MapSelectedMarker(point: newPoint, asset: asset, shouldAnimate: false);
+      _selectedAsset = asset;
+      _pendingSelectedAsset = null;
+      return;
+    }
+
+    _pinnedMarker.value = _MapSelectedMarker(point: newPoint, asset: asset, shouldAnimate: false);
   }
 
   LatLng _toMapCoordinate(LatLng location) {
@@ -367,6 +456,7 @@ class _DriftMapState extends ConsumerState<DriftMap> {
             point: marker.point,
             assetRemoteId: marker.asset.assetId,
             assetThumbhash: marker.asset.thumbhash ?? '',
+            size: _selectedMarkerSize,
             durationInMilliseconds: marker.shouldAnimate ? 100 : 0,
           );
         },
@@ -444,7 +534,7 @@ class _DynamicMyLocationButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final bottomSheetOffset = this.bottomSheetOffset;
     final isMobile = context.isMobile;
-    final right = isMobile ? 12.0 : 4.0;
+    final right = isMobile ? 20.0 : 4.0;
     final tabletBottomOffset = isMobile ? 0.0 : 96.0;
     final staticBottom = (isMobile ? 20.0 : 8.0) + context.padding.bottom + tabletBottomOffset;
     if (bottomSheetOffset == null) {

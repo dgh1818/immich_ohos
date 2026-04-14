@@ -18,29 +18,10 @@ import 'package:immich_mobile/widgets/common/user_circle_avatar.dart';
 
 import 'package:immich_mobile/services/backup.service.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:immich_mobile/providers/api.provider.dart';
-import 'package:immich_mobile/providers/app_settings.provider.dart';
-import 'package:immich_mobile/repositories/album_media.repository.dart';
-import 'package:immich_mobile/services/album.service.dart';
-import 'package:immich_mobile/repositories/file_media.repository.dart';
-import 'package:immich_mobile/repositories/asset.repository.dart';
-import 'package:immich_mobile/repositories/asset_media.repository.dart';
 
 import 'package:path/path.dart' as p;
 import 'package:flutter/services.dart';
 import 'dart:io';
-
-final backupServiceProvider = Provider(
-  (ref) => BackupService(
-    ref.watch(apiServiceProvider),
-    ref.watch(appSettingsServiceProvider),
-    ref.watch(albumServiceProvider),
-    ref.watch(albumMediaRepositoryProvider),
-    ref.watch(fileMediaRepositoryProvider),
-    ref.watch(assetRepositoryProvider),
-    ref.watch(assetMediaRepositoryProvider),
-  ),
-);
 
 class ImmichAppBar extends ConsumerWidget implements PreferredSizeWidget {
   @override

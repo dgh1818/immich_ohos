@@ -13,9 +13,14 @@ import nativeBuffer from "../../utils/native_buffer";
 
 const GRID_THUMB_MAX_DIM = 320;
 
+interface LocalRequestState {
+  task: taskpool.Task;
+  cancelled: boolean;
+}
+
 export class LocalImagesImpl extends LocalImageApiOhos {
   static ctx?: common.Context;
-  private requestMap = new Map<number, taskpool.Task>();
+  private requestMap = new Map<number, LocalRequestState>();
 
   private static toNativeBuffer(buffer: ArrayBuffer, label: string): number {
     const length = buffer.byteLength;
@@ -87,7 +92,8 @@ export class LocalImagesImpl extends LocalImageApiOhos {
     const task: taskpool.Task = preferEncoded
       ? new taskpool.Task(readEncodedLocalAssetTask, assetId)
       : new taskpool.Task(decodeLocalImageTask, assetId, width, height, isVideo, sendableContext);
-    this.requestMap.set(requestId, task);
+    const state: LocalRequestState = { task, cancelled: false };
+    this.requestMap.set(requestId, state);
 
     const isFullSize = width <= 0 && height <= 0;
     const isGridThumb =
@@ -99,54 +105,95 @@ export class LocalImagesImpl extends LocalImageApiOhos {
     const executor = taskpool.execute(task, priority);
 
     executor
-      .then((d: object) => {
+      .then((d: object): void => {
         if (preferEncoded) {
           const encoded = d as ArrayBuffer | undefined;
           if (encoded != undefined) {
+            if (state.cancelled) {
+              this.finishCancelled(result);
+              return;
+            }
             const resOut = new Map<string, Object>();
             const pointer = LocalImagesImpl.toNativeBuffer(encoded, "encoded local image");
+            if (state.cancelled) {
+              try {
+                nativeBuffer.free(pointer);
+              } catch (_) {}
+              this.finishCancelled(result);
+              return;
+            }
             resOut.set("pointer", pointer);
             resOut.set("length", encoded.byteLength);
-            return result.success(resOut);
+            result.success(resOut);
+            return;
+          } else if (state.cancelled) {
+            this.finishCancelled(result);
+            return;
           } else {
-            return result.error(new Error("encoded asset result undefined"));
+            result.error(new Error("encoded asset result undefined"));
+            return;
           }
         }
 
         const res = d as LocalDecodeResult | undefined;
         if (res != undefined) {
+          if (state.cancelled) {
+            this.freeDecodedResult(res);
+            this.finishCancelled(result);
+            return;
+          }
           const resOut = new Map<string, Object>();
           resOut.set("width", res.width);
           resOut.set("height", res.height);
           resOut.set("rowBytes", res.rowBytes);
           resOut.set("isHdr", res.isHdr);
           resOut.set("pointer", res.pointer);
-          return result.success(resOut);
+          result.success(resOut);
+          return;
+        } else if (state.cancelled) {
+          this.finishCancelled(result);
+          return;
         } else {
-          return result.error(new Error("res==undefined"));
+          result.error(new Error("res==undefined"));
+          return;
         }
       })
-      .catch((e: object) => {
+      .catch((e: object): void => {
+        if (state.cancelled) {
+          this.finishCancelled(result);
+          return;
+        }
         result.error(e as BusinessError);
       })
-      .finally(() => {
+      .finally((): void => {
         this.requestMap.delete(requestId);
       });
   }
 
   override cancelRequest(requestId: number) {
-    if (!this.requestMap.has(requestId)) {
+    const state = this.requestMap.get(requestId);
+    if (!state) {
       return;
     }
-    const request = this.requestMap.get(requestId);
-    if (!request) {
-      return;
-    }
+    state.cancelled = true;
     try {
-      taskpool.cancel(request);
+      taskpool.cancel(state.task);
     } catch (_) {
     } finally {
       this.requestMap.delete(requestId);
     }
+  }
+
+  private finishCancelled(result: Result<Map<string, Object>>) {
+    result.success(new Map<string, Object>());
+  }
+
+  private freeDecodedResult(result: LocalDecodeResult) {
+    if (result.pointer === 0) {
+      return;
+    }
+    try {
+      nativeBuffer.free(result.pointer);
+    } catch (_) {}
   }
 }

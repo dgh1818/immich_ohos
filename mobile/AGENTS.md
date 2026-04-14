@@ -60,6 +60,15 @@
 - Prefer fixing the root cause over adding fallback paths.
 - Avoid silent failure handling unless upstream already does so.
 
+## ArkTS language constraints
+
+- Object literals cannot be used as type declarations in ArkTS (`arkts-no-obj-literals-as-types`).
+  - Instead of `(info: { receiveSize: number; totalSize: number })`, define a named `interface` and use that.
+- Always define named interfaces for callback parameter types, function return shapes, and structured objects.
+- Do not use `any` or `unknown` in ArkTS (`arkts-no-any-unknown`).
+  - Always add explicit concrete types for locals, callback parameters, return values, and intermediate values from `Map.get(...)` / `MethodCall` arguments.
+  - When the shape is known, prefer concrete maps like `Map<string, number>` / `Map<string, string>` instead of `ESObject`-typed locals.
+
 ## Validation
 
 - If a build or check requires Huawei OHOS SDK, use:

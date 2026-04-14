@@ -11,6 +11,7 @@ import 'package:immich_mobile/entities/asset.entity.dart';
 import 'package:immich_mobile/entities/backup_album.entity.dart';
 import 'package:immich_mobile/entities/store.entity.dart';
 import 'package:immich_mobile/infrastructure/repositories/network.repository.dart';
+import 'package:immich_mobile/infrastructure/repositories/storage.repository.dart';
 import 'package:immich_mobile/repositories/upload.repository.dart';
 import 'package:immich_mobile/models/backup/backup_candidate.model.dart';
 import 'package:immich_mobile/models/backup/current_upload_asset.model.dart';
@@ -18,6 +19,7 @@ import 'package:immich_mobile/models/backup/error_upload_asset.model.dart';
 import 'package:immich_mobile/models/backup/success_upload_asset.model.dart';
 import 'package:immich_mobile/providers/api.provider.dart';
 import 'package:immich_mobile/providers/app_settings.provider.dart';
+import 'package:immich_mobile/providers/infrastructure/storage.provider.dart';
 import 'package:immich_mobile/repositories/album_media.repository.dart';
 import 'package:immich_mobile/repositories/asset.repository.dart';
 import 'package:immich_mobile/repositories/asset_media.repository.dart';
@@ -46,6 +48,7 @@ final backupServiceProvider = Provider(
     ref.watch(fileMediaRepositoryProvider),
     ref.watch(assetRepositoryProvider),
     ref.watch(assetMediaRepositoryProvider),
+    ref.watch(storageRepositoryProvider),
   ),
 );
 
@@ -58,6 +61,7 @@ class BackupService {
   final FileMediaRepository _fileMediaRepository;
   final AssetRepository _assetRepository;
   final AssetMediaRepository _assetMediaRepository;
+  final StorageRepository _storageRepository;
 
   BackupService(
     this._apiService,
@@ -67,6 +71,7 @@ class BackupService {
     this._fileMediaRepository,
     this._assetRepository,
     this._assetMediaRepository,
+    this._storageRepository,
   );
 
   Future<List<String>?> getDeviceBackupAsset() async {
@@ -295,7 +300,11 @@ class BackupService {
             livePhotoFile = await asset.local!.loadFile(withSubtype: true, progressHandler: pmProgressHandler);
           }
         } else {
-          file = await asset.local!.originFile.timeout(const Duration(seconds: 5));
+          if (Platform.isOhos) {
+            file = await _storageRepository.getFileForAsset(asset.local!.id);
+          } else {
+            file = await asset.local!.originFile.timeout(const Duration(seconds: 5));
+          }
 
           if (asset.local!.isLivePhoto) {
             livePhotoFile = await asset.local!.originFileWithSubtype.timeout(const Duration(seconds: 5));

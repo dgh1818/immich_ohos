@@ -96,6 +96,7 @@ enum StoreKey<T> {
   syncMigrationStatus<String>._(1013),
   imageHdr<bool>._(1014),
   videoHdr<bool>._(1015),
+  ohosLocalAssetOrientationBackfill<bool>._(1016),
   hybridArkuiPhotos<bool>._(1016);
 
   const StoreKey._(this.id);
