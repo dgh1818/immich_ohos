@@ -115,12 +115,14 @@ class UploadRepository {
         final ohosRequest = OhosMultipartRequest('POST', uploadUri);
         ohosRequest.headers.addAll(ApiService.getAuthenticatedRequestHeaders(uploadUri.toString()));
         ohosRequest.fields.addAll(fields);
-        ohosRequest.files.add(OhosMultipartFile(
-          field: 'assetData',
-          filePath: file.path,
-          filename: originalFileName,
-          contentType: 'application/octet-stream',
-        ));
+        ohosRequest.files.add(
+          OhosMultipartFile(
+            field: 'assetData',
+            filePath: file.path,
+            filename: originalFileName,
+            contentType: 'application/octet-stream',
+          ),
+        );
         ohosRequest.onProgress = onProgress;
         ohosRequest.abortTrigger = cancelToken?.future;
 
@@ -134,7 +136,12 @@ class UploadRepository {
         );
 
         final fileStream = file.openRead();
-        final assetRawUploadData = MultipartFile("assetData", fileStream, file.lengthSync(), filename: originalFileName);
+        final assetRawUploadData = MultipartFile(
+          "assetData",
+          fileStream,
+          file.lengthSync(),
+          filename: originalFileName,
+        );
 
         baseRequest.fields.addAll(fields);
         baseRequest.files.add(assetRawUploadData);
