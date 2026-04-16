@@ -9,6 +9,7 @@ import {
   HYBRID_DEFERRED_REMOTE_WRITE_LIMIT,
   HYBRID_ENABLE_REMOTE_THUMBNAIL_DISK_WRITES,
   HYBRID_REMOTE_THUMBNAIL_CACHE_DIR,
+  HYBRID_REMOTE_THUMBNAIL_LEGACY_CACHE_DIR,
   HYBRID_REMOTE_THUMBNAIL_CACHE_MAX_BYTES,
   HYBRID_REMOTE_THUMBNAIL_CACHE_TRIM_INTERVAL_MS,
   HYBRID_REMOTE_THUMBNAIL_CACHE_TRIM_TARGET_BYTES,
@@ -36,12 +37,26 @@ function ensureRemoteThumbnailCacheDir(ctx: common.UIAbilityContext): string {
   return cacheDir;
 }
 
+function legacyRemoteThumbnailCacheDir(ctx: common.UIAbilityContext): string {
+  return `${ctx.getApplicationContext().cacheDir}/${HYBRID_REMOTE_THUMBNAIL_LEGACY_CACHE_DIR}`;
+}
+
 function remoteThumbnailCachePath(
   ctx: common.UIAbilityContext,
   url: string,
   requestSize: number,
 ): string {
   const cacheDir = ensureRemoteThumbnailCacheDir(ctx);
+  const cacheKey = `${requestSize}:${url}`;
+  return `${cacheDir}/thumb_${hashString(cacheKey)}.img`;
+}
+
+function remoteThumbnailLegacyCachePath(
+  ctx: common.UIAbilityContext,
+  url: string,
+  requestSize: number,
+): string {
+  const cacheDir = legacyRemoteThumbnailCacheDir(ctx);
   const cacheKey = `${requestSize}:${url}`;
   return `${cacheDir}/thumb_${hashString(cacheKey)}.img`;
 }
@@ -64,6 +79,63 @@ interface HybridRemoteCacheFileInfo {
   lastAccessAt: number;
 }
 
+function trackRemoteThumbnailCacheDir(
+  cacheDir: string,
+  files: Map<string, HybridRemoteCacheFileInfo>,
+  now: number,
+): number {
+  let totalBytes = 0;
+  try {
+    const entries = fs.listFileSync(cacheDir);
+    for (let index = 0; index < entries.length; index += 1) {
+      const name = entries[index];
+      const path = `${cacheDir}/${name}`;
+      try {
+        const stat = fs.statSync(path);
+        if (!stat.isFile()) {
+          continue;
+        }
+
+        if (name.endsWith('.tmp')) {
+          deleteFileIfExists(path);
+          continue;
+        }
+
+        files.set(path, {
+          path: path,
+          size: stat.size,
+          lastAccessAt: stat.mtime > 0 ? stat.mtime : now,
+        });
+        totalBytes += stat.size;
+      } catch (_) {
+        // ignore individual stat failures
+      }
+    }
+  } catch (_) {
+    // ignore missing cache directory
+  }
+
+  return totalBytes;
+}
+
+function findExistingRemoteThumbnailCachePath(
+  ctx: common.UIAbilityContext,
+  url: string,
+  requestSize: number,
+): string | undefined {
+  const primaryPath = remoteThumbnailCachePath(ctx, url, requestSize);
+  if (HybridRemoteThumbnailCacheIndex.hasCachePath(ctx, primaryPath)) {
+    return primaryPath;
+  }
+
+  const legacyPath = remoteThumbnailLegacyCachePath(ctx, url, requestSize);
+  if (HybridRemoteThumbnailCacheIndex.hasCachePath(ctx, legacyPath)) {
+    return legacyPath;
+  }
+
+  return undefined;
+}
+
 export class HybridRemoteThumbnailCacheIndex {
   private static initialized: boolean = false;
   private static initializing: boolean = false;
@@ -81,36 +153,10 @@ export class HybridRemoteThumbnailCacheIndex {
 
     HybridRemoteThumbnailCacheIndex.initializing = true;
     try {
-      const cacheDir = ensureRemoteThumbnailCacheDir(ctx);
-      const entries = fs.listFileSync(cacheDir);
       const files: Map<string, HybridRemoteCacheFileInfo> = new Map();
-      let totalBytes = 0;
       const now = Date.now();
-
-      for (let index = 0; index < entries.length; index += 1) {
-        const name = entries[index];
-        const path = `${cacheDir}/${name}`;
-        try {
-          const stat = fs.statSync(path);
-          if (!stat.isFile()) {
-            continue;
-          }
-
-          if (name.endsWith('.tmp')) {
-            deleteFileIfExists(path);
-            continue;
-          }
-
-          files.set(path, {
-            path: path,
-            size: stat.size,
-            lastAccessAt: stat.mtime > 0 ? stat.mtime : now,
-          });
-          totalBytes += stat.size;
-        } catch (_) {
-          // ignore individual stat failures
-        }
-      }
+      let totalBytes = trackRemoteThumbnailCacheDir(ensureRemoteThumbnailCacheDir(ctx), files, now);
+      totalBytes += trackRemoteThumbnailCacheDir(legacyRemoteThumbnailCacheDir(ctx), files, now);
 
       HybridRemoteThumbnailCacheIndex.files = files;
       HybridRemoteThumbnailCacheIndex.totalBytes = totalBytes;
@@ -444,8 +490,7 @@ export function hasRemoteThumbnailCache(
   url: string,
   requestSize: number,
 ): boolean {
-  const cachePath = remoteThumbnailCachePath(ctx, url, requestSize);
-  return HybridRemoteThumbnailCacheIndex.hasCachePath(ctx, cachePath);
+  return findExistingRemoteThumbnailCachePath(ctx, url, requestSize) !== undefined;
 }
 
 export async function loadRemoteThumbnail(
@@ -453,8 +498,8 @@ export async function loadRemoteThumbnail(
   url: string,
   requestSize: number,
 ): Promise<PixelMap> {
-  let cachePath = remoteThumbnailCachePath(ctx, url, requestSize);
-  if (HybridRemoteThumbnailCacheIndex.hasCachePath(ctx, cachePath)) {
+  const cachePath = findExistingRemoteThumbnailCachePath(ctx, url, requestSize);
+  if (cachePath) {
     try {
       return await decodeRemoteThumbnailFromFile(cachePath, requestSize);
     } catch (_) {
@@ -507,10 +552,12 @@ export async function ensureRemoteThumbnailCached(
     return '';
   }
 
-  const cachePath = remoteThumbnailCachePath(ctx, url, requestSize);
-  if (HybridRemoteThumbnailCacheIndex.hasCachePath(ctx, cachePath)) {
-    return cachePath;
+  const existingCachePath = findExistingRemoteThumbnailCachePath(ctx, url, requestSize);
+  if (existingCachePath) {
+    return existingCachePath;
   }
+
+  const cachePath = remoteThumbnailCachePath(ctx, url, requestSize);
 
   const request = http.createHttp();
   const options: http.HttpRequestOptions = {

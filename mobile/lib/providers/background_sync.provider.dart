@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:immich_mobile/domain/utils/background_sync.dart';
 import 'package:immich_mobile/providers/backup/drift_backup.provider.dart';
+import 'package:immich_mobile/services/hybrid_arkui_bridge.service.dart';
 import 'package:immich_mobile/providers/sync_status.provider.dart';
 
 final backgroundSyncProvider = Provider<BackgroundSyncManager>((ref) {
@@ -19,6 +22,9 @@ final backgroundSyncProvider = Provider<BackgroundSyncManager>((ref) {
       final backupProvider = ref.read(driftBackupProvider.notifier);
       if (backupProvider.mounted) {
         backupProvider.updateError(isSuccess == true ? BackupError.none : BackupError.syncFailed);
+      }
+      if (isSuccess == true) {
+        unawaited(HybridArkuiBridgeService.predownloadTimelineHeadThumbnailsAfterRemoteSync());
       }
     },
     onRemoteSyncError: syncStatusNotifier.errorRemoteSync,

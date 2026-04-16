@@ -25,6 +25,72 @@ function toError(error: Object | string | number | boolean | undefined | null): 
   return new Error(`${error}`);
 }
 
+interface HybridLocalPhotoAssetCacheEntry {
+  asset: photoAccessHelper.PhotoAsset;
+  lastUsedAt: number;
+}
+
+interface ResolvedHybridLocalPhotoAsset {
+  asset: photoAccessHelper.PhotoAsset;
+  fromCache: boolean;
+}
+
+class HybridLocalPhotoAssetCache {
+  private static readonly LIMIT: number = 256;
+  private static entries: Map<string, HybridLocalPhotoAssetCacheEntry> = new Map();
+
+  static acquire(assetId: string): photoAccessHelper.PhotoAsset | undefined {
+    const entry = HybridLocalPhotoAssetCache.entries.get(assetId);
+    if (!entry) {
+      return undefined;
+    }
+    entry.lastUsedAt = Date.now();
+    return entry.asset;
+  }
+
+  static store(assetId: string, asset: photoAccessHelper.PhotoAsset): void {
+    HybridLocalPhotoAssetCache.entries.set(assetId, {
+      asset: asset,
+      lastUsedAt: Date.now(),
+    });
+    HybridLocalPhotoAssetCache.prune();
+  }
+
+  static invalidate(assetId: string): void {
+    HybridLocalPhotoAssetCache.entries.delete(assetId);
+  }
+
+  private static prune(): void {
+    if (HybridLocalPhotoAssetCache.entries.size <= HybridLocalPhotoAssetCache.LIMIT) {
+      return;
+    }
+
+    const removableKeys: Array<string> = [];
+    HybridLocalPhotoAssetCache.entries.forEach((_: HybridLocalPhotoAssetCacheEntry, key: string) => {
+      removableKeys.push(key);
+    });
+
+    removableKeys.sort((leftKey: string, rightKey: string) => {
+      const leftEntry = HybridLocalPhotoAssetCache.entries.get(leftKey);
+      const rightEntry = HybridLocalPhotoAssetCache.entries.get(rightKey);
+      const leftUsedAt = leftEntry?.lastUsedAt ?? 0;
+      const rightUsedAt = rightEntry?.lastUsedAt ?? 0;
+      return leftUsedAt - rightUsedAt;
+    });
+
+    while (
+      HybridLocalPhotoAssetCache.entries.size > HybridLocalPhotoAssetCache.LIMIT &&
+      removableKeys.length > 0
+    ) {
+      const key = removableKeys.shift();
+      if (!key) {
+        break;
+      }
+      HybridLocalPhotoAssetCache.entries.delete(key);
+    }
+  }
+}
+
 export class HybridThumbnailCache {
   private static entries: Map<string, HybridThumbnailCacheEntry> = new Map();
   private static activeColumns: number = HYBRID_GRID_COLUMNS;
@@ -360,7 +426,8 @@ export class HybridThumbnailRequestLimiter {
   private static visibleWaiters: Array<() => void> = [];
   private static prefetchWaiters: Array<() => void> = [];
   private static scrollActive: boolean = false;
-  private static readonly SCROLL_THUMBNAIL_LIMIT: number = 4;
+  private static readonly SCROLL_VISIBLE_THUMBNAIL_LIMIT: number = 8;
+  private static readonly SCROLL_PREFETCH_LIMIT: number = 2;
 
   static async run(task: () => Promise<PixelMap>, isPrefetch: boolean): Promise<PixelMap> {
     await HybridThumbnailRequestLimiter.acquire(isPrefetch);
@@ -388,6 +455,17 @@ export class HybridThumbnailRequestLimiter {
     for (const waiter of stale) {
       waiter();
     }
+  }
+
+  static shouldPausePrefetch(): boolean {
+    if (!HybridThumbnailRequestLimiter.scrollActive) {
+      return false;
+    }
+
+    return HybridThumbnailRequestLimiter.activePrefetchCount >=
+      HybridThumbnailRequestLimiter.SCROLL_PREFETCH_LIMIT ||
+      HybridThumbnailRequestLimiter.activeCount >=
+      HybridThumbnailRequestLimiter.SCROLL_VISIBLE_THUMBNAIL_LIMIT;
   }
 
   /**
@@ -419,11 +497,17 @@ export class HybridThumbnailRequestLimiter {
 
   private static tryAcquire(isPrefetch: boolean): boolean {
     const thumbnailLimit = HybridThumbnailRequestLimiter.scrollActive
-      ? HybridThumbnailRequestLimiter.SCROLL_THUMBNAIL_LIMIT
+      ? HybridThumbnailRequestLimiter.SCROLL_VISIBLE_THUMBNAIL_LIMIT
       : HYBRID_MAX_CONCURRENT_THUMBNAIL_REQUESTS;
-    const prefetchLimit = resolveHybridPrefetchConcurrency();
+    const prefetchLimit = HybridThumbnailRequestLimiter.scrollActive
+      ? HybridThumbnailRequestLimiter.SCROLL_PREFETCH_LIMIT
+      : resolveHybridPrefetchConcurrency();
 
     if (HybridThumbnailRequestLimiter.activeCount >= thumbnailLimit) {
+      return false;
+    }
+
+    if (isPrefetch && prefetchLimit <= 0) {
       return false;
     }
 
@@ -518,21 +602,61 @@ async function loadLocalThumbnail(
   assetId: string,
   requestSize: number,
 ): Promise<PixelMap> {
+  const resolved = await resolveLocalPhotoAsset(ctx, assetId);
+  try {
+    return await resolved.asset.getThumbnail({ width: requestSize, height: requestSize });
+  } catch (error) {
+    if (!resolved.fromCache) {
+      throw toError(error);
+    }
+
+    HybridLocalPhotoAssetCache.invalidate(assetId);
+    const refreshedAsset = await queryLocalPhotoAsset(ctx, assetId);
+    return await refreshedAsset.getThumbnail({ width: requestSize, height: requestSize });
+  }
+}
+
+async function resolveLocalPhotoAsset(
+  ctx: common.UIAbilityContext,
+  assetId: string,
+): Promise<ResolvedHybridLocalPhotoAsset> {
+  const cachedAsset = HybridLocalPhotoAssetCache.acquire(assetId);
+  if (cachedAsset) {
+    return {
+      asset: cachedAsset,
+      fromCache: true,
+    };
+  }
+
+  return {
+    asset: await queryLocalPhotoAsset(ctx, assetId),
+    fromCache: false,
+  };
+}
+
+async function queryLocalPhotoAsset(
+  ctx: common.UIAbilityContext,
+  assetId: string,
+): Promise<photoAccessHelper.PhotoAsset> {
   const helper = photoAccessHelper.getPhotoAccessHelper(ctx);
   const predicates = new dataSharePredicates.DataSharePredicates();
-  predicates.equalTo('uri', assetId);
+  predicates.equalTo(photoAccessHelper.PhotoKeys.URI, assetId);
 
   let result: photoAccessHelper.FetchResult<photoAccessHelper.PhotoAsset> | undefined = undefined;
   try {
     result = await helper.getAssets({
-      fetchColumns: ['uri'],
+      fetchColumns: [photoAccessHelper.PhotoKeys.URI],
       predicates: predicates,
     });
     const photoAsset = await result.getFirstObject();
     if (!photoAsset) {
       throw new Error(`Local asset not found: ${assetId}`);
     }
-    return await photoAsset.getThumbnail({ width: requestSize, height: requestSize });
+    HybridLocalPhotoAssetCache.store(assetId, photoAsset);
+    return photoAsset;
+  } catch (error) {
+    HybridLocalPhotoAssetCache.invalidate(assetId);
+    throw toError(error);
   } finally {
     try {
       result?.close();
@@ -545,6 +669,10 @@ export function warmupAssetThumbnail(
   asset: HybridPhotoAsset,
   requestSize: number,
 ): void {
+  if (HybridThumbnailRequestLimiter.shouldPausePrefetch()) {
+    return;
+  }
+
   if (asset.localId) {
     HybridThumbnailCache.prefetch(buildThumbnailCacheKey(asset.id, requestSize), () =>
       loadThumbnailForPrefetchAsset(ctx, asset, requestSize)
@@ -570,6 +698,10 @@ export function prefetchAssetThumbnail(
   asset: HybridPhotoAsset,
   requestSize: number,
 ): void {
+  if (HybridThumbnailRequestLimiter.shouldPausePrefetch()) {
+    return;
+  }
+
   HybridThumbnailCache.prefetch(buildThumbnailCacheKey(asset.id, requestSize), () =>
     loadThumbnailForPrefetchAsset(ctx, asset, requestSize)
   );

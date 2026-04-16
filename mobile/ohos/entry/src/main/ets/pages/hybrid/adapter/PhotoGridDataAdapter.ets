@@ -73,37 +73,15 @@ export class PhotoGridDataAdapter {
   public buildGridItemsForColumns(
     sections: Array<PhotoSection>,
     columns: number,
-    _topSpacerHeight: number,
-    hasMore: boolean,
-    fillPosition: number = 0,
-    includeTail: boolean = false,
   ): Array<GridItem> {
     const reflowedSections = this.timelineBuilder.reflowSections(sections, columns);
-    return this.buildGridItemsFromSections(
-      reflowedSections,
-      columns,
-      hasMore,
-      fillPosition,
-      includeTail,
-    );
+    return this.buildGridItemsFromSections(reflowedSections);
   }
 
   public buildGridItemsFromSections(
     sections: Array<PhotoSection>,
-    columns: number,
-    hasMore: boolean,
-    fillPosition: number = 0,
-    includeTail: boolean = false,
   ): Array<GridItem> {
     const items: Array<GridItem> = [];
-    const safeFillPosition = Math.max(0, fillPosition);
-    for (let index = 0; index < safeFillPosition; index += 1) {
-      const placeholderItem = new GridItemRecord();
-      placeholderItem.id = `placeholder_${columns}_${safeFillPosition}_${index}`;
-      placeholderItem.kind = 'placeholder';
-      items.push(placeholderItem);
-    }
-
     this.flattenSectionsToGridEntries(sections).forEach((entry: GridAssetEntry) => {
       const photoItem = new GridItemRecord();
       photoItem.id = `photo_${entry.sourceIndex}_${entry.asset.id}`;
@@ -114,35 +92,14 @@ export class PhotoGridDataAdapter {
       items.push(photoItem);
     });
 
-    if (includeTail && hasMore) {
-      const tailCount = Math.max(1, columns);
-      for (let index = 0; index < tailCount; index += 1) {
-        const tailItem = new GridItemRecord();
-        tailItem.id = `tail_${columns}_${index}`;
-        tailItem.kind = 'tail';
-        items.push(tailItem);
-      }
-    }
-
     return items;
   }
 
   public buildGroupGridItems(
     sections: Array<PhotoSection>,
     groups: Array<GroupInfo>,
-    columns: number,
-    hasMore: boolean,
-    fillPosition: number = 0,
-    includeTail: boolean = false,
   ): Array<GridItem> {
     const items: Array<GridItem> = [];
-    const safeFillPosition = Math.max(0, fillPosition);
-    for (let index = 0; index < safeFillPosition; index += 1) {
-      const placeholderItem = new GridItemRecord();
-      placeholderItem.id = `placeholder_${columns}_${safeFillPosition}_${index}`;
-      placeholderItem.kind = 'placeholder';
-      items.push(placeholderItem);
-    }
 
     let sourceIndex = 0;
     sections.forEach((section: PhotoSection, sectionIndex: number) => {
@@ -173,16 +130,6 @@ export class PhotoGridDataAdapter {
         sourceIndex += 1;
       });
     });
-
-    if (includeTail && hasMore) {
-      const tailCount = Math.max(1, columns);
-      for (let index = 0; index < tailCount; index += 1) {
-        const tailItem = new GridItemRecord();
-        tailItem.id = `tail_${columns}_${index}`;
-        tailItem.kind = 'tail';
-        items.push(tailItem);
-      }
-    }
 
     return items;
   }

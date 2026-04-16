@@ -68,13 +68,11 @@ export class TimelineDataManager {
   private monthBuckets: Array<BucketInfo> = [];
   private windowStartOffset: number = 0;
   private windowEndOffset: number = 0;
-  private hasMore: boolean = true;
 
   public updateSourceState(state: TimelineDataSourceState): void {
     this.mergeSourceState(state, true);
     this.yearBuckets = state.yearBuckets.slice();
     this.monthBuckets = state.monthBuckets.slice();
-    this.hasMore = state.hasMore;
     this.resetSlidingWindowState();
   }
 
@@ -86,7 +84,6 @@ export class TimelineDataManager {
     this.mergeSourceState(state, true);
     this.yearBuckets = state.yearBuckets.slice();
     this.monthBuckets = state.monthBuckets.slice();
-    this.hasMore = state.hasMore;
     // 不调用 resetSlidingWindowState()，保留滚动中的窗口位置
   }
 
@@ -107,7 +104,6 @@ export class TimelineDataManager {
     this.monthBuckets = [];
     this.windowStartOffset = 0;
     this.windowEndOffset = 0;
-    this.hasMore = true;
     this.resetSlidingWindowState();
   }
 
@@ -134,17 +130,9 @@ export class TimelineDataManager {
     return this.buildSourceWindowState(form).groupDayGroups.slice();
   }
 
-  public buildSourceGridItemsForForm(
-    form: FormIndex,
-    includeTail: boolean = true,
-  ): Array<GridItem> {
+  public buildSourceGridItemsForForm(form: FormIndex): Array<GridItem> {
     const sourceWindowState = this.buildSourceWindowState(form);
-    const fillPosition = this.resolveSourceFillPositionForWindowStart(
-      form,
-      sourceWindowState,
-      sourceWindowState.windowStartOffset,
-    );
-    return this.buildGridItemsFromWindowState(form, sourceWindowState, fillPosition, includeTail);
+    return this.buildGridItemsFromWindowState(form, sourceWindowState);
   }
 
   public buildSourceTimelineItemsForForm(form: FormIndex): Array<TimelineItem> {
@@ -261,12 +249,7 @@ export class TimelineDataManager {
 
     const preloadWindowResult = this.buildWindowUpdateResult(preloadRequest);
     this.setFormWindowState(preloadRequest.form, preloadWindowResult.windowState);
-    const gridItems = this.buildGridItemsFromWindowState(
-      preloadRequest.form,
-      preloadWindowResult.windowState,
-      preloadWindowResult.fillPosition,
-      preloadRequest.includeTail,
-    );
+    const gridItems = this.buildGridItemsFromWindowState(preloadRequest.form, preloadWindowResult.windowState);
     return {
       gridItems: gridItems,
       anchorGridIndex: preloadWindowResult.anchorGridIndex,
@@ -276,17 +259,8 @@ export class TimelineDataManager {
     };
   }
 
-  public buildGridItemsForForm(
-    form: FormIndex,
-    fillPosition: number = 0,
-    includeTail: boolean = true,
-  ): Array<GridItem> {
-    return this.buildGridItemsFromWindowState(
-      form,
-      this.resolveOwnedWindowState(form),
-      fillPosition,
-      includeTail,
-    );
+  public buildGridItemsForForm(form: FormIndex): Array<GridItem> {
+    return this.buildGridItemsFromWindowState(form, this.resolveOwnedWindowState(form));
   }
 
   public buildTimelineItemsForForm(form: FormIndex): Array<TimelineItem> {
@@ -539,12 +513,7 @@ export class TimelineDataManager {
     const resolvedFillPosition = request.fillPosition >= 0
       ? Math.max(0, request.fillPosition)
       : this.resolveSourceFillPositionForWindowStart(request.form, fullWindowState, windowState.windowStartOffset);
-    const gridItems = this.buildGridItemsFromWindowState(
-      request.form,
-      windowState,
-      resolvedFillPosition,
-      request.includeTail,
-    );
+    const gridItems = this.buildGridItemsFromWindowState(request.form, windowState);
     const anchorAssetId = formPhotoAssets[anchorLocalPhotoIndex]?.id;
     return {
       windowState: windowState,
@@ -589,37 +558,15 @@ export class TimelineDataManager {
   private buildGridItemsFromWindowState(
     form: FormIndex,
     windowState: TimelineFormWindowState,
-    fillPosition: number,
-    includeTail: boolean,
   ): Array<GridItem> {
     const columns = getColumnsByFormIndex(form);
     if (form === FormIndex.GROUP_DAY) {
-      return this.buildGroupGridItems(
-        windowState.sections,
-        windowState.groupDayGroups,
-        columns,
-        this.hasMore,
-        fillPosition,
-        includeTail,
-      );
+      return this.buildGroupGridItems(windowState.sections, windowState.groupDayGroups);
     }
     if (this.shouldUseBucketProjection(form)) {
-      return this.dataAdapter.buildGridItemsFromSections(
-        windowState.sections,
-        columns,
-        this.hasMore,
-        fillPosition,
-        includeTail,
-      );
+      return this.dataAdapter.buildGridItemsFromSections(windowState.sections);
     }
-    return this.dataAdapter.buildGridItemsForColumns(
-      windowState.sections,
-      columns,
-      0,
-      this.hasMore,
-      fillPosition,
-      includeTail,
-    );
+    return this.dataAdapter.buildGridItemsForColumns(windowState.sections, columns);
   }
 
   private buildTimelineItemsFromWindowState(
@@ -833,64 +780,8 @@ export class TimelineDataManager {
   private buildGroupGridItems(
     sections: Array<PhotoSection>,
     groups: Array<GroupInfo>,
-    columns: number,
-    hasMore: boolean,
-    fillPosition: number,
-    includeTail: boolean,
   ): Array<GridItem> {
-    const items: Array<GridItem> = [];
-    const safeFillPosition = Math.max(0, fillPosition);
-    for (let index = 0; index < safeFillPosition; index += 1) {
-      items.push({
-        id: `placeholder_${columns}_${safeFillPosition}_${index}`,
-        kind: 'placeholder',
-        sectionKey: '',
-      });
-    }
-
-    let runningSourceIndex = 0;
-    sections.forEach((section: PhotoSection, sectionIndex: number) => {
-      const group = groups[sectionIndex];
-      const sectionAssets = this.dataAdapter.flattenAssets([section]);
-      if (sectionAssets.length <= 0) {
-        return;
-      }
-
-      items.push({
-        id: `group_header_${section.key}_${sectionIndex}`,
-        kind: 'groupHeader',
-        headerText: section.title,
-        headerCount: group?.count ?? sectionAssets.length,
-        sectionKey: section.key,
-      });
-
-      sectionAssets.forEach((asset: PhotoAsset, assetIndex: number) => {
-        const sourceIndex = group?.offset !== undefined
-          ? group.offset + assetIndex
-          : runningSourceIndex;
-        items.push({
-          id: `photo_${sourceIndex}_${asset.id}`,
-          kind: 'photo',
-          asset: asset,
-          sectionKey: section.key,
-          sourceIndex: sourceIndex,
-        });
-        runningSourceIndex += 1;
-      });
-    });
-
-    if (includeTail && hasMore) {
-      const tailCount = Math.max(1, columns);
-      for (let index = 0; index < tailCount; index += 1) {
-        items.push({
-          id: `tail_${columns}_${index}`,
-          kind: 'tail',
-          sectionKey: '',
-        });
-      }
-    }
-
-    return items;
+    return this.dataAdapter.buildGroupGridItems(sections, groups);
   }
 
   private resolvePreloadPhotoRange(

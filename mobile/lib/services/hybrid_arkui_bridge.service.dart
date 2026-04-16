@@ -29,9 +29,11 @@ class HybridArkuiBridgeService {
   HybridArkuiBridgeService._(Drift drift) : _timelineRepository = DriftTimelineRepository(drift);
 
   static const MethodChannel _channel = MethodChannel('immich/hybrid');
+  static const int _defaultSyncRemoteHeadPredownloadPages = 4;
   static HybridArkuiBridgeService? _instance;
   static AppRouter? _router;
   static WidgetRef? _uiRef;
+  static final Logger _staticLog = Logger('HybridArkuiBridgeService');
 
   final DriftTimelineRepository _timelineRepository;
   final Logger _log = Logger('HybridArkuiBridgeService');
@@ -57,6 +59,30 @@ class HybridArkuiBridgeService {
     }
 
     await _channel.invokeMethod<void>('setLaunchModePreference', enabled);
+  }
+
+  static Future<void> predownloadTimelineHeadThumbnailsAfterRemoteSync({
+    int pages = _defaultSyncRemoteHeadPredownloadPages,
+  }) async {
+    if (defaultTargetPlatform != TargetPlatform.ohos) {
+      return;
+    }
+
+    final enabled = Store.tryGet(StoreKey.hybridArkuiPhotos) ?? false;
+    final accessToken = Store.tryGet<String>(StoreKey.accessToken);
+    final serverEndpoint = Store.tryGet<String>(StoreKey.serverEndpoint);
+    if (!enabled || accessToken == null || accessToken.isEmpty || serverEndpoint == null || serverEndpoint.isEmpty) {
+      return;
+    }
+
+    final normalizedPages = pages.clamp(1, 4).toInt();
+    try {
+      await _channel.invokeMethod<void>('predownloadTimelineHeadThumbnails', {
+        'pages': normalizedPages,
+      });
+    } catch (error, stackTrace) {
+      _staticLog.fine('Failed to schedule hybrid head thumbnail predownload after remote sync', error, stackTrace);
+    }
   }
 
   Future<Object?> _handleCall(MethodCall call) async {

@@ -1278,7 +1278,7 @@ export class PhotoGridViewModel {
   }
 
   private buildCommittedGridItems(): Array<GridItem> {
-    return this.timelineDataManager.buildSourceGridItemsForForm(this.activeForm, true);
+    return this.timelineDataManager.buildSourceGridItemsForForm(this.activeForm);
   }
 
   private syncActiveSourceProjection(syncDataSource: boolean = false, useReconcile: boolean = false): void {
