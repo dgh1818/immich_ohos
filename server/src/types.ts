@@ -106,6 +106,7 @@ export interface VideoFormat {
   formatLongName?: string;
   duration: number;
   bitrate: number;
+  tags?: Record<string, string | number>;
 }
 
 export interface ImageDimensions {
