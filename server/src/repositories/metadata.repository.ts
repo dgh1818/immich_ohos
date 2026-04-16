@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { BinaryField, DefaultReadTaskOptions, ExifTool, Tags } from 'exiftool-vendored';
 import geotz from 'geo-tz';
 import { LoggingRepository } from 'src/repositories/logging.repository';
+import { mimeTypes } from 'src/utils/mime-types';
 
 interface ExifDuration {
   Value: number;
@@ -77,8 +78,6 @@ export interface ImmichTags extends Omit<Tags, TagsWithWrongTypes> {
 
 @Injectable()
 export class MetadataRepository {
-  private static readonly defaultReadArgs = ['-api', 'largefilesupport=1'];
-
   private exiftool = new ExifTool({
     defaultVideosToUTC: true,
     backfillTimezones: true,
@@ -90,7 +89,7 @@ export class MetadataRepository {
     geoTz: (lat, lon) => geotz.find(lat, lon)[0],
     geolocation: true,
     // Enable exiftool LFS to parse metadata for files larger than 2GB.
-    readArgs: MetadataRepository.defaultReadArgs,
+    readArgs: ['-api', 'largefilesupport=1'],
     writeArgs: ['-api', 'largefilesupport=1', '-overwrite_original'],
     taskTimeoutMillis: 2 * 60 * 1000,
   });
@@ -107,49 +106,16 @@ export class MetadataRepository {
     await this.exiftool.end();
   }
 
-  async readTags(path: string): Promise<ImmichTags> {
-    const readArgs = MetadataRepository.defaultReadArgs;
-
-    const startedAt = Date.now();
-    this.logger.log(`[metadata.readTags] start path=${path} args=${readArgs.join(' ')}`);
-    const slowReadWarning = setTimeout(() => {
-      this.logger.warn(`[metadata.readTags] still-running path=${path} elapsed=${Date.now() - startedAt}ms args=${readArgs.join(' ')}`);
-    }, 5000);
-
-    try {
-      const tags = (await this.exiftool.read(path, { readArgs })) as ImmichTags;
-      this.logger.log(
-        `[metadata.readTags] done path=${path} elapsed=${Date.now() - startedAt}ms tags=${Object.keys(tags).length}`,
-      );
-
-      return tags;
-    } catch (error) {
-      const stack = error instanceof Error ? error.stack : undefined;
-      this.logger.warn(`Error reading exif data (${path}): ${error}${stack ? `\n${stack}` : ''}`);
-      this.logger.log(`[metadata.readTags] failed path=${path} elapsed=${Date.now() - startedAt}ms`);
+  readTags(path: string): Promise<ImmichTags> {
+    const args = mimeTypes.isVideo(path) ? ['-ee'] : [];
+    return this.exiftool.read(path, { readArgs: args }).catch((error: any) => {
+      this.logger.warn(`Error reading exif data (${path}): ${error}\n${error?.stack}`);
       return {};
-    } finally {
-      clearTimeout(slowReadWarning);
-    }
+    }) as Promise<ImmichTags>;
   }
 
-  async extractBinaryTag(path: string, tagName: string): Promise<Buffer> {
-    const startedAt = Date.now();
-    this.logger.log(`[metadata.extractBinaryTag] start path=${path} tag=${tagName}`);
-
-    try {
-      const buffer = await this.exiftool.extractBinaryTagToBuffer(tagName, path);
-      this.logger.log(
-        `[metadata.extractBinaryTag] done path=${path} tag=${tagName} elapsed=${Date.now() - startedAt}ms bytes=${buffer.byteLength}`,
-      );
-
-      return buffer;
-    } catch (error) {
-      const stack = error instanceof Error ? error.stack : undefined;
-      this.logger.warn(`Error extracting binary exif tag (${path}, ${tagName}): ${error}${stack ? `\n${stack}` : ''}`);
-      this.logger.log(`[metadata.extractBinaryTag] failed path=${path} tag=${tagName} elapsed=${Date.now() - startedAt}ms`);
-      throw error;
-    }
+  extractBinaryTag(path: string, tagName: string): Promise<Buffer> {
+    return this.exiftool.extractBinaryTagToBuffer(tagName, path);
   }
 
   async writeTags(path: string, tags: Partial<Tags>): Promise<void> {
