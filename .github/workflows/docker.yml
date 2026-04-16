@@ -23,14 +23,14 @@ jobs:
       should_run: ${{ steps.check.outputs.should_run }}
     steps:
       - id: token
-        uses: immich-app/devtools/actions/create-workflow-token@57ff6ebfd507b045514442683ff06ff1b2f6efbd # create-workflow-token-action-v1.0.2
+        uses: immich-app/devtools/actions/create-workflow-token@302aeb29273a51a5e55b8eb765fb3e7a3ec7dfeb # create-workflow-token-action-v1.0.2
         with:
           app-id: ${{ secrets.PUSH_O_MATIC_APP_ID }}
           private-key: ${{ secrets.PUSH_O_MATIC_APP_KEY }}
 
       - name: Check what should run
         id: check
-        uses: immich-app/devtools/actions/pre-job@f50e3b600b6ac1763ddb8f3dfc69093512b967a1 # pre-job-action-v2.0.3
+        uses: immich-app/devtools/actions/pre-job@302aeb29273a51a5e55b8eb765fb3e7a3ec7dfeb # pre-job-action-v2.0.3
         with:
           github-token: ${{ steps.token.outputs.token }}
           filters: |
@@ -155,7 +155,7 @@ jobs:
     name: Build and Push Server
     needs: pre-job
     if: ${{ fromJSON(needs.pre-job.outputs.should_run).server == true }}
-    uses: dgh1818/devtools/.github/workflows/multi-runner-build.yml@400ebe47fdfe77321effd39ee1d19cb893105faf # multi-runner-build-workflow-0.1.0
+    uses: dgh1818/devtools/.github/workflows/multi-runner-build.yml@302aeb29273a51a5e55b8eb765fb3e7a3ec7dfeb # multi-runner-build-workflow-0.1.0
     permissions:
       contents: read
       actions: read
@@ -178,7 +178,7 @@ jobs:
     runs-on: ubuntu-latest
     if: always()
     steps:
-      - uses: dgh1818/devtools/actions/success-check@400ebe47fdfe77321effd39ee1d19cb893105faf # success-check-action-0.0.3
+      - uses: dgh1818/devtools/actions/success-check@302aeb29273a51a5e55b8eb765fb3e7a3ec7dfeb # success-check-action-0.0.3
         with:
           needs: ${{ toJSON(needs) }}
 

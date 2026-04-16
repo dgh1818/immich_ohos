@@ -223,7 +223,6 @@ export class MetadataService extends BaseService {
       ownerId: string;
       libraryId: string | null;
     },
-    exifInfo: Insertable<AssetExifTable>,
   ): Promise<void> {
     const otherType = asset.type === AssetType.Video ? AssetType.Image : AssetType.Video;
     const match = await this.assetRepository.findOhosLivePhotoMatch({
@@ -242,11 +241,8 @@ export class MetadataService extends BaseService {
     });
 
     if (!match) {
-      this.logger.log(`error: not find match`);
       return;
     }
-
-    this.logger.log(`success:  find match`);
 
     const [photoAsset, motionAsset] = asset.type === AssetType.Image ? [asset, match] : [match, asset];
     await Promise.all([
@@ -382,12 +378,9 @@ export class MetadataService extends BaseService {
       },
     );
 
-    const { hasOhosLivePhoto, ohosFileSize, ohosVideoOffset } = await this.checkOhosLivePhoto(
-      asset.originalPath,
-      asset.type,
-    );
+    const { hasOhosLivePhoto } = await this.checkOhosLivePhoto(asset.originalPath, asset.type);
 
-    if (this.isMotionPhoto(asset, exifTags) || hasOhosLivePhoto == 1) {
+    if (this.isMotionPhoto(asset, exifTags) || hasOhosLivePhoto === 1) {
       tasks.push(() => this.applyMotionPhotos(asset, exifTags, dates, stats));
     }
 
@@ -401,9 +394,9 @@ export class MetadataService extends BaseService {
       await this.linkLivePhotos(asset, exifData);
     }
 
-    if (hasOhosLivePhoto == 2) {
+    if (hasOhosLivePhoto === 2) {
       this.logger.log(`Is Ohos Next livephoto (${asset.id})`);
-      await this.linkOhosLivePhotos(asset, exifData);
+      await this.linkOhosLivePhotos(asset);
     }
 
     await this.assetRepository.upsertJobStatus({ assetId: asset.id, metadataExtractedAt: new Date() });
@@ -669,10 +662,7 @@ export class MetadataService extends BaseService {
     const directory = Array.isArray(tags.ContainerDirectory)
       ? (tags.ContainerDirectory as ContainerDirectoryItem[])
       : null;
-    const { hasOhosLivePhoto, ohosFileSize, ohosVideoOffset } = await this.checkOhosLivePhoto(
-      asset.originalPath,
-      asset.type,
-    );
+    const { hasOhosLivePhoto, ohosFileSize, ohosVideoOffset } = await this.checkOhosLivePhoto(asset.originalPath, asset.type);
 
     let length = 0;
     let padding = 0;
@@ -705,6 +695,7 @@ export class MetadataService extends BaseService {
     try {
       const position = stats.size - length - padding;
       let video: Buffer;
+
       // Samsung MotionPhoto video extraction
       //     HEIC-encoded
       if (hasMotionPhotoVideo) {
@@ -726,6 +717,7 @@ export class MetadataService extends BaseService {
           length,
         });
       }
+
       const checksum = this.cryptoRepository.hashSha1(video);
       const checksumQuery = { ownerId: asset.ownerId, libraryId: asset.libraryId ?? undefined, checksum };
 
@@ -1085,6 +1077,7 @@ export class MetadataService extends BaseService {
   }
 
   private async getVideoTags(originalPath: string) {
+
     const { videoStreams, format } = await this.mediaRepository.probe(originalPath);
 
     const tags: Pick<ImmichTags, 'Duration' | 'Orientation' | 'ImageWidth' | 'ImageHeight'> = {};
@@ -1197,7 +1190,6 @@ export class MetadataService extends BaseService {
           }
         }
         const ohosVideoOffset = parseInt(numberStr, 10);
-        this.logger.log(`numberStr is ${numberStr} `);
 
         if (isNaN(ohosVideoOffset)) {
           hasOhosLivePhoto = 0;
@@ -1217,7 +1209,6 @@ export class MetadataService extends BaseService {
 
     if (startPos < 0) {
       hasOhosLivePhoto = 0;
-      this.logger.log(`startPos is ${startPos} `);
       return { hasOhosLivePhoto, ohosFileSize, ohosVideoOffset };
     }
 

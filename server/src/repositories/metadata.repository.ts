@@ -78,8 +78,6 @@ export interface ImmichTags extends Omit<Tags, TagsWithWrongTypes> {
 
 @Injectable()
 export class MetadataRepository {
-  private static readonly defaultReadArgs = ['-fast', '-api', 'largefilesupport=1'];
-
   private exiftool = new ExifTool({
     defaultVideosToUTC: true,
     backfillTimezones: true,
@@ -89,10 +87,11 @@ export class MetadataRepository {
     numericTags: [...DefaultReadTaskOptions.numericTags, 'FocalLength', 'FileSize'],
     /* eslint unicorn/no-array-callback-reference: off, unicorn/no-array-method-this-argument: off */
     geoTz: (lat, lon) => geotz.find(lat, lon)[0],
-    geolocation: false,
+    geolocation: true,
     // Enable exiftool LFS to parse metadata for files larger than 2GB.
-    readArgs: MetadataRepository.defaultReadArgs,
+    readArgs: ['-api', 'largefilesupport=1'],
     writeArgs: ['-api', 'largefilesupport=1', '-overwrite_original'],
+    taskTimeoutMillis: 2 * 60 * 1000,
   });
 
   constructor(private logger: LoggingRepository) {
@@ -108,11 +107,8 @@ export class MetadataRepository {
   }
 
   readTags(path: string): Promise<ImmichTags> {
-    const readArgs = mimeTypes.isVideo(path)
-      ? ['-ee', ...MetadataRepository.defaultReadArgs]
-      : MetadataRepository.defaultReadArgs;
-
-    return this.exiftool.read(path, { readArgs }).catch((error) => {
+    const args = mimeTypes.isVideo(path) ? ['-ee'] : [];
+    return this.exiftool.read(path, { readArgs: args }).catch((error: any) => {
       this.logger.warn(`Error reading exif data (${path}): ${error}\n${error?.stack}`);
       return {};
     }) as Promise<ImmichTags>;
