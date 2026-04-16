@@ -114,6 +114,11 @@ export class MetadataRepository {
 
     const startedAt = Date.now();
     this.logger.log(`[metadata.readTags] start path=${path} args=${readArgs.join(' ')}`);
+    const slowReadWarning = setTimeout(() => {
+      this.logger.warn(
+        `[metadata.readTags] still-running path=${path} elapsed=${Date.now() - startedAt}ms args=${readArgs.join(' ')}`,
+      );
+    }, 5000);
 
     try {
       const tags = (await this.exiftool.read(path, { readArgs })) as ImmichTags;
@@ -127,6 +132,8 @@ export class MetadataRepository {
       this.logger.warn(`Error reading exif data (${path}): ${error}${stack ? `\n${stack}` : ''}`);
       this.logger.log(`[metadata.readTags] failed path=${path} elapsed=${Date.now() - startedAt}ms`);
       return {};
+    } finally {
+      clearTimeout(slowReadWarning);
     }
   }
 
