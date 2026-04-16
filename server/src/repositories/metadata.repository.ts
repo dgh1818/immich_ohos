@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { BinaryField, DefaultReadTaskOptions, ExifTool, Tags } from 'exiftool-vendored';
 import geotz from 'geo-tz';
 import { LoggingRepository } from 'src/repositories/logging.repository';
+import { mimeTypes } from 'src/utils/mime-types';
 
 interface ExifDuration {
   Value: number;
@@ -78,6 +79,7 @@ export interface ImmichTags extends Omit<Tags, TagsWithWrongTypes> {
 @Injectable()
 export class MetadataRepository {
   private static readonly defaultReadArgs = ['-fast', '-api', 'largefilesupport=1'];
+  private static readonly defaultVideoReadArgs = ['-fast2', '-api', 'largefilesupport=1'];
 
   private exiftool = new ExifTool({
     defaultVideosToUTC: true,
@@ -92,7 +94,6 @@ export class MetadataRepository {
     // Enable exiftool LFS to parse metadata for files larger than 2GB.
     readArgs: MetadataRepository.defaultReadArgs,
     writeArgs: ['-api', 'largefilesupport=1', '-overwrite_original'],
-    taskTimeoutMillis: 2 * 60 * 1000,
   });
 
   constructor(private logger: LoggingRepository) {
@@ -108,7 +109,9 @@ export class MetadataRepository {
   }
 
   async readTags(path: string): Promise<ImmichTags> {
-    const readArgs = MetadataRepository.defaultReadArgs;
+    const readArgs = mimeTypes.isVideo(path)
+      ? MetadataRepository.defaultVideoReadArgs
+      : MetadataRepository.defaultReadArgs;
 
     const startedAt = Date.now();
     this.logger.log(`[metadata.readTags] start path=${path} args=${readArgs.join(' ')}`);
