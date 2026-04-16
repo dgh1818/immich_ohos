@@ -123,7 +123,8 @@ export class MetadataRepository {
 
       return tags;
     } catch (error) {
-      this.logger.warn(`Error reading exif data (${path}): ${error}\n${error?.stack}`);
+      const stack = error instanceof Error ? error.stack : undefined;
+      this.logger.warn(`Error reading exif data (${path}): ${error}${stack ? `\n${stack}` : ''}`);
       this.logger.log(`[metadata.readTags] failed path=${path} elapsed=${Date.now() - startedAt}ms`);
       return {};
     }
@@ -141,7 +142,8 @@ export class MetadataRepository {
 
       return buffer;
     } catch (error) {
-      this.logger.warn(`Error extracting binary exif tag (${path}, ${tagName}): ${error}\n${error?.stack}`);
+      const stack = error instanceof Error ? error.stack : undefined;
+      this.logger.warn(`Error extracting binary exif tag (${path}, ${tagName}): ${error}${stack ? `\n${stack}` : ''}`);
       this.logger.log(`[metadata.extractBinaryTag] failed path=${path} tag=${tagName} elapsed=${Date.now() - startedAt}ms`);
       throw error;
     }
