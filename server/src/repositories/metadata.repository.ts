@@ -77,7 +77,7 @@ export interface ImmichTags extends Omit<Tags, TagsWithWrongTypes> {
 
 @Injectable()
 export class MetadataRepository {
-  private static readonly defaultReadArgs = ['-fast', '-api', 'largefilesupport=1'];
+  private static readonly defaultReadArgs = ['-api', 'largefilesupport=1'];
 
   private exiftool = new ExifTool({
     defaultVideosToUTC: true,
@@ -88,10 +88,11 @@ export class MetadataRepository {
     numericTags: [...DefaultReadTaskOptions.numericTags, 'FocalLength', 'FileSize'],
     /* eslint unicorn/no-array-callback-reference: off, unicorn/no-array-method-this-argument: off */
     geoTz: (lat, lon) => geotz.find(lat, lon)[0],
-    geolocation: false,
+    geolocation: true,
     // Enable exiftool LFS to parse metadata for files larger than 2GB.
     readArgs: MetadataRepository.defaultReadArgs,
     writeArgs: ['-api', 'largefilesupport=1', '-overwrite_original'],
+    taskTimeoutMillis: 2 * 60 * 1000,
   });
 
   constructor(private logger: LoggingRepository) {
@@ -112,9 +113,7 @@ export class MetadataRepository {
     const startedAt = Date.now();
     this.logger.log(`[metadata.readTags] start path=${path} args=${readArgs.join(' ')}`);
     const slowReadWarning = setTimeout(() => {
-      this.logger.warn(
-        `[metadata.readTags] still-running path=${path} elapsed=${Date.now() - startedAt}ms args=${readArgs.join(' ')}`,
-      );
+      this.logger.warn(`[metadata.readTags] still-running path=${path} elapsed=${Date.now() - startedAt}ms args=${readArgs.join(' ')}`);
     }, 5000);
 
     try {

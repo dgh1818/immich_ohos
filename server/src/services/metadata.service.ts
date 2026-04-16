@@ -136,11 +136,6 @@ type Dates = {
   localDateTime: Date;
 };
 
-type Iso6709Coordinates = {
-  latitude: number;
-  longitude: number;
-};
-
 @Injectable()
 export class MetadataService extends BaseService {
   @OnEvent({ name: 'AppBootstrap', workers: [ImmichWorker.Microservices] })
@@ -664,7 +659,6 @@ export class MetadataService extends BaseService {
   }): Promise<ImmichTags> {
     const startedAt = Date.now();
     const { sidecarFile } = getAssetFiles(asset.files);
-    const shouldReadMediaTags = asset.type !== AssetType.Video;
 
     this.logMetadataExtractionStep(
       asset.id,
@@ -672,12 +666,8 @@ export class MetadataService extends BaseService {
       `sidecar=${sidecarFile?.path ?? 'none'} type=${asset.type}`,
     );
 
-    if (!shouldReadMediaTags) {
-      this.logMetadataExtractionStep(asset.id, 'get-exif-tags:skip-video-exiftool', `path=${asset.originalPath}`);
-    }
-
     const [mediaTags, sidecarTags, videoTags] = await Promise.all([
-      shouldReadMediaTags ? this.metadataRepository.readTags(asset.originalPath) : Promise.resolve<ImmichTags>({}),
+      this.metadataRepository.readTags(asset.originalPath),
       sidecarFile ? this.metadataRepository.readTags(sidecarFile.path) : null,
       asset.type === AssetType.Video ? this.getVideoTags(asset.id, asset.originalPath) : null,
     ]);
@@ -1194,49 +1184,6 @@ export class MetadataService extends BaseService {
     return !Number.isNaN(lat) && !Number.isNaN(lng) && (lat !== 0 || lng !== 0);
   }
 
-  private parseIso6709Location(location: string): Iso6709Coordinates | null {
-    const match = location.trim().match(/^([+-]\d{2}(?:\.\d+)?)([+-]\d{3}(?:\.\d+)?)(?:[+-]\d+(?:\.\d+)?)?(?:\/.*)?$/);
-    if (!match) {
-      return null;
-    }
-
-    const latitude = Number(match[1]);
-    const longitude = Number(match[2]);
-
-    if (
-      Number.isNaN(latitude) ||
-      Number.isNaN(longitude) ||
-      latitude < -90 ||
-      latitude > 90 ||
-      longitude < -180 ||
-      longitude > 180
-    ) {
-      return null;
-    }
-
-    return { latitude, longitude };
-  }
-
-  private getVideoGeoTags(formatTags?: Record<string, string | number>): Pick<ImmichTags, 'GPSLatitude' | 'GPSLongitude'> {
-    const locationTag = formatTags?.location;
-    const locationEngTag = formatTags?.['location-eng'];
-    const location = typeof locationTag === 'string' ? locationTag : typeof locationEngTag === 'string' ? locationEngTag : null;
-
-    if (!location) {
-      return {};
-    }
-
-    const coordinates = this.parseIso6709Location(location);
-    if (!coordinates) {
-      return {};
-    }
-
-    return {
-      GPSLatitude: coordinates.latitude,
-      GPSLongitude: coordinates.longitude,
-    };
-  }
-
   private getAutoStackId(tags: ImmichTags | null): string | null {
     if (!tags) {
       return null;
@@ -1282,9 +1229,7 @@ export class MetadataService extends BaseService {
 
     const { videoStreams, format } = await this.mediaRepository.probe(originalPath);
 
-    const tags: Pick<ImmichTags, 'Duration' | 'Orientation' | 'ImageWidth' | 'ImageHeight' | 'GPSLatitude' | 'GPSLongitude'> = {
-      ...this.getVideoGeoTags(format.tags),
-    };
+    const tags: Pick<ImmichTags, 'Duration' | 'Orientation' | 'ImageWidth' | 'ImageHeight'> = {};
 
     if (videoStreams[0]) {
       // Set video dimensions
@@ -1322,7 +1267,7 @@ export class MetadataService extends BaseService {
     this.logMetadataExtractionStep(
       assetId,
       'video-tags:done',
-      `elapsed=${Date.now() - startedAt}ms duration=${tags.Duration ?? 'null'} width=${tags.ImageWidth ?? 'null'} height=${tags.ImageHeight ?? 'null'} orientation=${tags.Orientation ?? 'null'} latitude=${tags.GPSLatitude ?? 'null'} longitude=${tags.GPSLongitude ?? 'null'}`,
+      `elapsed=${Date.now() - startedAt}ms duration=${tags.Duration ?? 'null'} width=${tags.ImageWidth ?? 'null'} height=${tags.ImageHeight ?? 'null'} orientation=${tags.Orientation ?? 'null'}`,
     );
 
     return tags;
