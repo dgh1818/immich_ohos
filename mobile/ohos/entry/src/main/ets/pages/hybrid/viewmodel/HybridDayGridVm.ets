@@ -214,6 +214,7 @@ export class HybridDayGridVm {
       this.isLoading = false;
       this.notifyDataLoading(false);
       console.info(`[${this.tag}] reload finalized: items=${this.allTimelineItems.length}, hasError=${this.errorText ? 1 : 0}`);
+      void this.ensureLoadedRunway();
     }
   }
 

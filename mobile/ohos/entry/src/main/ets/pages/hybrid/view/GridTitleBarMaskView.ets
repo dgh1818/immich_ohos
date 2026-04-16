@@ -11,6 +11,11 @@ export struct GridTitleBarMaskView {
       .zIndex(PhotoGridZIndex.TITLE_BAR_MASK)
       .width('100%')
       .height(this.maskHeight)
+      .alignRules({
+        top: { anchor: PhotoGridViewId.CONTAINER, align: VerticalAlign.Top },
+        start: { anchor: PhotoGridViewId.CONTAINER, align: HorizontalAlign.Start },
+        end: { anchor: PhotoGridViewId.CONTAINER, align: HorizontalAlign.End },
+      })
       .opacity(this.opacityValue)
       .linearGradient({
         angle: 180,

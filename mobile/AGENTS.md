@@ -4,7 +4,7 @@
 
 - Huawei DevEco Studio SDK path:
   - `C:\Program Files\Huawei\DevEco Studio\sdk\default`
-- `DEVECO_SDK_HOME` must point to:
+- If `DEVECO_SDK_HOME` is configured externally, it must point to:
   - `C:\Program Files\Huawei\DevEco Studio\sdk`
 - Do not point `DEVECO_SDK_HOME` to:
   - `C:\Program Files\Huawei\DevEco Studio\sdk\default`
@@ -75,10 +75,13 @@
   - `C:\Program Files\Huawei\DevEco Studio\sdk\default`
 - For OHOS ArkTS or hybrid timeline changes, validate from:
   - `F:\immich_ohos\mobile`
+- Preferred OHOS validation command:
+  - `flutter build hap --release`
+- Do not prepend the build command with an inline PowerShell environment assignment such as:
+  - `{ $env:DEVECO_SDK_HOME = 'C:\Program Files\Huawei\DevEco Studio\sdk' }`
+- For this workspace, ignore warnings about missing `DEVECO_SDK_HOME` when the plain `flutter build hap --release` command succeeds.
 - Before using `codegenie_mcp` to check ArkTS syntax, `git add` every newly created `.ets` file first.
   - Newly added untracked `.ets` files may be skipped by `codegenie_mcp` until they are staged.
-- Default OHOS validation command:
-  - `flutter build hap --release`
 - If `flutter build hap --release` fails, clearly distinguish:
   - code or ArkTS compilation failures
   - signing, certificate, or local toolchain/environment failures

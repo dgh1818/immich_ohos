@@ -440,9 +440,10 @@ export function delay(ms: number): Promise<void> {
 }
 
 // Grid DataSource：管理扁平化的照片列表
+// 对齐参考程序 DayDataView 的 IDataSource + DataChangeListener 模式
 export class HybridGridDataSource implements IDataSource {
   private items: Array<HybridGridItem> = [];
-  private listeners: Array<DataChangeListener> = [];
+  listeners: Array<DataChangeListener> = [];
 
   totalCount(): number {
     return this.items.length;
@@ -467,19 +468,89 @@ export class HybridGridDataSource implements IDataSource {
     this.listeners = this.listeners.filter((item: DataChangeListener) => item !== listener);
   }
 
-  // 更新所有数据（用于列数变化时）
-  updateAll(items: Array<HybridGridItem>): void {
+  /**
+   * 更新数据项（不触发通知，由调用方决定何时 onDataReloaded）
+   */
+  updateData(items: Array<HybridGridItem>): void {
     this.items = items.slice();
-    this.notifyDataReloaded();
   }
 
-  updateAllIfChanged(items: Array<HybridGridItem>): boolean {
+  /**
+   * 更新数据项并通知重新加载（对齐参考程序 DayDataView 模式）
+   * 仅在数据实际变化时触发 onDataReloaded
+   */
+  updateDataIfChanged(items: Array<HybridGridItem>): boolean {
     if (this.hasSameItems(items)) {
       return false;
     }
     this.items = items.slice();
-    this.notifyDataReloaded();
+    this.onDataReloaded();
     return true;
+  }
+
+  reconcile(items: Array<HybridGridItem>): boolean {
+    if (this.hasSameItems(items)) {
+      return false;
+    }
+
+    const previousItems = this.items.slice();
+    const nextItems = items.slice();
+    const minLength = Math.min(previousItems.length, nextItems.length);
+    this.items = nextItems;
+
+    for (let index = 0; index < minLength; index += 1) {
+      if (!this.isSameItem(previousItems[index], nextItems[index])) {
+        this.onDataChange(index);
+      }
+    }
+
+    if (previousItems.length > nextItems.length) {
+      for (let index = previousItems.length - 1; index >= nextItems.length; index -= 1) {
+        this.onDataDelete(index);
+      }
+      return true;
+    }
+
+    for (let index = previousItems.length; index < nextItems.length; index += 1) {
+      this.onDataAdd(index);
+    }
+    return true;
+  }
+
+  /**
+   * 通知数据重新加载（对齐参考程序 DayDataView.onDataReloaded）
+   */
+  onDataReloaded(): void {
+    this.listeners.forEach((listener: DataChangeListener) => {
+      listener.onDataReloaded();
+    });
+  }
+
+  /**
+   * 数据添加（对齐参考程序 DayDataView.onDataAdd）
+   */
+  onDataAdd(index: number): void {
+    this.listeners.forEach((listener: DataChangeListener) => {
+      listener.onDataAdd(index);
+    });
+  }
+
+  /**
+   * 数据变化（对齐参考程序 DayDataView.onDataChange）
+   */
+  onDataChange(index: number): void {
+    this.listeners.forEach((listener: DataChangeListener) => {
+      listener.onDataChange(index);
+    });
+  }
+
+  /**
+   * 数据删除（对齐参考程序 DayDataView.onDataDelete）
+   */
+  onDataDelete(index: number): void {
+    this.listeners.forEach((listener: DataChangeListener) => {
+      listener.onDataDelete(index);
+    });
   }
 
   private hasSameItems(items: Array<HybridGridItem>): boolean {
@@ -487,22 +558,14 @@ export class HybridGridDataSource implements IDataSource {
       return false;
     }
     for (let index = 0; index < items.length; index += 1) {
-      const current = this.items[index];
-      const next = items[index];
-      if (
-        current.id !== next.id ||
-        current.kind !== next.kind ||
-        current.sectionKey !== next.sectionKey
-      ) {
+      if (!this.isSameItem(this.items[index], items[index])) {
         return false;
       }
     }
     return true;
   }
 
-  private notifyDataReloaded(): void {
-    this.listeners.forEach((listener: DataChangeListener) => {
-      listener.onDataReloaded();
-    });
+  private isSameItem(left: HybridGridItem, right: HybridGridItem): boolean {
+    return left.id === right.id && left.kind === right.kind && left.sectionKey === right.sectionKey;
   }
 }

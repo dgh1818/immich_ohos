@@ -12,6 +12,7 @@ export class GridAttributeUpdater extends AttributeUpdater<GridAttribute> {
   private isLowGrid: boolean = false;
   private hitTestMode: HitTestMode = HitTestMode.Default;
   private showBackground: boolean = true;
+  private enabledValue: boolean = true;
 
   public override initializeModifier(instance: GridAttribute): void {
     instance
@@ -21,7 +22,8 @@ export class GridAttributeUpdater extends AttributeUpdater<GridAttribute> {
       .height(this.heightValue)
       .visibility(this.visibilityValue)
       .zIndex(this.zIndexValue)
-      .hitTestBehavior(this.hitTestMode);
+      .hitTestBehavior(this.hitTestMode)
+      .enabled(this.enabledValue);
   }
 
   public override onComponentChanged(instance: GridAttribute): void {
@@ -32,7 +34,8 @@ export class GridAttributeUpdater extends AttributeUpdater<GridAttribute> {
       .height(this.heightValue)
       .visibility(this.visibilityValue)
       .zIndex(this.zIndexValue)
-      .hitTestBehavior(this.hitTestMode);
+      .hitTestBehavior(this.hitTestMode)
+      .enabled(this.enabledValue);
   }
 
   public updateScale(scaleOptions: ScaleOptions): void {
@@ -82,6 +85,11 @@ export class GridAttributeUpdater extends AttributeUpdater<GridAttribute> {
     this.showBackground = showBackground;
   }
 
+  public updateEnable(enabled: boolean): void {
+    this.enabledValue = enabled;
+    this.attribute?.enabled(this.enabledValue);
+  }
+
   public getZIndex(): number {
     return this.isLowGrid ? this.lowZIndex : this.highZIndex;
   }
@@ -96,6 +104,7 @@ export class GridAttributeUpdater extends AttributeUpdater<GridAttribute> {
 
   public restoreZIndex(): void {
     this.updateIsLowGrid(false);
+    this.updateEnable(true);
   }
 
   public setLowZIndex(): void {

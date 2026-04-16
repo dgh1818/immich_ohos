@@ -2,7 +2,7 @@ import common from '@ohos.app.ability.common';
 import * as Shared from '../PhotoGridShared';
 import { GridSnapshotController } from '../viewcontroller/GridSnapshotController';
 import { GridTitleBarMaskController } from '../viewcontroller/GridTitleBarMaskController';
-import { PhotoGridViewController } from '../viewcontroller/PhotoGridViewController';
+import { PhotoGridViewController, PhotoGridViewId } from '../viewcontroller/PhotoGridViewController';
 import { PhotoGridViewModel } from '../viewmodel/PhotoGridViewModel';
 import { FixedIrregularView } from './FixedIrregularView';
 import { GridNoDataView } from './GridNoDataView';
@@ -32,6 +32,7 @@ export struct TimelineView {
   aboutToAppear(): void {
     this.viewController.updateTopInset(this.topInset);
     this.titleBarMaskController.updateTopInset(this.topInset);
+    this.viewModel.updateTopInset(this.topInset);
     this.viewModel.bindSnapshotController(this.snapshotController);
     this.viewModel.addStateListener(this.stateListener);
     void this.viewModel.init();
@@ -94,6 +95,11 @@ export struct TimelineView {
         interactive: this.viewModel.yearGridState.interactive,
         warmActive: this.viewModel.yearGridState.warmActive,
         columns: this.viewModel.yearGridState.columns,
+        layoutOptions: this.viewModel.resolveGridLayoutOptions(FormIndex.YEAR),
+        headSpacerHeight: this.viewModel.resolveHeadSpacerHeight(FormIndex.YEAR),
+        tailSpacerHeight: this.viewModel.resolveTailSpacerHeight(FormIndex.YEAR),
+        gap: this.viewModel.resolveGridGap(FormIndex.YEAR),
+        tailFillPositions: this.viewModel.resolveTailFillPositions(FormIndex.YEAR),
         cacheRows: this.viewModel.yearGridState.cacheRows,
         requestSize: this.viewModel.resolveRequestSize(FormIndex.YEAR),
         touchScrollEnd: this.viewModel.activeForm === FormIndex.YEAR ? this.viewModel.touchScrollEnd : true,
@@ -105,8 +111,8 @@ export struct TimelineView {
         gridDataSourceAttachHandler: (dataSource: Shared.GridDataSource): void => {
           this.viewModel.bindDataSource(FormIndex.YEAR, dataSource);
         },
-        assetTapHandler: (asset: Shared.PhotoAsset): void => {
-          void this.viewModel.openPreviewAssetViewer(asset);
+        assetTapHandler: (_asset: Shared.PhotoAsset): void => {
+          this.viewModel.handleSingleTapEvent(FormIndex.YEAR);
         },
         areaChangeHandler: (width: number, height: number): void => {
           this.viewModel.onGridAreaChange(width, height);
@@ -122,6 +128,18 @@ export struct TimelineView {
         },
         scrollIndexHandler: (start: number, end: number): void => {
           this.viewModel.onFormScrollIndex(FormIndex.YEAR, start, end);
+        },
+        didScrollHandler: (offset: number, state: number): void => {
+          this.viewModel.onFormDidScroll(FormIndex.YEAR, offset, state);
+        },
+        reachStartHandler: (): void => {
+          this.viewModel.onFormReachStart(FormIndex.YEAR);
+        },
+        reachEndHandler: (): void => {
+          this.viewModel.onFormReachEnd(FormIndex.YEAR);
+        },
+        willScrollHandler: (offset: number, state: number, source: number): void => {
+          this.viewModel.onFormWillScroll(FormIndex.YEAR, offset, state, source);
         },
         pinchStartHandler: (centerX: number, centerY: number): void => {
           this.viewModel.onPinchStart(centerX, centerY);
@@ -139,6 +157,11 @@ export struct TimelineView {
         interactive: this.viewModel.monthGridState.interactive,
         warmActive: this.viewModel.monthGridState.warmActive,
         columns: this.viewModel.monthGridState.columns,
+        layoutOptions: this.viewModel.resolveGridLayoutOptions(FormIndex.MONTH),
+        headSpacerHeight: this.viewModel.resolveHeadSpacerHeight(FormIndex.MONTH),
+        tailSpacerHeight: this.viewModel.resolveTailSpacerHeight(FormIndex.MONTH),
+        gap: this.viewModel.resolveGridGap(FormIndex.MONTH),
+        tailFillPositions: this.viewModel.resolveTailFillPositions(FormIndex.MONTH),
         cacheRows: this.viewModel.monthGridState.cacheRows,
         requestSize: this.viewModel.resolveRequestSize(FormIndex.MONTH),
         touchScrollEnd: this.viewModel.activeForm === FormIndex.MONTH ? this.viewModel.touchScrollEnd : true,
@@ -150,8 +173,8 @@ export struct TimelineView {
         gridDataSourceAttachHandler: (dataSource: Shared.GridDataSource): void => {
           this.viewModel.bindDataSource(FormIndex.MONTH, dataSource);
         },
-        assetTapHandler: (asset: Shared.PhotoAsset): void => {
-          void this.viewModel.openPreviewAssetViewer(asset);
+        assetTapHandler: (_asset: Shared.PhotoAsset): void => {
+          this.viewModel.handleSingleTapEvent(FormIndex.MONTH);
         },
         areaChangeHandler: (width: number, height: number): void => {
           this.viewModel.onGridAreaChange(width, height);
@@ -167,6 +190,18 @@ export struct TimelineView {
         },
         scrollIndexHandler: (start: number, end: number): void => {
           this.viewModel.onFormScrollIndex(FormIndex.MONTH, start, end);
+        },
+        didScrollHandler: (offset: number, state: number): void => {
+          this.viewModel.onFormDidScroll(FormIndex.MONTH, offset, state);
+        },
+        reachStartHandler: (): void => {
+          this.viewModel.onFormReachStart(FormIndex.MONTH);
+        },
+        reachEndHandler: (): void => {
+          this.viewModel.onFormReachEnd(FormIndex.MONTH);
+        },
+        willScrollHandler: (offset: number, state: number, source: number): void => {
+          this.viewModel.onFormWillScroll(FormIndex.MONTH, offset, state, source);
         },
         pinchStartHandler: (centerX: number, centerY: number): void => {
           this.viewModel.onPinchStart(centerX, centerY);
@@ -184,6 +219,11 @@ export struct TimelineView {
         interactive: this.viewModel.dayGridState.interactive,
         warmActive: this.viewModel.dayGridState.warmActive,
         columns: this.viewModel.dayGridState.columns,
+        layoutOptions: this.viewModel.resolveGridLayoutOptions(FormIndex.DAY),
+        headSpacerHeight: this.viewModel.resolveHeadSpacerHeight(FormIndex.DAY),
+        tailSpacerHeight: this.viewModel.resolveTailSpacerHeight(FormIndex.DAY),
+        gap: this.viewModel.resolveGridGap(FormIndex.DAY),
+        tailFillPositions: this.viewModel.resolveTailFillPositions(FormIndex.DAY),
         cacheRows: this.viewModel.dayGridState.cacheRows,
         requestSize: this.viewModel.resolveRequestSize(FormIndex.DAY),
         touchScrollEnd: this.viewModel.activeForm === FormIndex.DAY ? this.viewModel.touchScrollEnd : true,
@@ -213,6 +253,18 @@ export struct TimelineView {
         scrollIndexHandler: (start: number, end: number): void => {
           this.viewModel.onFormScrollIndex(FormIndex.DAY, start, end);
         },
+        didScrollHandler: (offset: number, state: number): void => {
+          this.viewModel.onFormDidScroll(FormIndex.DAY, offset, state);
+        },
+        reachStartHandler: (): void => {
+          this.viewModel.onFormReachStart(FormIndex.DAY);
+        },
+        reachEndHandler: (): void => {
+          this.viewModel.onFormReachEnd(FormIndex.DAY);
+        },
+        willScrollHandler: (offset: number, state: number, source: number): void => {
+          this.viewModel.onFormWillScroll(FormIndex.DAY, offset, state, source);
+        },
         pinchStartHandler: (centerX: number, centerY: number): void => {
           this.viewModel.onPinchStart(centerX, centerY);
         },
@@ -229,6 +281,11 @@ export struct TimelineView {
         interactive: this.viewModel.groupDayGridState.interactive,
         warmActive: this.viewModel.groupDayGridState.warmActive,
         columns: this.viewModel.groupDayGridState.columns,
+        layoutOptions: this.viewModel.resolveGridLayoutOptions(FormIndex.GROUP_DAY),
+        headSpacerHeight: this.viewModel.resolveHeadSpacerHeight(FormIndex.GROUP_DAY),
+        tailSpacerHeight: this.viewModel.resolveTailSpacerHeight(FormIndex.GROUP_DAY),
+        gap: this.viewModel.resolveGridGap(FormIndex.GROUP_DAY),
+        tailFillPositions: this.viewModel.resolveTailFillPositions(FormIndex.GROUP_DAY),
         cacheRows: this.viewModel.groupDayGridState.cacheRows,
         requestSize: this.viewModel.resolveRequestSize(FormIndex.GROUP_DAY),
         touchScrollEnd: this.viewModel.activeForm === FormIndex.GROUP_DAY ? this.viewModel.touchScrollEnd : true,
@@ -258,6 +315,18 @@ export struct TimelineView {
         scrollIndexHandler: (start: number, end: number): void => {
           this.viewModel.onFormScrollIndex(FormIndex.GROUP_DAY, start, end);
         },
+        didScrollHandler: (offset: number, state: number): void => {
+          this.viewModel.onFormDidScroll(FormIndex.GROUP_DAY, offset, state);
+        },
+        reachStartHandler: (): void => {
+          this.viewModel.onFormReachStart(FormIndex.GROUP_DAY);
+        },
+        reachEndHandler: (): void => {
+          this.viewModel.onFormReachEnd(FormIndex.GROUP_DAY);
+        },
+        willScrollHandler: (offset: number, state: number, source: number): void => {
+          this.viewModel.onFormWillScroll(FormIndex.GROUP_DAY, offset, state, source);
+        },
         pinchStartHandler: (centerX: number, centerY: number): void => {
           this.viewModel.onPinchStart(centerX, centerY);
         },
@@ -272,8 +341,8 @@ export struct TimelineView {
       GridSnapshotView({
         snapshotImage: this.snapshotController.snapshotImage,
         visible: this.snapshotController.isVisible,
-        opacityValue: this.snapshotController.getSnapshotOpacity(),
-        offsetY: this.snapshotController.getSnapshotOffsetY(),
+        opacityValue: this.snapshotController.snapshotOpacity,
+        offsetY: this.snapshotController.snapshotOffsetY,
       });
     }
     .width('100%')
@@ -281,10 +350,10 @@ export struct TimelineView {
     .clip(false)
     .backgroundColor(Color.Transparent)
     .alignRules({
-      top: { anchor: '__container__', align: VerticalAlign.Top },
-      bottom: { anchor: '__container__', align: VerticalAlign.Bottom },
-      start: { anchor: '__container__', align: HorizontalAlign.Start },
-      end: { anchor: '__container__', align: HorizontalAlign.End },
+      top: { anchor: PhotoGridViewId.CONTAINER, align: VerticalAlign.Top },
+      bottom: { anchor: PhotoGridViewId.CONTAINER, align: VerticalAlign.Bottom },
+      start: { anchor: PhotoGridViewId.CONTAINER, align: HorizontalAlign.Start },
+      end: { anchor: PhotoGridViewId.CONTAINER, align: HorizontalAlign.End },
     });
   }
 
@@ -300,7 +369,11 @@ export struct TimelineView {
       }
 
       if (this.viewController.isFixedIrregularViewInit) {
-        FixedIrregularView();
+        FixedIrregularView({
+          areaChangeHandler: (_width: number, height: number): void => {
+            this.viewModel.updateGridHeadSpacerHeight(height);
+          },
+        });
       }
 
       if (this.viewController.isNoDataViewInit) {
@@ -320,7 +393,7 @@ export struct TimelineView {
         });
       }
     }
-    .id('__container__')
+    .id(PhotoGridViewId.CONTAINER)
     .width('100%')
     .height('100%')
     .clip(false)

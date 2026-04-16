@@ -236,6 +236,13 @@ export class PinchStateManager extends StateObserverManager<PinchAction, string>
   }
 
   /**
+   * 设置切换开始信息（用于非捏合触发的切换，如点击切换）
+   */
+  public setSwitchStartInfo(startInfo: SwitchStartInfo): void {
+    this._switchStartInfo = startInfo;
+  }
+
+  /**
    * 更新标准放缩系数
    */
   public updateStandardScales(standardScales: number[], reason?: string): void {

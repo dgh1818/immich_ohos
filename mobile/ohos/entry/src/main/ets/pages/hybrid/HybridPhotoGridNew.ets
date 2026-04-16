@@ -185,7 +185,7 @@ export struct HybridPhotoGridNew {
 
   private updateGridData(): void {
     this.allGridItems = this.buildGridItemsForColumns(this.gridColumns);
-    this.gridDataSource.updateAll(this.allGridItems);
+    this.gridDataSource.updateDataIfChanged(this.allGridItems);
   }
 
   private buildGridItemsForColumns(columns: number): Array<Shared.HybridGridItem> {
@@ -365,7 +365,7 @@ export struct HybridPhotoGridNew {
     } else {
       this.targetGridItems = this.buildGridItemsForColumns(state.targetColumns);
     }
-    this.targetGridDataSource.updateAll(this.targetGridItems);
+    this.targetGridDataSource.updateDataIfChanged(this.targetGridItems);
     this.syncTargetGridScroll(scrollOffset);
     this.viewModel.handlePinchStart(centerX, centerY);
   }
@@ -389,7 +389,7 @@ export struct HybridPhotoGridNew {
       } else {
         this.targetGridItems = this.buildGridItemsForColumns(state.targetColumns);
       }
-      this.targetGridDataSource.updateAll(this.targetGridItems);
+      this.targetGridDataSource.updateDataIfChanged(this.targetGridItems);
     }
 
     this.updateTargetGridProperties(state.currentScale);
@@ -529,7 +529,7 @@ export struct HybridPhotoGridNew {
     if (zoomInColumns > 0) {
       this.prebuiltZoomInGridItems = this.buildGridItemsForColumns(zoomInColumns);
       this.prebuiltZoomInColumns = zoomInColumns;
-      this.prebuiltZoomInDataSource.updateAll(this.prebuiltZoomInGridItems);
+      this.prebuiltZoomInDataSource.updateDataIfChanged(this.prebuiltZoomInGridItems);
 
       // Scroll pre-built grid to matching position
       this.syncPrebuiltGridScroll(this.prebuiltZoomInScroller, zoomInColumns);
@@ -542,7 +542,7 @@ export struct HybridPhotoGridNew {
     if (zoomOutColumns > 0) {
       this.prebuiltZoomOutGridItems = this.buildGridItemsForColumns(zoomOutColumns);
       this.prebuiltZoomOutColumns = zoomOutColumns;
-      this.prebuiltZoomOutDataSource.updateAll(this.prebuiltZoomOutGridItems);
+      this.prebuiltZoomOutDataSource.updateDataIfChanged(this.prebuiltZoomOutGridItems);
 
       // Scroll pre-built grid to matching position
       this.syncPrebuiltGridScroll(this.prebuiltZoomOutScroller, zoomOutColumns);

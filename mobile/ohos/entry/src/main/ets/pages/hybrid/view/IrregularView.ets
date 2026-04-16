@@ -20,6 +20,10 @@ export struct IrregularView {
       }
       .id(PhotoGridViewId.IRREGULAR)
       .zIndex(PhotoGridZIndex.IRREGULAR)
+      .alignRules({
+        top: { anchor: PhotoGridViewId.CONTAINER, align: VerticalAlign.Top },
+        start: { anchor: PhotoGridViewId.CONTAINER, align: HorizontalAlign.Start },
+      })
       .padding({ left: 12, right: 12, top: 10, bottom: 10 })
       .backgroundColor($r('sys.color.ohos_id_color_sub_background'))
       .borderRadius(18)

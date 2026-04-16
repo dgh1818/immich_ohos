@@ -78,6 +78,18 @@ export class TimelineDataManager {
     this.resetSlidingWindowState();
   }
 
+  /**
+   * 更新数据源但保留现有滑动窗口位置（滚动中使用）
+   * 对齐参考程序: 滚动中数据加载不重置窗口位置
+   */
+  public updateSourceStatePreservingWindow(state: TimelineDataSourceState): void {
+    this.mergeSourceState(state, true);
+    this.yearBuckets = state.yearBuckets.slice();
+    this.monthBuckets = state.monthBuckets.slice();
+    this.hasMore = state.hasMore;
+    // 不调用 resetSlidingWindowState()，保留滚动中的窗口位置
+  }
+
   public appendSourcePage(state: TimelineDataSourceState): void {
     this.mergeSourceState(state, false);
     if (state.yearBuckets.length > 0) {
@@ -115,6 +127,64 @@ export class TimelineDataManager {
     return this.dataAdapter.cloneSections(this.resolveSourceSectionsForForm(form));
   }
 
+  public getSourceGroupDayGroups(form: FormIndex = FormIndex.GROUP_DAY): Array<GroupInfo> {
+    if (form !== FormIndex.GROUP_DAY) {
+      return [];
+    }
+    return this.buildSourceWindowState(form).groupDayGroups.slice();
+  }
+
+  public buildSourceGridItemsForForm(
+    form: FormIndex,
+    includeTail: boolean = true,
+  ): Array<GridItem> {
+    const sourceWindowState = this.buildSourceWindowState(form);
+    const fillPosition = this.resolveSourceFillPositionForWindowStart(
+      form,
+      sourceWindowState,
+      sourceWindowState.windowStartOffset,
+    );
+    return this.buildGridItemsFromWindowState(form, sourceWindowState, fillPosition, includeTail);
+  }
+
+  public buildSourceTimelineItemsForForm(form: FormIndex): Array<TimelineItem> {
+    return this.buildTimelineItemsFromWindowState(form, this.buildSourceWindowState(form));
+  }
+
+  public resolveSourceFillPositionForForm(form: FormIndex): number {
+    const sourceWindowState = this.buildSourceWindowState(form);
+    return this.resolveSourceFillPositionForWindowStart(
+      form,
+      sourceWindowState,
+      sourceWindowState.windowStartOffset,
+    );
+  }
+
+  public resolveSourceGridIndexForPhotoOffset(form: FormIndex, photoOffset: number): number {
+    const sourceWindowState = this.buildSourceWindowState(form);
+    const fillPosition = this.resolveSourceFillPositionForWindowStart(
+      form,
+      sourceWindowState,
+      sourceWindowState.windowStartOffset,
+    );
+    return this.resolveGridIndexForPhotoOffsetInWindowState(form, sourceWindowState, photoOffset, fillPosition);
+  }
+
+  public resolveSourceTimelineRowIndexForGridIndex(form: FormIndex, gridIndex: number): number {
+    const sourceWindowState = this.buildSourceWindowState(form);
+    const fillPosition = this.resolveSourceFillPositionForWindowStart(
+      form,
+      sourceWindowState,
+      sourceWindowState.windowStartOffset,
+    );
+    const safeGridIndex = Math.max(0, gridIndex - fillPosition);
+    const columns = Math.max(1, getColumnsByFormIndex(form));
+    if (form !== FormIndex.GROUP_DAY) {
+      return Math.max(0, Math.floor(safeGridIndex / columns));
+    }
+    return this.resolveGroupTimelineRowIndex(sourceWindowState.groupDayGroups, columns, safeGridIndex);
+  }
+
   public getGroupDayGroups(form: FormIndex = FormIndex.GROUP_DAY): Array<GroupInfo> {
     if (form !== FormIndex.GROUP_DAY) {
       return [];
@@ -145,6 +215,10 @@ export class TimelineDataManager {
 
   public getSourceWindowStartOffset(): number {
     return this.windowStartOffset;
+  }
+
+  public getSourceWindowEndOffset(): number {
+    return this.windowEndOffset;
   }
 
   public resetSlidingWindowState(form?: FormIndex): void {
@@ -376,6 +450,22 @@ export class TimelineDataManager {
     const sections = this.resolveSourceSectionsForForm(form);
     return {
       sections: this.dataAdapter.cloneSections(sections),
+      groupDayGroups: form === FormIndex.GROUP_DAY
+        ? this.buildCanonicalGroupWindowGroups(
+            sections,
+            this.windowStartOffset,
+            this.resolveSourceGroupsForForm(form, sections),
+          )
+        : [],
+      windowStartOffset: this.windowStartOffset,
+      windowPhotoCount: this.dataAdapter.flattenAssets(sections).length,
+    };
+  }
+
+  private buildSourceWindowState(form: FormIndex): TimelineFormWindowState {
+    const sections = this.resolveSourceSectionsForForm(form);
+    return {
+      sections: sections,
       groupDayGroups: form === FormIndex.GROUP_DAY
         ? this.buildCanonicalGroupWindowGroups(
             sections,

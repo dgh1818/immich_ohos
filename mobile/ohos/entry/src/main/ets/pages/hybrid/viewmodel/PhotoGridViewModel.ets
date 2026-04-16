@@ -17,6 +17,7 @@ import {
 import { SwitchCalcParams, SwitchCalcUtils } from './SwitchCalcUtils';
 import {
   TimelineDataManager,
+  TimelineDataSourceState,
   TimelinePreloadReason,
   TimelinePreloadRequest,
   TimelinePreloadResult,
@@ -61,6 +62,7 @@ const FILL_POSITION_RESTORE_DELAY_MS: number = 350;
 const PRELOAD_TIMEOUT_MS: number = 180;
 const PINCH_SHRINK_ENTER_SCALE: number = 0.98;
 const EXPAND_MIN_OPACITY: number = 0.15;
+const GRID_CACHED_COUNT: number = 5;
 
 const FORM_ORDER: Array<FormIndex> = [
   FormIndex.YEAR,
@@ -77,6 +79,7 @@ export class FormGridState {
   public readonly showFsm: GridShowFsm = new GridShowFsm();
   public scroller?: Scroller = undefined;
   public dataSource?: Shared.GridDataSource = undefined;
+  public gridItems: Array<GridItem> = [];
   public visible: boolean = false;
   public interactive: boolean = false;
   public warmActive: boolean = false;
@@ -96,7 +99,7 @@ export class FormGridState {
   public constructor(form: FormIndex) {
     this.form = form;
     this.columns = getColumnsByFormIndex(form);
-    this.cacheRows = Shared.resolveListCacheCount(this.columns);
+    this.cacheRows = GRID_CACHED_COUNT;
   }
 }
 
@@ -123,12 +126,14 @@ export class PhotoGridViewModel {
   private preloadVersion: number = -1;
   private preloadActiveForm: FormIndex = FormIndex.INVALID;
   private transitionTimeoutId?: number = undefined;
+  private tapSwitchTargetForm: FormIndex = FormIndex.INVALID;
   private lastVisibleGridStart: number = 0;
   private lastVisibleGridEnd: number = 0;
   private visibleGridCapacity: number = 0;
   private lastScrollPrefetchAt: number = 0;
   private lastForwardPrefetchEnd: number = -1;
   private lastBackwardPrefetchStart: number = Number.MAX_SAFE_INTEGER;
+  private lastWindowAnchorGridIndex: number = 0;
   private backgroundPredownloadToken: number = 0;
   private backgroundPredownloadRunning: boolean = false;
   private idleWorkToken: number = 0;
@@ -201,11 +206,26 @@ export class PhotoGridViewModel {
   public targetForm: FormIndex = FormIndex.DAY;
   public transitionFromForm: FormIndex = FormIndex.DAY;
   public transitionToForm: FormIndex = FormIndex.DAY;
+  public topInsetHeight: number = 56;
+  public bottomAvoidHeight: number = 0;
+  private gridHeadSpacerHeight: number = 0;
 
   private readonly dataLoadListener: DataLoadListener = {
     onDataLoaded: (): void => {
       if (this.pinchActive) {
         this.syncMetaFromDataVm();
+        return;
+      }
+      if (this.isGridScrolling) {
+        this.syncSourceWhileScrolling();
+        return;
+      }
+      if (this.hasCompletedFirstLoad) {
+        // 非滚动状态下新数据到达（loadMore 完成等）时，用增量通知同步到 Grid，
+        // 避免 onDataReloaded() 带来的可见闪烁。
+        this.syncSourceWhileScrolling();
+        this.syncActiveWindowToVisibleAnchor(true, false);
+        this.reconcileFormGridItems(this.activeForm, this.currentGridItems);
         return;
       }
       this.syncFromDataVm();
@@ -216,11 +236,23 @@ export class PhotoGridViewModel {
         this.syncMetaFromDataVm();
         return;
       }
+      if (this.isGridScrolling) {
+        this.syncSourceWhileScrolling();
+        return;
+      }
+      if (this.hasCompletedFirstLoad) {
+        this.syncSourceWhileScrolling();
+        return;
+      }
       this.syncFromDataVm();
       this.hasCompletedFirstLoad = true;
     },
     onDataLoading: (isLoading: boolean): void => {
-      this.syncMetaFromDataVm();
+      if (this.isGridScrolling) {
+        this.syncSourceWhileScrolling();
+      } else {
+        this.syncMetaFromDataVm();
+      }
       if (!isLoading) {
         this.hasCompletedFirstLoad = true;
       }
@@ -241,8 +273,8 @@ export class PhotoGridViewModel {
         areaSize: { width: 0, height: 0 },
         isGridShow: true,
         isGridActive: true,
-        topAvoidHeight: 56,
-        bottomAvoidHeight: 0,
+        topAvoidHeight: this.topInsetHeight,
+        bottomAvoidHeight: this.bottomAvoidHeight,
       },
       switchConfig: {
         isSupportSwitch: true,
@@ -337,7 +369,7 @@ export class PhotoGridViewModel {
     Thumbnail.setPrefetchRuntimeMode(Shared.PrefetchRuntimeMode.NORMAL);
     FORM_ORDER.forEach((form: FormIndex) => {
       const state = this.getGridState(form);
-      state.dataSource?.updateAllIfChanged([]);
+      this.clearFormGridItems(form);
       state.scroller = undefined;
       state.dataSource = undefined;
     });
@@ -378,7 +410,7 @@ export class PhotoGridViewModel {
     state.dataSource = dataSource;
     if (form === this.activeForm) {
       this.resetFormPreloadRuntime(form, PreloadStateType.HIDDEN_STATE);
-      dataSource.updateAllIfChanged(this.currentGridItems.slice());
+      this.updateFormGridItems(form, this.currentGridItems);
       return;
     }
     if (!this.pinchActive && this.shouldPreloadForm(form)) {
@@ -386,7 +418,7 @@ export class PhotoGridViewModel {
       return;
     }
     this.resetFormPreloadRuntime(form, PreloadStateType.INIT_STATE);
-    dataSource.updateAllIfChanged([]);
+    this.clearFormGridItems(form);
   }
 
   public onGridAreaChange(width: number, height: number): void {
@@ -404,6 +436,26 @@ export class PhotoGridViewModel {
       this.updateFloatingSection(this.resolveVisibleTimelineRowIndex());
       this.notifyStateChanged();
     }
+  }
+
+  public updateTopInset(topInset: number): void {
+    const nextTopInset = Math.max(0, topInset);
+    if (Math.abs(this.topInsetHeight - nextTopInset) <= 0.5) {
+      return;
+    }
+    this.topInsetHeight = nextTopInset;
+    this.syncStateProxyRuntime('updateTopInset');
+    this.notifyStateChanged();
+  }
+
+  public updateGridHeadSpacerHeight(height: number): void {
+    const nextHeight = Math.max(0, height);
+    if (Math.abs(this.gridHeadSpacerHeight - nextHeight) <= 0.5) {
+      return;
+    }
+    this.gridHeadSpacerHeight = nextHeight;
+    this.syncStateProxyRuntime('updateGridHeadSpacerHeight');
+    this.notifyStateChanged();
   }
 
   public onFormScrollStart(form: FormIndex): void {
@@ -432,7 +484,11 @@ export class PhotoGridViewModel {
     this.updateTouchScrollEnd();
     Thumbnail.setRuntimeScrollActive(false);
     this.timelineViewModel.onScrollStop();
-    this.syncActiveWindowToVisibleAnchor(true);
+    this.syncSourceWhileScrolling();
+    // 滚动停止后只把最新 source 投影增量同步到 active Grid；
+    // 内部滑窗状态仍然会更新，但不会再把 window-local 数组直接塞回 Grid。
+    this.syncActiveWindowToVisibleAnchor(true, false);
+    this.reconcileFormGridItems(this.activeForm, this.currentGridItems);
     this.prefetchVisibleAndAheadAfterScrollStop();
     this.scheduleIdlePrefetchWork();
     this.preloadAdjacentForms();
@@ -466,6 +522,35 @@ export class PhotoGridViewModel {
     this.notifyStateChanged();
   }
 
+  public onFormDidScroll(form: FormIndex, _offset: number, _state: number): void {
+    if (form !== this.activeForm || this.pinchActive) {
+      return;
+    }
+    this.syncCurrentScrollOffset(form);
+  }
+
+  public onFormReachStart(form: FormIndex): void {
+    if (form !== this.activeForm || this.pinchActive) {
+      return;
+    }
+    this.currentScrollOffsetY = 0;
+  }
+
+  public onFormReachEnd(form: FormIndex): void {
+    if (form !== this.activeForm || this.pinchActive) {
+      return;
+    }
+    this.syncCurrentScrollOffset(form);
+    void this.timelineViewModel.loadMore();
+  }
+
+  public onFormWillScroll(form: FormIndex, offset: number, _state: number, _source: number): void {
+    if (form !== this.activeForm || this.pinchActive) {
+      return;
+    }
+    this.currentScrollOffsetY = Math.max(0, this.currentScrollOffsetY + offset);
+  }
+
   public onPinchStart(centerX: number, centerY: number): void {
     if (this.listWidth <= 0 || this.listHeight <= 0) {
       return;
@@ -489,10 +574,10 @@ export class PhotoGridViewModel {
       this.currentScrollOffsetY,
       this.listWidth,
       this.listHeight,
-      0,
+      this.resolveHeadSpacerHeight(this.activeForm),
       totalPhotoCount,
-      this.timelineDataManager.getWindowStartOffsetForForm(this.activeForm),
-      this.timelineDataManager.getGroupDayGroups(this.activeForm),
+      this.timelineDataManager.getSourceWindowStartOffset(),
+      this.groupDayGroups,
     );
     this.pinchActive = true;
     this.pinchCenterX = centerX;
@@ -502,7 +587,7 @@ export class PhotoGridViewModel {
     this.targetForm = this.activeForm;
     this.timelineDataManager.updateSlidingWindowState(this.activeForm);
     this.transitionFromForm = this.activeForm;
-    this.groupDayGroups = this.timelineDataManager.getGroupDayGroups(this.activeForm);
+    this.groupDayGroups = this.timelineDataManager.getSourceGroupDayGroups(this.activeForm);
     this.preparedTargetForm = FormIndex.INVALID;
     this.preparedTargetVersion = -1;
     this.updatePrefetchRuntimeMode();
@@ -544,7 +629,6 @@ export class PhotoGridViewModel {
     pinchUpdateParams.targetForm = this.targetForm;
     pinchUpdateParams.willArriveForm = this.targetForm !== this.activeForm ? this.targetForm : undefined;
     this.pinchStateManager.updatePinchState(pinchUpdateParams);
-    this.formFsm.submitEvent(FormEventTypeUtils.getPinchEventTypeFromForm(this.targetForm, true));
 
     this.showActiveForm(this.activeForm);
     this.setFormWarmActive(this.activeForm, false);
@@ -563,8 +647,8 @@ export class PhotoGridViewModel {
     this.setFormWarmActive(this.targetForm, true);
     this.syncLivePinchShadowState(this.pinchState);
 
-    this.getGridState(this.activeForm).cacheRows = Shared.resolveListCacheCount(this.getGridState(this.activeForm).columns);
-    this.getGridState(this.targetForm).cacheRows = Shared.resolveListCacheCount(this.getGridState(this.targetForm).columns);
+    this.getGridState(this.activeForm).cacheRows = GRID_CACHED_COUNT;
+    this.getGridState(this.targetForm).cacheRows = GRID_CACHED_COUNT;
     this.refreshFormZIndices(this.targetForm);
     this.notifyStateChanged();
   }
@@ -585,6 +669,49 @@ export class PhotoGridViewModel {
 
   public async openPreviewAssetViewer(asset: PhotoAsset): Promise<void> {
     await this.actionAdapter.openAssetViewer(this.viewerSections, asset);
+  }
+
+  /**
+   * 处理单击切换事件（tap-to-zoom）
+   * 对齐参考程序：仅更新切换状态并提交 FSM 事件，数据提交在动画结束后执行
+   */
+  public handleSingleTapEvent(sourceForm: FormIndex): void {
+    if (this.pinchActive) {
+      return;
+    }
+    if (this.stateProxy.switchStateManager.isSwitchingAsm.currentState) {
+      return;
+    }
+    if (sourceForm !== this.activeForm) {
+      return;
+    }
+
+    const activeIndex = FORM_ORDER.indexOf(sourceForm);
+    if (activeIndex < 0 || activeIndex + 1 >= FORM_ORDER.length) {
+      return;
+    }
+    const targetForm: FormIndex = FORM_ORDER[activeIndex + 1];
+
+    // 构建点击切换的 SwitchStartInfo，使用屏幕中心作为锚点
+    const centerX = this.listWidth / 2;
+    const centerY = this.listHeight / 2;
+    const switchStartInfo = new SwitchStartInfo(SwitchType.CLICK_GRID, sourceForm, centerX, centerY);
+    switchStartInfo.anchorCenterX = centerX;
+    switchStartInfo.anchorCenterY = centerY;
+    this.pinchStateManager.setSwitchStartInfo(switchStartInfo);
+
+    // 更新切换中状态（对齐参考：isSwitchingAsm + updateSwitchState + submitEvent）
+    this.updateSwitchTransitionState(true, sourceForm, targetForm, 'handleSingleTapEvent');
+    this.tapSwitchTargetForm = targetForm;
+
+    // 准备显示状态
+    this.markFormWillShow(targetForm);
+    this.showPreviewForm(targetForm);
+    this.refreshFormZIndices(targetForm);
+
+    // 提交切换事件，触发动画（不改变 activeForm，不重建数据）
+    this.formFsm.submitEvent(FormEventTypeUtils.getSwitchEventTypeFromForm(targetForm));
+    this.notifyStateChanged();
   }
 
   public shouldShowInitialLoading(): boolean {
@@ -659,18 +786,131 @@ export class PhotoGridViewModel {
     this.formFsm.submitEvent(FormEventTypeUtils.getSwitchEventTypeFromForm(this.activeForm));
   }
 
+  public resolveGridGap(form: FormIndex): number {
+    if (form >= 0 && form < DEFAULT_GUTTER.length) {
+      return DEFAULT_GUTTER[form];
+    }
+    return Shared.GRID_GAP;
+  }
+
+  public resolveGridLayoutOptions(form: FormIndex): GridLayoutOptions {
+    const irregularIndexes: Array<number> = [];
+    if (this.resolveHeadSpacerHeight(form) > 0) {
+      irregularIndexes.push(0);
+    }
+    return {
+      regularSize: [1, 1],
+      irregularIndexes: irregularIndexes,
+    };
+  }
+
+  public resolveHeadSpacerHeight(form: FormIndex): number {
+    if (form === FormIndex.INVALID) {
+      return 0;
+    }
+    return Math.max(0, this.gridHeadSpacerHeight);
+  }
+
+  public resolveTailSpacerHeight(form: FormIndex): number {
+    if (form === FormIndex.INVALID) {
+      return 0;
+    }
+    return Math.max(0, this.bottomAvoidHeight);
+  }
+
+  public resolveTailFillPositions(form: FormIndex): Array<number> {
+    if (this.hasMore || this.itemCount <= 0) {
+      return [];
+    }
+
+    const state = this.getGridState(form);
+    const columns = Math.max(1, state.columns);
+    if (form !== this.activeForm) {
+      const windowEndOffset = this.timelineDataManager.getWindowEndOffsetForForm(form);
+      if (windowEndOffset < this.itemCount) {
+        return [];
+      }
+    }
+
+    if (state.gridItems.length <= 0) {
+      return [];
+    }
+
+    const tailPhotoCount = form === FormIndex.GROUP_DAY
+      ? this.resolveGroupTailPhotoCount(state.gridItems)
+      : this.resolveGridPhotoCount(state.gridItems);
+    if (tailPhotoCount <= 0) {
+      return [];
+    }
+
+    const lastRowCount = (tailPhotoCount + Math.max(0, state.fillPosition)) % columns;
+    const tailFillCount = lastRowCount > 0 ? (columns - lastRowCount) : 0;
+    const tailFillPositions: Array<number> = [];
+    for (let index = 0; index < tailFillCount; index += 1) {
+      tailFillPositions.push(index + 1);
+    }
+    return tailFillPositions;
+  }
+
+  private resolveGridPhotoCount(gridItems: Array<GridItem>): number {
+    let count = 0;
+    gridItems.forEach((item: GridItem) => {
+      if (item.kind === 'photo') {
+        count += 1;
+      }
+    });
+    return count;
+  }
+
+  private resolveGroupTailPhotoCount(gridItems: Array<GridItem>): number {
+    let count = 0;
+    for (let index = gridItems.length - 1; index >= 0; index -= 1) {
+      const item = gridItems[index];
+      if (item.kind === 'tail' || item.kind === 'placeholder') {
+        continue;
+      }
+      if (item.kind === 'groupHeader') {
+        break;
+      }
+      if (item.kind === 'photo') {
+        count += 1;
+      }
+    }
+    return count;
+  }
+
+  private updateFormGridItems(form: FormIndex, gridItems: Array<GridItem>, syncDataSource: boolean = true): void {
+    const state = this.getGridState(form);
+    state.gridItems = gridItems.slice();
+    if (syncDataSource) {
+      state.dataSource?.updateDataIfChanged(state.gridItems.slice());
+    }
+  }
+
+  private reconcileFormGridItems(form: FormIndex, gridItems: Array<GridItem>): void {
+    const state = this.getGridState(form);
+    state.gridItems = gridItems.slice();
+    state.dataSource?.reconcile(state.gridItems.slice());
+  }
+
+  private clearFormGridItems(form: FormIndex, syncDataSource: boolean = true): void {
+    this.updateFormGridItems(form, [], syncDataSource);
+  }
+
   private syncStateProxyRuntime(reason: string): void {
     const activeState = this.getGridState(this.activeForm);
     this.stateProxy.displayStateManager.updateStateFromVariableConfig({
       areaSize: { width: this.listWidth, height: this.listHeight },
       isGridShow: activeState.visible,
       isGridActive: activeState.interactive && !this.pinchActive,
-      topAvoidHeight: 56,
-      bottomAvoidHeight: 0,
+      topAvoidHeight: this.topInsetHeight,
+      bottomAvoidHeight: this.bottomAvoidHeight,
     }, reason);
 
     FORM_ORDER.forEach((form: FormIndex) => {
       const state = this.getGridState(form);
+      const gap = this.resolveGridGap(form);
+      const headSpacerHeight = this.resolveHeadSpacerHeight(form);
       const scrollOffset = form === this.activeForm ? this.currentScrollOffsetY : 0;
       const firstVisibleIndex = form === this.activeForm ? this.lastVisibleGridStart : state.firstVisibleIndex;
       const lastVisibleIndex = form === this.activeForm
@@ -678,14 +918,14 @@ export class PhotoGridViewModel {
         : state.firstVisibleIndex;
 
       this.stateProxy.gridStateManager.updateColumn(form, state.columns, reason);
-      this.stateProxy.gridStateManager.updateImageHeight(form, this.resolveTimelineRowHeight(state.columns), reason);
-      this.stateProxy.gridStateManager.updateImageGutter(form, Shared.GRID_GAP, reason);
-      this.stateProxy.gridStateManager.updateImageColumnGutter(form, Shared.GRID_GAP, reason);
+      this.stateProxy.gridStateManager.updateImageHeight(form, this.resolveTimelineRowHeight(state.columns, form), reason);
+      this.stateProxy.gridStateManager.updateImageGutter(form, gap, reason);
+      this.stateProxy.gridStateManager.updateImageColumnGutter(form, gap, reason);
       this.stateProxy.gridStateManager.updateCachedCount(form, state.cacheRows, reason);
       this.stateProxy.gridStateManager.updateFillPosition(form, Math.max(0, state.fillPosition), reason);
       this.stateProxy.gridStateManager.updateScrollOffset(form, scrollOffset, reason);
       this.stateProxy.gridStateManager.updateFirstIndex(form, Math.max(0, firstVisibleIndex), reason);
-      this.stateProxy.gridStateManager.updateIrregularHeight(form, scrollOffset, reason);
+      this.stateProxy.gridStateManager.updateIrregularHeight(form, headSpacerHeight, reason);
       this.stateProxy.gridStateManager.updateSupportFillPosition(form, true, reason);
       this.stateProxy.gridStateManager.getGridShowStateManager(form).updateState(state.showState, reason);
 
@@ -758,24 +998,55 @@ export class PhotoGridViewModel {
   }
 
   private handleGridSwitchAnimationEnd(form: FormIndex): void {
-    if (this.pinchActive || form !== this.activeForm) {
+    if (this.pinchActive) {
+      return;
+    }
+
+    // 处理点击切换的动画结束：动画完成后再提交数据变更
+    if (form === this.tapSwitchTargetForm && form !== this.activeForm) {
+      this.commitTapTransition(form);
+      return;
+    }
+
+    if (form !== this.activeForm) {
       return;
     }
 
     this.dispatchShowEvent(form, ShowEventType.SHOW);
     this.dispatchShowEventToOtherForms(form, ShowEventType.OTHER_END_ANIMATION);
+    this.updateSwitchTransitionState(false, form, form, 'handleGridSwitchAnimationEnd');
     this.syncStateProxyRuntime('handleGridSwitchAnimationEnd');
-    this.snapshotController?.prepareRestoreAnimation();
     this.notifyStateChanged();
+  }
+
+  /**
+   * 提交点击切换（动画结束后执行）
+   * 对齐参考程序的 notifySwitchAnimationEnd → handleSwitchEnd 模式
+   */
+  private commitTapTransition(targetForm: FormIndex): void {
+    this.tapSwitchTargetForm = FormIndex.INVALID;
+    const targetColumns = getColumnsByFormIndex(targetForm);
+
+    const commitState = new GridColumnsCommitState();
+    commitState.columns = targetColumns;
+    commitState.anchorItemIndex = 0;
+    commitState.extraOffset = 0;
+
+    this.activeForm = targetForm;
+    this.targetForm = targetForm;
+    this.transitionFromForm = targetForm;
+    this.transitionToForm = targetForm;
+    this.timelineViewModel.silentSetGridColumns(targetColumns, commitState);
+    this.syncFromDataVm();
+    this.pinchStateManager.clearStartInfo();
+    this.scheduleIdlePrefetchWork();
   }
 
   private applyBaseFormState(): void {
     FORM_ORDER.forEach((form: FormIndex) => {
       const state = this.getGridState(form);
       const isActiveForm = form === this.activeForm;
-      state.cacheRows = form === this.activeForm
-        ? Shared.resolveListCacheCount(state.columns)
-        : Math.max(1, this.resolveViewportRowsForColumns(state.columns));
+      state.cacheRows = GRID_CACHED_COUNT;
       state.warmActive = false;
       state.scaleValue = 1;
       state.opacityValue = isActiveForm ? 1 : 0;
@@ -852,9 +1123,7 @@ export class PhotoGridViewModel {
   private syncRequestSizes(): void {
     FORM_ORDER.forEach((form: FormIndex) => {
       const state = this.getGridState(form);
-      state.cacheRows = form === this.activeForm
-        ? Shared.resolveListCacheCount(state.columns)
-        : Math.max(1, this.resolveViewportRowsForColumns(state.columns));
+      state.cacheRows = GRID_CACHED_COUNT;
     });
   }
 
@@ -866,7 +1135,7 @@ export class PhotoGridViewModel {
     if (this.listWidth <= 0 || this.listHeight <= 0 || columns <= 0) {
       return 6;
     }
-    const totalGap = Shared.GRID_GAP * Math.max(0, columns - 1);
+    const totalGap = this.resolveGridGap(getFormIndexByColumns(columns)) * Math.max(0, columns - 1);
     const rowHeight = Math.max(1, (this.listWidth - totalGap) / columns);
     return Math.max(1, Math.ceil(this.listHeight / rowHeight) + 2);
   }
@@ -890,13 +1159,13 @@ export class PhotoGridViewModel {
   }
 
   private updatePinchStandardScales(): void {
-    const referenceItemSize = this.resolveTimelineRowHeight(this.getGridState(this.activeForm).columns);
+    const referenceItemSize = this.resolveTimelineRowHeight(this.getGridState(this.activeForm).columns, this.activeForm);
     if (referenceItemSize <= 0) {
       return;
     }
 
     const standardScales: number[] = FORM_ORDER.map((form: FormIndex) => {
-      const itemSize = this.resolveTimelineRowHeight(this.getGridState(form).columns);
+      const itemSize = this.resolveTimelineRowHeight(this.getGridState(form).columns, form);
       return itemSize > 0 ? itemSize / referenceItemSize : 1.0;
     });
     this.pinchStateManager.updateStandardScales(standardScales, `PinchStandard_${FormIndex[this.activeForm]}`);
@@ -907,6 +1176,13 @@ export class PhotoGridViewModel {
     const activeScale = this.resolveDisplayLiveScale(state);
     activeState.scaleValue = activeScale;
     activeState.opacityValue = 1;
+    activeState.attributeUpdater.updateScale({
+      x: activeScale,
+      y: activeScale,
+      centerX: this.pinchCenterX,
+      centerY: this.pinchCenterY,
+    });
+    activeState.attributeUpdater.updateOpacity(1);
 
     if (this.targetForm === this.activeForm) {
       return;
@@ -919,14 +1195,20 @@ export class PhotoGridViewModel {
       const fadeRange = Math.max(0.001, 1.0 - fadeStart);
       const rawOpacity = Math.min(1, Math.max(0, (targetState.scaleValue - fadeStart) / fadeRange));
       targetState.opacityValue = Math.min(1, EXPAND_MIN_OPACITY + (1.0 - EXPAND_MIN_OPACITY) * rawOpacity);
-      return;
+    } else {
+      const shrinkProgress = Math.min(
+        1,
+        Math.max(0, (PINCH_SHRINK_ENTER_SCALE - state.liveScale) / Math.max(0.001, PINCH_SHRINK_ENTER_SCALE - 0.75)),
+      );
+      targetState.opacityValue = shrinkProgress;
     }
-
-    const shrinkProgress = Math.min(
-      1,
-      Math.max(0, (PINCH_SHRINK_ENTER_SCALE - state.liveScale) / Math.max(0.001, PINCH_SHRINK_ENTER_SCALE - 0.75)),
-    );
-    targetState.opacityValue = shrinkProgress;
+    targetState.attributeUpdater.updateScale({
+      x: targetState.scaleValue,
+      y: targetState.scaleValue,
+      centerX: this.pinchCenterX,
+      centerY: this.pinchCenterY,
+    });
+    targetState.attributeUpdater.updateOpacity(targetState.opacityValue);
   }
 
   private handlePreFormSwitch(state: PinchStateInfo, form: FormIndex): void {
@@ -951,7 +1233,7 @@ export class PhotoGridViewModel {
     calcParams.gridWidth = state.gridWidth;
     calcParams.gridHeight = state.gridHeight;
     calcParams.topInset = state.topInset;
-    calcParams.gap = Shared.GRID_GAP;
+    calcParams.gap = this.resolveGridGap(form);
     const calcResult = SwitchCalcUtils.calcSwitch(calcParams);
     const targetFillPosition = Math.max(0, calcResult.fillPosition ?? 0);
     const preloadRequest = this.buildPreloadRequest(
@@ -976,7 +1258,7 @@ export class PhotoGridViewModel {
       targetDataSource.totalCount() > 0 &&
       targetState.preloadRequestKey === preloadRequestKey
     ) {
-      this.scrollScrollerToAnchor(targetState.scroller, targetState.preloadAnchorGridIndex, targetExtraOffset);
+      this.scrollScrollerToAnchor(form, targetState.scroller, targetState.preloadAnchorGridIndex, targetExtraOffset);
       return;
     }
 
@@ -987,7 +1269,7 @@ export class PhotoGridViewModel {
     switchStartInfo.setCachedAnchorCenterX(form, calcResult.anchorCenterX);
     const preloadResult = this.triggerPreloadViewData(preloadRequest);
     const anchorGridIndex = preloadResult?.anchorGridIndex ?? targetState.preloadAnchorGridIndex ?? targetGridIndex;
-    this.scrollScrollerToAnchor(targetState.scroller, anchorGridIndex, targetExtraOffset);
+    this.scrollScrollerToAnchor(form, targetState.scroller, anchorGridIndex, targetExtraOffset);
     if (preloadResult) {
       this.warmTargetFormPreview(form, preloadResult.gridItems, anchorGridIndex);
     }
@@ -996,15 +1278,36 @@ export class PhotoGridViewModel {
   }
 
   private buildCommittedGridItems(): Array<GridItem> {
-    return this.timelineDataManager.buildGridItemsForForm(
-      this.activeForm,
-      this.getGridState(this.activeForm).fillPosition,
-    );
+    return this.timelineDataManager.buildSourceGridItemsForForm(this.activeForm, true);
+  }
+
+  private syncActiveSourceProjection(syncDataSource: boolean = false, useReconcile: boolean = false): void {
+    const activeState = this.getGridState(this.activeForm);
+    activeState.fillPosition = this.timelineDataManager.resolveSourceFillPositionForForm(this.activeForm);
+    this.viewerSections = this.timelineDataManager.getSourceSectionsForForm(this.activeForm);
+    this.sections = this.viewerSections;
+    this.groupDayGroups = this.timelineDataManager.getSourceGroupDayGroups(this.activeForm);
+    this.yearBuckets = this.timelineDataManager.getYearBuckets();
+    this.monthBuckets = this.timelineDataManager.getMonthBuckets();
+    this.currentItems = this.timelineDataManager.buildSourceTimelineItemsForForm(this.activeForm);
+    this.itemCount = this.dataAdapter.flattenAssets(this.viewerSections).length;
+    this.currentGridItems = this.buildCommittedGridItems();
+
+    if (syncDataSource) {
+      if (useReconcile) {
+        this.reconcileFormGridItems(this.activeForm, this.currentGridItems);
+      } else {
+        this.updateFormGridItems(this.activeForm, this.currentGridItems);
+      }
+      return;
+    }
+
+    this.updateFormGridItems(this.activeForm, this.currentGridItems, false);
   }
 
   private syncCommittedFormDataSource(): void {
     const activeState = this.getGridState(this.activeForm);
-    activeState.dataSource?.updateAllIfChanged(this.currentGridItems.slice());
+    activeState.dataSource?.updateDataIfChanged(this.currentGridItems.slice());
     FORM_ORDER.forEach((form: FormIndex) => {
       if (form === this.activeForm) {
         return;
@@ -1012,7 +1315,7 @@ export class PhotoGridViewModel {
       if (this.pinchActive && form === this.targetForm) {
         return;
       }
-      this.getGridState(form).dataSource?.updateAllIfChanged([]);
+      this.getGridState(form).dataSource?.updateDataIfChanged([]);
     });
   }
 
@@ -1038,17 +1341,10 @@ export class PhotoGridViewModel {
       }
     });
     this.timelineDataManager.updateSlidingWindowState(this.activeForm);
-    this.viewerSections = this.timelineDataManager.getSourceSectionsForForm(this.activeForm);
-    this.sections = this.timelineDataManager.getSectionsForForm(this.activeForm);
-    this.groupDayGroups = this.timelineDataManager.getGroupDayGroups(this.activeForm);
-    this.yearBuckets = this.timelineDataManager.getYearBuckets();
-    this.monthBuckets = this.timelineDataManager.getMonthBuckets();
     this.targetForm = this.activeForm;
     this.transitionFromForm = this.activeForm;
     this.transitionToForm = this.activeForm;
-    this.currentItems = this.timelineDataManager.buildTimelineItemsForForm(this.activeForm);
-    this.itemCount = this.dataAdapter.flattenAssets(this.viewerSections).length;
-    this.currentGridItems = this.buildCommittedGridItems();
+    this.syncActiveSourceProjection(false, false);
     this.syncActiveWindowToVisibleAnchor(true, false, false);
     this.pendingWarmupSections = this.timelineDataManager.getSections();
     this.syncFormFsmToActiveForm();
@@ -1069,12 +1365,41 @@ export class PhotoGridViewModel {
     this.notifyStateChanged();
   }
 
+  private syncCommittedLocalState(): void {
+    this.isLoading = this.timelineViewModel.getIsLoading();
+    this.isLoadingMore = this.timelineViewModel.getIsLoadingMore();
+    this.hasMore = this.timelineViewModel.getHasMore();
+    this.errorText = this.timelineViewModel.getErrorText();
+    FORM_ORDER.forEach((form: FormIndex) => {
+      if (!this.pinchActive || form !== this.activeForm) {
+        this.getGridState(form).fillPosition = 0;
+        this.getGridState(form).firstVisibleIndex = 0;
+      }
+    });
+    this.timelineDataManager.updateSlidingWindowState(this.activeForm);
+    this.targetForm = this.activeForm;
+    this.transitionFromForm = this.activeForm;
+    this.transitionToForm = this.activeForm;
+    this.syncActiveSourceProjection(false, false);
+    this.pendingWarmupSections = this.timelineDataManager.getSections();
+    this.syncFormFsmToActiveForm();
+    this.renderVersion += 1;
+    this.preparedTargetForm = FormIndex.INVALID;
+    this.preparedTargetVersion = -1;
+    this.resetPreloadedForms();
+    this.syncCommittedFormDataSource();
+    this.applyBaseFormState();
+    this.updateFloatingSection(this.resolveVisibleTimelineRowIndex());
+    Thumbnail.ThumbnailCache.setActiveColumns(this.getGridState(this.activeForm).columns);
+  }
+
   private syncMetaFromDataVm(): void {
     this.isLoading = this.timelineViewModel.getIsLoading();
     this.isLoadingMore = this.timelineViewModel.getIsLoadingMore();
     this.hasMore = this.timelineViewModel.getHasMore();
     this.errorText = this.timelineViewModel.getErrorText();
-    this.timelineDataManager.updateSourceState({
+    // 仅更新数据源元信息，保留现有滑动窗口位置——避免 onDataLoading 后窗口重置
+    this.timelineDataManager.updateSourceStatePreservingWindow({
       sections: this.timelineViewModel.getSections(),
       groupDayGroups: this.timelineViewModel.getGroupDayGroups(),
       yearBuckets: this.timelineViewModel.getYearBuckets(),
@@ -1084,13 +1409,30 @@ export class PhotoGridViewModel {
       hasMore: this.hasMore,
     });
     this.timelineDataManager.updateSlidingWindowState(this.activeForm);
-    this.viewerSections = this.timelineDataManager.getSourceSectionsForForm(this.activeForm);
-    this.sections = this.timelineDataManager.getSectionsForForm(this.activeForm);
-    this.groupDayGroups = this.timelineDataManager.getGroupDayGroups(this.activeForm);
-    this.yearBuckets = this.timelineDataManager.getYearBuckets();
-    this.monthBuckets = this.timelineDataManager.getMonthBuckets();
-    this.itemCount = this.dataAdapter.flattenAssets(this.viewerSections).length;
+    this.syncActiveSourceProjection(false, false);
     this.updatePrefetchRuntimeMode();
+    this.notifyStateChanged();
+  }
+
+  /**
+   * 滚动中的轻量级数据同步：刷新 source 投影与元信息，
+   * 但不在滚动中把新投影直接同步到 active Grid 数据源。
+   */
+  private syncSourceWhileScrolling(): void {
+    this.isLoading = this.timelineViewModel.getIsLoading();
+    this.isLoadingMore = this.timelineViewModel.getIsLoadingMore();
+    this.hasMore = this.timelineViewModel.getHasMore();
+    this.errorText = this.timelineViewModel.getErrorText();
+    this.timelineDataManager.updateSourceStatePreservingWindow({
+      sections: this.timelineViewModel.getSections(),
+      groupDayGroups: this.timelineViewModel.getGroupDayGroups(),
+      yearBuckets: this.timelineViewModel.getYearBuckets(),
+      monthBuckets: this.timelineViewModel.getMonthBuckets(),
+      windowStartOffset: this.timelineViewModel.getWindowStartOffset(),
+      windowEndOffset: this.timelineViewModel.getWindowEndOffset(),
+      hasMore: this.hasMore,
+    });
+    this.syncActiveSourceProjection(false, false);
     this.notifyStateChanged();
   }
 
@@ -1105,27 +1447,47 @@ export class PhotoGridViewModel {
   }
 
   private resolveVisibleTimelineRowIndex(): number {
-    const rowHeight = this.resolveTimelineRowHeight(this.getGridState(this.activeForm).columns);
+    const rowHeight = this.resolveTimelineRowHeight(this.getGridState(this.activeForm).columns, this.activeForm);
     if (rowHeight <= 0) {
       return 0;
     }
-    return Math.max(0, Math.floor(this.currentScrollOffsetY / rowHeight));
+    return Math.max(0, Math.floor(this.resolveContentScrollOffset(this.activeForm, this.currentScrollOffsetY) / rowHeight));
   }
 
-  private resolveTimelineRowHeight(columns: number): number {
+  private resolveTimelineRowHeight(columns: number, form?: FormIndex): number {
     if (this.listWidth <= 0 || columns <= 0) {
       return 0;
     }
-    const totalGap = Shared.GRID_GAP * Math.max(0, columns - 1);
+    const resolvedForm = form === undefined ? getFormIndexByColumns(columns) : form;
+    const totalGap = this.resolveGridGap(resolvedForm) * Math.max(0, columns - 1);
     return Math.max(0, (this.listWidth - totalGap) / columns);
   }
 
   private resolveTimelineRowIndexFromGridIndex(gridIndex: number, form: FormIndex): number {
+    if (form === this.activeForm) {
+      return this.timelineDataManager.resolveSourceTimelineRowIndexForGridIndex(form, gridIndex);
+    }
     return this.timelineDataManager.resolveTimelineRowIndexForGridIndex(
       form,
       gridIndex,
       this.getGridState(form).fillPosition,
     );
+  }
+
+  private resolveRenderLeadingItemCount(form: FormIndex): number {
+    return this.resolveHeadSpacerHeight(form) > 0 ? 1 : 0;
+  }
+
+  private normalizeRenderGridIndex(form: FormIndex, renderGridIndex: number): number {
+    return Math.max(0, renderGridIndex - this.resolveRenderLeadingItemCount(form));
+  }
+
+  private resolveRenderGridIndex(form: FormIndex, dataGridIndex: number): number {
+    return Math.max(0, dataGridIndex) + this.resolveRenderLeadingItemCount(form);
+  }
+
+  private resolveContentScrollOffset(form: FormIndex, scrollOffset: number): number {
+    return Math.max(0, scrollOffset - this.resolveHeadSpacerHeight(form));
   }
 
   private syncCurrentScrollOffset(form: FormIndex): void {
@@ -1135,11 +1497,27 @@ export class PhotoGridViewModel {
   }
 
   private runPinchCommit(state: PinchStateInfo, targetForm: FormIndex): void {
+    this.updateSwitchTransitionState(true, this.activeForm, targetForm, 'runPinchCommit');
     this.dispatchShowEvent(this.activeForm, ShowEventType.OTHER_KEEP_SHOW_END_ANIMATION);
     this.markFormWillShow(targetForm);
     this.showPreviewForm(this.activeForm);
     this.showPreviewForm(targetForm);
     this.refreshFormZIndices(targetForm);
+
+    const sourceForm = this.activeForm;
+    const centerX = this.pinchCenterX;
+    const centerY = this.pinchCenterY;
+    const sourceGridState = this.getGridState(sourceForm);
+    const targetGridState = this.getGridState(targetForm);
+    animateTo({
+      duration: PINCH_COMMIT_DURATION_MS,
+      curve: Curve.EaseInOut,
+    }, (): void => {
+      sourceGridState.attributeUpdater.updateScale({ x: 1, y: 1, centerX: centerX, centerY: centerY });
+      sourceGridState.attributeUpdater.updateOpacity(0);
+      targetGridState.attributeUpdater.updateScale({ x: 1, y: 1, centerX: centerX, centerY: centerY });
+      targetGridState.attributeUpdater.updateOpacity(1);
+    });
 
     this.transitionTimeoutId = setTimeout((): void => {
       this.transitionTimeoutId = undefined;
@@ -1148,7 +1526,7 @@ export class PhotoGridViewModel {
   }
 
   private commitPinchTransition(state: PinchStateInfo, targetForm: FormIndex): void {
-    const committedFillPosition = this.getGridState(targetForm).fillPosition;
+    const sourceForm = this.activeForm;
     const commitState = new GridColumnsCommitState();
     commitState.columns = this.getGridState(targetForm).columns;
     commitState.targetFirstRowIndex = state.targetFirstRowIndex;
@@ -1157,10 +1535,9 @@ export class PhotoGridViewModel {
     commitState.targetAnchorPhotoIndex = state.targetAnchorPhotoIndex;
     commitState.targetScrollOffset = this.anchorAdapter.resolveFinalScrollOffset(state);
     commitState.anchorItemIndex = state.anchorItemIndex;
-    commitState.anchorItemIndex = this.timelineDataManager.resolveGridIndexForPhotoOffset(
+    commitState.anchorItemIndex = this.timelineDataManager.resolveSourceGridIndexForPhotoOffset(
       targetForm,
       state.anchorPhotoOffset,
-      committedFillPosition,
     );
     commitState.extraOffset = this.resolveTargetExtraOffset(state, commitState.targetScrollOffset);
 
@@ -1168,10 +1545,11 @@ export class PhotoGridViewModel {
     this.targetForm = targetForm;
     this.transitionFromForm = targetForm;
     this.transitionToForm = targetForm;
+    this.updateSwitchTransitionState(true, sourceForm, targetForm, 'commitPinchTransition');
     this.currentScrollOffsetY = commitState.targetScrollOffset;
     this.timelineViewModel.silentSetGridColumns(this.getGridState(targetForm).columns, commitState);
-    this.syncFromDataVm();
-    this.scrollCommitToAnchor(this.getGridState(targetForm).scroller, commitState);
+    this.syncCommittedLocalState();
+    this.scrollCommitToAnchor(targetForm, this.getGridState(targetForm).scroller, commitState);
     this.pinchStateManager.clearStartInfo();
     this.pinchState = undefined;
     this.pinchActive = false;
@@ -1187,6 +1565,17 @@ export class PhotoGridViewModel {
   }
 
   private animateResetToActiveForm(): void {
+    const centerX = this.pinchCenterX;
+    const centerY = this.pinchCenterY;
+    const activeState = this.getGridState(this.activeForm);
+    animateTo({
+      duration: PINCH_RESET_DURATION_MS,
+      curve: Curve.EaseInOut,
+    }, (): void => {
+      activeState.attributeUpdater.updateScale({ x: 1, y: 1, centerX: centerX, centerY: centerY });
+      activeState.attributeUpdater.updateOpacity(1);
+    });
+
     this.transitionTimeoutId = setTimeout((): void => {
       this.transitionTimeoutId = undefined;
       this.pinchStateManager.clearStartInfo();
@@ -1201,7 +1590,10 @@ export class PhotoGridViewModel {
       FORM_ORDER.forEach((form: FormIndex) => {
         this.getGridState(form).fillPosition = 0;
       });
+      this.getGridState(this.activeForm).fillPosition =
+        this.timelineDataManager.resolveSourceFillPositionForForm(this.activeForm);
       this.cancelPendingShowTransitions();
+      this.updateSwitchTransitionState(false, this.activeForm, this.activeForm, 'animateResetToActiveForm');
       this.snapshotController?.resetRestoreFpState();
       this.snapshotController?.cancelRestoreAnimation();
       this.timelineViewModel.endPinchFreeze();
@@ -1217,10 +1609,15 @@ export class PhotoGridViewModel {
     return Math.max(0.5, Math.min(2.0, state.liveScale));
   }
 
-  private scrollScrollerToAnchor(scroller: Scroller | undefined, anchorItemIndex: number, extraOffset: number): void {
+  private scrollScrollerToAnchor(
+    form: FormIndex,
+    scroller: Scroller | undefined,
+    anchorItemIndex: number,
+    extraOffset: number,
+  ): void {
     try {
       scroller?.scrollToIndex(
-        Math.max(0, anchorItemIndex),
+        this.resolveRenderGridIndex(form, anchorItemIndex),
         false,
         ScrollAlign.START,
         { extraOffset: LengthMetrics.vp(extraOffset) },
@@ -1228,8 +1625,8 @@ export class PhotoGridViewModel {
     } catch (_error) {}
   }
 
-  private scrollCommitToAnchor(scroller: Scroller | undefined, commitState: GridColumnsCommitState): void {
-    this.scrollScrollerToAnchor(scroller, commitState.anchorItemIndex, commitState.extraOffset);
+  private scrollCommitToAnchor(form: FormIndex, scroller: Scroller | undefined, commitState: GridColumnsCommitState): void {
+    this.scrollScrollerToAnchor(form, scroller, commitState.anchorItemIndex, commitState.extraOffset);
   }
 
   private resolveTargetExtraOffset(state: PinchStateInfo, _targetScrollOffset: number): number {
@@ -1355,7 +1752,9 @@ export class PhotoGridViewModel {
       return;
     }
 
-    const shifted = this.syncActiveWindowToVisibleAnchor(false, true, false);
+    // Active Grid 已经绑定 source-backed 稳定索引空间；
+    // 滑窗移动只服务于内部预加载与锚点计算，不再驱动 Grid 数据源更新。
+    const shifted = this.syncActiveWindowToVisibleAnchor(false, false, false);
     if (!shifted) {
       return;
     }
@@ -1512,23 +1911,42 @@ export class PhotoGridViewModel {
     }
 
     this.syncStateProxyRuntime('restoreFillPosition.start');
-    this.snapshotController?.notifyFillPositionChanged(true);
 
     const restoreToken = this.renderVersion;
     this.transitionTimeoutId = setTimeout((): void => {
-      this.transitionTimeoutId = undefined;
-      if (this.activeForm !== form || this.pinchActive || restoreToken !== this.renderVersion) {
-        return;
-      }
-
-      this.syncStateProxyRuntime('restoreFillPosition.prepare');
-      this.snapshotController?.prepareRestoreAnimation();
-      state.fillPosition = 0;
-      this.snapshotController?.notifyFillPositionChanged(false);
-      this.currentGridItems = this.buildCommittedGridItems();
-      state.dataSource?.updateAllIfChanged(this.currentGridItems.slice());
-      this.notifyStateChanged();
+      this.continueRestoreFillPosition(form, restoreToken);
     }, FILL_POSITION_RESTORE_DELAY_MS);
+  }
+
+  private continueRestoreFillPosition(form: FormIndex, restoreToken: number): void {
+    if (this.activeForm !== form || this.pinchActive || restoreToken !== this.renderVersion) {
+      this.transitionTimeoutId = undefined;
+      return;
+    }
+
+    if (this.stateProxy.switchStateManager.isSwitchingAsm.currentState) {
+      this.transitionTimeoutId = setTimeout((): void => {
+        this.continueRestoreFillPosition(form, restoreToken);
+      }, 32) as number;
+      return;
+    }
+
+    this.transitionTimeoutId = undefined;
+    const state = this.getGridState(form);
+    state.fillPosition = this.timelineDataManager.resolveSourceFillPositionForForm(form);
+    this.currentGridItems = this.buildCommittedGridItems();
+    this.updateFormGridItems(form, this.currentGridItems);
+    this.syncStateProxyRuntime('restoreFillPosition.ready');
+    this.notifyStateChanged();
+  }
+
+  private updateSwitchTransitionState(
+    isSwitching: boolean,
+    fromForm: FormIndex,
+    toForm: FormIndex,
+    reason: string,
+  ): void {
+    this.stateProxy.switchStateManager.updateTransitionState(isSwitching, fromForm, toForm, reason);
   }
 
   private resolveAdjacentForms(form: FormIndex): Array<FormIndex> {
@@ -1565,9 +1983,29 @@ export class PhotoGridViewModel {
       this.resolveViewportRowsForColumns(state.columns) * state.columns,
     );
     const isPinchPreSwitch = reason === TimelinePreloadReason.PINCH_PRE_SWITCH;
+    const isActiveWindow = reason === TimelinePreloadReason.ACTIVE_VISIBLE_WINDOW ||
+      reason === TimelinePreloadReason.POST_COMMIT;
     const normalizedFillPosition = reason === TimelinePreloadReason.ACTIVE_VISIBLE_WINDOW
       ? fillPosition
       : Math.max(0, fillPosition);
+    let backwardBuffer: number;
+    let forwardBuffer: number;
+    if (isPinchPreSwitch) {
+      backwardBuffer = Math.max(viewportItemCount, state.columns * 2);
+      forwardBuffer = Math.max(viewportItemCount * 2, state.columns * 6);
+    } else if (isActiveWindow) {
+      backwardBuffer = Math.max(
+        viewportItemCount * Shared.HYBRID_KEEP_ABOVE_SCREEN_MULTIPLIER,
+        state.columns * Shared.HYBRID_ACTIVE_ROW_KEEP_BEHIND,
+      );
+      forwardBuffer = Math.max(
+        viewportItemCount * Shared.HYBRID_KEEP_BELOW_SCREEN_MULTIPLIER,
+        state.columns * Shared.HYBRID_ACTIVE_ROW_KEEP_AHEAD,
+      );
+    } else {
+      backwardBuffer = Math.max(state.columns, Math.floor(viewportItemCount / 2));
+      forwardBuffer = Math.max(viewportItemCount, state.columns * 4);
+    }
     return {
       form: form,
       firstIndex: Math.max(0, firstIndex),
@@ -1576,12 +2014,8 @@ export class PhotoGridViewModel {
       includeTail: includeTail,
       reason: reason,
       viewportItemCount: viewportItemCount,
-      backwardBufferItemCount: isPinchPreSwitch
-        ? Math.max(viewportItemCount, state.columns * 2)
-        : Math.max(state.columns, Math.floor(viewportItemCount / 2)),
-      forwardBufferItemCount: isPinchPreSwitch
-        ? Math.max(viewportItemCount * 2, state.columns * 6)
-        : Math.max(viewportItemCount, state.columns * 4),
+      backwardBufferItemCount: backwardBuffer,
+      forwardBufferItemCount: forwardBuffer,
     };
   }
 
@@ -1620,7 +2054,7 @@ export class PhotoGridViewModel {
   }
 
   private resolveActiveViewportPhotoOffset(): number {
-    const fallbackPhotoOffset = this.timelineDataManager.getWindowStartOffsetForForm(this.activeForm) +
+    const fallbackPhotoOffset = this.timelineDataManager.getSourceWindowStartOffset() +
       Math.max(0, this.getGridState(this.activeForm).firstVisibleIndex);
     if (this.currentGridItems.length <= 0) {
       return fallbackPhotoOffset;
@@ -1651,7 +2085,7 @@ export class PhotoGridViewModel {
     if (form === FormIndex.GROUP_DAY) {
       return Math.max(0, item.sourceIndex);
     }
-    return Math.max(0, this.timelineDataManager.getWindowStartOffsetForForm(form) + item.sourceIndex);
+    return Math.max(0, this.timelineDataManager.getSourceWindowStartOffset() + item.sourceIndex);
   }
 
   private resolveSourceLocalPhotoOffset(globalPhotoOffset: number): number {
@@ -1660,7 +2094,7 @@ export class PhotoGridViewModel {
 
   private syncActiveWindowToVisibleAnchor(
     force: boolean = false,
-    syncDataSource: boolean = true,
+    _syncDataSource: boolean = true,
     notifyStateChanged: boolean = true,
   ): boolean {
     if (this.pinchActive || this.sections.length <= 0) {
@@ -1684,20 +2118,12 @@ export class PhotoGridViewModel {
 
     if (!force &&
       previousWindowStartOffset === activeWindowResult.windowStartPhotoOffset &&
-      previousWindowPhotoCount === activeWindowResult.windowPhotoCount &&
-      activeState.fillPosition === activeWindowResult.fillPosition) {
+      previousWindowPhotoCount === activeWindowResult.windowPhotoCount) {
       return false;
     }
 
-    activeState.fillPosition = activeWindowResult.fillPosition;
     activeState.firstVisibleIndex = Math.max(0, activeRequest.anchorPhotoOffset - activeWindowResult.windowStartPhotoOffset);
-    this.sections = this.timelineDataManager.getSectionsForForm(this.activeForm);
-    this.groupDayGroups = this.timelineDataManager.getGroupDayGroups(this.activeForm);
-    this.currentItems = this.timelineDataManager.buildTimelineItemsForForm(this.activeForm);
-    this.currentGridItems = activeWindowResult.gridItems;
-    if (syncDataSource) {
-      activeState.dataSource?.updateAllIfChanged(this.currentGridItems.slice());
-    }
+    this.lastWindowAnchorGridIndex = activeWindowResult.anchorGridIndex;
     this.updateFloatingSection(this.resolveVisibleTimelineRowIndex());
     if (notifyStateChanged) {
       this.notifyStateChanged();
@@ -1782,9 +2208,7 @@ export class PhotoGridViewModel {
     this.timelineDataManager.resetSlidingWindowState(form);
     state.preloadRequestKey = '';
     state.preloadAnchorGridIndex = 0;
-    if (clearDataSource) {
-      state.dataSource?.updateAllIfChanged([]);
-    }
+    this.clearFormGridItems(form, clearDataSource);
   }
 
   private triggerPreloadViewData(request: TimelinePreloadRequest): TimelinePreloadResult | undefined {
@@ -1805,7 +2229,7 @@ export class PhotoGridViewModel {
         return undefined;
       }
       state.fillPosition = preloadResult.fillPosition;
-      state.dataSource.updateAllIfChanged(preloadResult.gridItems);
+      this.updateFormGridItems(request.form, preloadResult.gridItems);
       state.preloadAnchorGridIndex = preloadResult.anchorGridIndex;
       if (preloadResult.gridItems.length <= 0) {
         this.timelineDataManager.resetSlidingWindowState(request.form);

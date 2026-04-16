@@ -73,10 +73,10 @@ export class AnimationScale {
   /**
    * 最小缩放比例（<1.0 允许越过最大列数的视觉弹性）
    */
-  public static readonly MIN_SCALE: number = 0.88;
+  public static readonly MIN_SCALE: number = 0.97;
   
   /**
    * 最大缩放比例（>1.0 允许越过最小列数的视觉弹性）
    */
-  public static readonly MAX_SCALE: number = 1.12;
+  public static readonly MAX_SCALE: number = 1.05;
 }

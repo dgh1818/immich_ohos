@@ -178,7 +178,7 @@ export struct HybridPhotoGridOptimized {
 
   private updateGridData(): void {
     this.allGridItems = this.buildGridItemsForColumns(this.gridColumns);
-    this.gridDataSource.updateAll(this.allGridItems);
+    this.gridDataSource.updateDataIfChanged(this.allGridItems);
   }
 
   private buildGridItemsForColumns(columns: number): Array<Shared.HybridGridItem> {
@@ -348,7 +348,7 @@ export struct HybridPhotoGridOptimized {
     this.targetGridOpacity = 0;
 
     this.targetGridItems = this.buildGridItemsForColumns(state.targetColumns);
-    this.targetGridDataSource.updateAll(this.targetGridItems);
+    this.targetGridDataSource.updateDataIfChanged(this.targetGridItems);
     this.syncTargetGridScroll(scrollOffset);
   }
 
@@ -365,7 +365,7 @@ export struct HybridPhotoGridOptimized {
     if (state.targetColumns !== this.pinchTargetColumns) {
       this.pinchTargetColumns = state.targetColumns;
       this.targetGridItems = this.buildGridItemsForColumns(state.targetColumns);
-      this.targetGridDataSource.updateAll(this.targetGridItems);
+      this.targetGridDataSource.updateDataIfChanged(this.targetGridItems);
     }
 
     this.updateTargetGridProperties(state.currentScale);

@@ -1,25 +1,25 @@
 import { AbstractObserverProxy } from '../common/model/AbstractObserverProxy';
 import { StateChangeCallback } from '../common/model/StateObserverManager';
-import { DisplayObserverProxy } from './DisplayStateManager';
+import { DisplayObserverProxy, DisplayStateManager } from './DisplayStateManager';
 import { FormEventType, FormStateType } from './GridFormFsm';
-import { GridObserverProxy } from './GridStateManager';
+import { GridObserverProxy, GridStateManager } from './GridStateManager';
 import { GridStateProxy } from './GridStateProxy';
-import { ScrollerObserverProxy } from './ScrollerStateManager';
-import { SwitchObserverProxy } from './SwitchStateManager';
+import { ScrollerObserverProxy, ScrollerStateManager } from './ScrollerStateManager';
+import { SwitchObserverProxy, SwitchStateManager } from './SwitchStateManager';
 import { FormIndex } from './constants/GridDefine';
 
-export class GridStateObserverProxy extends AbstractObserverProxy<GridStateProxy> {
+export class GridStateObserverProxy extends AbstractObserverProxy<GridStateProxy, number, FormEventType> {
   public readonly gridObserverProxy: GridObserverProxy = new GridObserverProxy(
-    (persistentId: number): GridStateProxy['gridStateManager'] => GridStateProxy.getInstance(persistentId).gridStateManager,
+    (persistentId: number): GridStateManager => GridStateProxy.getInstance(persistentId).gridStateManager,
   );
   public readonly displayObserverProxy: DisplayObserverProxy = new DisplayObserverProxy(
-    (persistentId: number): GridStateProxy['displayStateManager'] => GridStateProxy.getInstance(persistentId).displayStateManager,
+    (persistentId: number): DisplayStateManager => GridStateProxy.getInstance(persistentId).displayStateManager,
   );
   public readonly switchObserverProxy: SwitchObserverProxy = new SwitchObserverProxy(
-    (persistentId: number): GridStateProxy['switchStateManager'] => GridStateProxy.getInstance(persistentId).switchStateManager,
+    (persistentId: number): SwitchStateManager => GridStateProxy.getInstance(persistentId).switchStateManager,
   );
   public readonly scrollerObserverProxy: ScrollerObserverProxy = new ScrollerObserverProxy(
-    (persistentId: number): GridStateProxy['scrollerStateManager'] => GridStateProxy.getInstance(persistentId).scrollerStateManager,
+    (persistentId: number): ScrollerStateManager => GridStateProxy.getInstance(persistentId).scrollerStateManager,
   );
 
   public constructor(tag?: string) {
@@ -27,10 +27,7 @@ export class GridStateObserverProxy extends AbstractObserverProxy<GridStateProxy
   }
 
   public getFormState(callback?: StateChangeCallback<FormStateType, FormEventType>): FormStateType {
-    return this.getState<FormStateType>(
-      this.proxy.formFsm as never,
-      callback as unknown as StateChangeCallback<FormStateType>,
-    );
+    return this.getState<FormStateType>(this.proxy.formFsm, callback);
   }
 
   public getCurrentForm(): FormIndex {

@@ -16,6 +16,11 @@ export struct YearGridView {
   @Prop interactive: boolean = false;
   @Prop warmActive: boolean = false;
   @Prop columns: number = Shared.GRID_COLUMNS;
+  @Prop layoutOptions: GridLayoutOptions = { regularSize: [1, 1], irregularIndexes: [] };
+  @Prop headSpacerHeight: number = 0;
+  @Prop tailSpacerHeight: number = 0;
+  @Prop gap: number = Shared.GRID_GAP;
+  @Prop tailFillPositions: Array<number> = [];
   @Prop cacheRows: number = Shared.LIST_CACHE_COUNT;
   @Prop requestSize: number = Shared.REQUEST_SIZE;
   @Prop touchScrollEnd: boolean = true;
@@ -30,6 +35,11 @@ export struct YearGridView {
   public scrollStopHandler: () => void = (): void => {};
   public touchStateHandler: (touching: boolean) => void = (_touching: boolean): void => {};
   public scrollIndexHandler: (start: number, end: number) => void = (_start: number, _end: number): void => {};
+  public didScrollHandler: (offset: number, state: number) => void = (_offset: number, _state: number): void => {};
+  public reachStartHandler: () => void = (): void => {};
+  public reachEndHandler: () => void = (): void => {};
+  public willScrollHandler: (offset: number, state: number, source: number) => void =
+    (_offset: number, _state: number, _source: number): void => {};
   public pinchStartHandler: (centerX: number, centerY: number) => void = (_centerX: number, _centerY: number): void => {};
   public pinchUpdateHandler: (scale: number, centerX: number, centerY: number) => void =
     (_scale: number, _centerX: number, _centerY: number): void => {};
@@ -81,11 +91,51 @@ export struct YearGridView {
       .width('100%')
       .clip(false)
       .aspectRatio(1)
+      .visibility(Visibility.Hidden)
       .backgroundColor(Color.Transparent);
   }
 
+  @Builder
+  private buildHeadSpacer() {
+    if (this.headSpacerHeight > 0) {
+      GridItem() {
+        Column() {}
+          .width('100%')
+          .height(this.headSpacerHeight)
+          .backgroundColor(Color.Transparent);
+      }
+      .columnStart(0)
+      .columnEnd(this.columns + 1);
+    }
+  }
+
+  @Builder
+  private buildTailFillItems() {
+    ForEach(this.tailFillPositions, (item: number) => {
+      GridItem() {
+        this.buildPlaceholderCell();
+      }
+      .reuseId(`tailFill_${item}`);
+    }, (item: number) => `year_tail_fill_${item}`);
+  }
+
+  @Builder
+  private buildTailSpacer() {
+    if (this.tailSpacerHeight > 0) {
+      GridItem() {
+        Column() {}
+          .width('100%')
+          .height(this.tailSpacerHeight)
+          .backgroundColor(Color.Transparent);
+      }
+      .columnStart(0)
+      .columnEnd(this.columns + 1);
+    }
+  }
+
   build() {
-    Grid(YEAR_GRID_SCROLLER) {
+    Grid(YEAR_GRID_SCROLLER, this.layoutOptions) {
+      this.buildHeadSpacer();
       LazyForEach(
         YEAR_GRID_DATA_SOURCE,
         (item: GridItem) => {
@@ -100,15 +150,18 @@ export struct YearGridView {
         },
         (item: GridItem) => `year_${item.id}`,
       );
+      this.buildTailFillItems();
+      this.buildTailSpacer();
     }
       .id(PhotoGridViewId.YEAR_GRID)
       .attributeModifier(this.attributeUpdater)
       .columnsTemplate(this.resolveColumnsTemplate())
-      .rowsGap(Shared.GRID_GAP)
-      .columnsGap(Shared.GRID_GAP)
+      .rowsGap(this.gap)
+      .columnsGap(this.gap)
       .cachedCount(Math.max(1, this.cacheRows))
       .scrollBar(BarState.Off)
-      .edgeEffect(this.interactive ? EdgeEffect.Spring : EdgeEffect.None)
+      .edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
+      .draggable(false)
       .clip(false)
       .width('100%')
       .height('100%')
@@ -121,10 +174,11 @@ export struct YearGridView {
         this.scrollStartHandler();
       })
       .onScrollStop((): void => {
+        this.touchStateHandler(false);
         this.scrollStopHandler();
       })
       .onTouch((event: TouchEvent): void => {
-        if (event.type === TouchType.Down) {
+        if (event.type === TouchType.Down || event.type === TouchType.Move) {
           this.touchStateHandler(true);
           return;
         }
@@ -135,6 +189,19 @@ export struct YearGridView {
       .onScrollIndex((start: number, end: number): void => {
         this.scrollIndexHandler(start, end);
       })
+      .onDidScroll((offset: number, state: number): void => {
+        this.didScrollHandler(offset, state);
+      })
+      .onReachStart((): void => {
+        this.reachStartHandler();
+      })
+      .onReachEnd((): void => {
+        this.reachEndHandler();
+      })
+      .onWillScroll((offset: number, state: number, source: number): void => {
+        this.willScrollHandler(offset, state, source);
+      })
+      .backToTop(false)
       .gesture(
         GestureGroup(
           GestureMode.Parallel,

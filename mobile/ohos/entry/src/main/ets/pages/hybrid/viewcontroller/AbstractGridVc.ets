@@ -158,6 +158,7 @@ export abstract class AbstractGridVc extends AbstractFormVc implements PinchEven
           AnimationDuration.QUICK_PINCH : AnimationDuration.SLOW_PINCH,
       }),
       prepareAction: () => {
+        this.attributeUpdater.updateEnable(false);
         this.attributeUpdater.updateHitTestMode(HitTestMode.None);
         this.attributeUpdater.updateShowBackground(false);
       },
@@ -299,6 +300,7 @@ export abstract class AbstractGridVc extends AbstractFormVc implements PinchEven
         },
       }),
       prepareAction: () => {
+        this.attributeUpdater.updateEnable(false);
         this.attributeUpdater.updateHitTestMode(HitTestMode.None);
         this.attributeUpdater.updateShowBackground(false);
       },

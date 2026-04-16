@@ -1,8 +1,9 @@
 import { componentSnapshot } from '@kit.ArkUI';
+import { StateChangeCallback } from '../common/model/StateObserverManager';
 import { GridStateProxy } from '../statemanager/GridStateProxy';
 import { FormIndex } from '../statemanager/constants/GridDefine';
 import { RestoreFpStateType } from '../statemanager/GridRestoreFpFsm';
-import { AnimationDuration, AnimationOpacity } from './animation/AnimationDefine';
+import { AnimationCurve, AnimationDuration, AnimationOpacity } from './animation/AnimationDefine';
 import { PhotoGridViewId } from './PhotoGridVc';
 import { GridSnapshotVm } from '../viewmodel/GridSnapshotVm';
 
@@ -14,10 +15,22 @@ export class GridSnapshotVc {
   @Track public snapshotOffsetY: number = 0;
 
   private readonly viewModel: GridSnapshotVm = new GridSnapshotVm();
-  private restoreAnimationTimeoutId?: number = undefined;
+  private readonly scrollOffsetListener: StateChangeCallback<number, string | number> = (): void => {
+    this.updateSnapshotOffset();
+  };
+  private readonly irregularHeightListener: StateChangeCallback<number, string | number> = (): void => {
+    this.updateSnapshotOffset();
+  };
+  private readonly restoreStateListener: StateChangeCallback<RestoreFpStateType, string | number> = (
+    _oldState: RestoreFpStateType,
+    restoreState: RestoreFpStateType,
+  ): void => {
+    this.handleRestoreStateChanged(restoreState);
+  };
 
   public bindStateProxy(stateProxy: GridStateProxy): void {
     this.viewModel.bindStateProxy(stateProxy);
+    this.registerRestoreStateObserver();
   }
 
   public get restoreFpState(): RestoreFpStateType {
@@ -36,7 +49,7 @@ export class GridSnapshotVc {
   }
 
   public hideSnapshot(): void {
-    this.clearRestoreAnimationTimeout();
+    this.clearSnapshotOffsetObservers();
     const currentSnapshot = this.snapshotImage;
     this.snapshotImage = undefined;
     this.isVisible = false;
@@ -47,47 +60,64 @@ export class GridSnapshotVc {
     }
   }
 
-  public notifyFillPositionChanged(hasFillPosition: boolean): void {
-    this.viewModel.notifyFillPositionChanged(hasFillPosition);
+  public cancelRestoreAnimation(): void {
+    this.viewModel.cancelRestoreAnimation();
+    this.hideSnapshot();
   }
 
-  public prepareRestoreAnimation(): void {
-    const restoreState = this.viewModel.prepareRestoreAnimation();
-    if (restoreState !== RestoreFpStateType.ANIMATION_PREPARE_STATE) {
-      return;
+  public resetRestoreFpState(): void {
+    this.viewModel.resetRestoreState();
+    this.hideSnapshot();
+  }
+
+  private registerRestoreStateObserver(): void {
+    this.viewModel.releaseGridCallback(this.restoreStateListener);
+    this.viewModel.getRestoreState(undefined, this.restoreStateListener);
+  }
+
+  private handleRestoreStateChanged(restoreState: RestoreFpStateType): void {
+    switch (restoreState) {
+      case RestoreFpStateType.INIT_STATE:
+      case RestoreFpStateType.IDLE_STATE:
+      case RestoreFpStateType.FILL_POSITION_STATE:
+        this.hideSnapshot();
+        break;
+      case RestoreFpStateType.ANIMATION_PREPARE_STATE:
+        this.prepareRestoreAnimation();
+        break;
+      case RestoreFpStateType.ANIMATION_READY_STATE:
+        this.doRestoreAnimation();
+        break;
+      default:
+        break;
     }
+  }
+
+  private prepareRestoreAnimation(): void {
+    this.clearSnapshotOffsetObservers();
+    this.viewModel.getScrollOffset(undefined, this.scrollOffsetListener);
+    this.viewModel.getIrregularHeight(undefined, this.irregularHeightListener);
 
     const snapshotOffset = this.viewModel.getSnapshotOffset();
     this.snapshotOffsetY = snapshotOffset;
     this.snapshotOpacity = AnimationOpacity.DEFAULT;
 
     if (!this.captureSnapshot(snapshotOffset)) {
-      this.onRestoreAnimationComplete();
+      this.viewModel.notifyAnimationComplete();
       return;
     }
 
     this.isVisible = this.snapshotImage !== undefined;
-    const nextState = this.viewModel.notifyAnimationPrepareComplete();
-    if (nextState === RestoreFpStateType.ANIMATION_READY_STATE) {
-      this.doRestoreAnimation();
-    }
-  }
-
-  public cancelRestoreAnimation(): void {
-    this.clearRestoreAnimationTimeout();
-    this.viewModel.cancelRestoreAnimation();
-    this.hideSnapshot();
-  }
-
-  public resetRestoreFpState(): void {
-    this.clearRestoreAnimationTimeout();
-    this.viewModel.resetRestoreState();
-    this.hideSnapshot();
+    this.viewModel.notifyAnimationPrepareComplete();
   }
 
   private captureSnapshot(snapshotOffset: number): boolean {
     const gridAreaSize = this.viewModel.getGridAreaSize();
     if (gridAreaSize.width <= 0 || gridAreaSize.height <= 0) {
+      return false;
+    }
+
+    if (snapshotOffset < 0 || snapshotOffset > gridAreaSize.height / 2) {
       return false;
     }
 
@@ -97,7 +127,7 @@ export class GridSnapshotVc {
         region: {
           left: 0,
           right: vp2px(gridAreaSize.width),
-          top: vp2px(Math.max(0, snapshotOffset)),
+          top: vp2px(snapshotOffset),
           bottom: vp2px(gridAreaSize.height),
         },
       });
@@ -126,30 +156,28 @@ export class GridSnapshotVc {
   }
 
   private doRestoreAnimation(): void {
-    this.clearRestoreAnimationTimeout();
     this.snapshotOpacity = AnimationOpacity.DEFAULT;
     animateTo({
       duration: AnimationDuration.RESTORE_FILL_POSITION,
-      curve: Curve.Linear,
+      curve: AnimationCurve.SHARP_CURVE,
+      onFinish: (): void => {
+        this.viewModel.notifyAnimationComplete();
+      },
     }, (): void => {
       this.snapshotOpacity = AnimationOpacity.TRANSPARENT;
     });
-    this.restoreAnimationTimeoutId = setTimeout((): void => {
-      this.onRestoreAnimationComplete();
-    }, AnimationDuration.RESTORE_FILL_POSITION) as number;
   }
 
-  private onRestoreAnimationComplete(): void {
-    this.clearRestoreAnimationTimeout();
-    this.viewModel.notifyAnimationComplete();
-    this.hideSnapshot();
-  }
-
-  private clearRestoreAnimationTimeout(): void {
-    if (this.restoreAnimationTimeoutId !== undefined) {
-      clearTimeout(this.restoreAnimationTimeoutId);
-      this.restoreAnimationTimeoutId = undefined;
+  private updateSnapshotOffset(): void {
+    if (!this.snapshotImage) {
+      return;
     }
+    this.snapshotOffsetY = this.viewModel.getSnapshotOffset();
+  }
+
+  private clearSnapshotOffsetObservers(): void {
+    this.viewModel.releaseGridCallback(this.scrollOffsetListener);
+    this.viewModel.releaseGridCallback(this.irregularHeightListener);
   }
 
   private releaseSnapshotImage(snapshotImage: PixelMap): void {

@@ -327,9 +327,9 @@ export class HybridPhotoGridVm {
     this.currentGridItems = [];
     this.dataVm.removeDataLoadListener(this.dataLoadListener);
     this.dataVm.release();
-    this.dataSourceA?.updateAllIfChanged([]);
-    this.dataSourceB?.updateAllIfChanged([]);
-    this.dataSourceC?.updateAllIfChanged([]);
+    this.dataSourceA?.updateDataIfChanged([]);
+    this.dataSourceB?.updateDataIfChanged([]);
+    this.dataSourceC?.updateDataIfChanged([]);
     this.timelineDataSource?.replaceAll([]);
     this.snapshotController?.hideSnapshot();
     this.previewVisibleStartIndex = -1;
@@ -845,9 +845,9 @@ export class HybridPhotoGridVm {
       return;
     }
     // Clear data source BEFORE changing columns so "cross count change" operates on 0 items (instant).
-    dormantDataSource.updateAllIfChanged([]);
+    dormantDataSource.updateDataIfChanged([]);
     this.setTargetColumnsForDirection(state.targetDirection, state.targetColumns);
-    dormantDataSource.updateAllIfChanged(previewGridItems);
+    dormantDataSource.updateDataIfChanged(previewGridItems);
     if (state.targetDirection === HybridPinchTargetDirection.SHRINK) {
       this.idlePrebuildColumns = state.targetColumns;
       this.idlePrebuildFillPosition = 0;
@@ -978,7 +978,7 @@ export class HybridPhotoGridVm {
     this.lastIdleVisiblePrefetchKey = '';
     this.lastIdleOverscanPrefetchKey = '';
     this.lastShrinkPrewarmPrefetchKey = '';
-    this.resolveShrinkTargetDataSource()?.updateAllIfChanged([]);
+    this.resolveShrinkTargetDataSource()?.updateDataIfChanged([]);
     if (clearDataSource) {
       this.logMemoryDebug('idle-prebuild-cleared');
     }
@@ -1020,7 +1020,7 @@ export class HybridPhotoGridVm {
       if (hadIdleDormantColumns) {
         this.setExpandTargetColumns(0);
       }
-      this.resolveExpandTargetDataSource()?.updateAllIfChanged([]);
+      this.resolveExpandTargetDataSource()?.updateDataIfChanged([]);
     }
   }
 
@@ -1030,7 +1030,7 @@ export class HybridPhotoGridVm {
       this.idlePrebuildReady = false;
       this.idlePrebuildVisibleRowsWarm = false;
       this.setShrinkTargetWarmActive(false);
-      this.resolveShrinkTargetDataSource()?.updateAllIfChanged([]);
+      this.resolveShrinkTargetDataSource()?.updateDataIfChanged([]);
     }
     if (this.idleExpandStructureReady) {
       this.idleExpandStructureReady = false;
@@ -1038,7 +1038,7 @@ export class HybridPhotoGridVm {
       this.idleExpandVisibleRowsWarm = false;
       this.idleExpandGridItems = [];
       this.setExpandTargetWarmActive(false);
-      this.resolveExpandTargetDataSource()?.updateAllIfChanged([]);
+      this.resolveExpandTargetDataSource()?.updateDataIfChanged([]);
     }
   }
 
@@ -1168,7 +1168,7 @@ export class HybridPhotoGridVm {
     this.idlePrebuildColumns = state.targetColumns;
     // Clear data source BEFORE changing columns so "cross count change" operates on 0 items.
     if (refreshDataSource && this.getShrinkTargetColumns() !== state.targetColumns) {
-      dormantDataSource.updateAllIfChanged([]);
+      dormantDataSource.updateDataIfChanged([]);
     }
     this.setShrinkTargetColumns(state.targetColumns);
     if (refreshDataSource) {
@@ -1180,7 +1180,7 @@ export class HybridPhotoGridVm {
         0,
         true,
       );
-      dormantDataSource.updateAllIfChanged(previewGridItems);
+      dormantDataSource.updateDataIfChanged(previewGridItems);
     }
     this.idlePrebuildFillPosition = 0;
     this.idlePrebuildTargetScrollOffset = state.targetScrollOffset;
@@ -1311,7 +1311,7 @@ export class HybridPhotoGridVm {
 
   private updateCommittedGridDataSource(items: Array<HybridGridItem>): void {
     this.currentGridItems = items.slice();
-    this.resolveCurrentDataSource()?.updateAllIfChanged(this.currentGridItems);
+    this.resolveCurrentDataSource()?.updateDataIfChanged(this.currentGridItems);
   }
 
   private normalizeCommittedPreviewLayerForPinchStart(): void {
@@ -1648,17 +1648,17 @@ export class HybridPhotoGridVm {
 
   public bindDataSourceA(dataSource: Shared.HybridGridDataSource): void {
     this.dataSourceA = dataSource;
-    this.dataSourceA.updateAllIfChanged(this.currentGridKind === HybridGridKind.A ? this.currentGridItems.slice() : []);
+    this.dataSourceA.updateDataIfChanged(this.currentGridKind === HybridGridKind.A ? this.currentGridItems.slice() : []);
   }
 
   public bindDataSourceB(dataSource: Shared.HybridGridDataSource): void {
     this.dataSourceB = dataSource;
-    this.dataSourceB.updateAllIfChanged(this.currentGridKind === HybridGridKind.B ? this.currentGridItems.slice() : []);
+    this.dataSourceB.updateDataIfChanged(this.currentGridKind === HybridGridKind.B ? this.currentGridItems.slice() : []);
   }
 
   public bindDataSourceC(dataSource: Shared.HybridGridDataSource): void {
     this.dataSourceC = dataSource;
-    this.dataSourceC.updateAllIfChanged(this.currentGridKind === HybridGridKind.C ? this.currentGridItems.slice() : []);
+    this.dataSourceC.updateDataIfChanged(this.currentGridKind === HybridGridKind.C ? this.currentGridItems.slice() : []);
   }
 
   private forcePruneVisibleThumbnailCache(): void {
@@ -1879,10 +1879,10 @@ export class HybridPhotoGridVm {
     if (didRebuild && this.idleExpandGridItems.length > 0) {
       // Clear data source BEFORE changing columns so "cross count change" operates on 0 items.
       if (this.getExpandTargetColumns() !== state.targetColumns) {
-        expandDataSource.updateAllIfChanged([]);
+        expandDataSource.updateDataIfChanged([]);
       }
       this.setExpandTargetColumns(state.targetColumns);
-      expandDataSource.updateAllIfChanged(this.idleExpandGridItems);
+      expandDataSource.updateDataIfChanged(this.idleExpandGridItems);
       this.setExpandTargetWarmActive(true);
       this.scrollStateToAnchor(expandScroller, state);
     }
@@ -2505,7 +2505,7 @@ export class HybridPhotoGridVm {
     this.previewVisibleStartIndex = -1;
     this.previewVisibleEndIndex = -1;
     this.dataVm.silentSetGridColumns(state.targetColumns, commitState);
-    // Reuse prebuild items (same fillPosition) so updateAllIfChanged() detects no change
+    // Reuse prebuild items (same fillPosition) so updateDataIfChanged() detects no change
     // and skips onDataReloaded, avoiding expensive Grid re-layout.
     // Read directly from the target dormant grid's data source to avoid race between
     // shrink/expand idle prebuilds overwriting a shared field.
@@ -3042,14 +3042,14 @@ export class HybridPhotoGridVm {
       // reverse pinch finds pre-populated items instead of a blank grid.
       if (this.lastPromotedDirection === HybridPinchTargetDirection.SHRINK) {
         // After shrink: shrinkTarget is idle-rebuild, expandTarget is carryOver
-        this.resolveDataSource(this.shrinkTargetKind)?.updateAllIfChanged([]);
+        this.resolveDataSource(this.shrinkTargetKind)?.updateDataIfChanged([]);
       } else if (this.lastPromotedDirection === HybridPinchTargetDirection.EXPAND) {
         // After expand: expandTarget is idle-rebuild, shrinkTarget is carryOver
-        this.resolveDataSource(this.expandTargetKind)?.updateAllIfChanged([]);
+        this.resolveDataSource(this.expandTargetKind)?.updateDataIfChanged([]);
       } else {
         // Fallback: clear both
-        this.resolveDataSource(this.shrinkTargetKind)?.updateAllIfChanged([]);
-        this.resolveDataSource(this.expandTargetKind)?.updateAllIfChanged([]);
+        this.resolveDataSource(this.shrinkTargetKind)?.updateDataIfChanged([]);
+        this.resolveDataSource(this.expandTargetKind)?.updateDataIfChanged([]);
       }
       this.refreshGridCacheRows();
       this.pendingCommit = undefined;

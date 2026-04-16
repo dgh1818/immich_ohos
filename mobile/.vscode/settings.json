@@ -2,14 +2,30 @@
   "dart.flutterSdkPath": ".fvm/versions/custom_3.35.7",
   "dart.lineLength": 120,
   "[dart]": {
-    "editor.rulers": [
-      120
-    ]
+    "editor.rulers": [120]
+  },
+  "files.exclude": {
+    "**/.fvm": true,
+    "**/.dart_tool": true,
+    "**/.isar": true,
+    "**/ArkTSCheck": true,
+    "**/build": true,
+    "**/*.log": true
   },
   "search.exclude": {
-    "**/.fvm": true
+    "**/.fvm": true,
+    "**/.dart_tool": true,
+    "**/.isar": true,
+    "**/ArkTSCheck": true,
+    "**/build": true,
+    "**/*.log": true
   },
   "files.watcherExclude": {
-    "**/.fvm": true
+    "**/.fvm/**": true,
+    "**/.dart_tool/**": true,
+    "**/.isar/**": true,
+    "**/ArkTSCheck/**": true,
+    "**/build/**": true,
+    "**/*.log": true
   }
 }
