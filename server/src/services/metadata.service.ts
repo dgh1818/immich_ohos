@@ -258,6 +258,10 @@ export class MetadataService extends BaseService {
     await this.eventRepository.emit('AssetHide', { assetId: motionAsset.id, userId: motionAsset.ownerId });
   }
 
+  private logMetadataExtractionStep(assetId: string, step: string, details?: string) {
+    this.logger.log(`[metadata.extract][${assetId}] ${step}${details ? ` ${details}` : ''}`);
+  }
+
   @OnJob({ name: JobName.AssetExtractMetadataQueueAll, queue: QueueName.MetadataExtraction })
   async handleQueueMetadataExtraction(job: JobOf<JobName.AssetExtractMetadataQueueAll>): Promise<JobStatus> {
     const { force } = job;
@@ -278,33 +282,70 @@ export class MetadataService extends BaseService {
 
   @OnJob({ name: JobName.AssetExtractMetadata, queue: QueueName.MetadataExtraction })
   async handleMetadataExtraction(data: JobOf<JobName.AssetExtractMetadata>) {
+    const startedAt = Date.now();
+    this.logger.log(`[metadata.extract][${data.id}] start`);
+
+    const loadStartedAt = Date.now();
     const [{ metadata, reverseGeocoding }, asset] = await Promise.all([
       this.getConfig({ withCache: true }),
       this.assetJobRepository.getForMetadataExtraction(data.id),
     ]);
 
     if (!asset) {
+      this.logger.log(`[metadata.extract][${data.id}] asset-not-found elapsed=${Date.now() - startedAt}ms`);
       return;
     }
 
+    this.logMetadataExtractionStep(
+      asset.id,
+      'asset-loaded',
+      `elapsed=${Date.now() - loadStartedAt}ms path=${asset.originalPath} type=${asset.type}`,
+    );
+
+    const readStartedAt = Date.now();
+    this.logMetadataExtractionStep(asset.id, 'metadata-read:start', `path=${asset.originalPath}`);
     const [exifTags, stats] = await Promise.all([
       this.getExifTags(asset),
       this.storageRepository.stat(asset.originalPath),
     ]);
+    this.logMetadataExtractionStep(
+      asset.id,
+      'metadata-read:done',
+      `elapsed=${Date.now() - readStartedAt}ms statSize=${stats.size} exifKeys=${Object.keys(exifTags).length}`,
+    );
     this.logger.verbose('Exif Tags', exifTags);
 
+    const deriveStartedAt = Date.now();
     const dates = this.getDates(asset, exifTags, stats);
 
     const { width, height } = this.getImageDimensions(exifTags);
+    this.logMetadataExtractionStep(
+      asset.id,
+      'derive-dates-and-dimensions',
+      `elapsed=${Date.now() - deriveStartedAt}ms dateTimeOriginal=${dates.dateTimeOriginal.toISOString()} width=${width ?? 'null'} height=${height ?? 'null'}`,
+    );
+
     let geo: ReverseGeocodeResult = { country: null, state: null, city: null },
       latitude: number | null = null,
       longitude: number | null = null;
     if (this.hasGeo(exifTags)) {
       latitude = Number(exifTags.GPSLatitude);
       longitude = Number(exifTags.GPSLongitude);
+      this.logMetadataExtractionStep(asset.id, 'gps-found', `latitude=${latitude} longitude=${longitude}`);
       if (reverseGeocoding.enabled) {
+        const reverseStartedAt = Date.now();
+        this.logMetadataExtractionStep(asset.id, 'reverse-geocode:start');
         geo = await this.mapRepository.reverseGeocode({ latitude, longitude });
+        this.logMetadataExtractionStep(
+          asset.id,
+          'reverse-geocode:done',
+          `elapsed=${Date.now() - reverseStartedAt}ms country=${geo.country ?? 'null'} state=${geo.state ?? 'null'} city=${geo.city ?? 'null'}`,
+        );
+      } else {
+        this.logMetadataExtractionStep(asset.id, 'reverse-geocode:skipped', 'reason=disabled');
       }
+    } else {
+      this.logMetadataExtractionStep(asset.id, 'gps-absent');
     }
 
     const tags = this.getTagList(exifTags);
@@ -357,6 +398,12 @@ export class MetadataService extends BaseService {
       tags: tags.length > 0 ? tags : null,
     };
 
+    this.logMetadataExtractionStep(
+      asset.id,
+      'prepare-exif-payload',
+      `tagCount=${tags.length} livePhotoCID=${exifData.livePhotoCID ?? 'null'} orientation=${exifData.orientation ?? 'null'}`,
+    );
+
     const isSidewards = exifTags.Orientation && this.isOrientationSidewards(exifTags.Orientation);
     const assetWidth = isSidewards ? validate(height) : validate(width);
     const assetHeight = isSidewards ? validate(width) : validate(height);
@@ -382,30 +429,55 @@ export class MetadataService extends BaseService {
       },
     );
 
+    const livePhotoCheckStartedAt = Date.now();
+    this.logMetadataExtractionStep(asset.id, 'ohos-live-photo-check:start');
     const { hasOhosLivePhoto, ohosFileSize, ohosVideoOffset } = await this.checkOhosLivePhoto(
       asset.originalPath,
       asset.type,
+      asset.id,
+    );
+    this.logMetadataExtractionStep(
+      asset.id,
+      'ohos-live-photo-check:done',
+      `elapsed=${Date.now() - livePhotoCheckStartedAt}ms result=${hasOhosLivePhoto} fileSize=${ohosFileSize} videoOffset=${ohosVideoOffset}`,
     );
 
-    if (this.isMotionPhoto(asset, exifTags) || hasOhosLivePhoto == 1) {
+    const shouldApplyMotionPhotoTask = this.isMotionPhoto(asset, exifTags) || hasOhosLivePhoto == 1;
+    const shouldApplyTaggedFaces = isFaceImportEnabled(metadata) && this.hasTaggedFaces(exifTags);
+
+    if (shouldApplyMotionPhotoTask) {
+      this.logMetadataExtractionStep(asset.id, 'motion-photo-task:queued', `hasOhosLivePhoto=${hasOhosLivePhoto}`);
       tasks.push(() => this.applyMotionPhotos(asset, exifTags, dates, stats));
     }
 
-    if (isFaceImportEnabled(metadata) && this.hasTaggedFaces(exifTags)) {
+    if (shouldApplyTaggedFaces) {
+      this.logMetadataExtractionStep(asset.id, 'tagged-faces-task:queued');
       tasks.push(() => this.applyTaggedFaces(asset, exifTags));
     }
 
+    const tasksStartedAt = Date.now();
+    this.logMetadataExtractionStep(
+      asset.id,
+      'tasks:start',
+      `motionPhoto=${shouldApplyMotionPhotoTask} taggedFaces=${shouldApplyTaggedFaces}`,
+    );
     await tasks.all();
+    this.logMetadataExtractionStep(asset.id, 'tasks:done', `elapsed=${Date.now() - tasksStartedAt}ms`);
 
     if (exifData.livePhotoCID) {
+      this.logMetadataExtractionStep(asset.id, 'link-live-photo:start', `livePhotoCID=${exifData.livePhotoCID}`);
       await this.linkLivePhotos(asset, exifData);
+      this.logMetadataExtractionStep(asset.id, 'link-live-photo:done');
     }
 
     if (hasOhosLivePhoto == 2) {
+      this.logMetadataExtractionStep(asset.id, 'link-ohos-live-photo:start');
       this.logger.log(`Is Ohos Next livephoto (${asset.id})`);
       await this.linkOhosLivePhotos(asset, exifData);
+      this.logMetadataExtractionStep(asset.id, 'link-ohos-live-photo:done');
     }
 
+    this.logMetadataExtractionStep(asset.id, 'finalize:start');
     await this.assetRepository.upsertJobStatus({ assetId: asset.id, metadataExtractedAt: new Date() });
 
     await this.eventRepository.emit('AssetMetadataExtracted', {
@@ -413,6 +485,8 @@ export class MetadataService extends BaseService {
       userId: asset.ownerId,
       source: data.source,
     });
+
+    this.logMetadataExtractionStep(asset.id, 'done', `elapsed=${Date.now() - startedAt}ms`);
   }
 
   @OnJob({ name: JobName.SidecarQueueAll, queue: QueueName.Sidecar })
@@ -577,20 +651,43 @@ export class MetadataService extends BaseService {
     return { width, height };
   }
 
-  private async getExifTags(asset: { originalPath: string; files: AssetFile[]; type: AssetType }): Promise<ImmichTags> {
+  private async getExifTags(asset: {
+    id: string;
+    originalPath: string;
+    files: AssetFile[];
+    type: AssetType;
+  }): Promise<ImmichTags> {
+    const startedAt = Date.now();
     const { sidecarFile } = getAssetFiles(asset.files);
+
+    this.logMetadataExtractionStep(
+      asset.id,
+      'get-exif-tags:start',
+      `sidecar=${sidecarFile?.path ?? 'none'} type=${asset.type}`,
+    );
 
     const [mediaTags, sidecarTags, videoTags] = await Promise.all([
       this.metadataRepository.readTags(asset.originalPath),
       sidecarFile ? this.metadataRepository.readTags(sidecarFile.path) : null,
-      asset.type === AssetType.Video ? this.getVideoTags(asset.originalPath) : null,
+      asset.type === AssetType.Video ? this.getVideoTags(asset.id, asset.originalPath) : null,
     ]);
+
+    this.logMetadataExtractionStep(
+      asset.id,
+      'get-exif-tags:read-complete',
+      `elapsed=${Date.now() - startedAt}ms mediaKeys=${Object.keys(mediaTags).length} sidecarKeys=${Object.keys(sidecarTags ?? {}).length} videoKeys=${Object.keys(videoTags ?? {}).length}`,
+    );
 
     // prefer dates from sidecar tags
     if (sidecarTags) {
       const result = firstDateTime(sidecarTags);
       const sidecarDate = result?.dateTime;
       if (sidecarDate) {
+        this.logMetadataExtractionStep(
+          asset.id,
+          'get-exif-tags:sidecar-date-override',
+          `tag=${result?.tag ?? 'unknown'} value=${sidecarDate.toISOString()}`,
+        );
         for (const tag of EXIF_DATE_TAGS) {
           delete mediaTags[tag];
         }
@@ -608,14 +705,27 @@ export class MetadataService extends BaseService {
 
     // prefer duration from video tags
     // don't save duration if asset is definitely not an animated image (see e.g. CR3 with Duration: 1s)
-    if (videoTags || !mimeTypes.isPossiblyAnimatedImage(asset.originalPath)) {
+    const isPossiblyAnimatedImage = mimeTypes.isPossiblyAnimatedImage(asset.originalPath);
+    if (videoTags || !isPossiblyAnimatedImage) {
+      this.logMetadataExtractionStep(
+        asset.id,
+        'get-exif-tags:duration-filter',
+        `usedVideoTags=${!!videoTags} isPossiblyAnimatedImage=${isPossiblyAnimatedImage}`,
+      );
       delete mediaTags.Duration;
     }
 
     // never use duration from sidecar
     delete sidecarTags?.Duration;
 
-    return { ...mediaTags, ...videoTags, ...sidecarTags };
+    const mergedTags = { ...mediaTags, ...videoTags, ...sidecarTags };
+    this.logMetadataExtractionStep(
+      asset.id,
+      'get-exif-tags:done',
+      `elapsed=${Date.now() - startedAt}ms mergedKeys=${Object.keys(mergedTags).length}`,
+    );
+
+    return mergedTags;
   }
 
   private getTagList(exifTags: ImmichTags): string[] {
@@ -661,6 +771,9 @@ export class MetadataService extends BaseService {
   }
 
   private async applyMotionPhotos(asset: Asset, tags: ImmichTags, dates: Dates, stats: Stats) {
+    const startedAt = Date.now();
+    this.logMetadataExtractionStep(asset.id, 'motion-photo:start', `path=${asset.originalPath}`);
+
     const isMotionPhoto = tags.MotionPhoto;
     const isMicroVideo = tags.MicroVideo;
     const videoOffset = tags.MicroVideoOffset;
@@ -672,6 +785,7 @@ export class MetadataService extends BaseService {
     const { hasOhosLivePhoto, ohosFileSize, ohosVideoOffset } = await this.checkOhosLivePhoto(
       asset.originalPath,
       asset.type,
+      asset.id,
     );
 
     let length = 0;
@@ -696,26 +810,38 @@ export class MetadataService extends BaseService {
       this.logger.log(`Is Ohos JPEG-encoded livephoto (${asset.id})`);
     }
 
+    this.logMetadataExtractionStep(
+      asset.id,
+      'motion-photo:analyzed',
+      `isMotionPhoto=${!!isMotionPhoto} isMicroVideo=${!!isMicroVideo} hasMotionPhotoVideo=${!!hasMotionPhotoVideo} hasEmbeddedVideoFile=${!!hasEmbeddedVideoFile} hasOhosLivePhoto=${hasOhosLivePhoto} length=${length} padding=${padding}`,
+    );
+
     if (!length && !hasEmbeddedVideoFile && !hasMotionPhotoVideo && !hasOhosLivePhoto) {
+      this.logMetadataExtractionStep(asset.id, 'motion-photo:skipped', 'reason=no-embedded-video');
       return;
     }
 
-    this.logger.debug(`Starting motion photo video extraction for asset ${asset.id}: ${asset.originalPath}`);
+    this.logMetadataExtractionStep(asset.id, 'motion-photo:extract:start');
 
     try {
       const position = stats.size - length - padding;
       let video: Buffer;
+      let extractionSource = 'readFile';
+
       // Samsung MotionPhoto video extraction
       //     HEIC-encoded
       if (hasMotionPhotoVideo) {
+        extractionSource = 'MotionPhotoVideo';
         video = await this.metadataRepository.extractBinaryTag(asset.originalPath, 'MotionPhotoVideo');
       }
       //     JPEG-encoded; HEIC also contains these tags, so this conditional must come second
       else if (hasEmbeddedVideoFile) {
+        extractionSource = 'EmbeddedVideoFile';
         video = await this.metadataRepository.extractBinaryTag(asset.originalPath, 'EmbeddedVideoFile');
       }
       //     Ohos LivePhoto video extraction; JPEG-encoded
       else if (hasOhosLivePhoto == 1) {
+        extractionSource = 'OhosLivePhoto';
         video = await this.processOhosLivePhoto(asset.originalPath, ohosFileSize, ohosVideoOffset);
       }
       // Default video extraction
@@ -726,11 +852,20 @@ export class MetadataService extends BaseService {
           length,
         });
       }
+
+      this.logMetadataExtractionStep(
+        asset.id,
+        'motion-photo:extract:done',
+        `source=${extractionSource} bytes=${video.byteLength} position=${position}`,
+      );
+
       const checksum = this.cryptoRepository.hashSha1(video);
       const checksumQuery = { ownerId: asset.ownerId, libraryId: asset.libraryId ?? undefined, checksum };
 
       let motionAsset = await this.assetRepository.getByChecksum(checksumQuery);
       let isNewMotionAsset = false;
+
+      this.logMetadataExtractionStep(asset.id, 'motion-photo:checksum', `checksum=${checksum}`);
 
       if (!motionAsset) {
         try {
@@ -753,6 +888,7 @@ export class MetadataService extends BaseService {
           });
 
           isNewMotionAsset = true;
+          this.logMetadataExtractionStep(asset.id, 'motion-photo:asset-created', `motionAssetId=${motionAssetId}`);
 
           if (!asset.isExternal) {
             await this.userRepository.updateUsage(asset.ownerId, video.byteLength);
@@ -768,6 +904,8 @@ export class MetadataService extends BaseService {
             return;
           }
         }
+      } else {
+        this.logMetadataExtractionStep(asset.id, 'motion-photo:asset-reused', `motionAssetId=${motionAsset.id}`);
       }
 
       if (!isNewMotionAsset) {
@@ -813,8 +951,9 @@ export class MetadataService extends BaseService {
         await this.jobRepository.queue({ name: JobName.AssetEncodeVideo, data: { id: motionAsset.id } });
       }
 
-      this.logger.debug(`Finished motion photo video extraction for asset ${asset.id}: ${asset.originalPath}`);
+      this.logMetadataExtractionStep(asset.id, 'motion-photo:done', `elapsed=${Date.now() - startedAt}ms`);
     } catch (error: Error | any) {
+      this.logMetadataExtractionStep(asset.id, 'motion-photo:failed', `elapsed=${Date.now() - startedAt}ms error=${error}`);
       this.logger.error(
         `Failed to extract motion video for ${asset.id}: ${asset.originalPath}: ${error}`,
         error?.stack,
@@ -1084,7 +1223,10 @@ export class MetadataService extends BaseService {
     return null;
   }
 
-  private async getVideoTags(originalPath: string) {
+  private async getVideoTags(assetId: string, originalPath: string) {
+    const startedAt = Date.now();
+    this.logMetadataExtractionStep(assetId, 'video-tags:start', `path=${originalPath}`);
+
     const { videoStreams, format } = await this.mediaRepository.probe(originalPath);
 
     const tags: Pick<ImmichTags, 'Duration' | 'Orientation' | 'ImageWidth' | 'ImageHeight'> = {};
@@ -1122,6 +1264,12 @@ export class MetadataService extends BaseService {
       tags.Duration = format.duration;
     }
 
+    this.logMetadataExtractionStep(
+      assetId,
+      'video-tags:done',
+      `elapsed=${Date.now() - startedAt}ms duration=${tags.Duration ?? 'null'} width=${tags.ImageWidth ?? 'null'} height=${tags.ImageHeight ?? 'null'} orientation=${tags.Orientation ?? 'null'}`,
+    );
+
     return tags;
   }
 
@@ -1155,7 +1303,13 @@ export class MetadataService extends BaseService {
   private async checkOhosLivePhoto(
     filePath: string,
     assetType: AssetType,
+    assetId?: string,
   ): Promise<{ hasOhosLivePhoto: number; ohosFileSize: number; ohosVideoOffset: number }> {
+    const startedAt = Date.now();
+    if (assetId) {
+      this.logMetadataExtractionStep(assetId, 'check-ohos-live-photo:start', `path=${filePath} type=${assetType}`);
+    }
+
     const stats = await fs.stat(filePath);
     const ohosFileSize = stats.size;
     let ohosLiveMetaDataOFFSET = 20;
@@ -1165,6 +1319,13 @@ export class MetadataService extends BaseService {
     let ohosVideoOffset = -1;
     const minSize = ohosVideoEndOffset + 1;
     if (ohosFileSize < minSize) {
+      if (assetId) {
+        this.logMetadataExtractionStep(
+          assetId,
+          'check-ohos-live-photo:skip',
+          `elapsed=${Date.now() - startedAt}ms reason=file-too-small size=${ohosFileSize}`,
+        );
+      }
       return { hasOhosLivePhoto, ohosFileSize, ohosVideoOffset };
     }
     if (assetType === AssetType.Image) {
@@ -1203,6 +1364,13 @@ export class MetadataService extends BaseService {
           hasOhosLivePhoto = 0;
           return { hasOhosLivePhoto, ohosFileSize, ohosVideoOffset };
         } else {
+          if (assetId) {
+            this.logMetadataExtractionStep(
+              assetId,
+              'check-ohos-live-photo:jpeg-live-detected',
+              `elapsed=${Date.now() - startedAt}ms videoOffset=${ohosVideoOffset}`,
+            );
+          }
           return { hasOhosLivePhoto, ohosFileSize, ohosVideoOffset };
         }
       }
@@ -1233,6 +1401,13 @@ export class MetadataService extends BaseService {
         hasOhosLivePhoto = isMatch ? 2 : 0;
         if (isMatch) {
           hasOhosLivePhoto = 2;
+          if (assetId) {
+            this.logMetadataExtractionStep(
+              assetId,
+              'check-ohos-live-photo:next-live-detected',
+              `elapsed=${Date.now() - startedAt}ms fileSize=${ohosFileSize}`,
+            );
+          }
           return { hasOhosLivePhoto, ohosFileSize, ohosVideoOffset };
         }
       } finally {
@@ -1255,10 +1430,25 @@ export class MetadataService extends BaseService {
         const foundIndex = hay.indexOf(needle);
         const isMatch = foundIndex !== -1;
         hasOhosLivePhoto = isMatch ? 2 : 0;
+        if (assetId) {
+          this.logMetadataExtractionStep(
+            assetId,
+            'check-ohos-live-photo:video-scan-done',
+            `elapsed=${Date.now() - startedAt}ms result=${hasOhosLivePhoto}`,
+          );
+        }
         return { hasOhosLivePhoto, ohosFileSize, ohosVideoOffset };
       } finally {
         await fd4.close();
       }
+    }
+
+    if (assetId) {
+      this.logMetadataExtractionStep(
+        assetId,
+        'check-ohos-live-photo:done',
+        `elapsed=${Date.now() - startedAt}ms result=${hasOhosLivePhoto} videoOffset=${ohosVideoOffset}`,
+      );
     }
 
     return { hasOhosLivePhoto, ohosFileSize, ohosVideoOffset };

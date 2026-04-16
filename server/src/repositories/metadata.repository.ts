@@ -107,19 +107,44 @@ export class MetadataRepository {
     await this.exiftool.end();
   }
 
-  readTags(path: string): Promise<ImmichTags> {
+  async readTags(path: string): Promise<ImmichTags> {
     const readArgs = mimeTypes.isVideo(path)
       ? ['-ee', ...MetadataRepository.defaultReadArgs]
       : MetadataRepository.defaultReadArgs;
 
-    return this.exiftool.read(path, { readArgs }).catch((error) => {
+    const startedAt = Date.now();
+    this.logger.log(`[metadata.readTags] start path=${path} args=${readArgs.join(' ')}`);
+
+    try {
+      const tags = (await this.exiftool.read(path, { readArgs })) as ImmichTags;
+      this.logger.log(
+        `[metadata.readTags] done path=${path} elapsed=${Date.now() - startedAt}ms tags=${Object.keys(tags).length}`,
+      );
+
+      return tags;
+    } catch (error) {
       this.logger.warn(`Error reading exif data (${path}): ${error}\n${error?.stack}`);
+      this.logger.log(`[metadata.readTags] failed path=${path} elapsed=${Date.now() - startedAt}ms`);
       return {};
-    }) as Promise<ImmichTags>;
+    }
   }
 
-  extractBinaryTag(path: string, tagName: string): Promise<Buffer> {
-    return this.exiftool.extractBinaryTagToBuffer(tagName, path);
+  async extractBinaryTag(path: string, tagName: string): Promise<Buffer> {
+    const startedAt = Date.now();
+    this.logger.log(`[metadata.extractBinaryTag] start path=${path} tag=${tagName}`);
+
+    try {
+      const buffer = await this.exiftool.extractBinaryTagToBuffer(tagName, path);
+      this.logger.log(
+        `[metadata.extractBinaryTag] done path=${path} tag=${tagName} elapsed=${Date.now() - startedAt}ms bytes=${buffer.byteLength}`,
+      );
+
+      return buffer;
+    } catch (error) {
+      this.logger.warn(`Error extracting binary exif tag (${path}, ${tagName}): ${error}\n${error?.stack}`);
+      this.logger.log(`[metadata.extractBinaryTag] failed path=${path} tag=${tagName} elapsed=${Date.now() - startedAt}ms`);
+      throw error;
+    }
   }
 
   async writeTags(path: string, tags: Partial<Tags>): Promise<void> {
