@@ -21,7 +21,7 @@ void main() {
     when(() => mockLocalAlbumRepo.unlinkRemoteAlbum(any())).thenAnswer((_) async {});
   });
 
-  test('unlinks a local album when its linked remote album no longer exists', () async {
+  test('clears linkedRemoteAlbumId when linked remote album no longer exists', () async {
     final linkedAlbum = LocalAlbumStub.recent.copyWith(linkedRemoteAlbumId: 'missing-remote-id');
 
     when(() => mockLocalAlbumRepo.getBackupAlbums()).thenAnswer((_) async => [linkedAlbum]);
