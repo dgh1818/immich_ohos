@@ -293,20 +293,11 @@ class _DriftMapState extends ConsumerState<DriftMap> {
   Future<void> _reanchorActiveAssetForViewport() async {
     final controller = mapController;
     final asset = _pendingSelectedAsset ?? _selectedAsset ?? _pinnedAsset;
-    if (!mounted || controller == null) {
+    if (!mounted || controller == null || asset == null) {
       return;
     }
 
-    late final LatLng processed;
-    if (asset != null) {
-      processed = _toMapCoordinate(asset.location);
-    } else {
-      final bounds = await controller.getVisibleRegion();
-      processed = LatLng(
-        (bounds.southwest.latitude + bounds.northeast.latitude) / 2,
-        (bounds.southwest.longitude + bounds.northeast.longitude) / 2,
-      );
-    }
+    final processed = _toMapCoordinate(asset.location);
 
     // Get current screen position of the marker (physical pixels on non-iOS)
     final point = await controller.toScreenLocation(processed);
@@ -337,7 +328,7 @@ class _DriftMapState extends ConsumerState<DriftMap> {
 
     // Update marker screen position after camera moved
     final newPoint = await controller.toScreenLocation(processed);
-    if (!mounted || asset == null) {
+    if (!mounted) {
       return;
     }
 
