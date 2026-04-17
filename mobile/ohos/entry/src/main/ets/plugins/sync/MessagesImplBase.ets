@@ -80,6 +80,19 @@ cacheDir: string): Promise<string> {
 
 
 
+    let isAccessible = false;
+    try {
+      isAccessible = fs.accessSync(path);
+    } catch (e) {
+      console.error(`hashAssetTask access check failed for ${uri} with path ${path}`, e);
+      return '';
+    }
+
+    if (!isAccessible) {
+      console.error(`hashAssetTask access denied or missing for ${uri} with path ${path}`);
+      return '';
+    }
+
     return await new Promise<string>((resolve) => {
       try {
         if (isCloud) {
@@ -458,52 +471,47 @@ export class MessagesImplBase extends NativeSyncApiOhos {
   override async hashAssets(assetIds: string[], allowNetworkAccess: boolean, result: Result<Array<HashResult>>) {
     this.cancelRequested = false;
     this.currentTasks = [];
-    const group = new taskpool.TaskGroup();
+    const executors: Array<Promise<string | undefined>> = [];
     //vibrator.HapticFeedback.EFFECT_HARD
 
     // await vibrator.startVibration({ type: 'preset', effectId: vibrator.HapticFeedback.EFFECT_HARD },
     //   { id: 0, usage: 'touch' });
 
     for (const id of assetIds) {
-      console.error(`hashAssets ${id}`);
-      const asset = await this.getAssetByUri(id);
-      console.error(`hashAssets asset ${id}`);
-      const position = asset?.get(photoAccessHelper.PhotoKeys.POSITION) as photoAccessHelper.PositionType | undefined;
-      let isCloud = position === photoAccessHelper.PositionType.CLOUD;
-      // const param: HashAssetParams = {
-      //   uri: id,
-      //   isCloud: position === photoAccessHelper.PositionType.CLOUD,
-      //   cacheDir: this.ctx!.cacheDir,
-      // };
-      const task = new taskpool.Task(hashAssetTask, id, isCloud, this.ctx!.cacheDir);
-      group.addTask(task);
-      this.currentTasks.push(task);
+      try {
+        const asset = await this.getAssetByUri(id);
+        const position = asset?.get(photoAccessHelper.PhotoKeys.POSITION) as photoAccessHelper.PositionType | undefined;
+        const isCloud = position === photoAccessHelper.PositionType.CLOUD;
+        const task = new taskpool.Task(hashAssetTask, id, isCloud, this.ctx!.cacheDir);
+        this.currentTasks.push(task);
+        const executor = (taskpool.execute(task, taskpool.Priority.MEDIUM) as Promise<string | undefined>).catch((e: BusinessError | Error) => {
+          if (!this.cancelRequested) {
+            console.error(`hashAsset taskpool execute error for ${id}`, e);
+          }
+          return undefined;
+        });
+        executors.push(executor);
+      } catch (e) {
+        console.error(`hashAsset setup error for ${id}`, e);
+        executors.push(Promise.resolve(undefined));
+      }
     }
 
     const results: HashResult[] = [];
-    try {
-      const res = await taskpool.execute(group, taskpool.Priority.MEDIUM) as Array<string | undefined>;
-      const hashes = (res ?? []).map((digest) => digest ?? '');
-      for (let i = 0; i < assetIds.length; i++) {
-        if (this.cancelRequested) {
-          break;
-        }
-        const b64 = hashes[i] ?? '';
-        const hr = new HashResult();
-        hr.setAssetId(assetIds[i]);
-        hr.setHash(b64.length === 0 ? '' : b64);
-        // Always set error field so the list has a fixed length [assetId, error, hash].
-        hr.setError(b64.length === 0 ? 'hash_failed' : '');
-        results.push(hr);
+    for (let i = 0; i < assetIds.length; i++) {
+      if (this.cancelRequested) {
+        break;
       }
-    } catch (e) {
-      console.error(`hashAssets taskpool execute error: ${e}`);
-      // for (const id of assetIds) {
-      //   const hr = new HashResult();
-      //   hr.setAssetId(id);
-      //   hr.setError('hash_failed');
-      //   results.push(hr);
-      // }
+
+      const hr = new HashResult();
+      hr.setAssetId(assetIds[i]);
+
+      const b64 = (await executors[i]) ?? '';
+      hr.setHash(b64.length === 0 ? '' : b64);
+      // Always set error field so the list has a fixed length [assetId, error, hash].
+      hr.setError(b64.length === 0 ? 'hash_failed' : '');
+
+      results.push(hr);
     }
 
     result.success(results);
