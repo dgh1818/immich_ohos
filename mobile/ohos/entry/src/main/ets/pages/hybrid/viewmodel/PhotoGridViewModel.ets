@@ -222,15 +222,16 @@ export class PhotoGridViewModel {
         return;
       }
       if (this.isGridScrolling) {
-        this.syncSourceWhileScrolling();
+        this.syncSourceWhileScrolling(false);
         return;
       }
       if (this.hasCompletedFirstLoad) {
         // 非滚动状态下新数据到达（loadMore 完成等）时，用增量通知同步到 Grid，
         // 避免 onDataReloaded() 带来的可见闪烁。
-        this.syncSourceWhileScrolling();
+        this.syncSourceWhileScrolling(false);
         this.syncActiveWindowToVisibleAnchor(true, false);
         this.reconcileFormGridItems(this.activeForm, this.currentGridItems);
+        this.notifyStateChanged();
         return;
       }
       this.syncFromDataVm();
@@ -242,11 +243,11 @@ export class PhotoGridViewModel {
         return;
       }
       if (this.isGridScrolling) {
-        this.syncSourceWhileScrolling();
+        this.syncSourceWhileScrolling(false);
         return;
       }
       if (this.hasCompletedFirstLoad) {
-        this.syncSourceWhileScrolling();
+        this.syncSourceWhileScrolling(true);
         return;
       }
       this.syncFromDataVm();
@@ -254,7 +255,7 @@ export class PhotoGridViewModel {
     },
     onDataLoading: (isLoading: boolean): void => {
       if (this.isGridScrolling) {
-        this.syncSourceWhileScrolling();
+        this.syncSourceWhileScrolling(false);
       } else {
         this.syncMetaFromDataVm();
       }
@@ -478,6 +479,7 @@ export class PhotoGridViewModel {
     Thumbnail.setRuntimeScrollActive(true);
     Thumbnail.ThumbnailRequestLimiter.drainStalePrefetchWaiters();
     this.timelineViewModel.onScrollStart();
+    this.notifyStateChanged();
   }
 
   public onFormScrollStop(form: FormIndex): void {
@@ -489,7 +491,7 @@ export class PhotoGridViewModel {
     this.updateTouchScrollEnd();
     Thumbnail.setRuntimeScrollActive(false);
     this.timelineViewModel.onScrollStop();
-    this.syncSourceWhileScrolling();
+    this.syncSourceWhileScrolling(false);
     // 滚动停止后只把最新 source 投影增量同步到 active Grid；
     // 内部滑窗状态仍然会更新，但不会再把 window-local 数组直接塞回 Grid。
     this.syncActiveWindowToVisibleAnchor(true, false);
@@ -497,6 +499,7 @@ export class PhotoGridViewModel {
     this.prefetchVisibleAndAheadAfterScrollStop();
     this.scheduleIdlePrefetchWork();
     this.preloadAdjacentForms();
+    this.notifyStateChanged();
   }
 
   public onFormTouchState(form: FormIndex, touching: boolean): void {
@@ -521,10 +524,12 @@ export class PhotoGridViewModel {
     this.maybeShiftActiveWindowWhileScrolling();
     const rowStart = this.resolveTimelineRowIndexFromGridIndex(start, form);
     const rowEnd = this.resolveTimelineRowIndexFromGridIndex(end, form);
-    this.updateFloatingSection(rowStart);
+    const floatingSectionChanged = this.updateFloatingSection(rowStart);
     this.timelineViewModel.onScrollIndex(rowStart, rowEnd);
     this.prefetchAheadWhileScrolling(previousGridStart, previousGridEnd, this.lastVisibleGridStart, this.lastVisibleGridEnd);
-    this.notifyStateChanged();
+    if (floatingSectionChanged) {
+      this.notifyStateChanged();
+    }
   }
 
   public onFormDidScroll(form: FormIndex, _offset: number, _state: number): void {
@@ -1313,15 +1318,6 @@ export class PhotoGridViewModel {
   private syncCommittedFormDataSource(): void {
     const activeState = this.getGridState(this.activeForm);
     activeState.dataSource?.updateDataIfChanged(this.currentGridItems.slice());
-    FORM_ORDER.forEach((form: FormIndex) => {
-      if (form === this.activeForm) {
-        return;
-      }
-      if (this.pinchActive && form === this.targetForm) {
-        return;
-      }
-      this.getGridState(form).dataSource?.updateDataIfChanged([]);
-    });
   }
 
   private syncFromDataVm(): void {
@@ -1423,7 +1419,7 @@ export class PhotoGridViewModel {
    * 滚动中的轻量级数据同步：刷新 source 投影与元信息，
    * 但不在滚动中把新投影直接同步到 active Grid 数据源。
    */
-  private syncSourceWhileScrolling(): void {
+  private syncSourceWhileScrolling(notifyUi: boolean = false): void {
     this.isLoading = this.timelineViewModel.getIsLoading();
     this.isLoadingMore = this.timelineViewModel.getIsLoadingMore();
     this.hasMore = this.timelineViewModel.getHasMore();
@@ -1438,17 +1434,23 @@ export class PhotoGridViewModel {
       hasMore: this.hasMore,
     });
     this.syncActiveSourceProjection(false, false);
-    this.notifyStateChanged();
+    if (notifyUi) {
+      this.notifyStateChanged();
+    }
   }
 
-  private updateFloatingSection(startIndex: number): void {
+  private updateFloatingSection(startIndex: number): boolean {
     const info = this.dataAdapter.buildFloatingSectionInfo(this.currentItems, startIndex);
-    this.applyFloatingSection(info);
+    return this.applyFloatingSection(info);
   }
 
-  private applyFloatingSection(info: FloatingSectionInfo): void {
+  private applyFloatingSection(info: FloatingSectionInfo): boolean {
+    if (this.floatingSectionTitle === info.title && this.floatingSectionCount === info.count) {
+      return false;
+    }
     this.floatingSectionTitle = info.title;
     this.floatingSectionCount = info.count;
+    return true;
   }
 
   private resolveVisibleTimelineRowIndex(): number {
@@ -2308,6 +2310,9 @@ export class PhotoGridViewModel {
     this.timelineDataManager.resetSlidingWindowState(form);
     state.preloadRequestKey = '';
     state.preloadAnchorGridIndex = 0;
+    if (clearDataSource && state.gridItems.length > 0) {
+      return;
+    }
     this.clearFormGridItems(form, clearDataSource);
   }
 
