@@ -56,13 +56,18 @@ type PhotoSection = Shared.PhotoSection;
 type TimelineItem = Shared.TimelineItem;
 type GridItem = Shared.GridItem;
 
+interface GridIndexRange {
+  startIndex: number;
+  endIndex: number;
+}
+
 const PINCH_RESET_DURATION_MS: number = 160;
 const PINCH_COMMIT_DURATION_MS: number = 150;
 const FILL_POSITION_RESTORE_DELAY_MS: number = 350;
 const PRELOAD_TIMEOUT_MS: number = 180;
 const PINCH_SHRINK_ENTER_SCALE: number = 0.98;
 const EXPAND_MIN_OPACITY: number = 0.15;
-const GRID_CACHED_COUNT: number = 5;
+const GRID_CACHED_COUNT: number = 8;
 
 const FORM_ORDER: Array<FormIndex> = [
   FormIndex.YEAR,
@@ -1729,8 +1734,17 @@ export class PhotoGridViewModel {
   }
 
   private prefetchVisibleAndAheadAfterScrollStop(): void {
-    if (this.currentGridItems.length <= 0 || this.pinchActive) {
+    const range = this.resolveScrollStopPrefetchRange();
+    if (!range) {
       return;
+    }
+
+    this.prefetchGridRange(range.startIndex, range.endIndex);
+  }
+
+  private resolveScrollStopPrefetchRange(): GridIndexRange | undefined {
+    if (this.currentGridItems.length <= 0 || this.pinchActive) {
+      return undefined;
     }
 
     const startIndex = Math.max(0, this.lastVisibleGridStart);
@@ -1744,7 +1758,11 @@ export class PhotoGridViewModel {
             this.getGridState(this.activeForm).columns) - 1,
         ),
       );
-    this.prefetchGridRange(startIndex, this.resolveScrollStopPrefetchEnd(endIndex));
+
+    return {
+      startIndex: startIndex,
+      endIndex: this.resolveScrollStopPrefetchEnd(endIndex),
+    };
   }
 
   private maybeShiftActiveWindowWhileScrolling(): void {
@@ -1785,6 +1803,70 @@ export class PhotoGridViewModel {
             return Promise.resolve();
           }
           return Thumbnail.backgroundPredownloadRemoteThumbnail(this.context, asset.thumbnailUrl, requestSize);
+        }),
+      );
+      await Shared.delay(Shared.HYBRID_BACKGROUND_PREDOWNLOAD_YIELD_MS);
+    }
+  }
+
+  private collectPhotoAssetsInGridRange(range: GridIndexRange): Array<PhotoAsset> {
+    const assets: Array<PhotoAsset> = [];
+    const seenRemoteKeys: Set<string> = new Set();
+    const safeStart = Math.max(0, range.startIndex);
+    const safeEnd = Math.min(range.endIndex, this.currentGridItems.length - 1);
+
+    for (let index = safeStart; index <= safeEnd; index += 1) {
+      const item = this.currentGridItems[index];
+      if (item.kind !== 'photo' || !item.asset) {
+        continue;
+      }
+
+      const asset = item.asset;
+      const remoteUrl = asset.thumbnailUrl;
+      if (!remoteUrl) {
+        continue;
+      }
+
+      if (seenRemoteKeys.has(remoteUrl)) {
+        continue;
+      }
+
+      seenRemoteKeys.add(remoteUrl);
+      assets.push(asset);
+    }
+
+    return assets;
+  }
+
+  private async predownloadVisibleAndAheadRunway(requestSize: number): Promise<void> {
+    if (!Shared.HYBRID_ENABLE_REMOTE_THUMBNAIL_DISK_WRITES) {
+      return;
+    }
+
+    const range = this.resolveScrollStopPrefetchRange();
+    if (!range) {
+      return;
+    }
+
+    const assets = this.collectPhotoAssetsInGridRange(range);
+    if (assets.length <= 0) {
+      return;
+    }
+
+    const batchSize = Math.max(1, Shared.resolvePrefetchConcurrency());
+    for (let index = 0; index < assets.length; index += batchSize) {
+      while (Thumbnail.ThumbnailRequestLimiter.isUnderPressure()) {
+        await Shared.delay(Shared.HYBRID_BACKGROUND_PREDOWNLOAD_YIELD_MS * 2);
+      }
+
+      const batch = assets.slice(index, index + batchSize);
+      await Promise.all(
+        batch.map((asset: PhotoAsset): Promise<void> => {
+          const remoteUrl = asset.thumbnailUrl;
+          if (!remoteUrl) {
+            return Promise.resolve();
+          }
+          return Thumbnail.backgroundPredownloadRemoteThumbnail(this.context, remoteUrl, requestSize);
         }),
       );
       await Shared.delay(Shared.HYBRID_BACKGROUND_PREDOWNLOAD_YIELD_MS);
@@ -1869,18 +1951,36 @@ export class PhotoGridViewModel {
     const token = ++this.idleWorkToken;
     const requestSize = this.resolveRequestSize(this.activeForm);
     setTimeout((): void => {
-      if (token !== this.idleWorkToken || this.isGridScrolling || this.pinchActive) {
+      void this.runIdlePrefetchWork(token, requestSize);
+    }, Shared.HYBRID_SCROLL_IDLE_DELAY_MS);
+  }
+
+  private shouldAbortIdlePrefetchWork(token: number): boolean {
+    return token !== this.idleWorkToken || this.isGridScrolling || this.pinchActive;
+  }
+
+  private async runIdlePrefetchWork(token: number, requestSize: number): Promise<void> {
+    if (this.shouldAbortIdlePrefetchWork(token)) {
+      return;
+    }
+
+    await this.predownloadVisibleAndAheadRunway(requestSize);
+    if (this.shouldAbortIdlePrefetchWork(token)) {
+      return;
+    }
+
+    const pendingSections = this.pendingWarmupSections.splice(0, this.pendingWarmupSections.length);
+    if (pendingSections.length > 0) {
+      await this.predownloadSections(pendingSections, false, requestSize);
+      if (this.shouldAbortIdlePrefetchWork(token)) {
         return;
       }
+    }
 
-      const pendingSections = this.pendingWarmupSections.splice(0, this.pendingWarmupSections.length);
-      if (pendingSections.length > 0) {
-        void this.predownloadSections(pendingSections, false, requestSize);
-      }
-      Thumbnail.flushDeferredThumbnailWritesIfIdle();
-      Thumbnail.trimRemoteThumbnailCacheIfNeeded(this.context);
-      this.startBackgroundPredownload();
-    }, Shared.HYBRID_DISK_IDLE_DELAY_MS);
+    Thumbnail.flushDeferredThumbnailWritesIfIdle();
+    Thumbnail.trimRemoteThumbnailCacheIfNeeded(this.context);
+    this.prefetchVisibleAndAheadAfterScrollStop();
+    this.startBackgroundPredownload();
   }
 
   private warmTargetFormPreview(

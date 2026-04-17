@@ -426,8 +426,8 @@ export class HybridThumbnailRequestLimiter {
   private static visibleWaiters: Array<() => void> = [];
   private static prefetchWaiters: Array<() => void> = [];
   private static scrollActive: boolean = false;
-  private static readonly SCROLL_VISIBLE_THUMBNAIL_LIMIT: number = 8;
-  private static readonly SCROLL_PREFETCH_LIMIT: number = 2;
+  private static readonly SCROLL_VISIBLE_THUMBNAIL_LIMIT: number = 6;
+  private static readonly SCROLL_PREFETCH_LIMIT: number = 1;
 
   static async run(task: () => Promise<PixelMap>, isPrefetch: boolean): Promise<PixelMap> {
     await HybridThumbnailRequestLimiter.acquire(isPrefetch);

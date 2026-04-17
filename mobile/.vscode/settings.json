@@ -27,5 +27,6 @@
     "**/ArkTSCheck/**": true,
     "**/build/**": true,
     "**/*.log": true
-  }
+  },
+  "cmake.sourceDirectory": "F:/immich_ohos/mobile/photo_manager_image_provider/example/linux"
 }
