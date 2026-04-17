@@ -70,9 +70,15 @@ class HashService {
           break;
         }
 
-        final assetsToHash = (await _localAlbumRepository.getAssetsToHash(album.id))
-            .where((asset) => processedAssetIds.add(asset.id))
-            .toList();
+        final assetsToHash = <LocalAsset>[];
+        final albumAssetsToHash = await _localAlbumRepository.getAssetsToHash(album.id);
+        for (final asset in albumAssetsToHash) {
+          if (processedAssetIds.contains(asset.id)) {
+            continue;
+          }
+          processedAssetIds.add(asset.id);
+          assetsToHash.add(asset);
+        }
 
         //开启后台保活
         if (assetsToHash.isNotEmpty && !_startedBackgroundTransfer && Platform.isOhos) {
