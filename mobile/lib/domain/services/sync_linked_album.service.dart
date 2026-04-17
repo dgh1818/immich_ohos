@@ -31,13 +31,14 @@ class SyncLinkedAlbumService {
       selectedAlbums.map((localAlbum) async {
         final linkedRemoteAlbumId = localAlbum.linkedRemoteAlbumId;
         if (linkedRemoteAlbumId == null) {
-          _log.warning("No linked remote album ID found for local album: ${localAlbum.name}");
+          _log.fine("Skipping unlinked local album: ${localAlbum.name}");
           return;
         }
 
         final remoteAlbum = await _remoteAlbumRepository.get(linkedRemoteAlbumId);
         if (remoteAlbum == null) {
           _log.warning("Linked remote album not found for ID: $linkedRemoteAlbumId");
+          await _localAlbumRepository.unlinkRemoteAlbum(localAlbum.id);
           return;
         }
 

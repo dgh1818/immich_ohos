@@ -190,5 +190,22 @@ void main() {
       verify(() => mockNativeApi.hashAssets([asset1.id], allowNetworkAccess: true)).called(1);
       verify(() => mockNativeApi.hashAssets([asset2.id], allowNetworkAccess: false)).called(1);
     });
+
+    test('does not retry the same asset across multiple albums in one run', () async {
+      final album1 = LocalAlbumStub.recent.copyWith(id: 'album-1');
+      final album2 = LocalAlbumStub.recent.copyWith(id: 'album-2');
+      final asset = LocalAssetStub.image1;
+
+      when(() => mockAlbumRepo.getBackupAlbums()).thenAnswer((_) async => [album1, album2]);
+      when(() => mockAlbumRepo.getAssetsToHash(album1.id)).thenAnswer((_) async => [asset]);
+      when(() => mockAlbumRepo.getAssetsToHash(album2.id)).thenAnswer((_) async => [asset]);
+      when(
+        () => mockNativeApi.hashAssets([asset.id], allowNetworkAccess: false),
+      ).thenAnswer((_) async => [HashResult(assetId: asset.id, error: 'hash_failed')]);
+
+      await sut.hashAssets();
+
+      verify(() => mockNativeApi.hashAssets([asset.id], allowNetworkAccess: false)).called(1);
+    });
   });
 }
