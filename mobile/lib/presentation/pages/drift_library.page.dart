@@ -13,6 +13,7 @@ import 'package:immich_mobile/providers/infrastructure/partner.provider.dart';
 import 'package:immich_mobile/providers/infrastructure/people.provider.dart';
 import 'package:immich_mobile/providers/server_info.provider.dart';
 import 'package:immich_mobile/presentation/widgets/images/remote_image_provider.dart';
+import 'package:immich_mobile/presentation/widgets/map/map_utils.dart';
 import 'package:immich_mobile/routing/router.dart';
 import 'package:immich_mobile/utils/image_url_builder.dart';
 import 'package:immich_mobile/widgets/common/immich_sliver_app_bar.dart';
@@ -216,7 +217,18 @@ class _PlacesCollectionCard extends StatelessWidget {
         final size = context.width * widthFactor - 20.0;
 
         return GestureDetector(
-          onTap: () => context.pushRoute(DriftPlaceRoute(currentLocation: null)),
+          onTap: () async {
+            final (location, _) = await MapUtils.checkPermAndGetLocation(context: context, silent: true);
+            if (!context.mounted) {
+              return;
+            }
+
+            context.pushRoute(
+              DriftPlaceRoute(
+                currentLocation: location == null ? null : LatLng(location.latitude, location.longitude),
+              ),
+            );
+          },
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [

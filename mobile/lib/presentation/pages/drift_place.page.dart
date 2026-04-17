@@ -94,13 +94,11 @@ class _Map extends StatelessWidget {
                 height: 200,
                 width: context.width,
                 child: MapThumbnail(
-                  onTap: (_, __) =>
-                      context.pushRoute(DriftMapRoute(initialLocation: const LatLng(31.171944, 121.549722))),
+                  onTap: (_, __) => context.pushRoute(DriftMapRoute(initialLocation: currentLocation)),
                   zoom: 8,
                   centre: currentLocation ?? const LatLng(31.171944, 121.549722),
                   showAttribution: false,
                   themeMode: context.isDarkTheme ? ThemeMode.dark : ThemeMode.light,
-
                   isZoomControlsEnabled: false,
                 ),
               ),
