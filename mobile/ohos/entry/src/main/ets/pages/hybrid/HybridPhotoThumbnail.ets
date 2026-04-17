@@ -446,6 +446,10 @@ export class HybridThumbnailRequestLimiter {
     }
   }
 
+  static isScrollActive(): boolean {
+    return HybridThumbnailRequestLimiter.scrollActive;
+  }
+
   static drainStalePrefetchWaiters(): void {
     // Drop all queued prefetch waiters on scroll start — their viewport targets are stale.
     // Resolve each promise so the caller's async chain finishes (the limiter never acquired
@@ -681,6 +685,10 @@ export function warmupAssetThumbnail(
   }
 
   if (asset.thumbnailUrl) {
+    if (HybridThumbnailRequestLimiter.isScrollActive() &&
+      !Disk.hasRemoteThumbnailCache(ctx, asset.thumbnailUrl, requestSize)) {
+      return;
+    }
     HybridRemoteThumbnailWarmup.predownload(ctx, asset, requestSize);
   }
 }
@@ -699,6 +707,12 @@ export function prefetchAssetThumbnail(
   requestSize: number,
 ): void {
   if (HybridThumbnailRequestLimiter.shouldPausePrefetch()) {
+    return;
+  }
+
+  if (asset.thumbnailUrl &&
+    HybridThumbnailRequestLimiter.isScrollActive() &&
+    !Disk.hasRemoteThumbnailCache(ctx, asset.thumbnailUrl, requestSize)) {
     return;
   }
 

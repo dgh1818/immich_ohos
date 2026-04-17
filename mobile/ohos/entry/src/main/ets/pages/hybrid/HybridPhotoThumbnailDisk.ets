@@ -7,6 +7,7 @@ import {
   delay,
   HYBRID_BACKGROUND_PREDOWNLOAD_YIELD_MS,
   HYBRID_DEFERRED_REMOTE_WRITE_LIMIT,
+  HYBRID_DEFERRED_REMOTE_WRITE_MAX_BYTES,
   HYBRID_ENABLE_REMOTE_THUMBNAIL_DISK_WRITES,
   HYBRID_REMOTE_THUMBNAIL_CACHE_DIR,
   HYBRID_REMOTE_THUMBNAIL_LEGACY_CACHE_DIR,
@@ -352,6 +353,87 @@ class HybridDeferredRemoteThumbnailWriter {
   private static entries: Map<string, HybridDeferredRemoteWriteEntry> = new Map();
   private static running: boolean = false;
   private static lastCtx?: common.UIAbilityContext;
+  private static totalBytes: number = 0;
+
+  private static buildKey(url: string, requestSize: number): string {
+    return `${requestSize}:${url}`;
+  }
+
+  private static touchKey(key: string): void {
+    const entry = HybridDeferredRemoteThumbnailWriter.entries.get(key);
+    if (!entry) {
+      return;
+    }
+
+    HybridDeferredRemoteThumbnailWriter.entries.delete(key);
+    HybridDeferredRemoteThumbnailWriter.entries.set(key, entry);
+  }
+
+  private static trimOverflow(): void {
+    while (
+      HybridDeferredRemoteThumbnailWriter.entries.size > HYBRID_DEFERRED_REMOTE_WRITE_LIMIT ||
+      HybridDeferredRemoteThumbnailWriter.totalBytes > HYBRID_DEFERRED_REMOTE_WRITE_MAX_BYTES
+    ) {
+      const oldestKey = HybridDeferredRemoteThumbnailWriter.entries.keys().next().value as string | undefined;
+      if (!oldestKey) {
+        break;
+      }
+
+      const oldestEntry = HybridDeferredRemoteThumbnailWriter.entries.get(oldestKey);
+      HybridDeferredRemoteThumbnailWriter.entries.delete(oldestKey);
+      if (!oldestEntry) {
+        continue;
+      }
+      HybridDeferredRemoteThumbnailWriter.totalBytes = Math.max(
+        0,
+        HybridDeferredRemoteThumbnailWriter.totalBytes - oldestEntry.data.byteLength,
+      );
+    }
+  }
+
+  static hasPending(
+    url: string,
+    requestSize: number,
+  ): boolean {
+    const key = HybridDeferredRemoteThumbnailWriter.buildKey(url, requestSize);
+    const hasEntry = HybridDeferredRemoteThumbnailWriter.entries.has(key);
+    if (hasEntry) {
+      HybridDeferredRemoteThumbnailWriter.touchKey(key);
+    }
+    return hasEntry;
+  }
+
+  static peekData(
+    url: string,
+    requestSize: number,
+  ): ArrayBuffer | undefined {
+    const key = HybridDeferredRemoteThumbnailWriter.buildKey(url, requestSize);
+    const entry = HybridDeferredRemoteThumbnailWriter.entries.get(key);
+    if (!entry) {
+      return undefined;
+    }
+
+    HybridDeferredRemoteThumbnailWriter.touchKey(key);
+    return entry.data;
+  }
+
+  static takeData(
+    url: string,
+    requestSize: number,
+  ): ArrayBuffer | undefined {
+    const key = HybridDeferredRemoteThumbnailWriter.buildKey(url, requestSize);
+    const entry = HybridDeferredRemoteThumbnailWriter.entries.get(key);
+    if (!entry) {
+      return undefined;
+    }
+
+    HybridDeferredRemoteThumbnailWriter.entries.delete(key);
+    HybridDeferredRemoteThumbnailWriter.totalBytes = Math.max(
+      0,
+      HybridDeferredRemoteThumbnailWriter.totalBytes - entry.data.byteLength,
+    );
+    return entry.data;
+  }
 
   static enqueue(
     ctx: common.UIAbilityContext,
@@ -364,22 +446,24 @@ class HybridDeferredRemoteThumbnailWriter {
       return;
     }
 
-    const key = `${requestSize}:${url}`;
+    const key = HybridDeferredRemoteThumbnailWriter.buildKey(url, requestSize);
+    const previous = HybridDeferredRemoteThumbnailWriter.entries.get(key);
     HybridDeferredRemoteThumbnailWriter.lastCtx = ctx;
+    if (previous) {
+      HybridDeferredRemoteThumbnailWriter.totalBytes = Math.max(
+        0,
+        HybridDeferredRemoteThumbnailWriter.totalBytes - previous.data.byteLength,
+      );
+      HybridDeferredRemoteThumbnailWriter.entries.delete(key);
+    }
     HybridDeferredRemoteThumbnailWriter.entries.set(key, {
       ctx: ctx,
       url: url,
       requestSize: requestSize,
       data: data,
     });
-
-    while (HybridDeferredRemoteThumbnailWriter.entries.size > HYBRID_DEFERRED_REMOTE_WRITE_LIMIT) {
-      const oldestKey = HybridDeferredRemoteThumbnailWriter.entries.keys().next().value as string | undefined;
-      if (!oldestKey) {
-        break;
-      }
-      HybridDeferredRemoteThumbnailWriter.entries.delete(oldestKey);
-    }
+    HybridDeferredRemoteThumbnailWriter.totalBytes += data.byteLength;
+    HybridDeferredRemoteThumbnailWriter.trimOverflow();
   }
 
   static flushIfIdle(): void {
@@ -490,7 +574,8 @@ export function hasRemoteThumbnailCache(
   url: string,
   requestSize: number,
 ): boolean {
-  return findExistingRemoteThumbnailCachePath(ctx, url, requestSize) !== undefined;
+  return findExistingRemoteThumbnailCachePath(ctx, url, requestSize) !== undefined ||
+    HybridDeferredRemoteThumbnailWriter.hasPending(url, requestSize);
 }
 
 export async function loadRemoteThumbnail(
@@ -506,6 +591,11 @@ export async function loadRemoteThumbnail(
       deleteFileIfExists(cachePath);
       HybridRemoteThumbnailCacheIndex.noteRemoved(cachePath);
     }
+  }
+
+  const pendingData = HybridDeferredRemoteThumbnailWriter.peekData(url, requestSize);
+  if (pendingData) {
+    return await decodeRemoteThumbnailFromBuffer(pendingData, requestSize);
   }
 
   const request = http.createHttp();
@@ -558,6 +648,15 @@ export async function ensureRemoteThumbnailCached(
   }
 
   const cachePath = remoteThumbnailCachePath(ctx, url, requestSize);
+  const pendingData = HybridDeferredRemoteThumbnailWriter.peekData(url, requestSize);
+  if (pendingData) {
+    if (HybridScrollState.isScrolling) {
+      return cachePath;
+    }
+
+    const persistData = HybridDeferredRemoteThumbnailWriter.takeData(url, requestSize) ?? pendingData;
+    return persistRemoteThumbnailBuffer(ctx, url, requestSize, persistData);
+  }
 
   const request = http.createHttp();
   const options: http.HttpRequestOptions = {
