@@ -58,7 +58,7 @@
 
 链接已实测可用，解决了发布地区在海外导致不能安装的问题，推荐先卸载自签名版本再重新安装，如仍不可用可以提issue <br/>
 2026.03.29更新
-https://appgallery.huawei.com/link/invite-test-wap?taskId=9cc188692a9f1973980c762a4c510283&invitationCode=2yNHPAZ1Hll <br/>
+https://appgallery.huawei.com/link/invite-test-wap?taskId=dc0303c2e71378926b76126e7eeb6844&invitationCode=2yNHPAZ1Hll <br/>
 https://appgallery.huawei.com/app/detail?id=com.dgh18.immich&channelId=SHARE&source=appshare <br/>
 **IMMICH 搭配对应版本 本项目下服务器 使用**
 
