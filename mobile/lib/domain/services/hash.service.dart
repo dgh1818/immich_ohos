@@ -62,6 +62,7 @@ class HashService {
 
       // Sorted by backupSelection followed by isCloud
       final localAlbums = await _localAlbumRepository.getBackupAlbums();
+      final processedAssetIds = <String>{};
 
       for (final album in localAlbums) {
         if (isCancelled) {
@@ -70,9 +71,15 @@ class HashService {
         }
 
         final assetsToHash = await _localAlbumRepository.getAssetsToHash(album.id);
+        final uniqueAssetsToHash = <LocalAsset>[];
+        for (final asset in assetsToHash) {
+          if (processedAssetIds.add(asset.id)) {
+            uniqueAssetsToHash.add(asset);
+          }
+        }
 
         //开启后台保活
-        if (assetsToHash.isNotEmpty && !_startedBackgroundTransfer && Platform.isOhos) {
+        if (uniqueAssetsToHash.isNotEmpty && !_startedBackgroundTransfer && Platform.isOhos) {
           try {
             await _nativeSyncApi.startBackgroundTransfer();
             _startedBackgroundTransfer = true;
@@ -81,11 +88,11 @@ class HashService {
           }
         }
 
-        toHashCount = assetsToHash.length;
+        toHashCount = uniqueAssetsToHash.length;
         hashedCount = 0;
 
-        if (assetsToHash.isNotEmpty) {
-          await _hashAssets(album, assetsToHash);
+        if (uniqueAssetsToHash.isNotEmpty) {
+          await _hashAssets(album, uniqueAssetsToHash);
         }
       }
       if (CurrentPlatform.isAndroid && localAlbums.isNotEmpty) {
@@ -133,8 +140,6 @@ class HashService {
       }
     }
 
-    stopwatch.stop();
-    _log.info("Hashing took - ${stopwatch.elapsedMilliseconds}ms");
   }
 
   /// Processes a list of [LocalAsset]s, storing their hash and updating the assets in the DB

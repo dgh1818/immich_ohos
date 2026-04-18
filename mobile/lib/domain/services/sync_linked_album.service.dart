@@ -38,6 +38,7 @@ class SyncLinkedAlbumService {
         final remoteAlbum = await _remoteAlbumRepository.get(linkedRemoteAlbumId);
         if (remoteAlbum == null) {
           _log.warning("Linked remote album not found for ID: $linkedRemoteAlbumId");
+          await _localAlbumRepository.unlinkRemoteAlbum(localAlbum.id);
           return;
         }
 
