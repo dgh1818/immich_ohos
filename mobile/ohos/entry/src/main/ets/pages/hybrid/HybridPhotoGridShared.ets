@@ -34,13 +34,13 @@ export const HYBRID_THUMBNAIL_RELEASE_DELAY_MS = 220;
 export const HYBRID_LOAD_MORE_THROTTLE_MS = 100;
 export const HYBRID_FLOATING_HEADER_HEIGHT = 56;
 export const HYBRID_REMOTE_THUMBNAIL_CACHE_DIR = 'thumbnail';
-export const HYBRID_REMOTE_THUMBNAIL_LEGACY_CACHE_DIR = 'hybrid_photos';
 export const HYBRID_REMOTE_THUMBNAIL_CACHE_MAX_BYTES = 2 * 1024 * 1024 * 1024;
 export const HYBRID_REMOTE_THUMBNAIL_CACHE_TRIM_TARGET_BYTES = 1800 * 1024 * 1024;
 export const HYBRID_REMOTE_THUMBNAIL_CACHE_TRIM_INTERVAL_MS = 10000;
 export const HYBRID_BACKGROUND_PREDOWNLOAD_YIELD_MS = 80;
 export const HYBRID_SCROLL_IDLE_DELAY_MS = 240;
 export const HYBRID_SCROLL_PREFETCH_INTERVAL_MS = 50;
+export const HYBRID_SCROLL_REMOTE_PREDOWNLOAD_BATCH_SIZE = 4;
 export const HYBRID_DISK_IDLE_DELAY_MS = 900;
 export const HYBRID_DEFERRED_REMOTE_WRITE_LIMIT = 2048;
 export const HYBRID_DEFERRED_REMOTE_WRITE_MAX_BYTES = 192 * 1024 * 1024;
@@ -497,6 +497,12 @@ export class HybridGridDataSource implements IDataSource {
 
     const previousItems = this.items.slice();
     const nextItems = items.slice();
+    if (!this.canIncrementallyReconcile(previousItems, nextItems)) {
+      this.items = nextItems;
+      this.onDataReloaded();
+      return true;
+    }
+
     const minLength = Math.min(previousItems.length, nextItems.length);
     this.items = nextItems;
 
@@ -515,6 +521,19 @@ export class HybridGridDataSource implements IDataSource {
 
     for (let index = previousItems.length; index < nextItems.length; index += 1) {
       this.onDataAdd(index);
+    }
+    return true;
+  }
+
+  private canIncrementallyReconcile(
+    previousItems: Array<HybridGridItem>,
+    nextItems: Array<HybridGridItem>,
+  ): boolean {
+    const minLength = Math.min(previousItems.length, nextItems.length);
+    for (let index = 0; index < minLength; index += 1) {
+      if (!this.isSameItem(previousItems[index], nextItems[index])) {
+        return false;
+      }
     }
     return true;
   }

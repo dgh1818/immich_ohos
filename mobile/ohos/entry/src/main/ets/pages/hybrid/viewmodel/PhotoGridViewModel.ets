@@ -17,7 +17,6 @@ import {
 import { SwitchCalcParams, SwitchCalcUtils } from './SwitchCalcUtils';
 import {
   TimelineDataManager,
-  TimelineDataSourceState,
   TimelinePreloadReason,
   TimelinePreloadRequest,
   TimelinePreloadResult,
@@ -59,6 +58,14 @@ type GridItem = Shared.GridItem;
 interface GridIndexRange {
   startIndex: number;
   endIndex: number;
+}
+
+interface DuplicateAssetKeyStats {
+  totalAssetCount: number;
+  uniqueKeyCount: number;
+  duplicateKeyCount: number;
+  duplicateAssetCount: number;
+  firstDuplicateKey: string;
 }
 
 const PINCH_RESET_DURATION_MS: number = 160;
@@ -144,6 +151,9 @@ export class PhotoGridViewModel {
   private idleWorkToken: number = 0;
   private pendingWarmupSections: Array<PhotoSection> = [];
   private viewerSections: Array<PhotoSection> = [];
+  private appendSourcePagePreDuplicateLogged: boolean = false;
+  private appendSourcePagePostDuplicateLogged: boolean = false;
+  private syncActiveProjectionPreDuplicateLogged: boolean = false;
 
   public readonly yearGridState: FormGridState = new FormGridState(FormIndex.YEAR);
   public readonly monthGridState: FormGridState = new FormGridState(FormIndex.MONTH);
@@ -322,6 +332,7 @@ export class PhotoGridViewModel {
     }
 
     this.initialized = true;
+    Thumbnail.primeRemoteThumbnailCacheIndex(this.context);
     this.initGridVcs();
     this.timelineViewModel.addDataLoadListener(this.dataLoadListener);
     this.hasCompletedFirstLoad = false;
@@ -416,10 +427,10 @@ export class PhotoGridViewModel {
     state.dataSource = dataSource;
     if (form === this.activeForm) {
       this.resetFormPreloadRuntime(form, PreloadStateType.HIDDEN_STATE);
-      this.updateFormGridItems(form, this.currentGridItems);
+      this.reconcileFormGridItems(form, this.currentGridItems);
       return;
     }
-    if (!this.pinchActive && this.shouldPreloadForm(form)) {
+    if (this.shouldKeepAdjacentFormsWarm() && this.shouldPreloadForm(form)) {
       this.triggerPreloadViewData(this.buildAdjacentPreloadRequest(form));
       return;
     }
@@ -498,7 +509,6 @@ export class PhotoGridViewModel {
     this.reconcileFormGridItems(this.activeForm, this.currentGridItems);
     this.prefetchVisibleAndAheadAfterScrollStop();
     this.scheduleIdlePrefetchWork();
-    this.preloadAdjacentForms();
     this.notifyStateChanged();
   }
 
@@ -524,12 +534,9 @@ export class PhotoGridViewModel {
     this.maybeShiftActiveWindowWhileScrolling();
     const rowStart = this.resolveTimelineRowIndexFromGridIndex(start, form);
     const rowEnd = this.resolveTimelineRowIndexFromGridIndex(end, form);
-    const floatingSectionChanged = this.updateFloatingSection(rowStart);
+    this.updateFloatingSection(rowStart);
     this.timelineViewModel.onScrollIndex(rowStart, rowEnd);
     this.prefetchAheadWhileScrolling(previousGridStart, previousGridEnd, this.lastVisibleGridStart, this.lastVisibleGridEnd);
-    if (floatingSectionChanged) {
-      this.notifyStateChanged();
-    }
   }
 
   public onFormDidScroll(form: FormIndex, _offset: number, _state: number): void {
@@ -574,7 +581,7 @@ export class PhotoGridViewModel {
     this.timelineViewModel.beginPinchFreeze();
     this.timelineViewModel.handlePinchStart(centerX, centerY);
 
-    const totalPhotoCount = this.dataAdapter.flattenAssets(this.sections).length;
+    const totalPhotoCount = this.dataAdapter.countAssets(this.sections);
     this.pinchState = this.anchorAdapter.createPinchState(
       this.activeForm,
       this.currentGridItems,
@@ -713,10 +720,12 @@ export class PhotoGridViewModel {
     // 更新切换中状态（对齐参考：isSwitchingAsm + updateSwitchState + submitEvent）
     this.updateSwitchTransitionState(true, sourceForm, targetForm, 'handleSingleTapEvent');
     this.tapSwitchTargetForm = targetForm;
+  this.triggerPreloadViewData(this.buildAdjacentPreloadRequest(targetForm));
 
     // 准备显示状态
     this.markFormWillShow(targetForm);
     this.showPreviewForm(targetForm);
+  this.setFormWarmActive(targetForm, true);
     this.refreshFormZIndices(targetForm);
 
     // 提交切换事件，触发动画（不改变 activeForm，不重建数据）
@@ -1292,6 +1301,13 @@ export class PhotoGridViewModel {
   }
 
   private syncActiveSourceProjection(syncDataSource: boolean = false, useReconcile: boolean = false): void {
+    this.logDuplicateAssetKeysOnce(
+      'syncActiveSourceProjection:pre',
+      this.timelineDataManager.getSourceSectionsForForm(FormIndex.DAY),
+      this.timelineDataManager.getSourceWindowStartOffset(),
+      this.timelineDataManager.getSourceWindowEndOffset(),
+      this.activeForm,
+    );
     const activeState = this.getGridState(this.activeForm);
     activeState.fillPosition = this.timelineDataManager.resolveSourceFillPositionForForm(this.activeForm);
     this.viewerSections = this.timelineDataManager.getSourceSectionsForForm(this.activeForm);
@@ -1300,7 +1316,7 @@ export class PhotoGridViewModel {
     this.yearBuckets = this.timelineDataManager.getYearBuckets();
     this.monthBuckets = this.timelineDataManager.getMonthBuckets();
     this.currentItems = this.timelineDataManager.buildSourceTimelineItemsForForm(this.activeForm);
-    this.itemCount = this.dataAdapter.flattenAssets(this.viewerSections).length;
+    this.itemCount = this.dataAdapter.countAssets(this.viewerSections);
     this.currentGridItems = this.buildCommittedGridItems();
 
     if (syncDataSource) {
@@ -1316,8 +1332,7 @@ export class PhotoGridViewModel {
   }
 
   private syncCommittedFormDataSource(): void {
-    const activeState = this.getGridState(this.activeForm);
-    activeState.dataSource?.updateDataIfChanged(this.currentGridItems.slice());
+    this.reconcileFormGridItems(this.activeForm, this.currentGridItems);
   }
 
   private syncFromDataVm(): void {
@@ -1356,7 +1371,9 @@ export class PhotoGridViewModel {
     this.syncCommittedFormDataSource();
     this.applyBaseFormState();
     this.updateFloatingSection(this.resolveVisibleTimelineRowIndex());
-    this.preloadAdjacentForms(true);
+    if (this.shouldKeepAdjacentFormsWarm()) {
+      this.preloadAdjacentForms(true);
+    }
     Thumbnail.ThumbnailCache.setActiveColumns(this.getGridState(this.activeForm).columns);
     this.updatePrefetchRuntimeMode();
     if (!this.isGridScrolling && !this.pinchActive) {
@@ -1641,12 +1658,17 @@ export class PhotoGridViewModel {
   }
 
   private updatePrefetchRuntimeMode(): void {
-    const constrained = this.pinchActive ||
-      (this.transitionToForm !== this.activeForm) ||
-      (this.preparedTargetForm !== FormIndex.INVALID && this.preparedTargetForm !== this.activeForm);
+    const constrained = this.shouldKeepAdjacentFormsWarm();
     Thumbnail.setPrefetchRuntimeMode(
       constrained ? Shared.PrefetchRuntimeMode.CONSTRAINED : Shared.PrefetchRuntimeMode.NORMAL,
     );
+  }
+
+  private shouldKeepAdjacentFormsWarm(): boolean {
+    return this.pinchActive ||
+      this.tapSwitchTargetForm !== FormIndex.INVALID ||
+      this.transitionToForm !== this.activeForm ||
+      (this.preparedTargetForm !== FormIndex.INVALID && this.preparedTargetForm !== this.activeForm);
   }
 
   private prefetchGridRange(startIndex: number, endIndex: number): void {
@@ -1657,6 +1679,7 @@ export class PhotoGridViewModel {
     const requestSize = this.resolveRequestSize(this.activeForm);
     const safeStart = Math.max(0, startIndex);
     const safeEnd = Math.min(endIndex, this.currentGridItems.length - 1);
+    let scrollRemotePredownloadCount = 0;
     if (safeStart > safeEnd) {
       return;
     }
@@ -1666,6 +1689,15 @@ export class PhotoGridViewModel {
       if (item.kind !== 'photo' || !item.asset) {
         continue;
       }
+
+      const remoteUrl = item.asset.thumbnailUrl;
+      if (this.isGridScrolling && remoteUrl && !Thumbnail.hasRemoteThumbnailCache(this.context, remoteUrl, requestSize, false)) {
+        if (scrollRemotePredownloadCount >= Shared.HYBRID_SCROLL_REMOTE_PREDOWNLOAD_BATCH_SIZE) {
+          continue;
+        }
+        scrollRemotePredownloadCount += 1;
+      }
+
       Thumbnail.prefetchAssetThumbnail(this.context, item.asset, requestSize);
     }
   }
@@ -1921,6 +1953,14 @@ export class PhotoGridViewModel {
           break;
         }
 
+        this.logDuplicateAssetKeysOnce(
+          'appendSourcePage:pre',
+          page.sections,
+          page.windowStartOffset,
+          page.windowEndOffset,
+          FormIndex.DAY,
+        );
+
         this.timelineDataManager.appendSourcePage({
           sections: page.sections,
           groupDayGroups: page.groupDayGroups,
@@ -1930,6 +1970,14 @@ export class PhotoGridViewModel {
           windowEndOffset: page.windowEndOffset,
           hasMore: page.hasMore,
         });
+
+        this.logDuplicateAssetKeysOnce(
+          'appendSourcePage:post',
+          this.timelineDataManager.getSourceSectionsForForm(FormIndex.DAY),
+          this.timelineDataManager.getSourceWindowStartOffset(),
+          this.timelineDataManager.getSourceWindowEndOffset(),
+          FormIndex.DAY,
+        );
 
         await this.predownloadSections(page.sections, true, requestSize);
 
@@ -1955,6 +2003,102 @@ export class PhotoGridViewModel {
     setTimeout((): void => {
       void this.runIdlePrefetchWork(token, requestSize);
     }, Shared.HYBRID_SCROLL_IDLE_DELAY_MS);
+  }
+
+  private logDuplicateAssetKeysOnce(
+    stage: string,
+    sections: Array<PhotoSection>,
+    windowStartOffset: number,
+    windowEndOffset: number,
+    form: FormIndex,
+  ): void {
+    const stats = this.collectDuplicateAssetKeyStats(sections);
+    if (stats.duplicateKeyCount <= 0) {
+      return;
+    }
+    if (stage === 'appendSourcePage:pre') {
+      if (this.appendSourcePagePreDuplicateLogged) {
+        return;
+      }
+      this.appendSourcePagePreDuplicateLogged = true;
+    } else if (stage === 'appendSourcePage:post') {
+      if (this.appendSourcePagePostDuplicateLogged) {
+        return;
+      }
+      this.appendSourcePagePostDuplicateLogged = true;
+    } else if (stage === 'syncActiveSourceProjection:pre') {
+      if (this.syncActiveProjectionPreDuplicateLogged) {
+        return;
+      }
+      this.syncActiveProjectionPreDuplicateLogged = true;
+    }
+    console.warn(
+      `[PhotoGridViewModel] duplicate asset keys at ${stage}: form=${FormIndex[form]}, ` +
+        `window=[${windowStartOffset}, ${windowEndOffset}), sections=${sections.length}, ` +
+        `totalAssets=${stats.totalAssetCount}, uniqueKeys=${stats.uniqueKeyCount}, ` +
+        `duplicateKeys=${stats.duplicateKeyCount}, duplicateAssets=${stats.duplicateAssetCount}, ` +
+        `firstDuplicateKey=${stats.firstDuplicateKey}`,
+    );
+  }
+
+  private collectDuplicateAssetKeyStats(sections: Array<PhotoSection>): DuplicateAssetKeyStats {
+    const countsByKey: Map<string, number> = new Map();
+    let totalAssetCount = 0;
+    for (let sectionIndex = 0; sectionIndex < sections.length; sectionIndex += 1) {
+      const section = sections[sectionIndex];
+      for (let rowIndex = 0; rowIndex < section.rows.length; rowIndex += 1) {
+        const row = section.rows[rowIndex];
+        for (let assetIndex = 0; assetIndex < row.length; assetIndex += 1) {
+          const asset = row[assetIndex];
+          const assetKey = this.resolveDuplicateAssetKey(asset);
+          totalAssetCount += 1;
+          const previousCount = countsByKey.get(assetKey);
+          if (previousCount === undefined) {
+            countsByKey.set(assetKey, 1);
+          } else {
+            countsByKey.set(assetKey, previousCount + 1);
+          }
+        }
+      }
+    }
+
+    let duplicateKeyCount = 0;
+    let duplicateAssetCount = 0;
+    let firstDuplicateKey = '';
+    countsByKey.forEach((count: number, key: string): void => {
+      if (count <= 1) {
+        return;
+      }
+      duplicateKeyCount += 1;
+      duplicateAssetCount += count - 1;
+      if (firstDuplicateKey.length <= 0) {
+        firstDuplicateKey = key;
+      }
+    });
+
+    return {
+      totalAssetCount: totalAssetCount,
+      uniqueKeyCount: countsByKey.size,
+      duplicateKeyCount: duplicateKeyCount,
+      duplicateAssetCount: duplicateAssetCount,
+      firstDuplicateKey: firstDuplicateKey,
+    };
+  }
+
+  private resolveDuplicateAssetKey(asset: PhotoAsset): string {
+    if (asset.remoteId !== undefined && asset.remoteId.length > 0) {
+      return asset.remoteId;
+    }
+    if (asset.localId !== undefined && asset.localId.length > 0) {
+      return asset.localId;
+    }
+    if (asset.id.length > 0) {
+      return asset.id;
+    }
+    if (asset.thumbnailUrl !== undefined && asset.thumbnailUrl.length > 0) {
+      return asset.thumbnailUrl;
+    }
+    return '__missing_asset_key__';
   }
 
   private shouldAbortIdlePrefetchWork(token: number): boolean {
@@ -2037,7 +2181,7 @@ export class PhotoGridViewModel {
     const state = this.getGridState(form);
     state.fillPosition = this.timelineDataManager.resolveSourceFillPositionForForm(form);
     this.currentGridItems = this.buildCommittedGridItems();
-    this.updateFormGridItems(form, this.currentGridItems);
+    this.reconcileFormGridItems(form, this.currentGridItems);
     this.syncStateProxyRuntime('restoreFillPosition.ready');
     this.notifyStateChanged();
   }
@@ -2165,14 +2309,14 @@ export class PhotoGridViewModel {
     const startIndex = Math.max(0, Math.min(this.lastVisibleGridStart, this.currentGridItems.length - 1));
     const endIndex = Math.max(startIndex, Math.min(this.lastVisibleGridEnd, this.currentGridItems.length - 1));
     for (let index = startIndex; index <= endIndex; index += 1) {
-      const photoOffset = this.resolveGlobalPhotoOffsetFromGridItem(this.currentGridItems[index], this.activeForm);
+      const photoOffset = this.resolveGlobalPhotoOffsetFromGridItem(this.currentGridItems[index]);
       if (photoOffset !== undefined) {
         return photoOffset;
       }
     }
 
     for (let index = 0; index < this.currentGridItems.length; index += 1) {
-      const photoOffset = this.resolveGlobalPhotoOffsetFromGridItem(this.currentGridItems[index], this.activeForm);
+      const photoOffset = this.resolveGlobalPhotoOffsetFromGridItem(this.currentGridItems[index]);
       if (photoOffset !== undefined) {
         return photoOffset;
       }
@@ -2180,14 +2324,11 @@ export class PhotoGridViewModel {
     return fallbackPhotoOffset;
   }
 
-  private resolveGlobalPhotoOffsetFromGridItem(item: GridItem, form: FormIndex): number | undefined {
+  private resolveGlobalPhotoOffsetFromGridItem(item: GridItem): number | undefined {
     if (item.kind !== 'photo' || item.sourceIndex === undefined) {
       return undefined;
     }
-    if (form === FormIndex.GROUP_DAY) {
-      return Math.max(0, item.sourceIndex);
-    }
-    return Math.max(0, this.timelineDataManager.getSourceWindowStartOffset() + item.sourceIndex);
+    return Math.max(0, item.sourceIndex);
   }
 
   private resolveSourceLocalPhotoOffset(globalPhotoOffset: number): number {
@@ -2310,7 +2451,7 @@ export class PhotoGridViewModel {
     this.timelineDataManager.resetSlidingWindowState(form);
     state.preloadRequestKey = '';
     state.preloadAnchorGridIndex = 0;
-    if (clearDataSource && state.gridItems.length > 0) {
+    if (!clearDataSource && state.gridItems.length > 0) {
       return;
     }
     this.clearFormGridItems(form, clearDataSource);

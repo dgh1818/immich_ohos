@@ -5,9 +5,9 @@ import { GridTitleBarMaskController } from '../viewcontroller/GridTitleBarMaskCo
 import { PhotoGridViewController, PhotoGridViewId } from '../viewcontroller/PhotoGridViewController';
 import { PhotoGridViewModel } from '../viewmodel/PhotoGridViewModel';
 import { FixedIrregularView } from './FixedIrregularView';
+import { FloatingSectionOverlayView } from './FloatingSectionOverlayView';
 import { GridNoDataView } from './GridNoDataView';
 import { GridTitleBarMaskView } from './GridTitleBarMaskView';
-import { IrregularView } from './IrregularView';
 import { YearGridView } from './YearGridView';
 import { MonthGridView } from './MonthGridView';
 import { DayGridView } from './DayGridView';
@@ -24,7 +24,7 @@ export struct TimelineView {
   @State private viewController: PhotoGridViewController = new PhotoGridViewController();
   @State private snapshotController: GridSnapshotController = new GridSnapshotController();
   @State private titleBarMaskController: GridTitleBarMaskController = new GridTitleBarMaskController();
-  @State private viewModel: PhotoGridViewModel = new PhotoGridViewModel(this.context);
+  private readonly viewModel: PhotoGridViewModel = new PhotoGridViewModel(this.context);
   private readonly stateListener: () => void = (): void => {
     this.renderTick += 1;
   };
@@ -361,10 +361,16 @@ export struct TimelineView {
   private buildGrid() {
     RelativeContainer() {
       if (this.viewController.isIrregularViewInit) {
-        IrregularView({
-          title: this.viewModel.floatingSectionTitle,
-          count: this.viewModel.floatingSectionCount,
+        FloatingSectionOverlayView({
           topInset: this.topInset,
+          addStateListenerHandler: (listener: () => void): void => {
+            this.viewModel.addStateListener(listener);
+          },
+          removeStateListenerHandler: (listener: () => void): void => {
+            this.viewModel.removeStateListener(listener);
+          },
+          resolveTitleHandler: (): string => this.viewModel.floatingSectionTitle,
+          resolveCountHandler: (): number => this.viewModel.floatingSectionCount,
         });
       }
 

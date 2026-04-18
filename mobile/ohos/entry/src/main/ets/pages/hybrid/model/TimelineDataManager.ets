@@ -315,7 +315,7 @@ export class TimelineDataManager {
 
   private mergeSourceState(state: TimelineDataSourceState, replaceExisting: boolean): void {
     const incomingSections = this.dataAdapter.cloneSections(state.sections);
-    const incomingPhotoCount = this.dataAdapter.flattenAssets(incomingSections).length;
+    const incomingPhotoCount = this.dataAdapter.countAssets(incomingSections);
     const incomingEndOffset = state.windowEndOffset > 0
       ? Math.max(0, state.windowEndOffset)
       : Math.max(0, state.windowStartOffset) + incomingPhotoCount;
@@ -398,7 +398,12 @@ export class TimelineDataManager {
     const lastSection = mergedSections[mergedSections.length - 1];
     const firstIncomingSection = normalizedIncomingSections[0];
     if (lastSection.key === firstIncomingSection.key && lastSection.title === firstIncomingSection.title) {
-      lastSection.rows = lastSection.rows.concat(firstIncomingSection.rows.map((row: Array<PhotoAsset>) => row.slice()));
+      const dedupedCount = this.appendDedupedSectionRows(lastSection, firstIncomingSection);
+      if (dedupedCount > 0) {
+        console.info(
+          `[TimelineDataManager] deduped ${dedupedCount} overlapping assets while merging section ${lastSection.key || lastSection.title}`,
+        );
+      }
       normalizedIncomingSections.shift();
     }
 
@@ -406,6 +411,40 @@ export class TimelineDataManager {
       mergedSections.push(section);
     });
     return mergedSections;
+  }
+
+  private appendDedupedSectionRows(targetSection: PhotoSection, incomingSection: PhotoSection): number {
+    const seenAssetKeys: Set<string> = new Set();
+    let dedupedCount = 0;
+
+    targetSection.rows.forEach((row: Array<PhotoAsset>) => {
+      row.forEach((asset: PhotoAsset) => {
+        seenAssetKeys.add(this.assetStableKey(asset));
+      });
+    });
+
+    incomingSection.rows.forEach((row: Array<PhotoAsset>) => {
+      const filteredRow: Array<PhotoAsset> = [];
+      row.forEach((asset: PhotoAsset) => {
+        const assetKey = this.assetStableKey(asset);
+        if (seenAssetKeys.has(assetKey)) {
+          dedupedCount += 1;
+          return;
+        }
+        seenAssetKeys.add(assetKey);
+        filteredRow.push(asset);
+      });
+
+      if (filteredRow.length > 0) {
+        targetSection.rows.push(filteredRow);
+      }
+    });
+
+    return dedupedCount;
+  }
+
+  private assetStableKey(asset: PhotoAsset): string {
+    return asset.remoteId ?? asset.localId ?? asset.id ?? asset.thumbnailUrl ?? '';
   }
 
   private setFormWindowState(form: FormIndex, windowState: TimelineFormWindowState): void {
@@ -425,14 +464,10 @@ export class TimelineDataManager {
     return {
       sections: this.dataAdapter.cloneSections(sections),
       groupDayGroups: form === FormIndex.GROUP_DAY
-        ? this.buildCanonicalGroupWindowGroups(
-            sections,
-            this.windowStartOffset,
-            this.resolveSourceGroupsForForm(form, sections),
-          )
+        ? this.buildCanonicalGroupWindowGroups(sections, this.windowStartOffset)
         : [],
       windowStartOffset: this.windowStartOffset,
-      windowPhotoCount: this.dataAdapter.flattenAssets(sections).length,
+      windowPhotoCount: this.dataAdapter.countAssets(sections),
     };
   }
 
@@ -441,23 +476,16 @@ export class TimelineDataManager {
     return {
       sections: sections,
       groupDayGroups: form === FormIndex.GROUP_DAY
-        ? this.buildCanonicalGroupWindowGroups(
-            sections,
-            this.windowStartOffset,
-            this.resolveSourceGroupsForForm(form, sections),
-          )
+        ? this.buildCanonicalGroupWindowGroups(sections, this.windowStartOffset)
         : [],
       windowStartOffset: this.windowStartOffset,
-      windowPhotoCount: this.dataAdapter.flattenAssets(sections).length,
+      windowPhotoCount: this.dataAdapter.countAssets(sections),
     };
   }
 
   private buildWindowUpdateResult(request: TimelinePreloadRequest): TimelineSlidingWindowUpdateResult {
     const fullWindowState = this.buildDefaultWindowState(request.form);
     const fullSections = fullWindowState.sections;
-    const sourceGroups = request.form === FormIndex.GROUP_DAY
-      ? this.resolveSourceGroupsForForm(request.form, fullSections)
-      : [];
     const formPhotoAssets = this.dataAdapter.flattenAssets(fullSections);
     const totalPhotoCount = formPhotoAssets.length;
     if (totalPhotoCount <= 0) {
@@ -496,16 +524,7 @@ export class TimelineDataManager {
     const windowState: TimelineFormWindowState = {
       sections: slicedSections,
       groupDayGroups: request.form === FormIndex.GROUP_DAY
-        ? this.buildCanonicalGroupWindowGroups(
-            slicedSections,
-            windowStartOffset,
-            this.sliceGroupsByPhotoRange(
-              sourceGroups,
-              fullWindowState.windowStartOffset,
-              startLocalPhotoIndex,
-              endLocalPhotoIndexExclusive,
-            ),
-          )
+        ? this.buildCanonicalGroupWindowGroups(slicedSections, windowStartOffset)
         : [],
       windowStartOffset: windowStartOffset,
       windowPhotoCount: Math.max(0, endLocalPhotoIndexExclusive - startLocalPhotoIndex),
@@ -538,7 +557,7 @@ export class TimelineDataManager {
   ): number {
     const safeFillPosition = Math.max(0, fillPosition);
     const safePhotoOffset = Math.max(0, photoOffset);
-    const maxLocalOffset = Math.max(0, this.dataAdapter.flattenAssets(windowState.sections).length - 1);
+    const maxLocalOffset = Math.max(0, windowState.windowPhotoCount - 1);
     if (form !== FormIndex.GROUP_DAY) {
       const localOffset = Math.min(
         maxLocalOffset,
@@ -561,12 +580,12 @@ export class TimelineDataManager {
   ): Array<GridItem> {
     const columns = getColumnsByFormIndex(form);
     if (form === FormIndex.GROUP_DAY) {
-      return this.buildGroupGridItems(windowState.sections, windowState.groupDayGroups);
+      return this.buildGroupGridItems(windowState.sections, windowState.groupDayGroups, windowState.windowStartOffset);
     }
     if (this.shouldUseBucketProjection(form)) {
-      return this.dataAdapter.buildGridItemsFromSections(windowState.sections);
+      return this.dataAdapter.buildGridItemsFromSections(windowState.sections, windowState.windowStartOffset);
     }
-    return this.dataAdapter.buildGridItemsForColumns(windowState.sections, columns);
+    return this.dataAdapter.buildGridItemsForColumns(windowState.sections, columns, windowState.windowStartOffset);
   }
 
   private buildTimelineItemsFromWindowState(
@@ -590,27 +609,12 @@ export class TimelineDataManager {
     return this.sections;
   }
 
-  private resolveSourceGroupsForForm(
-    form: FormIndex,
-    sections: Array<PhotoSection> = this.sections,
-  ): Array<GroupInfo> {
-    if (form !== FormIndex.GROUP_DAY) {
-      return [];
-    }
-    if (this.groupDayGroups.length > 0) {
-      return this.groupDayGroups.slice();
-    }
-
-    return this.deriveGroupsForSections(sections, this.windowStartOffset);
-  }
-
   private buildCanonicalGroupWindowGroups(
     sections: Array<PhotoSection>,
     windowStartOffset: number,
-    sourceGroups: Array<GroupInfo> = [],
   ): Array<GroupInfo> {
     const canonicalGroups = this.deriveGroupsForSections(sections, windowStartOffset);
-    this.validateCanonicalGroupWindowGroups(canonicalGroups, sections, windowStartOffset, sourceGroups);
+    this.validateCanonicalGroupWindowGroups(canonicalGroups, sections, windowStartOffset);
     return canonicalGroups;
   }
 
@@ -618,7 +622,7 @@ export class TimelineDataManager {
     const derivedGroups: Array<GroupInfo> = [];
     let runningOffset = Math.max(0, startOffset);
     sections.forEach((section: PhotoSection) => {
-      const count = this.dataAdapter.flattenAssets([section]).length;
+      const count = this.dataAdapter.countSectionAssets(section);
       derivedGroups.push({
         key: section.key,
         title: section.title,
@@ -634,7 +638,6 @@ export class TimelineDataManager {
     canonicalGroups: Array<GroupInfo>,
     sections: Array<PhotoSection>,
     windowStartOffset: number,
-    sourceGroups: Array<GroupInfo>,
   ): void {
     const normalizedWindowStartOffset = Math.max(0, windowStartOffset);
     if (canonicalGroups.length !== sections.length) {
@@ -648,18 +651,12 @@ export class TimelineDataManager {
     for (let index = 0; index < sections.length; index += 1) {
       const section = sections[index];
       const group = canonicalGroups[index];
-      const sectionCount = this.dataAdapter.flattenAssets([section]).length;
+      const sectionCount = this.dataAdapter.countSectionAssets(section);
       if (!group) {
         console.warn(`[TimelineDataManager] GROUP_DAY canonical group missing at index=${index}`);
         return;
       }
       if (index === 0 && group.offset !== normalizedWindowStartOffset) {
-        console.warn(
-          `[TimelineDataManager] GROUP_DAY first group offset mismatch: expected=${normalizedWindowStartOffset}, actual=${group.offset}`,
-        );
-        return;
-      }
-      if (group.count !== sectionCount) {
         console.warn(
           `[TimelineDataManager] GROUP_DAY group count mismatch at index=${index}: expected=${sectionCount}, actual=${group.count}`,
         );
@@ -668,41 +665,6 @@ export class TimelineDataManager {
       if (group.offset !== expectedOffset) {
         console.warn(
           `[TimelineDataManager] GROUP_DAY group offset mismatch at index=${index}: expected=${expectedOffset}, actual=${group.offset}`,
-        );
-        return;
-      }
-      expectedOffset += sectionCount;
-    }
-
-    if (sourceGroups.length > 0) {
-      this.validateSourceAlignedGroups(canonicalGroups, sourceGroups);
-    }
-  }
-
-  private validateSourceAlignedGroups(
-    canonicalGroups: Array<GroupInfo>,
-    sourceGroups: Array<GroupInfo>,
-  ): void {
-    if (canonicalGroups.length !== sourceGroups.length) {
-      console.warn(
-        `[TimelineDataManager] GROUP_DAY source group size mismatch: canonical=${canonicalGroups.length}, source=${sourceGroups.length}`,
-      );
-      return;
-    }
-
-    for (let index = 0; index < canonicalGroups.length; index += 1) {
-      const canonicalGroup = canonicalGroups[index];
-      const sourceGroup = sourceGroups[index];
-      if (
-        canonicalGroup.offset !== sourceGroup.offset ||
-        canonicalGroup.count !== sourceGroup.count ||
-        canonicalGroup.key !== sourceGroup.key ||
-        canonicalGroup.title !== sourceGroup.title
-      ) {
-        console.warn(
-          `[TimelineDataManager] GROUP_DAY source alignment mismatch at index=${index}: ` +
-          `canonical={key:${canonicalGroup.key},offset:${canonicalGroup.offset},count:${canonicalGroup.count}} ` +
-          `source={key:${sourceGroup.key},offset:${sourceGroup.offset},count:${sourceGroup.count}}`,
         );
         return;
       }
@@ -780,8 +742,9 @@ export class TimelineDataManager {
   private buildGroupGridItems(
     sections: Array<PhotoSection>,
     groups: Array<GroupInfo>,
+    sourceStartOffset: number = 0,
   ): Array<GridItem> {
-    return this.dataAdapter.buildGroupGridItems(sections, groups);
+    return this.dataAdapter.buildGroupGridItems(sections, groups, sourceStartOffset);
   }
 
   private resolvePreloadPhotoRange(
@@ -871,7 +834,7 @@ export class TimelineDataManager {
     const slicedSections: Array<PhotoSection> = [];
     let currentPhotoOffset = 0;
     sections.forEach((section: PhotoSection) => {
-      const sectionAssets = this.dataAdapter.flattenAssets([section]);
+      const sectionAssets = this.dataAdapter.flattenSectionAssets(section);
       const sectionPhotoCount = sectionAssets.length;
       const sectionStartOffset = currentPhotoOffset;
       const sectionEndOffset = sectionStartOffset + sectionPhotoCount;
@@ -894,38 +857,6 @@ export class TimelineDataManager {
       });
     });
     return slicedSections;
-  }
-
-  private sliceGroupsByPhotoRange(
-    groups: Array<GroupInfo>,
-    windowStartOffset: number,
-    startLocalPhotoIndex: number,
-    endLocalPhotoIndexExclusive: number,
-  ): Array<GroupInfo> {
-    if (groups.length <= 0 || endLocalPhotoIndexExclusive <= startLocalPhotoIndex) {
-      return [];
-    }
-
-    const startPhotoOffset = windowStartOffset + startLocalPhotoIndex;
-    const endPhotoOffsetExclusive = windowStartOffset + endLocalPhotoIndexExclusive;
-    const slicedGroups: Array<GroupInfo> = [];
-    groups.forEach((group: GroupInfo) => {
-      const groupStartOffset = group.offset;
-      const groupEndOffsetExclusive = group.offset + Math.max(0, group.count);
-      if (startPhotoOffset >= groupEndOffsetExclusive || endPhotoOffsetExclusive <= groupStartOffset) {
-        return;
-      }
-
-      const slicedStartOffset = Math.max(startPhotoOffset, groupStartOffset);
-      const slicedEndOffsetExclusive = Math.min(endPhotoOffsetExclusive, groupEndOffsetExclusive);
-      slicedGroups.push({
-        key: group.key,
-        title: group.title,
-        count: Math.max(0, slicedEndOffsetExclusive - slicedStartOffset),
-        offset: slicedStartOffset,
-      });
-    });
-    return slicedGroups;
   }
 
   private resolveAnchorGridIndex(
@@ -992,7 +923,6 @@ export class TimelineDataManager {
       visiblePhotoCount += group.count;
       remainingGridIndex -= group.count;
     }
-
     return Math.max(0, Math.floor(Math.max(0, visiblePhotoCount - 1) / Math.max(1, columns)));
   }
 }

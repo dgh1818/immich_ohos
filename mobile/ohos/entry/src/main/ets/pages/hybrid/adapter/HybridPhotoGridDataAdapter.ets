@@ -42,6 +42,10 @@ export class HybridFloatingSectionInfo {
 export class HybridPhotoGridDataAdapter {
   private readonly timelineBuilder: HybridPhotoTimelineBuilder = new HybridPhotoTimelineBuilder();
 
+  private buildStablePhotoItemId(asset: HybridPhotoAsset, sectionKey: string): string {
+    return `photo_${asset.id}_${sectionKey}`;
+  }
+
   public cloneSections(sections: Array<HybridPhotoSection>): Array<HybridPhotoSection> {
     return sections.map((section: HybridPhotoSection) => {
       const record = new HybridPhotoSectionRecord();
@@ -69,6 +73,7 @@ export class HybridPhotoGridDataAdapter {
     fillPosition: number = 0,
     includeTail: boolean = false,
   ): Array<HybridGridItem> {
+    void topSpacerHeight;
     const items: Array<HybridGridItem> = [];
     const safeFillPosition = Math.max(0, fillPosition);
     for (let index = 0; index < safeFillPosition; index += 1) {
@@ -80,7 +85,7 @@ export class HybridPhotoGridDataAdapter {
 
     this.flattenSectionsToGridEntries(sections).forEach((entry: HybridGridAssetEntry) => {
       const photoItem = new HybridGridItemRecord();
-      photoItem.id = `photo_${entry.sourceIndex}_${entry.asset.id}`;
+      photoItem.id = this.buildStablePhotoItemId(entry.asset, entry.sectionKey);
       photoItem.kind = 'photo';
       photoItem.asset = entry.asset;
       photoItem.sectionKey = entry.sectionKey;

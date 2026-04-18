@@ -22,6 +22,7 @@ let storage = LocalStorage.getShared()
 const EVENT_BACK_PRESS = 'EVENT_BACK_PRESS'
 const LAUNCH_MODE_LEGACY = 'legacy_flutter'
 const LAUNCH_MODE_HYBRID = 'hybrid_arkui_photos'
+const HYBRID_BUILD_BADGE = 'v2.7.5+270050014'
 
 @Entry(storage)
 @Component
@@ -81,6 +82,19 @@ struct Index {
           .backgroundColor(0xEAF8FAFC)
           .borderRadius(20)
           .margin({ left: 12, top: 20 });
+
+          Row() {
+            Text(HYBRID_BUILD_BADGE)
+              .fontSize(11)
+              .fontColor(0xFF0F172A)
+              .fontWeight(FontWeight.Medium)
+              .padding({ left: 10, right: 10, top: 6, bottom: 6 })
+              .backgroundColor(0xEAF8FAFC)
+              .borderRadius(14);
+          }
+          .width('100%')
+          .justifyContent(FlexAlign.End)
+          .padding({ right: 12, top: 20 });
         }
         .width('100%')
         .height('100%')

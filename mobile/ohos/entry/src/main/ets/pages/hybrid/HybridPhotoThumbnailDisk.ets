@@ -1,3 +1,4 @@
+import { taskpool } from '@kit.ArkTS';
 import { common } from '@kit.AbilityKit';
 import { fileIo as fs } from '@kit.CoreFileKit';
 import { image } from '@kit.ImageKit';
@@ -10,7 +11,6 @@ import {
   HYBRID_DEFERRED_REMOTE_WRITE_MAX_BYTES,
   HYBRID_ENABLE_REMOTE_THUMBNAIL_DISK_WRITES,
   HYBRID_REMOTE_THUMBNAIL_CACHE_DIR,
-  HYBRID_REMOTE_THUMBNAIL_LEGACY_CACHE_DIR,
   HYBRID_REMOTE_THUMBNAIL_CACHE_MAX_BYTES,
   HYBRID_REMOTE_THUMBNAIL_CACHE_TRIM_INTERVAL_MS,
   HYBRID_REMOTE_THUMBNAIL_CACHE_TRIM_TARGET_BYTES,
@@ -18,6 +18,10 @@ import {
   HybridRemoteCacheEntry,
   resolveHybridPrefetchConcurrency,
 } from './HybridPhotoGridShared';
+
+let remoteThumbnailCacheDirPath: string | undefined = undefined;
+let remoteThumbnailCacheDirEnsured: boolean = false;
+const remoteThumbnailPathCache: Map<string, string> = new Map();
 
 function hashString(input: string): string {
   let hash = 2166136261;
@@ -28,18 +32,25 @@ function hashString(input: string): string {
   return (hash >>> 0).toString(16).padStart(8, '0');
 }
 
-function ensureRemoteThumbnailCacheDir(ctx: common.UIAbilityContext): string {
-  const cacheDir = `${ctx.getApplicationContext().cacheDir}/${HYBRID_REMOTE_THUMBNAIL_CACHE_DIR}`;
-  try {
-    fs.mkdirSync(cacheDir);
-  } catch (_) {
-    // ignore if already exists
-  }
-  return cacheDir;
+function buildRemoteThumbnailCacheKey(url: string, requestSize: number): string {
+  return `${requestSize}:${url}`;
 }
 
-function legacyRemoteThumbnailCacheDir(ctx: common.UIAbilityContext): string {
-  return `${ctx.getApplicationContext().cacheDir}/${HYBRID_REMOTE_THUMBNAIL_LEGACY_CACHE_DIR}`;
+function ensureRemoteThumbnailCacheDir(ctx: common.UIAbilityContext): string {
+  if (!remoteThumbnailCacheDirPath) {
+    remoteThumbnailCacheDirPath = `${ctx.getApplicationContext().cacheDir}/${HYBRID_REMOTE_THUMBNAIL_CACHE_DIR}`;
+  }
+
+  if (!remoteThumbnailCacheDirEnsured) {
+    try {
+      fs.mkdirSync(remoteThumbnailCacheDirPath);
+    } catch (_) {
+      // ignore if already exists
+    }
+    remoteThumbnailCacheDirEnsured = true;
+  }
+
+  return remoteThumbnailCacheDirPath;
 }
 
 function remoteThumbnailCachePath(
@@ -47,19 +58,15 @@ function remoteThumbnailCachePath(
   url: string,
   requestSize: number,
 ): string {
-  const cacheDir = ensureRemoteThumbnailCacheDir(ctx);
-  const cacheKey = `${requestSize}:${url}`;
-  return `${cacheDir}/thumb_${hashString(cacheKey)}.img`;
-}
+  const cacheKey = buildRemoteThumbnailCacheKey(url, requestSize);
+  const cachedPath = remoteThumbnailPathCache.get(cacheKey);
+  if (cachedPath) {
+    return cachedPath;
+  }
 
-function remoteThumbnailLegacyCachePath(
-  ctx: common.UIAbilityContext,
-  url: string,
-  requestSize: number,
-): string {
-  const cacheDir = legacyRemoteThumbnailCacheDir(ctx);
-  const cacheKey = `${requestSize}:${url}`;
-  return `${cacheDir}/thumb_${hashString(cacheKey)}.img`;
+  const resolvedPath = `${ensureRemoteThumbnailCacheDir(ctx)}/thumb_${hashString(cacheKey)}.img`;
+  remoteThumbnailPathCache.set(cacheKey, resolvedPath);
+  return resolvedPath;
 }
 
 function remoteThumbnailTempPath(
@@ -72,6 +79,70 @@ function remoteThumbnailTempPath(
 
 export class HybridScrollState {
   static isScrolling: boolean = false;
+}
+
+export enum HybridRemoteThumbnailLoadKind {
+  VISIBLE = 0,
+  PREFETCH = 1,
+}
+
+let visibleRemoteThumbnailDiskTimingLogged: boolean = false;
+
+@Concurrent
+async function readRemoteThumbnailBufferTask(filePath: string): Promise<ArrayBuffer> {
+  const file = fs.openSync(filePath, fs.OpenMode.READ_ONLY);
+  let buffer: ArrayBuffer | undefined = undefined;
+  try {
+    const stat = fs.statSync(file.fd);
+    if (stat.size <= 0) {
+      throw new Error(`cached thumbnail is empty: ${filePath}`);
+    }
+
+    buffer = new ArrayBuffer(stat.size);
+    const bytesRead = fs.readSync(file.fd, buffer);
+    if (bytesRead <= 0) {
+      throw new Error(`failed to read cached thumbnail: ${filePath}`);
+    }
+
+    return bytesRead === stat.size ? buffer : buffer.slice(0, bytesRead);
+  } finally {
+    try {
+      fs.closeSync(file);
+    } catch (_) {}
+  }
+}
+
+async function readRemoteThumbnailBufferFromFile(
+  filePath: string,
+  loadKind: HybridRemoteThumbnailLoadKind,
+): Promise<ArrayBuffer> {
+  const priority = loadKind === HybridRemoteThumbnailLoadKind.VISIBLE
+    ? taskpool.Priority.HIGH
+    : taskpool.Priority.MEDIUM;
+  const task: taskpool.Task = new taskpool.Task(readRemoteThumbnailBufferTask, filePath);
+  const result = await taskpool.execute(task, priority) as ArrayBuffer | undefined;
+  if (!result) {
+    throw new Error(`failed to load cached thumbnail buffer: ${filePath}`);
+  }
+  return result;
+}
+
+function logVisibleRemoteThumbnailDiskTimingOnce(
+  filePath: string,
+  requestSize: number,
+  bufferByteLength: number,
+  readStartedAt: number,
+  decodeStartedAt: number,
+  finishedAt: number,
+): void {
+  if (visibleRemoteThumbnailDiskTimingLogged) {
+    return;
+  }
+
+  visibleRemoteThumbnailDiskTimingLogged = true;
+  console.info(
+    `[HybridPhotoThumbnailDisk] visible cached thumbnail timing requestSize=${requestSize} bytes=${bufferByteLength} readMs=${decodeStartedAt - readStartedAt} decodeMs=${finishedAt - decodeStartedAt} totalMs=${finishedAt - readStartedAt} path=${filePath}`,
+  );
 }
 
 interface HybridRemoteCacheFileInfo {
@@ -123,15 +194,11 @@ function findExistingRemoteThumbnailCachePath(
   ctx: common.UIAbilityContext,
   url: string,
   requestSize: number,
+  allowSyncFs: boolean = true,
 ): string | undefined {
   const primaryPath = remoteThumbnailCachePath(ctx, url, requestSize);
-  if (HybridRemoteThumbnailCacheIndex.hasCachePath(ctx, primaryPath)) {
+  if (HybridRemoteThumbnailCacheIndex.hasCachePath(ctx, primaryPath, allowSyncFs)) {
     return primaryPath;
-  }
-
-  const legacyPath = remoteThumbnailLegacyCachePath(ctx, url, requestSize);
-  if (HybridRemoteThumbnailCacheIndex.hasCachePath(ctx, legacyPath)) {
-    return legacyPath;
   }
 
   return undefined;
@@ -156,8 +223,7 @@ export class HybridRemoteThumbnailCacheIndex {
     try {
       const files: Map<string, HybridRemoteCacheFileInfo> = new Map();
       const now = Date.now();
-      let totalBytes = trackRemoteThumbnailCacheDir(ensureRemoteThumbnailCacheDir(ctx), files, now);
-      totalBytes += trackRemoteThumbnailCacheDir(legacyRemoteThumbnailCacheDir(ctx), files, now);
+      const totalBytes = trackRemoteThumbnailCacheDir(ensureRemoteThumbnailCacheDir(ctx), files, now);
 
       HybridRemoteThumbnailCacheIndex.files = files;
       HybridRemoteThumbnailCacheIndex.totalBytes = totalBytes;
@@ -169,14 +235,14 @@ export class HybridRemoteThumbnailCacheIndex {
     }
   }
 
-  static hasCachePath(ctx: common.UIAbilityContext, path: string): boolean {
+  static hasCachePath(ctx: common.UIAbilityContext, path: string, allowSyncFs: boolean = true): boolean {
     const existing = HybridRemoteThumbnailCacheIndex.files.get(path);
     if (existing) {
       existing.lastAccessAt = Date.now();
       return true;
     }
 
-    if (HybridRemoteThumbnailCacheIndex.initialized) {
+    if (HybridRemoteThumbnailCacheIndex.initialized || !allowSyncFs || HybridScrollState.isScrolling) {
       return false;
     }
 
@@ -243,6 +309,10 @@ export class HybridRemoteThumbnailCacheIndex {
     return Array.from(HybridRemoteThumbnailCacheIndex.files.values())
       .sort((left: HybridRemoteCacheFileInfo, right: HybridRemoteCacheFileInfo) => left.lastAccessAt - right.lastAccessAt);
   }
+}
+
+export function primeRemoteThumbnailCacheIndex(ctx: common.UIAbilityContext): void {
+  HybridRemoteThumbnailCacheIndex.ensureInitialized(ctx);
 }
 
 export class HybridRemoteThumbnailCachePruner {
@@ -514,31 +584,24 @@ class HybridDeferredRemoteThumbnailWriter {
 async function decodeRemoteThumbnailFromFile(
   filePath: string,
   requestSize: number,
+  loadKind: HybridRemoteThumbnailLoadKind,
 ): Promise<PixelMap> {
   HybridRemoteThumbnailCacheIndex.markAccessed(filePath);
-  const file = fs.openSync(filePath, fs.OpenMode.READ_ONLY);
-  let buffer: ArrayBuffer | undefined = undefined;
-  try {
-    const stat = fs.statSync(file.fd);
-    if (stat.size <= 0) {
-      throw new Error(`cached thumbnail is empty: ${filePath}`);
-    }
-
-    buffer = new ArrayBuffer(stat.size);
-    const bytesRead = fs.readSync(file.fd, buffer);
-    if (bytesRead <= 0) {
-      throw new Error(`failed to read cached thumbnail: ${filePath}`);
-    }
-
-    return await decodeRemoteThumbnailFromBuffer(
-      bytesRead === stat.size ? buffer : buffer.slice(0, bytesRead),
+  const readStartedAt = Date.now();
+  const buffer = await readRemoteThumbnailBufferFromFile(filePath, loadKind);
+  const decodeStartedAt = Date.now();
+  const pixelMap = await decodeRemoteThumbnailFromBuffer(buffer, requestSize);
+  if (loadKind === HybridRemoteThumbnailLoadKind.VISIBLE) {
+    logVisibleRemoteThumbnailDiskTimingOnce(
+      filePath,
       requestSize,
+      buffer.byteLength,
+      readStartedAt,
+      decodeStartedAt,
+      Date.now(),
     );
-  } finally {
-    try {
-      fs.closeSync(file);
-    } catch (_) {}
   }
+  return pixelMap;
 }
 
 async function decodeRemoteThumbnailFromBuffer(
@@ -573,8 +636,9 @@ export function hasRemoteThumbnailCache(
   ctx: common.UIAbilityContext,
   url: string,
   requestSize: number,
+  allowSyncFs: boolean = true,
 ): boolean {
-  return findExistingRemoteThumbnailCachePath(ctx, url, requestSize) !== undefined ||
+  return findExistingRemoteThumbnailCachePath(ctx, url, requestSize, allowSyncFs) !== undefined ||
     HybridDeferredRemoteThumbnailWriter.hasPending(url, requestSize);
 }
 
@@ -582,20 +646,21 @@ export async function loadRemoteThumbnail(
   ctx: common.UIAbilityContext,
   url: string,
   requestSize: number,
+  loadKind: HybridRemoteThumbnailLoadKind = HybridRemoteThumbnailLoadKind.VISIBLE,
 ): Promise<PixelMap> {
+  const pendingData = HybridDeferredRemoteThumbnailWriter.peekData(url, requestSize);
+  if (pendingData) {
+    return await decodeRemoteThumbnailFromBuffer(pendingData, requestSize);
+  }
+
   const cachePath = findExistingRemoteThumbnailCachePath(ctx, url, requestSize);
   if (cachePath) {
     try {
-      return await decodeRemoteThumbnailFromFile(cachePath, requestSize);
+      return await decodeRemoteThumbnailFromFile(cachePath, requestSize, loadKind);
     } catch (_) {
       deleteFileIfExists(cachePath);
       HybridRemoteThumbnailCacheIndex.noteRemoved(cachePath);
     }
-  }
-
-  const pendingData = HybridDeferredRemoteThumbnailWriter.peekData(url, requestSize);
-  if (pendingData) {
-    return await decodeRemoteThumbnailFromBuffer(pendingData, requestSize);
   }
 
   const request = http.createHttp();

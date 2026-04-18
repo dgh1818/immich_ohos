@@ -1,5 +1,5 @@
 import * as Shared from '../PhotoGridShared';
-import { PhotoTile, PhotoTileReleasePolicy } from '../PhotoTile';
+import { ImageGridItemComponent, ImageGridItemReleasePolicy } from '../common/ImageGridItemComponent';
 import { GridAttributeUpdater } from '../viewcontroller/GridAttributeUpdater';
 import { PhotoGridViewId } from '../viewcontroller/PhotoGridViewController';
 import { LazyLoadImg } from './LazyLoadImg';
@@ -61,13 +61,13 @@ export struct GroupGridView {
         touchScrollEnd: this.touchScrollEnd,
       }) {
         Stack() {
-          PhotoTile({
+          ImageGridItemComponent({
             asset: asset,
             requestSize: this.requestSize,
             suppressRelease: false,
             layerActive: this.visible && this.opacityValue > 0.01,
             warmActive: this.warmActive,
-            releasePolicy: this.interactive ? PhotoTileReleasePolicy.DELAYED : PhotoTileReleasePolicy.ACTIVE_ONLY,
+            releasePolicy: this.interactive ? ImageGridItemReleasePolicy.DELAYED : ImageGridItemReleasePolicy.ACTIVE_ONLY,
             invisibleReleaseDelayMs: this.interactive ? 220 : 0,
           })
             .width('100%')
