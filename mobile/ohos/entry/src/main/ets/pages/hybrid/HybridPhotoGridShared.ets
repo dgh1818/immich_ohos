@@ -1,4 +1,5 @@
 import { common } from '@kit.AbilityKit';
+import { IDataSourcePrefetching } from '@kit.ArkUI';
 export const HYBRID_GRID_COLUMNS = 4;
 export const HYBRID_GRID_GAP = 0;
 export const HYBRID_GRID_MIN_COLUMNS = 3;
@@ -15,14 +16,19 @@ export const HYBRID_SECTION_LEAD_LOOKAHEAD = 5;
 export const HYBRID_THUMBNAIL_CACHE_LIMIT = 1200;
 export const HYBRID_ACTIVE_ROW_KEEP_BEHIND = 12;
 export const HYBRID_ACTIVE_ROW_KEEP_AHEAD = 40;
-export const HYBRID_MAX_CONCURRENT_THUMBNAIL_REQUESTS = 12;
-export const HYBRID_MAX_CONCURRENT_PREFETCH_REQUESTS = 8;
-export const HYBRID_MAX_CONCURRENT_REMOTE_WARMUP_DOWNLOADS = 2;
+export const HYBRID_MAX_CONCURRENT_THUMBNAIL_REQUESTS = 14;
+export const HYBRID_MAX_CONCURRENT_PREFETCH_REQUESTS = 10;
+export const HYBRID_MAX_CONCURRENT_REMOTE_WARMUP_DOWNLOADS = 6;
+export const HYBRID_MAX_CONCURRENT_NEARBY_REMOTE_PREDOWNLOADS = 3;
+export const HYBRID_MAX_CONCURRENT_INITIAL_REMOTE_PREDOWNLOADS = 4;
 export const HYBRID_MAX_CONCURRENT_BACKGROUND_PREDOWNLOADS = 1;
 export const HYBRID_PREFETCH_CONCURRENCY_NORMAL = 4;
 export const HYBRID_PREFETCH_CONCURRENCY_CONSTRAINED = 2;
-export const HYBRID_BACKGROUND_PREDOWNLOAD_PAGE_SIZE = 180;
-export const HYBRID_BACKGROUND_PREDOWNLOAD_BATCH_SIZE = 12;
+export const HYBRID_BACKGROUND_PREDOWNLOAD_PAGE_SIZE = 360;
+export const HYBRID_BACKGROUND_PREDOWNLOAD_BATCH_SIZE = 24;
+export const HYBRID_INITIAL_REMOTE_PREDOWNLOAD_TARGET = 1000;
+export const HYBRID_INITIAL_REMOTE_PREDOWNLOAD_BATCH_SIZE = 24;
+export const HYBRID_INITIAL_REMOTE_PREDOWNLOAD_RESUME_DELAY_MS = 120;
 export const HYBRID_SMALL_SECTION_WARMUP_ASSET_LIMIT = 8;
 export const HYBRID_LARGE_SECTION_WARMUP_ASSET_LIMIT = 12;
 export const HYBRID_WINDOW_BEHIND_ROWS = 32;
@@ -37,13 +43,20 @@ export const HYBRID_REMOTE_THUMBNAIL_CACHE_DIR = 'thumbnail';
 export const HYBRID_REMOTE_THUMBNAIL_CACHE_MAX_BYTES = 2 * 1024 * 1024 * 1024;
 export const HYBRID_REMOTE_THUMBNAIL_CACHE_TRIM_TARGET_BYTES = 1800 * 1024 * 1024;
 export const HYBRID_REMOTE_THUMBNAIL_CACHE_TRIM_INTERVAL_MS = 10000;
-export const HYBRID_BACKGROUND_PREDOWNLOAD_YIELD_MS = 80;
+export const HYBRID_BACKGROUND_PREDOWNLOAD_YIELD_MS = 20;
 export const HYBRID_SCROLL_IDLE_DELAY_MS = 240;
 export const HYBRID_SCROLL_PREFETCH_INTERVAL_MS = 50;
-export const HYBRID_SCROLL_REMOTE_PREDOWNLOAD_BATCH_SIZE = 4;
+export const HYBRID_SCROLL_MEMORY_PREFETCH_FORWARD_SCREEN_MULTIPLIER = 5;
+export const HYBRID_SCROLL_MEMORY_PREFETCH_BACKWARD_SCREEN_MULTIPLIER = 2;
+export const HYBRID_SCROLL_STOP_MEMORY_PREFETCH_SCREEN_MULTIPLIER = 6;
+export const HYBRID_SCROLL_MIN_MEMORY_PREFETCH_COUNT = 128;
+export const HYBRID_PREFETCH_READY_RETENTION_MS = 1600;
+export const HYBRID_SCROLL_REMOTE_DISK_PREDOWNLOAD_MIN = 32;
+export const HYBRID_SCROLL_REMOTE_DISK_PREDOWNLOAD_MAX = 96;
 export const HYBRID_DISK_IDLE_DELAY_MS = 900;
 export const HYBRID_DEFERRED_REMOTE_WRITE_LIMIT = 2048;
 export const HYBRID_DEFERRED_REMOTE_WRITE_MAX_BYTES = 192 * 1024 * 1024;
+export const HYBRID_COMPRESSED_BUFFER_CACHE_MAX_BYTES = 48 * 1024 * 1024;
 export const HYBRID_ENABLE_REMOTE_THUMBNAIL_DISK_WRITES = true;
 export const HYBRID_VIEWPORT_CACHE_PRUNE_INTERVAL_MS = 180;
 export const HYBRID_MIN_RUNWAY_ROWS = 160;
@@ -52,9 +65,11 @@ export const HYBRID_LOAD_MORE_AHEAD_MIN_ROWS = 64;
 export const HYBRID_LOAD_MORE_VIEWPORT_MULTIPLIER = 6;
 export const HYBRID_KEEP_ABOVE_SCREEN_MULTIPLIER = 4;
 export const HYBRID_KEEP_BELOW_SCREEN_MULTIPLIER = 4;
-export const HYBRID_SCROLL_FORWARD_PREFETCH_SCREEN_MULTIPLIER = 4;
+export const HYBRID_SCROLL_FORWARD_PREFETCH_SCREEN_MULTIPLIER = 7;
 export const HYBRID_SCROLL_BACKWARD_PREFETCH_SCREEN_MULTIPLIER = 4;
-export const HYBRID_SCROLL_STOP_PREFETCH_SCREEN_MULTIPLIER = 4;
+export const HYBRID_SCROLL_STOP_PREFETCH_SCREEN_MULTIPLIER = 8;
+export const HYBRID_SCROLL_VISIBLE_THUMBNAIL_LIMIT = 8;
+export const HYBRID_SCROLL_PREFETCH_LIMIT = 2;
 export const HYBRID_IDLE_PREVIEW_VISIBLE_SCREEN_MULTIPLIER = 1;
 export const HYBRID_IDLE_PREVIEW_OVERSCAN_ABOVE_SCREEN_MULTIPLIER = 1.0;
 export const HYBRID_IDLE_PREVIEW_OVERSCAN_BELOW_SCREEN_MULTIPLIER = 1.0;
@@ -84,6 +99,24 @@ export function resolveHybridPrefetchConcurrency(): number {
   return hybridPrefetchRuntimeMode === HybridPrefetchRuntimeMode.CONSTRAINED
     ? HYBRID_PREFETCH_CONCURRENCY_CONSTRAINED
     : HYBRID_PREFETCH_CONCURRENCY_NORMAL;
+}
+
+export function resolveScrollMemoryPrefetchBudget(visibleCapacity: number): number {
+  const scaledBudget = Math.ceil(
+    Math.max(1, visibleCapacity) * HYBRID_SCROLL_MEMORY_PREFETCH_FORWARD_SCREEN_MULTIPLIER,
+  );
+  return Math.min(
+    HYBRID_THUMBNAIL_CACHE_LIMIT,
+    Math.max(HYBRID_SCROLL_MIN_MEMORY_PREFETCH_COUNT, scaledBudget),
+  );
+}
+
+export function resolveScrollRemoteDiskPredownloadBudget(visibleCapacity: number): number {
+  const baseBudget = Math.ceil(Math.max(1, visibleCapacity) * 2);
+  return Math.max(
+    HYBRID_SCROLL_REMOTE_DISK_PREDOWNLOAD_MIN,
+    Math.min(HYBRID_SCROLL_REMOTE_DISK_PREDOWNLOAD_MAX, baseBudget),
+  );
 }
 
 /**
@@ -281,8 +314,11 @@ export interface HybridGridItem {
 export interface HybridThumbnailCacheEntry {
   pixelMap?: PixelMap;
   loadingPromise?: Promise<PixelMap>;
+  loadingIsPrefetch?: boolean;
+  loadingToken?: number;
   refCount: number;
   lastUsedAt: number;
+  retainUntilAt?: number;
 }
 
 export interface HybridRemoteCacheEntry {
@@ -294,6 +330,7 @@ export interface HybridDeferredRemoteWriteEntry {
   url: string;
   requestSize: number;
   data: ArrayBuffer;
+  dataByteLength: number;
 }
 
 export interface HybridTimelineAssetEntry {
@@ -312,6 +349,19 @@ export interface HybridSectionMergeResult {
 export interface HybridTimelineTailUpdate {
   startIndex: number;
   items: Array<HybridTimelineItem>;
+}
+
+export interface HybridGridPrefetchRequest {
+  index: number;
+  item?: HybridGridItem;
+  visibleStart: number;
+  visibleEnd: number;
+  isCanceled: () => boolean;
+}
+
+export interface HybridGridPrefetchHandler {
+  prefetch(request: HybridGridPrefetchRequest): Promise<void>;
+  cancel(index: number, item?: HybridGridItem): void;
 }
 
 export class HybridTimelineDataSource implements IDataSource {
@@ -443,9 +493,13 @@ export function delay(ms: number): Promise<void> {
 
 // Grid DataSource：管理扁平化的照片列表
 // 对齐参考程序 DayDataView 的 IDataSource + DataChangeListener 模式
-export class HybridGridDataSource implements IDataSource {
+export class HybridGridDataSource implements IDataSource, IDataSourcePrefetching {
   private items: Array<HybridGridItem> = [];
   listeners: Array<DataChangeListener> = [];
+  private prefetchHandler?: HybridGridPrefetchHandler = undefined;
+  private prefetchVisibleStart: number = 0;
+  private prefetchVisibleEnd: number = -1;
+  private readonly prefetchTokens: Map<number, number> = new Map();
 
   totalCount(): number {
     return this.items.length;
@@ -468,6 +522,47 @@ export class HybridGridDataSource implements IDataSource {
 
   unregisterDataChangeListener(listener: DataChangeListener): void {
     this.listeners = this.listeners.filter((item: DataChangeListener) => item !== listener);
+  }
+
+  setPrefetchHandler(handler?: HybridGridPrefetchHandler): void {
+    this.prefetchHandler = handler;
+  }
+
+  updatePrefetchViewport(start: number, end: number): void {
+    this.prefetchVisibleStart = Math.max(0, start);
+    this.prefetchVisibleEnd = Math.max(this.prefetchVisibleStart, end);
+  }
+
+  async prefetch(index: number): Promise<void> {
+    const handler = this.prefetchHandler;
+    if (!handler) {
+      return;
+    }
+
+    const nextToken = (this.prefetchTokens.get(index) ?? 0) + 1;
+    this.prefetchTokens.set(index, nextToken);
+    const currentItem = this.items[index];
+    const visibleStart = this.prefetchVisibleStart;
+    const visibleEnd = this.prefetchVisibleEnd;
+    const request: HybridGridPrefetchRequest = {
+      index: index,
+      item: currentItem,
+      visibleStart: visibleStart,
+      visibleEnd: visibleEnd,
+      isCanceled: (): boolean => {
+        return (this.prefetchTokens.get(index) ?? 0) !== nextToken;
+      },
+    };
+
+    try {
+      await handler.prefetch(request);
+    } catch (_) {}
+  }
+
+  cancel(index: number): void {
+    const nextToken = (this.prefetchTokens.get(index) ?? 0) + 1;
+    this.prefetchTokens.set(index, nextToken);
+    this.prefetchHandler?.cancel(index, this.items[index]);
   }
 
   /**

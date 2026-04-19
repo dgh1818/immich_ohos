@@ -1,9 +1,13 @@
 param(
   [string]$HdcPath = 'C:\Program Files\Huawei\DevEco Studio\sdk\default\openharmony\toolchains\hdc.exe',
   [string]$BundleName = 'com.dgh18.immich',
+  [string]$AbilityName = 'EntryAbility',
   [string]$WindowName = 'immich0',
+  [string]$HapPath = '',
   [string]$OutputRoot = '',
   [int]$KeepAwakeMs = 3600000,
+  [switch]$InstallLatestHap,
+  [switch]$LaunchApp,
   [switch]$SkipHilogReset,
   [int]$SettleSeconds = 60,
   [string]$ReadyLogPattern = 'isKeepScreenOn: 0',
@@ -11,12 +15,12 @@ param(
   [int]$CooldownSeconds = 30,
   [int]$BurstFrames = 5,
   [int]$BurstDelayMs = 200,
-  [int]$DownFlingCount = 3,
-  [int]$DownVelocity = 30000,
-  [int]$DownStepLength = 1600,
-  [int]$UpFlingCount = 3,
-  [int]$UpVelocity = 30000,
-  [int]$UpStepLength = 1600
+  [int]$DownFlingCount = 15,
+  [int]$DownVelocity = 34000,
+  [int]$DownStepLength = 1900,
+  [int]$UpFlingCount = 10,
+  [int]$UpVelocity = 34000,
+  [int]$UpStepLength = 1900
 )
 
 Set-StrictMode -Version Latest
@@ -48,6 +52,33 @@ function Invoke-HdcFileRecv {
     throw "hdc file recv failed: $RemotePath -> $LocalPath`n$output"
   }
   return $output
+}
+
+function Invoke-HdcInstall {
+  param(
+    [Parameter(Mandatory = $true)]
+    [string]$PackagePath
+  )
+
+  $output = & $HdcPath install -r $PackagePath 2>&1
+  if ($LASTEXITCODE -ne 0) {
+    throw "hdc install failed: $PackagePath`n$output"
+  }
+  return $output
+}
+
+function Resolve-HapPath {
+  if (-not [string]::IsNullOrWhiteSpace($HapPath)) {
+    return $HapPath
+  }
+
+  return Join-Path (Resolve-Path (Join-Path $PSScriptRoot '..')).Path 'ohos\entry\build\default\outputs\default\entry-default-signed.hap'
+}
+
+function Launch-App {
+  Invoke-HdcShell "aa force-stop $BundleName" | Out-Null
+  Start-Sleep -Seconds 2
+  Invoke-HdcShell "aa start -a $AbilityName -b $BundleName" | Out-Null
 }
 
 function Invoke-DirectionalFling {
@@ -277,6 +308,17 @@ Invoke-HdcShell 'power-shell wakeup' | Out-Null
 Invoke-HdcShell "power-shell timeout -o $KeepAwakeMs" | Out-Null
 if (-not $SkipHilogReset) {
   Invoke-HdcShell 'hilog -r' | Out-Null
+}
+if ($InstallLatestHap) {
+  $resolvedHapPath = Resolve-HapPath
+  if (-not (Test-Path -LiteralPath $resolvedHapPath)) {
+    throw "hap not found: $resolvedHapPath"
+  }
+  Write-Output "installHap=$resolvedHapPath"
+  Invoke-HdcInstall -PackagePath $resolvedHapPath | Out-Null
+}
+if ($LaunchApp) {
+  Launch-App
 }
 Invoke-HdcShell "hidumper -s RenderService -a 'fpsClear $WindowName'" | Out-Null
 

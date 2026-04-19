@@ -224,23 +224,16 @@ export struct HybridPhotoTile {
       return;
     }
 
-    const cachedPixelMap = HybridThumbnailCache.acquire(cacheKey);
-    if (cachedPixelMap) {
-      this.releaseDisplayedAsset();
-      this.displayedAssetId = cacheKey;
-      this.pixelMap = cachedPixelMap;
-      this.isLoading = false;
-      this.hasError = false;
-      return;
-    }
-
     const version = ++this.loadVersion;
     // Keep stale pixelMap visible (isLoading=true but pixelMap stays)
     this.isLoading = true;
     this.hasError = false;
 
     try {
-      const pixelMap = await HybridThumbnailCache.load(cacheKey, () =>
+      const pixelMap = await HybridThumbnailCache.load(
+        cacheKey,
+        asset.thumbnailUrl !== undefined && asset.thumbnailUrl.length > 0,
+        () =>
         loadVisibleAssetThumbnail(this.context, asset, requestSize),
       );
       if (version !== this.loadVersion) {

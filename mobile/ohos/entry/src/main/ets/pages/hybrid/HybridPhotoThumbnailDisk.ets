@@ -1,12 +1,16 @@
 import { taskpool } from '@kit.ArkTS';
 import { common } from '@kit.AbilityKit';
 import { fileIo as fs } from '@kit.CoreFileKit';
-import { image } from '@kit.ImageKit';
+import { image, sendableImage } from '@kit.ImageKit';
 import { http } from '@kit.NetworkKit';
 import { URLSessionManager } from '../../plugins/core/URLSessionManager';
 import {
   delay,
   HYBRID_BACKGROUND_PREDOWNLOAD_YIELD_MS,
+  HYBRID_COMPRESSED_BUFFER_CACHE_MAX_BYTES,
+  HYBRID_MAX_CONCURRENT_BACKGROUND_PREDOWNLOADS,
+  HYBRID_MAX_CONCURRENT_INITIAL_REMOTE_PREDOWNLOADS,
+  HYBRID_MAX_CONCURRENT_NEARBY_REMOTE_PREDOWNLOADS,
   HYBRID_DEFERRED_REMOTE_WRITE_LIMIT,
   HYBRID_DEFERRED_REMOTE_WRITE_MAX_BYTES,
   HYBRID_ENABLE_REMOTE_THUMBNAIL_DISK_WRITES,
@@ -16,12 +20,15 @@ import {
   HYBRID_REMOTE_THUMBNAIL_CACHE_TRIM_TARGET_BYTES,
   HybridDeferredRemoteWriteEntry,
   HybridRemoteCacheEntry,
-  resolveHybridPrefetchConcurrency,
 } from './HybridPhotoGridShared';
 
 let remoteThumbnailCacheDirPath: string | undefined = undefined;
 let remoteThumbnailCacheDirEnsured: boolean = false;
 const remoteThumbnailPathCache: Map<string, string> = new Map();
+const HYBRID_DEFERRED_REMOTE_WRITE_HIGH_WATER_PERCENT: number = 75;
+const HYBRID_ENABLE_ASTC_REMOTE_THUMBNAILS: boolean = true;
+const HYBRID_ASTC_REMOTE_THUMBNAIL_MAX_REQUEST_SIZE: number = 256;
+const HYBRID_REMOTE_THUMBNAIL_REQUEST_SIZES: Array<number> = [96, 128, 160, 192, 224];
 
 function hashString(input: string): string {
   let hash = 2166136261;
@@ -34,6 +41,23 @@ function hashString(input: string): string {
 
 function buildRemoteThumbnailCacheKey(url: string, requestSize: number): string {
   return `${requestSize}:${url}`;
+}
+
+function resolveAlternateRemoteThumbnailRequestSizes(requestSize: number): Array<number> {
+  const largerSizes: Array<number> = [];
+  const smallerSizes: Array<number> = [];
+  for (let index = 0; index < HYBRID_REMOTE_THUMBNAIL_REQUEST_SIZES.length; index += 1) {
+    const size = HYBRID_REMOTE_THUMBNAIL_REQUEST_SIZES[index];
+    if (size === requestSize) {
+      continue;
+    }
+    if (size > requestSize) {
+      largerSizes.push(size);
+      continue;
+    }
+    smallerSizes.unshift(size);
+  }
+  return largerSizes.concat(smallerSizes);
 }
 
 function ensureRemoteThumbnailCacheDir(ctx: common.UIAbilityContext): string {
@@ -77,6 +101,10 @@ function remoteThumbnailTempPath(
   return `${remoteThumbnailCachePath(ctx, url, requestSize)}.tmp`;
 }
 
+function cloneRemoteThumbnailBuffer(data: ArrayBuffer): ArrayBuffer {
+  return data.slice(0);
+}
+
 export class HybridScrollState {
   static isScrolling: boolean = false;
 }
@@ -86,7 +114,272 @@ export enum HybridRemoteThumbnailLoadKind {
   PREFETCH = 1,
 }
 
+export enum HybridRemoteThumbnailSourceKind {
+  NONE = 0,
+  PERSISTED_FILE = 1,
+  PENDING_WRITE = 2,
+  NETWORK_MISS = 3,
+}
+
+export enum HybridRemotePredownloadPriorityHint {
+  NEARBY = 0,
+  INITIAL = 1,
+  BACKGROUND = 2,
+}
+
+export interface HybridRemoteThumbnailLoadResult {
+  pixelMap: PixelMap;
+  sourceKind: HybridRemoteThumbnailSourceKind;
+}
+
+interface HybridCompressedRemoteThumbnailBufferEntry {
+  data: ArrayBuffer;
+  dataByteLength: number;
+  sourceKind: HybridRemoteThumbnailSourceKind;
+}
+
+interface HybridCompressedRemoteThumbnailBufferHit {
+  data: ArrayBuffer;
+  sourceKind: HybridRemoteThumbnailSourceKind;
+}
+
+export interface HybridRemoteThumbnailStatsSnapshot {
+  remoteFileHitCount: number;
+  remotePendingHitCount: number;
+  remoteNetworkFetchCount: number;
+  remotePersistedCount: number;
+  remotePersistSkipCount: number;
+  remoteAstcDecodeCount: number;
+  remoteAstcFallbackCount: number;
+  deferredWriteDropCount: number;
+  deferredWriteQueueSize: number;
+  deferredWriteQueueBytes: number;
+}
+
+interface HybridBackgroundPredownloadWaiter {
+  resolve: () => void;
+  priorityHint: HybridRemotePredownloadPriorityHint;
+}
+
+class HybridCompressedRemoteThumbnailBufferCache {
+  private static entries: Map<string, HybridCompressedRemoteThumbnailBufferEntry> = new Map();
+  private static totalBytes: number = 0;
+
+  private static touch(
+    key: string,
+    entry: HybridCompressedRemoteThumbnailBufferEntry,
+  ): HybridCompressedRemoteThumbnailBufferEntry {
+    HybridCompressedRemoteThumbnailBufferCache.entries.delete(key);
+    HybridCompressedRemoteThumbnailBufferCache.entries.set(key, entry);
+    return entry;
+  }
+
+  private static dropEntry(key: string, entry: HybridCompressedRemoteThumbnailBufferEntry): void {
+    HybridCompressedRemoteThumbnailBufferCache.entries.delete(key);
+    HybridCompressedRemoteThumbnailBufferCache.totalBytes = Math.max(
+      0,
+      HybridCompressedRemoteThumbnailBufferCache.totalBytes - entry.dataByteLength,
+    );
+  }
+
+  private static resolveEntry(
+    url: string,
+    requestSize: number,
+  ): HybridCompressedRemoteThumbnailBufferEntry | undefined {
+    const requestSizes: Array<number> = [requestSize].concat(resolveAlternateRemoteThumbnailRequestSizes(requestSize));
+    for (let index = 0; index < requestSizes.length; index += 1) {
+      const candidateSize = requestSizes[index];
+      const key = buildRemoteThumbnailCacheKey(url, candidateSize);
+      const entry = HybridCompressedRemoteThumbnailBufferCache.entries.get(key);
+      if (!entry) {
+        continue;
+      }
+      if (entry.data.byteLength <= 0) {
+        HybridCompressedRemoteThumbnailBufferCache.dropEntry(key, entry);
+        continue;
+      }
+      return HybridCompressedRemoteThumbnailBufferCache.touch(key, entry);
+    }
+    return undefined;
+  }
+
+  private static trimOverflow(): void {
+    while (HybridCompressedRemoteThumbnailBufferCache.totalBytes > HYBRID_COMPRESSED_BUFFER_CACHE_MAX_BYTES) {
+      const oldestKey = HybridCompressedRemoteThumbnailBufferCache.entries.keys().next().value as string | undefined;
+      if (!oldestKey) {
+        return;
+      }
+      const oldestEntry = HybridCompressedRemoteThumbnailBufferCache.entries.get(oldestKey);
+      if (!oldestEntry) {
+        HybridCompressedRemoteThumbnailBufferCache.entries.delete(oldestKey);
+        continue;
+      }
+      HybridCompressedRemoteThumbnailBufferCache.dropEntry(oldestKey, oldestEntry);
+    }
+  }
+
+  static store(
+    url: string,
+    requestSize: number,
+    data: ArrayBuffer,
+    sourceKind: HybridRemoteThumbnailSourceKind,
+  ): void {
+    if (data.byteLength <= 0) {
+      return;
+    }
+
+    const key = buildRemoteThumbnailCacheKey(url, requestSize);
+    const previous = HybridCompressedRemoteThumbnailBufferCache.entries.get(key);
+    if (previous) {
+      HybridCompressedRemoteThumbnailBufferCache.totalBytes = Math.max(
+        0,
+        HybridCompressedRemoteThumbnailBufferCache.totalBytes - previous.dataByteLength,
+      );
+      HybridCompressedRemoteThumbnailBufferCache.entries.delete(key);
+    }
+
+    const storedData = cloneRemoteThumbnailBuffer(data);
+    HybridCompressedRemoteThumbnailBufferCache.entries.set(key, {
+      data: storedData,
+      dataByteLength: storedData.byteLength,
+      sourceKind: sourceKind,
+    });
+    HybridCompressedRemoteThumbnailBufferCache.totalBytes += storedData.byteLength;
+    HybridCompressedRemoteThumbnailBufferCache.trimOverflow();
+  }
+
+  static get(
+    url: string,
+    requestSize: number,
+  ): HybridCompressedRemoteThumbnailBufferHit | undefined {
+    const entry = HybridCompressedRemoteThumbnailBufferCache.resolveEntry(url, requestSize);
+    if (!entry) {
+      return undefined;
+    }
+    return {
+      data: cloneRemoteThumbnailBuffer(entry.data),
+      sourceKind: entry.sourceKind,
+    };
+  }
+
+  static has(url: string, requestSize: number): boolean {
+    return HybridCompressedRemoteThumbnailBufferCache.resolveEntry(url, requestSize) !== undefined;
+  }
+
+  static copyForPersist(
+    url: string,
+    requestSize: number,
+  ): ArrayBuffer | undefined {
+    const entry = HybridCompressedRemoteThumbnailBufferCache.resolveEntry(url, requestSize);
+    if (!entry) {
+      return undefined;
+    }
+    return cloneRemoteThumbnailBuffer(entry.data);
+  }
+
+  static promoteToPersisted(url: string, requestSize: number): void {
+    const entry = HybridCompressedRemoteThumbnailBufferCache.resolveEntry(url, requestSize);
+    if (!entry) {
+      return;
+    }
+    entry.sourceKind = HybridRemoteThumbnailSourceKind.PERSISTED_FILE;
+  }
+}
+
+class HybridRemoteThumbnailStats {
+  private static remoteFileHitCount: number = 0;
+  private static remotePendingHitCount: number = 0;
+  private static remoteNetworkFetchCount: number = 0;
+  private static remotePersistedCount: number = 0;
+  private static remotePersistSkipCount: number = 0;
+  private static remoteAstcDecodeCount: number = 0;
+  private static remoteAstcFallbackCount: number = 0;
+  private static deferredWriteDropCount: number = 0;
+
+  static noteSourceKind(sourceKind: HybridRemoteThumbnailSourceKind): void {
+    if (sourceKind === HybridRemoteThumbnailSourceKind.PERSISTED_FILE) {
+      HybridRemoteThumbnailStats.remoteFileHitCount += 1;
+      return;
+    }
+    if (sourceKind === HybridRemoteThumbnailSourceKind.PENDING_WRITE) {
+      HybridRemoteThumbnailStats.remotePendingHitCount += 1;
+    }
+  }
+
+  static noteNetworkFetch(): void {
+    HybridRemoteThumbnailStats.remoteNetworkFetchCount += 1;
+  }
+
+  static notePersisted(): void {
+    HybridRemoteThumbnailStats.remotePersistedCount += 1;
+  }
+
+  static notePersistSkip(): void {
+    HybridRemoteThumbnailStats.remotePersistSkipCount += 1;
+  }
+
+  static noteAstcDecodeUsed(): void {
+    HybridRemoteThumbnailStats.remoteAstcDecodeCount += 1;
+  }
+
+  static noteAstcDecodeFallback(): void {
+    HybridRemoteThumbnailStats.remoteAstcFallbackCount += 1;
+  }
+
+  static noteDeferredWriteDrop(): void {
+    HybridRemoteThumbnailStats.deferredWriteDropCount += 1;
+  }
+
+  static snapshot(): HybridRemoteThumbnailStatsSnapshot {
+    return {
+      remoteFileHitCount: HybridRemoteThumbnailStats.remoteFileHitCount,
+      remotePendingHitCount: HybridRemoteThumbnailStats.remotePendingHitCount,
+      remoteNetworkFetchCount: HybridRemoteThumbnailStats.remoteNetworkFetchCount,
+      remotePersistedCount: HybridRemoteThumbnailStats.remotePersistedCount,
+      remotePersistSkipCount: HybridRemoteThumbnailStats.remotePersistSkipCount,
+      remoteAstcDecodeCount: HybridRemoteThumbnailStats.remoteAstcDecodeCount,
+      remoteAstcFallbackCount: HybridRemoteThumbnailStats.remoteAstcFallbackCount,
+      deferredWriteDropCount: HybridRemoteThumbnailStats.deferredWriteDropCount,
+      deferredWriteQueueSize: HybridDeferredRemoteThumbnailWriter.size(),
+      deferredWriteQueueBytes: HybridDeferredRemoteThumbnailWriter.bytes(),
+    };
+  }
+}
+
 let visibleRemoteThumbnailDiskTimingLogged: boolean = false;
+
+function resolveRemoteThumbnailTaskPriority(loadKind: HybridRemoteThumbnailLoadKind): taskpool.Priority {
+  if (loadKind === HybridRemoteThumbnailLoadKind.VISIBLE) {
+    return HybridScrollState.isScrolling
+      ? taskpool.Priority.MEDIUM
+      : taskpool.Priority.HIGH;
+  }
+  return taskpool.Priority.LOW;
+}
+
+function shouldPersistRemoteThumbnailImmediately(
+  priorityHint: HybridRemotePredownloadPriorityHint,
+): boolean {
+  return priorityHint !== HybridRemotePredownloadPriorityHint.BACKGROUND;
+}
+
+function resolveBackgroundPredownloadConcurrencyLimit(
+  priorityHint: HybridRemotePredownloadPriorityHint,
+): number {
+  if (priorityHint === HybridRemotePredownloadPriorityHint.NEARBY) {
+    return HYBRID_MAX_CONCURRENT_NEARBY_REMOTE_PREDOWNLOADS;
+  }
+  if (priorityHint === HybridRemotePredownloadPriorityHint.INITIAL) {
+    return HYBRID_MAX_CONCURRENT_INITIAL_REMOTE_PREDOWNLOADS;
+  }
+  return HYBRID_MAX_CONCURRENT_BACKGROUND_PREDOWNLOADS;
+}
+
+function shouldPreferAstcRemoteThumbnail(requestSize: number): boolean {
+  return HYBRID_ENABLE_ASTC_REMOTE_THUMBNAILS &&
+    requestSize > 0 &&
+    requestSize <= HYBRID_ASTC_REMOTE_THUMBNAIL_MAX_REQUEST_SIZE;
+}
 
 @Concurrent
 async function readRemoteThumbnailBufferTask(filePath: string): Promise<ArrayBuffer> {
@@ -116,9 +409,7 @@ async function readRemoteThumbnailBufferFromFile(
   filePath: string,
   loadKind: HybridRemoteThumbnailLoadKind,
 ): Promise<ArrayBuffer> {
-  const priority = loadKind === HybridRemoteThumbnailLoadKind.VISIBLE
-    ? taskpool.Priority.HIGH
-    : taskpool.Priority.MEDIUM;
+  const priority = resolveRemoteThumbnailTaskPriority(loadKind);
   const task: taskpool.Task = new taskpool.Task(readRemoteThumbnailBufferTask, filePath);
   const result = await taskpool.execute(task, priority) as ArrayBuffer | undefined;
   if (!result) {
@@ -196,11 +487,14 @@ function findExistingRemoteThumbnailCachePath(
   requestSize: number,
   allowSyncFs: boolean = true,
 ): string | undefined {
-  const primaryPath = remoteThumbnailCachePath(ctx, url, requestSize);
-  if (HybridRemoteThumbnailCacheIndex.hasCachePath(ctx, primaryPath, allowSyncFs)) {
-    return primaryPath;
+  const requestSizes: Array<number> = [requestSize].concat(resolveAlternateRemoteThumbnailRequestSizes(requestSize));
+  for (let index = 0; index < requestSizes.length; index += 1) {
+    const candidateSize = requestSizes[index];
+    const candidatePath = remoteThumbnailCachePath(ctx, url, candidateSize);
+    if (HybridRemoteThumbnailCacheIndex.hasCachePath(ctx, candidatePath, allowSyncFs)) {
+      return candidatePath;
+    }
   }
-
   return undefined;
 }
 
@@ -235,7 +529,7 @@ export class HybridRemoteThumbnailCacheIndex {
     }
   }
 
-  static hasCachePath(ctx: common.UIAbilityContext, path: string, allowSyncFs: boolean = true): boolean {
+  static hasCachePath(_ctx: common.UIAbilityContext, path: string, allowSyncFs: boolean = true): boolean {
     const existing = HybridRemoteThumbnailCacheIndex.files.get(path);
     if (existing) {
       existing.lastAccessAt = Date.now();
@@ -397,6 +691,8 @@ function persistRemoteThumbnailBuffer(
 ): string {
   const cachePath = remoteThumbnailCachePath(ctx, url, requestSize);
   if (HybridRemoteThumbnailCacheIndex.hasCachePath(ctx, cachePath)) {
+    HybridCompressedRemoteThumbnailBufferCache.promoteToPersisted(url, requestSize);
+    HybridRemoteThumbnailStats.notePersistSkip();
     return cachePath;
   }
 
@@ -410,7 +706,14 @@ function persistRemoteThumbnailBuffer(
       deleteFileIfExists(cachePath);
       fs.renameSync(tempPath, cachePath);
     }
+    HybridCompressedRemoteThumbnailBufferCache.store(
+      url,
+      requestSize,
+      data,
+      HybridRemoteThumbnailSourceKind.PERSISTED_FILE,
+    );
     HybridRemoteThumbnailCacheIndex.notePersisted(cachePath, data.byteLength);
+    HybridRemoteThumbnailStats.notePersisted();
   } catch (error) {
     deleteFileIfExists(tempPath);
     throw error as Error;
@@ -439,6 +742,18 @@ class HybridDeferredRemoteThumbnailWriter {
     HybridDeferredRemoteThumbnailWriter.entries.set(key, entry);
   }
 
+  private static dropEntry(key: string, entry: HybridDeferredRemoteWriteEntry): void {
+    HybridDeferredRemoteThumbnailWriter.entries.delete(key);
+    HybridDeferredRemoteThumbnailWriter.totalBytes = Math.max(
+      0,
+      HybridDeferredRemoteThumbnailWriter.totalBytes - entry.dataByteLength,
+    );
+  }
+
+  private static isEntryDataUsable(entry: HybridDeferredRemoteWriteEntry): boolean {
+    return entry.data.byteLength > 0;
+  }
+
   private static trimOverflow(): void {
     while (
       HybridDeferredRemoteThumbnailWriter.entries.size > HYBRID_DEFERRED_REMOTE_WRITE_LIMIT ||
@@ -450,59 +765,99 @@ class HybridDeferredRemoteThumbnailWriter {
       }
 
       const oldestEntry = HybridDeferredRemoteThumbnailWriter.entries.get(oldestKey);
-      HybridDeferredRemoteThumbnailWriter.entries.delete(oldestKey);
       if (!oldestEntry) {
+        HybridDeferredRemoteThumbnailWriter.entries.delete(oldestKey);
         continue;
       }
-      HybridDeferredRemoteThumbnailWriter.totalBytes = Math.max(
-        0,
-        HybridDeferredRemoteThumbnailWriter.totalBytes - oldestEntry.data.byteLength,
-      );
+      HybridDeferredRemoteThumbnailWriter.dropEntry(oldestKey, oldestEntry);
+      HybridRemoteThumbnailStats.noteDeferredWriteDrop();
     }
+  }
+
+  static size(): number {
+    return HybridDeferredRemoteThumbnailWriter.entries.size;
+  }
+
+  static bytes(): number {
+    return HybridDeferredRemoteThumbnailWriter.totalBytes;
+  }
+
+  static isHighWater(): boolean {
+    return (HybridDeferredRemoteThumbnailWriter.entries.size * 100) >=
+      (HYBRID_DEFERRED_REMOTE_WRITE_LIMIT * HYBRID_DEFERRED_REMOTE_WRITE_HIGH_WATER_PERCENT) ||
+      (HybridDeferredRemoteThumbnailWriter.totalBytes * 100) >=
+      (HYBRID_DEFERRED_REMOTE_WRITE_MAX_BYTES * HYBRID_DEFERRED_REMOTE_WRITE_HIGH_WATER_PERCENT);
   }
 
   static hasPending(
     url: string,
     requestSize: number,
   ): boolean {
-    const key = HybridDeferredRemoteThumbnailWriter.buildKey(url, requestSize);
-    const hasEntry = HybridDeferredRemoteThumbnailWriter.entries.has(key);
-    if (hasEntry) {
+    const requestSizes: Array<number> = [requestSize].concat(resolveAlternateRemoteThumbnailRequestSizes(requestSize));
+    for (let index = 0; index < requestSizes.length; index += 1) {
+      const candidateSize = requestSizes[index];
+      const key = HybridDeferredRemoteThumbnailWriter.buildKey(url, candidateSize);
+      const entry = HybridDeferredRemoteThumbnailWriter.entries.get(key);
+      if (!entry) {
+        continue;
+      }
+      if (!HybridDeferredRemoteThumbnailWriter.isEntryDataUsable(entry)) {
+        HybridDeferredRemoteThumbnailWriter.dropEntry(key, entry);
+        HybridRemoteThumbnailStats.noteDeferredWriteDrop();
+        continue;
+      }
       HybridDeferredRemoteThumbnailWriter.touchKey(key);
+      return true;
     }
-    return hasEntry;
+    return false;
   }
 
   static peekData(
     url: string,
     requestSize: number,
   ): ArrayBuffer | undefined {
-    const key = HybridDeferredRemoteThumbnailWriter.buildKey(url, requestSize);
-    const entry = HybridDeferredRemoteThumbnailWriter.entries.get(key);
-    if (!entry) {
-      return undefined;
-    }
+    const requestSizes: Array<number> = [requestSize].concat(resolveAlternateRemoteThumbnailRequestSizes(requestSize));
+    for (let index = 0; index < requestSizes.length; index += 1) {
+      const candidateSize = requestSizes[index];
+      const key = HybridDeferredRemoteThumbnailWriter.buildKey(url, candidateSize);
+      const entry = HybridDeferredRemoteThumbnailWriter.entries.get(key);
+      if (!entry) {
+        continue;
+      }
+      if (!HybridDeferredRemoteThumbnailWriter.isEntryDataUsable(entry)) {
+        HybridDeferredRemoteThumbnailWriter.dropEntry(key, entry);
+        HybridRemoteThumbnailStats.noteDeferredWriteDrop();
+        continue;
+      }
 
-    HybridDeferredRemoteThumbnailWriter.touchKey(key);
-    return entry.data;
+      HybridDeferredRemoteThumbnailWriter.touchKey(key);
+      return entry.data;
+    }
+    return undefined;
   }
 
   static takeData(
     url: string,
     requestSize: number,
   ): ArrayBuffer | undefined {
-    const key = HybridDeferredRemoteThumbnailWriter.buildKey(url, requestSize);
-    const entry = HybridDeferredRemoteThumbnailWriter.entries.get(key);
-    if (!entry) {
-      return undefined;
-    }
+    const requestSizes: Array<number> = [requestSize].concat(resolveAlternateRemoteThumbnailRequestSizes(requestSize));
+    for (let index = 0; index < requestSizes.length; index += 1) {
+      const candidateSize = requestSizes[index];
+      const key = HybridDeferredRemoteThumbnailWriter.buildKey(url, candidateSize);
+      const entry = HybridDeferredRemoteThumbnailWriter.entries.get(key);
+      if (!entry) {
+        continue;
+      }
+      if (!HybridDeferredRemoteThumbnailWriter.isEntryDataUsable(entry)) {
+        HybridDeferredRemoteThumbnailWriter.dropEntry(key, entry);
+        HybridRemoteThumbnailStats.noteDeferredWriteDrop();
+        continue;
+      }
 
-    HybridDeferredRemoteThumbnailWriter.entries.delete(key);
-    HybridDeferredRemoteThumbnailWriter.totalBytes = Math.max(
-      0,
-      HybridDeferredRemoteThumbnailWriter.totalBytes - entry.data.byteLength,
-    );
-    return entry.data;
+      HybridDeferredRemoteThumbnailWriter.dropEntry(key, entry);
+      return entry.data;
+    }
+    return undefined;
   }
 
   static enqueue(
@@ -513,6 +868,7 @@ class HybridDeferredRemoteThumbnailWriter {
   ): void {
     const cachePath = remoteThumbnailCachePath(ctx, url, requestSize);
     if (HybridRemoteThumbnailCacheIndex.hasCachePath(ctx, cachePath)) {
+      HybridRemoteThumbnailStats.notePersistSkip();
       return;
     }
 
@@ -522,7 +878,7 @@ class HybridDeferredRemoteThumbnailWriter {
     if (previous) {
       HybridDeferredRemoteThumbnailWriter.totalBytes = Math.max(
         0,
-        HybridDeferredRemoteThumbnailWriter.totalBytes - previous.data.byteLength,
+        HybridDeferredRemoteThumbnailWriter.totalBytes - previous.dataByteLength,
       );
       HybridDeferredRemoteThumbnailWriter.entries.delete(key);
     }
@@ -531,6 +887,7 @@ class HybridDeferredRemoteThumbnailWriter {
       url: url,
       requestSize: requestSize,
       data: data,
+      dataByteLength: data.byteLength,
     });
     HybridDeferredRemoteThumbnailWriter.totalBytes += data.byteLength;
     HybridDeferredRemoteThumbnailWriter.trimOverflow();
@@ -559,8 +916,14 @@ class HybridDeferredRemoteThumbnailWriter {
       }
 
       const entry = HybridDeferredRemoteThumbnailWriter.entries.get(oldestKey);
-      HybridDeferredRemoteThumbnailWriter.entries.delete(oldestKey);
       if (!entry) {
+        HybridDeferredRemoteThumbnailWriter.entries.delete(oldestKey);
+        continue;
+      }
+      HybridDeferredRemoteThumbnailWriter.dropEntry(oldestKey, entry);
+      if (!HybridDeferredRemoteThumbnailWriter.isEntryDataUsable(entry)) {
+        HybridRemoteThumbnailStats.noteDeferredWriteDrop();
+        await delay(HYBRID_BACKGROUND_PREDOWNLOAD_YIELD_MS);
         continue;
       }
 
@@ -582,6 +945,7 @@ class HybridDeferredRemoteThumbnailWriter {
 }
 
 async function decodeRemoteThumbnailFromFile(
+  url: string,
   filePath: string,
   requestSize: number,
   loadKind: HybridRemoteThumbnailLoadKind,
@@ -589,8 +953,14 @@ async function decodeRemoteThumbnailFromFile(
   HybridRemoteThumbnailCacheIndex.markAccessed(filePath);
   const readStartedAt = Date.now();
   const buffer = await readRemoteThumbnailBufferFromFile(filePath, loadKind);
+  HybridCompressedRemoteThumbnailBufferCache.store(
+    url,
+    requestSize,
+    buffer,
+    HybridRemoteThumbnailSourceKind.PERSISTED_FILE,
+  );
   const decodeStartedAt = Date.now();
-  const pixelMap = await decodeRemoteThumbnailFromBuffer(buffer, requestSize);
+  const pixelMap = await decodeRemoteThumbnailFromBuffer(buffer, requestSize, loadKind);
   if (loadKind === HybridRemoteThumbnailLoadKind.VISIBLE) {
     logVisibleRemoteThumbnailDiskTimingOnce(
       filePath,
@@ -604,10 +974,12 @@ async function decodeRemoteThumbnailFromFile(
   return pixelMap;
 }
 
-async function decodeRemoteThumbnailFromBuffer(
+@Concurrent
+async function decodeRemoteThumbnailBufferTask(
   data: ArrayBuffer,
   requestSize: number,
-): Promise<PixelMap> {
+  preferAstc: boolean,
+): Promise<sendableImage.PixelMap> {
   const source = image.createImageSource(data);
   try {
     const imageInfo = await source.getImageInfo();
@@ -616,8 +988,27 @@ async function decodeRemoteThumbnailFromBuffer(
     const scale = Math.min(requestSize / sourceWidth, requestSize / sourceHeight);
     const desiredWidth = Math.max(1, Math.round(sourceWidth * scale));
     const desiredHeight = Math.max(1, Math.round(sourceHeight * scale));
+    if (preferAstc) {
+      try {
+        const astcPixelMap = await source.createPixelMap({
+          editable: false,
+          desiredPixelFormat: image.PixelMapFormat.ASTC_4x4,
+          desiredSize: {
+            width: desiredWidth,
+            height: desiredHeight,
+          },
+        });
+        try {
+          return sendableImage.convertFromPixelMap(astcPixelMap);
+        } finally {
+          try {
+            astcPixelMap.release();
+          } catch (_) {}
+        }
+      } catch (_) {}
+    }
 
-    return await source.createPixelMap({
+    const rgbaPixelMap = await source.createPixelMap({
       editable: false,
       desiredPixelFormat: image.PixelMapFormat.RGBA_8888,
       desiredSize: {
@@ -625,11 +1016,51 @@ async function decodeRemoteThumbnailFromBuffer(
         height: desiredHeight,
       },
     });
+    try {
+      return sendableImage.convertFromPixelMap(rgbaPixelMap);
+    } finally {
+      try {
+        rgbaPixelMap.release();
+      } catch (_) {}
+    }
   } finally {
     try {
       source.release();
     } catch (_) {}
   }
+}
+
+async function decodeRemoteThumbnailFromBuffer(
+  data: ArrayBuffer,
+  requestSize: number,
+  loadKind: HybridRemoteThumbnailLoadKind,
+): Promise<PixelMap> {
+  const priority = resolveRemoteThumbnailTaskPriority(loadKind);
+  const preferAstc = shouldPreferAstcRemoteThumbnail(requestSize);
+  const task: taskpool.Task = new taskpool.Task(
+    decodeRemoteThumbnailBufferTask,
+    data,
+    requestSize,
+    preferAstc,
+  );
+  const result = await taskpool.execute(task, priority) as sendableImage.PixelMap | undefined;
+  if (!result) {
+    throw new Error('failed to decode remote thumbnail buffer');
+  }
+  const pixelMap = sendableImage.convertToPixelMap(result);
+  try {
+    const imageInfo = pixelMap.getImageInfoSync();
+    if (imageInfo.pixelFormat === image.PixelMapFormat.ASTC_4x4) {
+      HybridRemoteThumbnailStats.noteAstcDecodeUsed();
+    } else if (preferAstc) {
+      HybridRemoteThumbnailStats.noteAstcDecodeFallback();
+    }
+  } catch (_) {
+    if (preferAstc) {
+      HybridRemoteThumbnailStats.noteAstcDecodeFallback();
+    }
+  }
+  return pixelMap;
 }
 
 export function hasRemoteThumbnailCache(
@@ -638,8 +1069,20 @@ export function hasRemoteThumbnailCache(
   requestSize: number,
   allowSyncFs: boolean = true,
 ): boolean {
+  if (HybridCompressedRemoteThumbnailBufferCache.has(url, requestSize)) {
+    return true;
+  }
   return findExistingRemoteThumbnailCachePath(ctx, url, requestSize, allowSyncFs) !== undefined ||
     HybridDeferredRemoteThumbnailWriter.hasPending(url, requestSize);
+}
+
+export function hasPersistedRemoteThumbnailCache(
+  ctx: common.UIAbilityContext,
+  url: string,
+  requestSize: number,
+  allowSyncFs: boolean = true,
+): boolean {
+  return findExistingRemoteThumbnailCachePath(ctx, url, requestSize, allowSyncFs) !== undefined;
 }
 
 export async function loadRemoteThumbnail(
@@ -647,16 +1090,47 @@ export async function loadRemoteThumbnail(
   url: string,
   requestSize: number,
   loadKind: HybridRemoteThumbnailLoadKind = HybridRemoteThumbnailLoadKind.VISIBLE,
-): Promise<PixelMap> {
+): Promise<HybridRemoteThumbnailLoadResult> {
+  const compressedBufferHit = HybridCompressedRemoteThumbnailBufferCache.get(url, requestSize);
+  if (compressedBufferHit) {
+    HybridRemoteThumbnailStats.noteSourceKind(compressedBufferHit.sourceKind);
+    return {
+      pixelMap: await decodeRemoteThumbnailFromBuffer(
+        compressedBufferHit.data,
+        requestSize,
+        loadKind,
+      ),
+      sourceKind: compressedBufferHit.sourceKind,
+    };
+  }
+
   const pendingData = HybridDeferredRemoteThumbnailWriter.peekData(url, requestSize);
   if (pendingData) {
-    return await decodeRemoteThumbnailFromBuffer(pendingData, requestSize);
+    HybridCompressedRemoteThumbnailBufferCache.store(
+      url,
+      requestSize,
+      pendingData,
+      HybridRemoteThumbnailSourceKind.PENDING_WRITE,
+    );
+    HybridRemoteThumbnailStats.noteSourceKind(HybridRemoteThumbnailSourceKind.PENDING_WRITE);
+    return {
+      pixelMap: await decodeRemoteThumbnailFromBuffer(
+        cloneRemoteThumbnailBuffer(pendingData),
+        requestSize,
+        loadKind,
+      ),
+      sourceKind: HybridRemoteThumbnailSourceKind.PENDING_WRITE,
+    };
   }
 
   const cachePath = findExistingRemoteThumbnailCachePath(ctx, url, requestSize);
   if (cachePath) {
     try {
-      return await decodeRemoteThumbnailFromFile(cachePath, requestSize, loadKind);
+      HybridRemoteThumbnailStats.noteSourceKind(HybridRemoteThumbnailSourceKind.PERSISTED_FILE);
+      return {
+        pixelMap: await decodeRemoteThumbnailFromFile(url, cachePath, requestSize, loadKind),
+        sourceKind: HybridRemoteThumbnailSourceKind.PERSISTED_FILE,
+      };
     } catch (_) {
       deleteFileIfExists(cachePath);
       HybridRemoteThumbnailCacheIndex.noteRemoved(cachePath);
@@ -672,6 +1146,7 @@ export async function loadRemoteThumbnail(
   URLSessionManager.applyToOptions(ctx.getApplicationContext(), options, url);
 
   try {
+    HybridRemoteThumbnailStats.noteNetworkFetch();
     const response = await request.request(url, options);
     URLSessionManager.updateFromResponse(
       ctx.getApplicationContext(),
@@ -688,11 +1163,23 @@ export async function loadRemoteThumbnail(
       throw new Error('Remote thumbnail response is empty');
     }
 
+    HybridCompressedRemoteThumbnailBufferCache.store(
+      url,
+      requestSize,
+      data,
+      HYBRID_ENABLE_REMOTE_THUMBNAIL_DISK_WRITES
+        ? HybridRemoteThumbnailSourceKind.PENDING_WRITE
+        : HybridRemoteThumbnailSourceKind.NETWORK_MISS,
+    );
+
     if (HYBRID_ENABLE_REMOTE_THUMBNAIL_DISK_WRITES) {
-      HybridDeferredRemoteThumbnailWriter.enqueue(ctx, url, requestSize, data);
+      HybridDeferredRemoteThumbnailWriter.enqueue(ctx, url, requestSize, cloneRemoteThumbnailBuffer(data));
     }
 
-    return await decodeRemoteThumbnailFromBuffer(data, requestSize);
+    return {
+      pixelMap: await decodeRemoteThumbnailFromBuffer(data, requestSize, loadKind),
+      sourceKind: HybridRemoteThumbnailSourceKind.NETWORK_MISS,
+    };
   } finally {
     request.destroy();
   }
@@ -702,6 +1189,7 @@ export async function ensureRemoteThumbnailCached(
   ctx: common.UIAbilityContext,
   url: string,
   requestSize: number,
+  priorityHint: HybridRemotePredownloadPriorityHint = HybridRemotePredownloadPriorityHint.NEARBY,
 ): Promise<string> {
   if (!HYBRID_ENABLE_REMOTE_THUMBNAIL_DISK_WRITES) {
     return '';
@@ -709,18 +1197,29 @@ export async function ensureRemoteThumbnailCached(
 
   const existingCachePath = findExistingRemoteThumbnailCachePath(ctx, url, requestSize);
   if (existingCachePath) {
+    HybridRemoteThumbnailStats.noteSourceKind(HybridRemoteThumbnailSourceKind.PERSISTED_FILE);
     return existingCachePath;
   }
 
   const cachePath = remoteThumbnailCachePath(ctx, url, requestSize);
   const pendingData = HybridDeferredRemoteThumbnailWriter.peekData(url, requestSize);
   if (pendingData) {
-    if (HybridScrollState.isScrolling) {
+    HybridRemoteThumbnailStats.noteSourceKind(HybridRemoteThumbnailSourceKind.PENDING_WRITE);
+    if (HybridScrollState.isScrolling || !shouldPersistRemoteThumbnailImmediately(priorityHint)) {
       return cachePath;
     }
 
     const persistData = HybridDeferredRemoteThumbnailWriter.takeData(url, requestSize) ?? pendingData;
     return persistRemoteThumbnailBuffer(ctx, url, requestSize, persistData);
+  }
+
+  const compressedBufferData = HybridCompressedRemoteThumbnailBufferCache.copyForPersist(url, requestSize);
+  if (compressedBufferData) {
+    if (HybridScrollState.isScrolling || !shouldPersistRemoteThumbnailImmediately(priorityHint)) {
+      HybridDeferredRemoteThumbnailWriter.enqueue(ctx, url, requestSize, compressedBufferData);
+      return cachePath;
+    }
+    return persistRemoteThumbnailBuffer(ctx, url, requestSize, compressedBufferData);
   }
 
   const request = http.createHttp();
@@ -732,6 +1231,7 @@ export async function ensureRemoteThumbnailCached(
   URLSessionManager.applyToOptions(ctx.getApplicationContext(), options, url);
 
   try {
+    HybridRemoteThumbnailStats.noteNetworkFetch();
     const response = await request.request(url, options);
     URLSessionManager.updateFromResponse(
       ctx.getApplicationContext(),
@@ -747,8 +1247,14 @@ export async function ensureRemoteThumbnailCached(
     if (!data || data.byteLength === 0) {
       throw new Error('Remote thumbnail response is empty');
     }
-    if (HybridScrollState.isScrolling) {
-      HybridDeferredRemoteThumbnailWriter.enqueue(ctx, url, requestSize, data);
+    if (HybridScrollState.isScrolling || !shouldPersistRemoteThumbnailImmediately(priorityHint)) {
+      HybridCompressedRemoteThumbnailBufferCache.store(
+        url,
+        requestSize,
+        data,
+        HybridRemoteThumbnailSourceKind.PENDING_WRITE,
+      );
+      HybridDeferredRemoteThumbnailWriter.enqueue(ctx, url, requestSize, cloneRemoteThumbnailBuffer(data));
       return cachePath;
     }
     return persistRemoteThumbnailBuffer(ctx, url, requestSize, data);
@@ -764,8 +1270,13 @@ export class HybridRemoteThumbnailBackgroundPredownload {
     ctx: common.UIAbilityContext,
     url: string,
     requestSize: number,
+    priorityHint: HybridRemotePredownloadPriorityHint = HybridRemotePredownloadPriorityHint.NEARBY,
   ): Promise<void> {
     if (!HYBRID_ENABLE_REMOTE_THUMBNAIL_DISK_WRITES) {
+      return;
+    }
+
+    if (HybridDeferredRemoteThumbnailWriter.isHighWater()) {
       return;
     }
 
@@ -781,8 +1292,9 @@ export class HybridRemoteThumbnailBackgroundPredownload {
     }
 
     const entry: HybridRemoteCacheEntry = existing ?? {};
-    entry.downloadingPromise = HybridBackgroundPredownloadLimiter.run(() =>
-      ensureRemoteThumbnailCached(ctx, url, requestSize)
+    entry.downloadingPromise = HybridBackgroundPredownloadLimiter.run(
+      () => ensureRemoteThumbnailCached(ctx, url, requestSize, priorityHint),
+      priorityHint,
     )
       .then(() => {})
       .catch(() => {})
@@ -801,10 +1313,13 @@ export class HybridRemoteThumbnailBackgroundPredownload {
 
 class HybridBackgroundPredownloadLimiter {
   private static activeCount: number = 0;
-  private static waiters: Array<() => void> = [];
+  private static waiters: Array<HybridBackgroundPredownloadWaiter> = [];
 
-  static async run<T>(task: () => Promise<T>): Promise<T> {
-    await HybridBackgroundPredownloadLimiter.acquire();
+  static async run<T>(
+    task: () => Promise<T>,
+    priorityHint: HybridRemotePredownloadPriorityHint,
+  ): Promise<T> {
+    await HybridBackgroundPredownloadLimiter.acquire(priorityHint);
     try {
       return await task();
     } finally {
@@ -812,18 +1327,22 @@ class HybridBackgroundPredownloadLimiter {
     }
   }
 
-  private static async acquire(): Promise<void> {
-    if (HybridBackgroundPredownloadLimiter.tryAcquire()) {
+  private static async acquire(priorityHint: HybridRemotePredownloadPriorityHint): Promise<void> {
+    if (HybridBackgroundPredownloadLimiter.tryAcquire(priorityHint)) {
       return;
     }
 
     await new Promise<void>((resolve: () => void) => {
-      HybridBackgroundPredownloadLimiter.waiters.push(resolve);
+      HybridBackgroundPredownloadLimiter.waiters.push({
+        resolve: resolve,
+        priorityHint: priorityHint,
+      });
     });
   }
 
-  private static tryAcquire(): boolean {
-    if (HybridBackgroundPredownloadLimiter.activeCount >= resolveHybridPrefetchConcurrency()) {
+  private static tryAcquire(priorityHint: HybridRemotePredownloadPriorityHint): boolean {
+    if (HybridBackgroundPredownloadLimiter.activeCount >=
+      resolveBackgroundPredownloadConcurrencyLimit(priorityHint)) {
       return false;
     }
 
@@ -836,16 +1355,37 @@ class HybridBackgroundPredownloadLimiter {
       HybridBackgroundPredownloadLimiter.activeCount -= 1;
     }
 
-    if (
-      HybridBackgroundPredownloadLimiter.waiters.length > 0 &&
-      HybridBackgroundPredownloadLimiter.tryAcquire()
-    ) {
-      const waiter = HybridBackgroundPredownloadLimiter.waiters.shift();
-      waiter?.();
+    const priorityOrder: Array<HybridRemotePredownloadPriorityHint> = [
+      HybridRemotePredownloadPriorityHint.NEARBY,
+      HybridRemotePredownloadPriorityHint.INITIAL,
+      HybridRemotePredownloadPriorityHint.BACKGROUND,
+    ];
+    for (let index = 0; index < priorityOrder.length; index += 1) {
+      const priorityHint = priorityOrder[index];
+      const waiterIndex = HybridBackgroundPredownloadLimiter.waiters.findIndex(
+        (waiter: HybridBackgroundPredownloadWaiter): boolean => waiter.priorityHint === priorityHint,
+      );
+      if (waiterIndex < 0) {
+        continue;
+      }
+      if (!HybridBackgroundPredownloadLimiter.tryAcquire(priorityHint)) {
+        continue;
+      }
+      const waiter = HybridBackgroundPredownloadLimiter.waiters.splice(waiterIndex, 1)[0];
+      waiter?.resolve();
+      return;
     }
   }
 }
 
 export function flushDeferredThumbnailWritesIfIdle(): void {
   HybridDeferredRemoteThumbnailWriter.flushIfIdle();
+}
+
+export function getRemoteThumbnailStatsSnapshot(): HybridRemoteThumbnailStatsSnapshot {
+  return HybridRemoteThumbnailStats.snapshot();
+}
+
+export function shouldThrottleRemoteDiskPredownload(): boolean {
+  return HybridDeferredRemoteThumbnailWriter.isHighWater();
 }

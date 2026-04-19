@@ -1,4 +1,7 @@
+import { BasicPrefetcher } from '@kit.ArkUI';
+import { common } from '@kit.AbilityKit';
 import * as Shared from '../PhotoGridShared';
+import { buildThumbnailCacheKey, hasRemoteThumbnailCache, HybridThumbnailCache } from '../HybridPhotoThumbnail';
 import { GridAttributeUpdater } from '../viewcontroller/GridAttributeUpdater';
 import { PhotoGridViewId } from '../viewcontroller/PhotoGridViewController';
 import { ImageGridItemComponent, ImageGridItemReleasePolicy } from '../common/ImageGridItemComponent';
@@ -9,9 +12,11 @@ type PhotoAsset = Shared.PhotoAsset;
 
 const DAY_GRID_SCROLLER: Scroller = new Scroller();
 const DAY_GRID_DATA_SOURCE: Shared.GridDataSource = new Shared.GridDataSource();
+const DAY_GRID_PREFETCHER: BasicPrefetcher = new BasicPrefetcher(DAY_GRID_DATA_SOURCE);
 
 @Component
 export struct DayGridView {
+  private context = getContext(this) as common.UIAbilityContext;
   @Prop visible: boolean = false;
   @Prop interactive: boolean = false;
   @Prop warmActive: boolean = false;
@@ -58,11 +63,30 @@ export struct DayGridView {
     return '1fr '.repeat(Math.max(1, this.columns)).trim();
   }
 
+  private shouldAllowLoadWhileScrolling(asset: PhotoAsset): boolean {
+    if (this.touchScrollEnd) {
+      return true;
+    }
+
+    const cacheKey = buildThumbnailCacheKey(asset.id, this.requestSize);
+    if (HybridThumbnailCache.hasReady(cacheKey)) {
+      return true;
+    }
+
+    const remoteUrl = asset.thumbnailUrl;
+    if (!remoteUrl || remoteUrl.length <= 0) {
+      return true;
+    }
+
+    return hasRemoteThumbnailCache(this.context, remoteUrl, this.requestSize, false);
+  }
+
   @Builder
   private buildPhotoCell(asset: PhotoAsset) {
     Stack() {
       LazyLoadImg({
         touchScrollEnd: this.touchScrollEnd,
+        allowLoadWhileScrolling: this.shouldAllowLoadWhileScrolling(asset),
       }) {
         Stack() {
           ImageGridItemComponent({
@@ -191,6 +215,8 @@ export struct DayGridView {
         }
       })
       .onScrollIndex((start: number, end: number): void => {
+        DAY_GRID_DATA_SOURCE.updatePrefetchViewport(start, end);
+        DAY_GRID_PREFETCHER.visibleAreaChanged(start, end);
         this.scrollIndexHandler(start, end);
       })
       .onDidScroll((offset: number, state: number): void => {

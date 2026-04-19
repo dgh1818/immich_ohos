@@ -43,5 +43,7 @@ intermediates/
 build/
 .build/
 
+tmp/
+
 **/oh_modules/**
 node_modules

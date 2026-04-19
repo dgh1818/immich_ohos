@@ -1125,6 +1125,33 @@ export class HybridDayGridVm {
     return this.nextOffset;
   }
 
+  public adoptPrefetchedPageCursor(
+    windowEndOffset: number,
+    nextOffset: number,
+    hasMore: boolean,
+  ): void {
+    const previousWindowEndOffset = this.windowEndOffset;
+    const previousNextOffset = this.nextOffset;
+    const advancedWindow = windowEndOffset > previousWindowEndOffset;
+    const advancedNextOffset = nextOffset > previousNextOffset;
+
+    if (advancedWindow) {
+      this.windowEndOffset = windowEndOffset;
+    }
+    if (advancedNextOffset) {
+      this.nextOffset = nextOffset;
+    }
+
+    if (!hasMore && (advancedWindow || advancedNextOffset)) {
+      this.hasMore = false;
+      return;
+    }
+
+    if (advancedWindow || advancedNextOffset) {
+      this.hasMore = hasMore;
+    }
+  }
+
   public getAllTimelineItems(): Array<HybridTimelineItem> {
     return this.allTimelineItems;
   }
