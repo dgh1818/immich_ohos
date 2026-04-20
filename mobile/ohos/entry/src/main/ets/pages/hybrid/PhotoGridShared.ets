@@ -31,5 +31,7 @@ export {
   HybridTimelineItem as TimelineItem,
   setHybridPrefetchRuntimeMode as setPrefetchRuntimeMode,
   HybridTimelineTailUpdate as TimelineTailUpdate,
+  resolveHybridCanonicalRequestSizeBucket as resolveCanonicalRequestSizeBucket,
+  resolveHybridRequestSizeBucketFamily as resolveRequestSizeBucketFamily,
   resolveHybridRequestSizeBucket as resolveRequestSizeBucket,
 } from './HybridPhotoGridShared';

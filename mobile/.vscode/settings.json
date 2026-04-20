@@ -10,7 +10,9 @@
     "**/.isar": true,
     "**/ArkTSCheck": true,
     "**/build": true,
-    "**/*.log": true
+    "**/*.log": true,
+    "**/tmp": true,
+    "**/tmp/**": true
   },
   "search.exclude": {
     "**/.fvm": true,
@@ -18,7 +20,9 @@
     "**/.isar": true,
     "**/ArkTSCheck": true,
     "**/build": true,
-    "**/*.log": true
+    "**/*.log": true,
+    "**/tmp": true,
+    "**/tmp/**": true
   },
   "files.watcherExclude": {
     "**/.fvm/**": true,
@@ -26,7 +30,11 @@
     "**/.isar/**": true,
     "**/ArkTSCheck/**": true,
     "**/build/**": true,
-    "**/*.log": true
+    "**/*.log": true,
+    "**/tmp": true,
+    "**/tmp/**": true
   },
+
+  
   "cmake.sourceDirectory": "F:/immich_ohos/mobile/photo_manager_image_provider/example/linux"
 }

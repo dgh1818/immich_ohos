@@ -8,6 +8,7 @@ import 'package:immich_mobile/domain/models/asset/base_asset.model.dart';
 import 'package:immich_mobile/domain/models/store.model.dart';
 import 'package:immich_mobile/domain/models/timeline.model.dart';
 import 'package:immich_mobile/domain/models/user.model.dart';
+import 'package:immich_mobile/domain/services/timeline.service.dart';
 import 'package:immich_mobile/entities/store.entity.dart';
 import 'package:immich_mobile/infrastructure/repositories/db.repository.dart';
 import 'package:immich_mobile/infrastructure/repositories/timeline.repository.dart';
@@ -132,20 +133,42 @@ class HybridArkuiBridgeService {
     }
 
     final userIds = await _resolveTimelineUserIds(currentUser.id);
-    final assets = await _timelineRepository.main(userIds, GroupAssetsBy.day).assetSource(offset, limit);
+    final timelineQuery = _timelineRepository.main(userIds, GroupAssetsBy.day);
+    final assets = await timelineQuery.assetSource(offset, limit);
     final sections = _chunkIntoSections(assets);
     final bucketMetadata = offset == 0
         ? await _buildBucketMetadata(userIds)
         : const _HybridBucketMetadata.empty();
     final groupDayGroups = _buildGroupDayGroups(sections, offset);
+    final nextOffset = offset + assets.length;
+    final hasMore = assets.length >= limit;
+    final shouldLogTotalAssetCount = offset == 0 || !hasMore;
+    final totalAssetCount = shouldLogTotalAssetCount
+        ? await _resolveTimelineTotalAssetCount(timelineQuery)
+        : null;
+    final totalHasMore = totalAssetCount != null ? nextOffset < totalAssetCount : null;
+    final firstAsset = assets.isNotEmpty ? assets.first : null;
+    final lastAsset = assets.isNotEmpty ? assets.last : null;
+    final firstAssetId = firstAsset?.remoteId ?? firstAsset?.localId ?? '';
+    final lastAssetId = lastAsset?.remoteId ?? lastAsset?.localId ?? '';
+
+    print(
+      '[HybridArkuiBridgeService] fetchTimelineWindow result: '
+      'offset=$offset limit=$limit returned=${assets.length} '
+      'hasMore=${hasMore ? 1 : 0} nextOffset=$nextOffset windowEndOffset=$nextOffset '
+      'totalAssetCount=${totalAssetCount ?? -1} totalHasMore=${totalHasMore == null ? -1 : (totalHasMore ? 1 : 0)} '
+      'sections=${sections.length} groupDayGroups=${groupDayGroups.length} userIds=${userIds.length} '
+      'firstAssetId=$firstAssetId firstCreatedAt=${firstAsset?.createdAt.toIso8601String() ?? ''} '
+      'lastAssetId=$lastAssetId lastCreatedAt=${lastAsset?.createdAt.toIso8601String() ?? ''}',
+    );
 
     return {
       'ready': true,
       'offset': offset,
-      'nextOffset': offset + assets.length,
-      'hasMore': assets.length >= limit,
+      'nextOffset': nextOffset,
+      'hasMore': hasMore,
       'windowStartOffset': offset,
-      'windowEndOffset': offset + assets.length,
+      'windowEndOffset': nextOffset,
       'sections': sections,
       'groupDayGroups': groupDayGroups,
       'yearBuckets': bucketMetadata.yearBuckets,
@@ -153,13 +176,24 @@ class HybridArkuiBridgeService {
     };
   }
 
+  Future<int?> _resolveTimelineTotalAssetCount(TimelineQuery timelineQuery) async {
+    try {
+      final buckets = await _firstBucketsOrEmpty(timelineQuery.bucketSource());
+      return buckets.fold<int>(0, (total, bucket) => total + bucket.assetCount);
+    } catch (error, stackTrace) {
+      print(
+        '[HybridArkuiBridgeService] Failed to resolve hybrid timeline total asset count: '
+        'error=$error stackTrace=$stackTrace',
+      );
+      return null;
+    }
+  }
+
   Future<_HybridBucketMetadata> _buildBucketMetadata(List<String> userIds) async {
     try {
-      final monthBuckets = await _timelineRepository
-          .main(userIds, GroupAssetsBy.month)
-          .bucketSource()
-          .first
-          .timeout(const Duration(seconds: 2), onTimeout: () => const <Bucket>[]);
+      final monthBuckets = await _firstBucketsOrEmpty(
+        _timelineRepository.main(userIds, GroupAssetsBy.month).bucketSource(),
+      );
       final timeBuckets = monthBuckets.whereType<TimeBucket>().toList(growable: false);
       if (timeBuckets.isEmpty) {
         return const _HybridBucketMetadata.empty();
@@ -215,6 +249,18 @@ class HybridArkuiBridgeService {
     } catch (error, stackTrace) {
       _log.warning('Failed to build hybrid timeline bucket metadata', error, stackTrace);
       return const _HybridBucketMetadata.empty();
+    }
+  }
+
+  Future<List<TBucket>> _firstBucketsOrEmpty<TBucket extends Bucket>(Stream<List<TBucket>> stream) {
+    return _firstBucketsOrEmptyImpl(stream);
+  }
+
+  Future<List<TBucket>> _firstBucketsOrEmptyImpl<TBucket extends Bucket>(Stream<List<TBucket>> stream) async {
+    try {
+      return await stream.first.timeout(const Duration(seconds: 2));
+    } on TimeoutException {
+      return <TBucket>[];
     }
   }
 

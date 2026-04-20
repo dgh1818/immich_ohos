@@ -15,6 +15,7 @@ import {
   HybridPrefetchRuntimeMode,
   HybridRemoteCacheEntry,
   HybridThumbnailCacheEntry,
+  resolveHybridCanonicalRequestSizeBucket,
   resolveHybridPrefetchConcurrency,
   resolveAdaptiveCacheLimit,
   setHybridPrefetchRuntimeMode,
@@ -83,6 +84,13 @@ interface HybridRemoteThumbnailStatsDelta {
   remoteAstcDecodeCount: number;
   remoteAstcFallbackCount: number;
   deferredWriteDropCount: number;
+  highWaterWaitCount: number;
+  highWaterResumeCount: number;
+  highWaterWaitTotalMs: number;
+  highWaterLastWaitMs: number;
+  highWaterMaxWaitMs: number;
+  deferredWriteQueueSize: number;
+  deferredWriteQueueBytes: number;
 }
 
 class HybridThumbnailPerfStats {
@@ -203,6 +211,22 @@ class HybridThumbnailPerfStats {
         0,
         currentStats.deferredWriteDropCount - bucket.remoteStatsSnapshot.deferredWriteDropCount,
       ),
+      highWaterWaitCount: Math.max(
+        0,
+        currentStats.highWaterWaitCount - bucket.remoteStatsSnapshot.highWaterWaitCount,
+      ),
+      highWaterResumeCount: Math.max(
+        0,
+        currentStats.highWaterResumeCount - bucket.remoteStatsSnapshot.highWaterResumeCount,
+      ),
+      highWaterWaitTotalMs: Math.max(
+        0,
+        currentStats.highWaterWaitTotalMs - bucket.remoteStatsSnapshot.highWaterWaitTotalMs,
+      ),
+      highWaterLastWaitMs: currentStats.highWaterLastWaitMs,
+      highWaterMaxWaitMs: currentStats.highWaterMaxWaitMs,
+      deferredWriteQueueSize: currentStats.deferredWriteQueueSize,
+      deferredWriteQueueBytes: currentStats.deferredWriteQueueBytes,
     };
   }
 
@@ -273,6 +297,13 @@ class HybridThumbnailPerfStats {
       `remoteAstcDecodeCount=${remoteStatsDelta.remoteAstcDecodeCount} ` +
       `remoteAstcFallbackCount=${remoteStatsDelta.remoteAstcFallbackCount} ` +
       `deferredWriteDropCount=${remoteStatsDelta.deferredWriteDropCount} ` +
+      `highWaterWaitCount=${remoteStatsDelta.highWaterWaitCount} ` +
+      `highWaterResumeCount=${remoteStatsDelta.highWaterResumeCount} ` +
+      `highWaterWaitMs=${remoteStatsDelta.highWaterWaitTotalMs} ` +
+      `highWaterLastWaitMs=${remoteStatsDelta.highWaterLastWaitMs} ` +
+      `highWaterMaxWaitMs=${remoteStatsDelta.highWaterMaxWaitMs} ` +
+      `deferredWriteQueueSize=${remoteStatsDelta.deferredWriteQueueSize} ` +
+      `deferredWriteQueueBytes=${remoteStatsDelta.deferredWriteQueueBytes} ` +
       `releaseCount=${bucket.releaseCount} ` +
       `releaseZeroRef=${bucket.releaseZeroRefCount} releaseRetained=${bucket.releaseRetainedCount} ` +
       `releaseTotalMs=${bucket.releaseTotalMs} pruneCount=${bucket.pruneCount} ` +
@@ -349,6 +380,7 @@ class HybridLocalPhotoAssetCache {
 export class HybridThumbnailCache {
   private static entries: Map<string, HybridThumbnailCacheEntry> = new Map();
   private static remoteSourceKinds: Map<string, Disk.HybridRemoteThumbnailSourceKind> = new Map();
+  private static viewportKeepKeys: Set<string> = new Set<string>();
   private static activeColumns: number = HYBRID_GRID_COLUMNS;
   private static pendingPrune: boolean = false;
   private static lastPruneAt: number = 0;
@@ -367,6 +399,14 @@ export class HybridThumbnailCache {
 
   static entryCount(): number {
     return HybridThumbnailCache.entries.size;
+  }
+
+  static updateViewportKeepKeys(keys: Set<string>): void {
+    const nextKeys: Set<string> = new Set<string>();
+    keys.forEach((key: string) => {
+      nextKeys.add(key);
+    });
+    HybridThumbnailCache.viewportKeepKeys = nextKeys;
   }
 
   static flushDeferredPrune(): void {
@@ -642,6 +682,7 @@ export class HybridThumbnailCache {
     HybridThumbnailCache.entries.forEach((entry: HybridThumbnailCacheEntry, key: string) => {
       if (
         keepKeys.has(key) ||
+        HybridThumbnailCache.viewportKeepKeys.has(key) ||
         entry.refCount > 0 ||
         entry.loadingPromise ||
         HybridThumbnailCache.shouldRetainEntry(entry, now, false)
@@ -657,6 +698,8 @@ export class HybridThumbnailCache {
       const entry = HybridThumbnailCache.entries.get(key);
       if (
         !entry ||
+        keepKeys.has(key) ||
+        HybridThumbnailCache.viewportKeepKeys.has(key) ||
         entry.refCount > 0 ||
         entry.loadingPromise ||
         HybridThumbnailCache.shouldRetainEntry(entry, now, false)
@@ -805,6 +848,7 @@ export class HybridThumbnailCache {
     const overflowKeys: Array<string> = [];
     HybridThumbnailCache.entries.forEach((entry: HybridThumbnailCacheEntry, key: string) => {
       if (
+        HybridThumbnailCache.viewportKeepKeys.has(key) ||
         entry.refCount <= 0 &&
         !entry.loadingPromise &&
         !HybridThumbnailCache.shouldRetainEntry(entry, now, force)
@@ -834,7 +878,7 @@ export class HybridThumbnailCache {
       }
 
       const entry = HybridThumbnailCache.entries.get(key);
-      if (!entry || entry.refCount > 0 || entry.loadingPromise) {
+      if (!entry || HybridThumbnailCache.viewportKeepKeys.has(key) || entry.refCount > 0 || entry.loadingPromise) {
         continue;
       }
       try {
@@ -883,14 +927,15 @@ class HybridRemoteThumbnailWarmup {
       return;
     }
 
-    if (Disk.hasRemoteThumbnailCache(ctx, asset.thumbnailUrl, requestSize)) {
+    const remoteDiskRequestSize = resolveHybridCanonicalRequestSizeBucket();
+    if (Disk.hasRemoteThumbnailCache(ctx, asset.thumbnailUrl, remoteDiskRequestSize)) {
       HybridThumbnailCache.prefetch(cacheKey, () =>
         loadThumbnailForPrefetchAsset(ctx, asset, requestSize, prefetchGeneration)
       );
       return;
     }
 
-    const key = `${requestSize}:${asset.thumbnailUrl}`;
+    const key = asset.thumbnailUrl;
     const existing = HybridRemoteThumbnailWarmup.entries.get(key);
     if (existing?.downloadingPromise) {
       return;
@@ -898,7 +943,7 @@ class HybridRemoteThumbnailWarmup {
 
     const entry: HybridRemoteCacheEntry = existing ?? {};
     entry.downloadingPromise = HybridRemoteWarmupLimiter.run(() =>
-      Disk.ensureRemoteThumbnailCached(ctx, asset.thumbnailUrl as string, requestSize)
+      Disk.ensureRemoteThumbnailCached(ctx, asset.thumbnailUrl as string, remoteDiskRequestSize)
     )
       .then(() => {
         const nextPrefetchGeneration = HybridThumbnailRequestLimiter.getPrefetchGeneration();
@@ -916,6 +961,52 @@ class HybridRemoteThumbnailWarmup {
       });
 
     HybridRemoteThumbnailWarmup.entries.set(key, entry);
+  }
+}
+
+class HybridRemoteThumbnailBufferWarmup {
+  private static entries: Map<string, HybridRemoteCacheEntry> = new Map();
+
+  static preload(
+    ctx: common.UIAbilityContext,
+    asset: HybridPhotoAsset,
+    requestSize: number,
+  ): boolean {
+    if (!asset.thumbnailUrl || !HYBRID_ENABLE_REMOTE_THUMBNAIL_DISK_WRITES) {
+      return false;
+    }
+
+    const remoteDiskRequestSize = resolveHybridCanonicalRequestSizeBucket();
+    void requestSize;
+    if (Disk.hasRemoteThumbnailCompressedData(asset.thumbnailUrl, remoteDiskRequestSize)) {
+      return false;
+    }
+    if (!Disk.hasPersistedRemoteThumbnailCache(ctx, asset.thumbnailUrl, remoteDiskRequestSize, false)) {
+      return false;
+    }
+
+    const key = `${remoteDiskRequestSize}:${asset.thumbnailUrl}`;
+    const existing = HybridRemoteThumbnailBufferWarmup.entries.get(key);
+    if (existing?.downloadingPromise) {
+      return false;
+    }
+
+    const entry: HybridRemoteCacheEntry = existing ?? {};
+    entry.downloadingPromise = HybridRemoteWarmupLimiter.run(() =>
+      Disk.preloadPersistedRemoteThumbnailBuffer(ctx, asset.thumbnailUrl as string, remoteDiskRequestSize)
+    )
+      .then(() => {})
+      .catch(() => {})
+      .finally(() => {
+        const current = HybridRemoteThumbnailBufferWarmup.entries.get(key);
+        if (current) {
+          current.downloadingPromise = undefined;
+          HybridRemoteThumbnailBufferWarmup.entries.delete(key);
+        }
+      });
+
+    HybridRemoteThumbnailBufferWarmup.entries.set(key, entry);
+    return true;
   }
 }
 
@@ -975,6 +1066,10 @@ export class HybridThumbnailRequestLimiter {
   private static scrollActive: boolean = false;
   private static readonly SCROLL_VISIBLE_THUMBNAIL_LIMIT: number = HYBRID_SCROLL_VISIBLE_THUMBNAIL_LIMIT;
   private static readonly SCROLL_PREFETCH_LIMIT: number = HYBRID_SCROLL_PREFETCH_LIMIT;
+  private static readonly SCROLL_PREFETCH_BACKLOG_LIMIT: number = Math.max(
+    12,
+    HYBRID_SCROLL_PREFETCH_LIMIT * 4,
+  );
 
   static getPrefetchGeneration(): number {
     return HybridThumbnailRequestLimiter.prefetchGeneration;
@@ -1027,8 +1122,9 @@ export class HybridThumbnailRequestLimiter {
       return false;
     }
 
-    return HybridThumbnailRequestLimiter.activePrefetchCount >=
-      HybridThumbnailRequestLimiter.SCROLL_PREFETCH_LIMIT;
+    return HybridThumbnailRequestLimiter.activePrefetchCount +
+      HybridThumbnailRequestLimiter.prefetchWaiters.length >=
+      HybridThumbnailRequestLimiter.SCROLL_PREFETCH_BACKLOG_LIMIT;
   }
 
   /**
@@ -1326,18 +1422,37 @@ export function predownloadRemoteAssetThumbnail(
   ctx: common.UIAbilityContext,
   asset: HybridPhotoAsset,
   requestSize: number,
+  exactRequestSize: boolean = false,
 ): boolean {
+  void requestSize;
   if (!asset.thumbnailUrl) {
     return false;
   }
   if (Disk.shouldThrottleRemoteDiskPredownload()) {
     return false;
   }
-  if (Disk.hasRemoteThumbnailCache(ctx, asset.thumbnailUrl, requestSize, false)) {
+  const remoteDiskRequestSize = resolveHybridCanonicalRequestSizeBucket();
+  if (exactRequestSize
+    ? Disk.hasExactRemoteThumbnailCache(ctx, asset.thumbnailUrl, remoteDiskRequestSize, false)
+    : Disk.hasRemoteThumbnailCache(ctx, asset.thumbnailUrl, remoteDiskRequestSize, false)) {
     return false;
   }
-  void backgroundPredownloadRemoteThumbnail(ctx, asset.thumbnailUrl, requestSize);
+  void backgroundPredownloadRemoteThumbnail(
+    ctx,
+    asset.thumbnailUrl,
+    remoteDiskRequestSize,
+    Disk.HybridRemotePredownloadPriorityHint.NEARBY,
+    exactRequestSize,
+  );
   return true;
+}
+
+export function preloadRemoteAssetThumbnailCompressedData(
+  ctx: common.UIAbilityContext,
+  asset: HybridPhotoAsset,
+  requestSize: number,
+): boolean {
+  return HybridRemoteThumbnailBufferWarmup.preload(ctx, asset, requestSize);
 }
 
 export function hasRemoteThumbnailCache(
@@ -1349,6 +1464,13 @@ export function hasRemoteThumbnailCache(
   return Disk.hasRemoteThumbnailCache(ctx, url, requestSize, allowSyncFs);
 }
 
+export function hasRemoteThumbnailCompressedData(
+  url: string,
+  requestSize: number,
+): boolean {
+  return Disk.hasRemoteThumbnailCompressedData(url, requestSize);
+}
+
 export function hasPersistedRemoteThumbnailCache(
   ctx: common.UIAbilityContext,
   url: string,
@@ -1356,6 +1478,24 @@ export function hasPersistedRemoteThumbnailCache(
   allowSyncFs: boolean = true,
 ): boolean {
   return Disk.hasPersistedRemoteThumbnailCache(ctx, url, requestSize, allowSyncFs);
+}
+
+export function hasExactRemoteThumbnailCache(
+  ctx: common.UIAbilityContext,
+  url: string,
+  requestSize: number,
+  allowSyncFs: boolean = true,
+): boolean {
+  return Disk.hasExactRemoteThumbnailCache(ctx, url, requestSize, allowSyncFs);
+}
+
+export function hasExactPersistedRemoteThumbnailCache(
+  ctx: common.UIAbilityContext,
+  url: string,
+  requestSize: number,
+  allowSyncFs: boolean = true,
+): boolean {
+  return Disk.hasExactPersistedRemoteThumbnailCache(ctx, url, requestSize, allowSyncFs);
 }
 
 export function primeRemoteThumbnailCacheIndex(ctx: common.UIAbilityContext): void {
@@ -1383,8 +1523,15 @@ export async function backgroundPredownloadRemoteThumbnail(
   url: string,
   requestSize: number,
   priorityHint: Disk.HybridRemotePredownloadPriorityHint = Disk.HybridRemotePredownloadPriorityHint.NEARBY,
+  exactRequestSize: boolean = false,
 ): Promise<void> {
-  await Disk.HybridRemoteThumbnailBackgroundPredownload.predownload(ctx, url, requestSize, priorityHint);
+  await Disk.HybridRemoteThumbnailBackgroundPredownload.predownload(
+    ctx,
+    url,
+    requestSize,
+    priorityHint,
+    exactRequestSize,
+  );
 }
 
 export function flushDeferredThumbnailWritesIfIdle(): void {

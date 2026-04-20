@@ -21,8 +21,8 @@ export const HYBRID_MAX_CONCURRENT_PREFETCH_REQUESTS = 10;
 export const HYBRID_MAX_CONCURRENT_REMOTE_WARMUP_DOWNLOADS = 6;
 export const HYBRID_MAX_CONCURRENT_NEARBY_REMOTE_PREDOWNLOADS = 3;
 export const HYBRID_MAX_CONCURRENT_INITIAL_REMOTE_PREDOWNLOADS = 4;
-export const HYBRID_MAX_CONCURRENT_BACKGROUND_PREDOWNLOADS = 1;
-export const HYBRID_PREFETCH_CONCURRENCY_NORMAL = 4;
+export const HYBRID_MAX_CONCURRENT_BACKGROUND_PREDOWNLOADS = 3;
+export const HYBRID_PREFETCH_CONCURRENCY_NORMAL = 6;
 export const HYBRID_PREFETCH_CONCURRENCY_CONSTRAINED = 2;
 export const HYBRID_BACKGROUND_PREDOWNLOAD_PAGE_SIZE = 360;
 export const HYBRID_BACKGROUND_PREDOWNLOAD_BATCH_SIZE = 24;
@@ -50,13 +50,16 @@ export const HYBRID_SCROLL_MEMORY_PREFETCH_FORWARD_SCREEN_MULTIPLIER = 5;
 export const HYBRID_SCROLL_MEMORY_PREFETCH_BACKWARD_SCREEN_MULTIPLIER = 2;
 export const HYBRID_SCROLL_STOP_MEMORY_PREFETCH_SCREEN_MULTIPLIER = 6;
 export const HYBRID_SCROLL_MIN_MEMORY_PREFETCH_COUNT = 128;
+export const HYBRID_NEARBY_MEMORY_PREDECODE_SCREEN_MULTIPLIER = 5;
+export const HYBRID_NEARBY_COMPRESSED_BUFFER_PRELOAD_SCREEN_MULTIPLIER = 9;
+export const HYBRID_NEARBY_COMPRESSED_BUFFER_PRELOAD_MAX_COUNT = 512;
 export const HYBRID_PREFETCH_READY_RETENTION_MS = 1600;
 export const HYBRID_SCROLL_REMOTE_DISK_PREDOWNLOAD_MIN = 32;
 export const HYBRID_SCROLL_REMOTE_DISK_PREDOWNLOAD_MAX = 96;
 export const HYBRID_DISK_IDLE_DELAY_MS = 900;
 export const HYBRID_DEFERRED_REMOTE_WRITE_LIMIT = 2048;
 export const HYBRID_DEFERRED_REMOTE_WRITE_MAX_BYTES = 192 * 1024 * 1024;
-export const HYBRID_COMPRESSED_BUFFER_CACHE_MAX_BYTES = 48 * 1024 * 1024;
+export const HYBRID_COMPRESSED_BUFFER_CACHE_MAX_BYTES = 200 * 1024 * 1024;
 export const HYBRID_ENABLE_REMOTE_THUMBNAIL_DISK_WRITES = true;
 export const HYBRID_VIEWPORT_CACHE_PRUNE_INTERVAL_MS = 180;
 export const HYBRID_MIN_RUNWAY_ROWS = 160;
@@ -69,7 +72,7 @@ export const HYBRID_SCROLL_FORWARD_PREFETCH_SCREEN_MULTIPLIER = 7;
 export const HYBRID_SCROLL_BACKWARD_PREFETCH_SCREEN_MULTIPLIER = 4;
 export const HYBRID_SCROLL_STOP_PREFETCH_SCREEN_MULTIPLIER = 8;
 export const HYBRID_SCROLL_VISIBLE_THUMBNAIL_LIMIT = 8;
-export const HYBRID_SCROLL_PREFETCH_LIMIT = 2;
+export const HYBRID_SCROLL_PREFETCH_LIMIT = 4;
 export const HYBRID_IDLE_PREVIEW_VISIBLE_SCREEN_MULTIPLIER = 1;
 export const HYBRID_IDLE_PREVIEW_OVERSCAN_ABOVE_SCREEN_MULTIPLIER = 1.0;
 export const HYBRID_IDLE_PREVIEW_OVERSCAN_BELOW_SCREEN_MULTIPLIER = 1.0;
@@ -108,6 +111,26 @@ export function resolveScrollMemoryPrefetchBudget(visibleCapacity: number): numb
   return Math.min(
     HYBRID_THUMBNAIL_CACHE_LIMIT,
     Math.max(HYBRID_SCROLL_MIN_MEMORY_PREFETCH_COUNT, scaledBudget),
+  );
+}
+
+export function resolveNearbyMemoryPredecodeBudget(visibleCapacity: number): number {
+  const scaledBudget = Math.ceil(
+    Math.max(1, visibleCapacity) * HYBRID_NEARBY_MEMORY_PREDECODE_SCREEN_MULTIPLIER,
+  );
+  return Math.min(
+    HYBRID_THUMBNAIL_CACHE_LIMIT,
+    Math.max(HYBRID_SCROLL_MIN_MEMORY_PREFETCH_COUNT, scaledBudget),
+  );
+}
+
+export function resolveNearbyCompressedBufferPreloadBudget(visibleCapacity: number): number {
+  const scaledBudget = Math.ceil(
+    Math.max(1, visibleCapacity) * HYBRID_NEARBY_COMPRESSED_BUFFER_PRELOAD_SCREEN_MULTIPLIER,
+  );
+  return Math.min(
+    HYBRID_NEARBY_COMPRESSED_BUFFER_PRELOAD_MAX_COUNT,
+    Math.max(resolveNearbyMemoryPredecodeBudget(visibleCapacity), scaledBudget),
   );
 }
 
@@ -235,6 +258,52 @@ export function resolveHybridRequestSizeBucket(
     bucket = Math.max(HYBRID_REQUEST_SIZE_BUCKETS[0], downgradeRequestSizeBucket(bucket));
   }
   return bucket;
+}
+
+export function resolveHybridRequestSizeBucketFamily(requestSize: number): Array<number> {
+  if (requestSize <= 0) {
+    return [];
+  }
+
+  const primaryBucket = clampRequestSizeBucket(requestSize);
+  let preferredBucket = primaryBucket;
+  for (let index = 0; index < HYBRID_REQUEST_SIZE_BUCKETS.length; index += 1) {
+    const bucket = HYBRID_REQUEST_SIZE_BUCKETS[index];
+    if (bucket <= 224) {
+      preferredBucket = bucket;
+    }
+  }
+
+  const family: Array<number> = [preferredBucket];
+  const largerBuckets: Array<number> = [];
+  const smallerBuckets: Array<number> = [];
+  for (let index = HYBRID_REQUEST_SIZE_BUCKETS.length - 1; index >= 0; index -= 1) {
+    const bucket = HYBRID_REQUEST_SIZE_BUCKETS[index];
+    if (bucket < preferredBucket) {
+      smallerBuckets.push(bucket);
+    }
+  }
+  for (let index = 0; index < HYBRID_REQUEST_SIZE_BUCKETS.length; index += 1) {
+    const bucket = HYBRID_REQUEST_SIZE_BUCKETS[index];
+    if (bucket > preferredBucket) {
+      largerBuckets.push(bucket);
+    }
+  }
+
+  const alternateCount = Math.max(largerBuckets.length, smallerBuckets.length);
+  for (let index = 0; index < alternateCount; index += 1) {
+    if (index < largerBuckets.length) {
+      family.push(largerBuckets[index]);
+    }
+    if (index < smallerBuckets.length) {
+      family.push(smallerBuckets[index]);
+    }
+  }
+  return family;
+}
+
+export function resolveHybridCanonicalRequestSizeBucket(): number {
+  return HYBRID_REQUEST_SIZE_BUCKETS[HYBRID_REQUEST_SIZE_BUCKETS.length - 1];
 }
 
 export interface HybridPhotoAsset {

@@ -68,6 +68,19 @@ interface DuplicateAssetKeyStats {
   firstDuplicateKey: string;
 }
 
+interface RemotePredownloadCoverageSnapshot {
+  totalRemoteAssetCount: number;
+  totalBucketEntryCount: number;
+  persistedGapCount: number;
+  transientOnlyGapCount: number;
+  fullMissGapCount: number;
+}
+
+interface NearbyViewportWarmupBudget {
+  decodedRemaining: number;
+  compressedRemaining: number;
+}
+
 type GridPrefetchCallback = (request: Shared.HybridGridPrefetchRequest) => Promise<void>;
 type GridPrefetchCancelCallback = (index: number, item?: GridItem) => void;
 
@@ -164,6 +177,8 @@ export class PhotoGridViewModel {
   private lastVisibleGridEnd: number = 0;
   private visibleGridCapacity: number = 0;
   private lastScrollPrefetchAt: number = 0;
+  private lastScrollDirection: number = 1;
+  private lastViewportKeepKeysAt: number = 0;
   private lastForwardPrefetchEnd: number = -1;
   private lastBackwardPrefetchStart: number = Number.MAX_SAFE_INTEGER;
   private lastWindowAnchorGridIndex: number = 0;
@@ -404,9 +419,12 @@ export class PhotoGridViewModel {
     this.lastVisibleGridEnd = 0;
     this.visibleGridCapacity = 0;
     this.lastScrollPrefetchAt = 0;
+    this.lastScrollDirection = 1;
+    this.lastViewportKeepKeysAt = 0;
     this.lastForwardPrefetchEnd = -1;
     this.lastBackwardPrefetchStart = Number.MAX_SAFE_INTEGER;
     this.pendingWarmupSections = [];
+    Thumbnail.ThumbnailCache.updateViewportKeepKeys(new Set<string>());
     this.pinchState = undefined;
     this.preparedTargetForm = FormIndex.INVALID;
     this.preparedTargetVersion = -1;
@@ -568,6 +586,7 @@ export class PhotoGridViewModel {
     this.lastVisibleGridStart = Math.max(0, start);
     this.lastVisibleGridEnd = Math.max(this.lastVisibleGridStart, end);
     this.visibleGridCapacity = Math.max(1, this.lastVisibleGridEnd - this.lastVisibleGridStart + 1);
+    this.updateLastScrollDirection(previousGridStart, previousGridEnd, this.lastVisibleGridStart, this.lastVisibleGridEnd);
     this.syncCurrentScrollOffset(form);
     this.maybeShiftActiveWindowWhileScrolling();
     const rowStart = this.resolveTimelineRowIndexFromGridIndex(start, form);
@@ -575,6 +594,7 @@ export class PhotoGridViewModel {
     this.updateFloatingSection(rowStart);
     this.timelineViewModel.onScrollIndex(rowStart, rowEnd);
     this.prefetchAheadWhileScrolling(previousGridStart, previousGridEnd, this.lastVisibleGridStart, this.lastVisibleGridEnd);
+    this.updateViewportThumbnailKeepKeys(false);
   }
 
   public onFormDidScroll(form: FormIndex, _offset: number, _state: number): void {
@@ -1819,7 +1839,7 @@ export class PhotoGridViewModel {
       await Thumbnail.backgroundPredownloadRemoteThumbnail(
         this.context,
         remoteUrl,
-        requestSize,
+        this.resolveInitialRemotePredownloadRequestSize(),
         Thumbnail.HybridRemotePredownloadPriorityHint.INITIAL,
       );
       return;
@@ -1838,7 +1858,7 @@ export class PhotoGridViewModel {
     await Thumbnail.backgroundPredownloadRemoteThumbnail(
       this.context,
       remoteUrl,
-      requestSize,
+      this.resolveInitialRemotePredownloadRequestSize(),
       Thumbnail.HybridRemotePredownloadPriorityHint.NEARBY,
     );
     if (request.isCanceled()) {
@@ -1852,6 +1872,7 @@ export class PhotoGridViewModel {
     requestSize: number,
     request: Shared.HybridGridPrefetchRequest,
   ): Promise<void> {
+    void requestSize;
     if (request.isCanceled() || Thumbnail.shouldThrottleRemoteDiskPredownload()) {
       return;
     }
@@ -1869,28 +1890,50 @@ export class PhotoGridViewModel {
     await Thumbnail.backgroundPredownloadRemoteThumbnail(
       this.context,
       remoteUrl,
-      requestSize,
+      this.resolveInitialRemotePredownloadRequestSize(),
       Thumbnail.HybridRemotePredownloadPriorityHint.NEARBY,
     );
   }
 
-  private prefetchGridRangeToMemory(startIndex: number, endIndex: number, budget: number): void {
-    if (this.currentGridItems.length <= 0 || this.pinchActive || budget <= 0) {
+  private updateLastScrollDirection(
+    previousStart: number,
+    previousEnd: number,
+    startIndex: number,
+    endIndex: number,
+  ): void {
+    if (endIndex > previousEnd || startIndex > previousStart) {
+      this.lastScrollDirection = 1;
       return;
+    }
+    if (startIndex < previousStart || endIndex < previousEnd) {
+      this.lastScrollDirection = -1;
+    }
+  }
+
+  private prefetchGridRangeToMemory(
+    startIndex: number,
+    endIndex: number,
+    budget: number,
+    allowRemoteDiskWarmup: boolean = true,
+    seenAssetKeys?: Set<string>,
+  ): number {
+    if (this.currentGridItems.length <= 0 || this.pinchActive || budget <= 0) {
+      return 0;
     }
 
     const requestSize = this.resolveRequestSize(this.activeForm);
     const safeStart = Math.max(0, startIndex);
     const safeEnd = Math.min(endIndex, this.currentGridItems.length - 1);
     if (safeStart > safeEnd) {
-      return;
+      return 0;
     }
 
     let remainingBudget = budget;
-    const seenAssetKeys: Set<string> = new Set();
+    let scheduledCount = 0;
+    const effectiveSeenAssetKeys: Set<string> = seenAssetKeys ?? new Set<string>();
     for (let index = safeStart; index <= safeEnd; index += 1) {
       if (remainingBudget <= 0) {
-        return;
+        return scheduledCount;
       }
 
       const item = this.currentGridItems[index];
@@ -1903,17 +1946,24 @@ export class PhotoGridViewModel {
       const dedupeKey = remoteUrl && remoteUrl.length > 0
         ? `remote:${remoteUrl}`
         : `asset:${asset.id}`;
-      if (seenAssetKeys.has(dedupeKey)) {
+      if (effectiveSeenAssetKeys.has(dedupeKey)) {
         continue;
       }
-      seenAssetKeys.add(dedupeKey);
+      effectiveSeenAssetKeys.add(dedupeKey);
+
+      const remoteCacheReady = remoteUrl && remoteUrl.length > 0
+        ? Thumbnail.hasRemoteThumbnailCache(this.context, remoteUrl, requestSize, false)
+        : false;
 
       if (
         remoteUrl &&
         remoteUrl.length > 0 &&
         this.isGridScrolling &&
-        !Thumbnail.hasRemoteThumbnailCache(this.context, remoteUrl, requestSize, false)
+        !remoteCacheReady
       ) {
+        if (!allowRemoteDiskWarmup) {
+          continue;
+        }
         this.startInitialRemotePredownloadIfNeeded();
         continue;
       }
@@ -1922,14 +1972,21 @@ export class PhotoGridViewModel {
         remoteUrl &&
         remoteUrl.length > 0 &&
         this.shouldPrioritizeInitialRemoteDiskWarmup() &&
-        !Thumbnail.hasRemoteThumbnailCache(this.context, remoteUrl, requestSize, false)
+        !remoteCacheReady
       ) {
+        if (!allowRemoteDiskWarmup) {
+          continue;
+        }
         void Thumbnail.backgroundPredownloadRemoteThumbnail(
           this.context,
           remoteUrl,
-          requestSize,
+          this.resolveInitialRemotePredownloadRequestSize(),
           Thumbnail.HybridRemotePredownloadPriorityHint.INITIAL,
         );
+        continue;
+      }
+
+      if (remoteUrl && remoteUrl.length > 0 && !remoteCacheReady && !allowRemoteDiskWarmup) {
         continue;
       }
 
@@ -1938,7 +1995,166 @@ export class PhotoGridViewModel {
       }
 
       remainingBudget -= 1;
+      scheduledCount += 1;
     }
+
+    return scheduledCount;
+  }
+
+  private preloadGridRangeRemoteCompressedData(
+    startIndex: number,
+    endIndex: number,
+    budget: number,
+    seenRemoteUrls?: Set<string>,
+  ): number {
+    if (this.currentGridItems.length <= 0 || this.pinchActive || budget <= 0) {
+      return 0;
+    }
+
+    const requestSize = this.resolveRequestSize(this.activeForm);
+    const safeStart = Math.max(0, startIndex);
+    const safeEnd = Math.min(endIndex, this.currentGridItems.length - 1);
+    if (safeStart > safeEnd) {
+      return 0;
+    }
+
+    let remainingBudget = budget;
+    let scheduledCount = 0;
+    const effectiveSeenRemoteUrls: Set<string> = seenRemoteUrls ?? new Set<string>();
+    for (let index = safeStart; index <= safeEnd; index += 1) {
+      if (remainingBudget <= 0) {
+        return scheduledCount;
+      }
+
+      const item = this.currentGridItems[index];
+      if (item.kind !== 'photo' || !item.asset || !item.asset.thumbnailUrl) {
+        continue;
+      }
+
+      const remoteUrl = item.asset.thumbnailUrl;
+      if (effectiveSeenRemoteUrls.has(remoteUrl)) {
+        continue;
+      }
+      effectiveSeenRemoteUrls.add(remoteUrl);
+
+      if (!Thumbnail.preloadRemoteAssetThumbnailCompressedData(this.context, item.asset, requestSize)) {
+        continue;
+      }
+
+      remainingBudget -= 1;
+      scheduledCount += 1;
+    }
+
+    return scheduledCount;
+  }
+
+  private warmNearbyViewportSegment(
+    startIndex: number,
+    endIndex: number,
+    budget: NearbyViewportWarmupBudget,
+    allowRemoteDiskWarmup: boolean,
+    seenAssetKeys: Set<string>,
+    seenRemoteUrls: Set<string>,
+  ): void {
+    if (startIndex > endIndex) {
+      return;
+    }
+
+    if (budget.compressedRemaining > 0) {
+      budget.compressedRemaining = Math.max(
+        0,
+        budget.compressedRemaining - this.preloadGridRangeRemoteCompressedData(
+          startIndex,
+          endIndex,
+          budget.compressedRemaining,
+          seenRemoteUrls,
+        ),
+      );
+    }
+
+    if (budget.decodedRemaining > 0) {
+      budget.decodedRemaining = Math.max(
+        0,
+        budget.decodedRemaining - this.prefetchGridRangeToMemory(
+          startIndex,
+          endIndex,
+          budget.decodedRemaining,
+          allowRemoteDiskWarmup,
+          seenAssetKeys,
+        ),
+      );
+    }
+  }
+
+  private preloadNearbyVisibleRunwayToMemory(allowRemoteDiskWarmup: boolean): void {
+    if (this.currentGridItems.length <= 0 || this.pinchActive) {
+      return;
+    }
+
+    const visibleStart = Math.max(0, Math.min(this.lastVisibleGridStart, this.currentGridItems.length - 1));
+    const visibleEnd = Math.max(visibleStart, Math.min(this.lastVisibleGridEnd, this.currentGridItems.length - 1));
+    const visibleCapacity = Math.max(1, visibleEnd - visibleStart + 1);
+    const budget: NearbyViewportWarmupBudget = {
+      decodedRemaining: Shared.resolveNearbyMemoryPredecodeBudget(visibleCapacity),
+      compressedRemaining: Shared.resolveNearbyCompressedBufferPreloadBudget(visibleCapacity),
+    };
+    const seenAssetKeys: Set<string> = new Set<string>();
+    const seenRemoteUrls: Set<string> = new Set<string>();
+    const forwardStart = Math.min(this.currentGridItems.length - 1, visibleEnd + 1);
+    const forwardEnd = this.resolveScrollStopPrefetchEnd(visibleEnd);
+    const backwardStart = this.resolveBackwardPrefetchStart(visibleStart);
+    const backwardEnd = Math.max(backwardStart, visibleStart - 1);
+
+    this.preloadGridRangeRemoteCompressedData(
+      visibleStart,
+      visibleEnd,
+      visibleCapacity,
+      seenRemoteUrls,
+    );
+    this.prefetchGridRangeToMemory(
+      visibleStart,
+      visibleEnd,
+      visibleCapacity,
+      allowRemoteDiskWarmup,
+      seenAssetKeys,
+    );
+
+    if (this.lastScrollDirection >= 0) {
+      this.warmNearbyViewportSegment(
+        forwardStart,
+        forwardEnd,
+        budget,
+        allowRemoteDiskWarmup,
+        seenAssetKeys,
+        seenRemoteUrls,
+      );
+      this.warmNearbyViewportSegment(
+        backwardStart,
+        backwardEnd,
+        budget,
+        allowRemoteDiskWarmup,
+        seenAssetKeys,
+        seenRemoteUrls,
+      );
+      return;
+    }
+
+    this.warmNearbyViewportSegment(
+      backwardStart,
+      backwardEnd,
+      budget,
+      allowRemoteDiskWarmup,
+      seenAssetKeys,
+      seenRemoteUrls,
+    );
+    this.warmNearbyViewportSegment(
+      forwardStart,
+      forwardEnd,
+      budget,
+      allowRemoteDiskWarmup,
+      seenAssetKeys,
+      seenRemoteUrls,
+    );
   }
 
   private predownloadGridRangeToDisk(startIndex: number, endIndex: number, budget: number): void {
@@ -1955,7 +2171,6 @@ export class PhotoGridViewModel {
       return;
     }
 
-    const requestSize = this.resolveRequestSize(this.activeForm);
     const safeStart = Math.max(0, startIndex);
     const safeEnd = Math.min(endIndex, this.currentGridItems.length - 1);
     if (safeStart > safeEnd) {
@@ -1980,7 +2195,11 @@ export class PhotoGridViewModel {
       }
       seenRemoteUrls.add(remoteUrl);
 
-      if (!Thumbnail.predownloadRemoteAssetThumbnail(this.context, item.asset, requestSize)) {
+      if (!Thumbnail.predownloadRemoteAssetThumbnail(
+        this.context,
+        item.asset,
+        this.resolveInitialRemotePredownloadRequestSize(),
+      )) {
         continue;
       }
 
@@ -2054,9 +2273,12 @@ export class PhotoGridViewModel {
       const targetEnd = this.resolveForwardPrefetchEnd(endIndex);
       if (targetStart <= targetEnd && targetEnd > this.lastForwardPrefetchEnd) {
         const visibleCapacity = this.resolveVisibleGridCapacity();
-        const memoryBudget = Shared.resolveScrollMemoryPrefetchBudget(visibleCapacity);
-        const memoryEnd = Math.min(targetEnd, endIndex + memoryBudget);
+        const memoryBudget = Shared.resolveNearbyMemoryPredecodeBudget(visibleCapacity);
+        const compressedBudget = Shared.resolveNearbyCompressedBufferPreloadBudget(visibleCapacity);
+        const memoryEnd = Math.min(targetEnd, targetStart + Math.max(0, memoryBudget - 1));
+        const compressedEnd = Math.min(targetEnd, targetStart + Math.max(0, compressedBudget - 1));
         const remoteDiskBudget = this.resolveAdaptiveRemoteDiskPredownloadBudget(visibleCapacity);
+        this.preloadGridRangeRemoteCompressedData(targetStart, compressedEnd, compressedBudget);
         this.prefetchGridRangeToMemory(targetStart, memoryEnd, memoryBudget);
         this.predownloadGridRangeToDisk(
           memoryEnd + 1,
@@ -2073,12 +2295,12 @@ export class PhotoGridViewModel {
       const targetEnd = Math.max(targetStart, startIndex - 1);
       if (targetStart <= targetEnd && targetStart < this.lastBackwardPrefetchStart) {
         const visibleCapacity = this.resolveVisibleGridCapacity();
-        const backwardMemoryCount = Math.max(
-          1,
-          Math.ceil(visibleCapacity * Shared.HYBRID_SCROLL_MEMORY_PREFETCH_BACKWARD_SCREEN_MULTIPLIER),
-        );
-        const memoryStart = Math.max(targetStart, startIndex - backwardMemoryCount);
-        this.prefetchGridRangeToMemory(memoryStart, targetEnd, backwardMemoryCount);
+        const backwardMemoryBudget = Shared.resolveNearbyMemoryPredecodeBudget(visibleCapacity);
+        const backwardCompressedBudget = Shared.resolveNearbyCompressedBufferPreloadBudget(visibleCapacity);
+        const memoryStart = Math.max(targetStart, targetEnd - Math.max(0, backwardMemoryBudget - 1));
+        const compressedStart = Math.max(targetStart, targetEnd - Math.max(0, backwardCompressedBudget - 1));
+        this.preloadGridRangeRemoteCompressedData(compressedStart, targetEnd, backwardCompressedBudget);
+        this.prefetchGridRangeToMemory(memoryStart, targetEnd, backwardMemoryBudget);
         this.lastBackwardPrefetchStart = targetStart;
       }
     }
@@ -2091,16 +2313,14 @@ export class PhotoGridViewModel {
     }
 
     const visibleCapacity = this.resolveVisibleGridCapacity();
-    const memoryBudget = Shared.resolveScrollMemoryPrefetchBudget(visibleCapacity);
+    const memoryBudget = Shared.resolveNearbyMemoryPredecodeBudget(visibleCapacity);
     const visibleEnd = this.lastVisibleGridEnd >= range.startIndex
       ? this.lastVisibleGridEnd
       : range.startIndex;
-    const stopAheadCount = Math.max(
-      1,
-      Math.ceil(visibleCapacity * Shared.HYBRID_SCROLL_STOP_MEMORY_PREFETCH_SCREEN_MULTIPLIER),
-    );
-    const memoryEnd = Math.min(range.endIndex, visibleEnd + stopAheadCount);
-    this.prefetchGridRangeToMemory(range.startIndex, memoryEnd, memoryBudget);
+    const memoryAheadCount = Math.max(0, memoryBudget);
+    const memoryEnd = Math.min(range.endIndex, visibleEnd + memoryAheadCount);
+    this.preloadNearbyVisibleRunwayToMemory(allowDiskPredownload);
+    this.updateViewportThumbnailKeepKeys(true);
     if (!allowDiskPredownload) {
       return;
     }
@@ -2134,6 +2354,48 @@ export class PhotoGridViewModel {
     };
   }
 
+  private updateViewportThumbnailKeepKeys(force: boolean): void {
+    if (this.currentGridItems.length <= 0 || this.pinchActive) {
+      return;
+    }
+
+    const now = Date.now();
+    if (!force && now - this.lastViewportKeepKeysAt < Shared.HYBRID_VIEWPORT_CACHE_PRUNE_INTERVAL_MS) {
+      return;
+    }
+    this.lastViewportKeepKeysAt = now;
+
+    const requestSize = this.resolveRequestSize(this.activeForm);
+    if (requestSize <= 0) {
+      return;
+    }
+
+    const visibleStart = Math.max(0, Math.min(this.lastVisibleGridStart, this.currentGridItems.length - 1));
+    const visibleEnd = Math.max(visibleStart, Math.min(this.lastVisibleGridEnd, this.currentGridItems.length - 1));
+    const visibleCapacity = Math.max(1, visibleEnd - visibleStart + 1);
+    const forwardKeepCount = Shared.resolveNearbyMemoryPredecodeBudget(visibleCapacity);
+    const reverseKeepCount = visibleCapacity;
+    const keepStart = this.lastScrollDirection >= 0
+      ? Math.max(0, visibleStart - reverseKeepCount)
+      : Math.max(0, visibleStart - forwardKeepCount);
+    const keepEnd = this.lastScrollDirection >= 0
+      ? Math.min(this.currentGridItems.length - 1, visibleEnd + forwardKeepCount)
+      : Math.min(this.currentGridItems.length - 1, visibleEnd + reverseKeepCount);
+    const keepKeys: Set<string> = new Set<string>();
+    for (let index = keepStart; index <= keepEnd; index += 1) {
+      const item = this.currentGridItems[index];
+      if (item.kind !== 'photo' || !item.asset || !item.asset.id) {
+        continue;
+      }
+      keepKeys.add(Thumbnail.buildThumbnailCacheKey(item.asset.id, requestSize));
+    }
+
+    Thumbnail.ThumbnailCache.updateViewportKeepKeys(keepKeys);
+    if (keepKeys.size > 0) {
+      Thumbnail.ThumbnailCache.pruneOutsideKeys(keepKeys);
+    }
+  }
+
   private maybeShiftActiveWindowWhileScrolling(): void {
     if (!this.isGridScrolling || this.pinchActive || this.sections.length <= 0) {
       return;
@@ -2150,29 +2412,49 @@ export class PhotoGridViewModel {
     this.lastBackwardPrefetchStart = this.lastVisibleGridStart;
   }
 
-  private async predownloadSections(
+  private resolveRemotePredownloadRequestSizes(requestSize: number): Array<number> {
+    if (requestSize <= 0) {
+      return [];
+    }
+    return [Shared.resolveCanonicalRequestSizeBucket()];
+  }
+
+  private async predownloadSectionsForRequestSizes(
     sections: Array<PhotoSection>,
     includeAllAssets: boolean,
-    requestSize: number,
-    priorityHint: Thumbnail.HybridRemotePredownloadPriorityHint = Thumbnail.HybridRemotePredownloadPriorityHint.NEARBY,
-  ): Promise<void> {
-    await this.predownloadSectionsUpToLimit(
-      sections,
-      includeAllAssets,
-      requestSize,
-      Number.MAX_SAFE_INTEGER,
-      true,
-      Shared.HYBRID_BACKGROUND_PREDOWNLOAD_BATCH_SIZE,
-      priorityHint,
-    );
+    requestSizes: Array<number>,
+    limit: number,
+    stopOnInteraction: boolean,
+    batchSize: number,
+    priorityHint: Thumbnail.HybridRemotePredownloadPriorityHint,
+    persistedOnly: boolean = false,
+  ): Promise<number> {
+    if (requestSizes.length <= 0) {
+      return 0;
+    }
+
+    let scheduledCount = 0;
+    for (let index = 0; index < requestSizes.length; index += 1) {
+      const candidateRequestSize = requestSizes[index];
+      scheduledCount += await this.predownloadSectionsUpToLimit(
+        sections,
+        includeAllAssets,
+        candidateRequestSize,
+        limit,
+        stopOnInteraction,
+        batchSize,
+        priorityHint,
+        persistedOnly,
+      );
+      if (stopOnInteraction && (this.isGridScrolling || this.pinchActive)) {
+        return scheduledCount;
+      }
+    }
+    return scheduledCount;
   }
 
   private resolveInitialRemotePredownloadRequestSize(): number {
-    return Shared.resolveRequestSizeBucket(
-      this.getGridState(FormIndex.DAY).columns,
-      this.listWidth,
-      Shared.ThumbnailLayerRole.ACTIVE,
-    );
+    return Shared.resolveCanonicalRequestSizeBucket();
   }
 
   private shouldAbortInitialRemotePredownload(token: number): boolean {
@@ -2224,6 +2506,7 @@ export class PhotoGridViewModel {
     includeAllAssets: boolean,
     requestSize: number,
     limit: number,
+    persistedOnly: boolean = false,
   ): Array<PhotoAsset> {
     if (sections.length <= 0 || limit <= 0) {
       return [];
@@ -2241,12 +2524,158 @@ export class PhotoGridViewModel {
       if (!remoteUrl || remoteUrl.length <= 0) {
         continue;
       }
-      if (Thumbnail.hasRemoteThumbnailCache(this.context, remoteUrl, requestSize, false)) {
+      const covered = persistedOnly
+        ? Thumbnail.hasPersistedRemoteThumbnailCache(this.context, remoteUrl, requestSize, false)
+        : Thumbnail.hasRemoteThumbnailCache(this.context, remoteUrl, requestSize, false);
+      if (covered) {
         continue;
       }
       selected.push(asset);
     }
     return selected;
+  }
+
+  private buildRemotePredownloadCoverageSnapshot(
+    sections: Array<PhotoSection>,
+    includeAllAssets: boolean,
+    requestSizes: Array<number>,
+  ): RemotePredownloadCoverageSnapshot {
+    if (sections.length <= 0 || requestSizes.length <= 0) {
+      return {
+        totalRemoteAssetCount: 0,
+        totalBucketEntryCount: 0,
+        persistedGapCount: 0,
+        transientOnlyGapCount: 0,
+        fullMissGapCount: 0,
+      };
+    }
+
+    const assets = this.timelineLayoutBuilder.collectPredownloadAssets(sections, includeAllAssets);
+    const seenRemoteUrls: Set<string> = new Set();
+    let totalRemoteAssetCount = 0;
+    let totalBucketEntryCount = 0;
+    let persistedGapCount = 0;
+    let transientOnlyGapCount = 0;
+    let fullMissGapCount = 0;
+
+    for (let index = 0; index < assets.length; index += 1) {
+      const asset = assets[index];
+      const remoteUrl = asset.thumbnailUrl;
+      if (!remoteUrl || remoteUrl.length <= 0 || seenRemoteUrls.has(remoteUrl)) {
+        continue;
+      }
+      seenRemoteUrls.add(remoteUrl);
+      totalRemoteAssetCount += 1;
+
+      for (let requestSizeIndex = 0; requestSizeIndex < requestSizes.length; requestSizeIndex += 1) {
+        const candidateRequestSize = requestSizes[requestSizeIndex];
+        totalBucketEntryCount += 1;
+        if (Thumbnail.hasPersistedRemoteThumbnailCache(this.context, remoteUrl, candidateRequestSize, false)) {
+          continue;
+        }
+
+        persistedGapCount += 1;
+        if (Thumbnail.hasRemoteThumbnailCache(this.context, remoteUrl, candidateRequestSize, false)) {
+          transientOnlyGapCount += 1;
+          continue;
+        }
+
+        fullMissGapCount += 1;
+      }
+    }
+
+    return {
+      totalRemoteAssetCount: totalRemoteAssetCount,
+      totalBucketEntryCount: totalBucketEntryCount,
+      persistedGapCount: persistedGapCount,
+      transientOnlyGapCount: transientOnlyGapCount,
+      fullMissGapCount: fullMissGapCount,
+    };
+  }
+
+  private buildLoadedRemotePredownloadCoverageSnapshot(
+    requestSizes: Array<number>,
+  ): RemotePredownloadCoverageSnapshot {
+    return this.buildRemotePredownloadCoverageSnapshot(
+      this.timelineDataManager.getSourceSectionsForForm(FormIndex.DAY),
+      true,
+      requestSizes,
+    );
+  }
+
+  private collectGridRangeRemotePredownloadCandidates(
+    startIndex: number,
+    endIndex: number,
+    requestSize: number,
+    limit: number,
+  ): Array<PhotoAsset> {
+    if (this.currentGridItems.length <= 0 || limit <= 0) {
+      return [];
+    }
+
+    const safeStart = Math.max(0, startIndex);
+    const safeEnd = Math.min(endIndex, this.currentGridItems.length - 1);
+    if (safeStart > safeEnd) {
+      return [];
+    }
+
+    const selected: Array<PhotoAsset> = [];
+    const seenRemoteUrls: Set<string> = new Set();
+    for (let index = safeStart; index <= safeEnd; index += 1) {
+      if (selected.length >= limit) {
+        return selected;
+      }
+
+      const item = this.currentGridItems[index];
+      if (item.kind !== 'photo' || !item.asset || !item.asset.thumbnailUrl) {
+        continue;
+      }
+
+      const remoteUrl = item.asset.thumbnailUrl;
+      if (seenRemoteUrls.has(remoteUrl)) {
+        continue;
+      }
+      seenRemoteUrls.add(remoteUrl);
+
+      if (Thumbnail.hasRemoteThumbnailCache(this.context, remoteUrl, requestSize, false)) {
+        continue;
+      }
+
+      selected.push(item.asset);
+    }
+    return selected;
+  }
+
+  private hasLoadedRemotePredownloadCandidates(
+    requestSize: number,
+    persistedOnly: boolean = false,
+  ): boolean {
+    return this.collectRemotePredownloadCandidates(
+      this.timelineDataManager.getSourceSectionsForForm(FormIndex.DAY),
+      true,
+      requestSize,
+      1,
+      persistedOnly,
+    ).length > 0;
+  }
+
+  private hasLoadedRemotePredownloadCandidatesForRequestSizes(
+    requestSizes: Array<number>,
+    persistedOnly: boolean = false,
+  ): boolean {
+    for (let index = 0; index < requestSizes.length; index += 1) {
+      if (this.hasLoadedRemotePredownloadCandidates(requestSizes[index], persistedOnly)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private hasBackgroundCoverageWork(requestSizes: Array<number>): boolean {
+    if (this.hasMore) {
+      return true;
+    }
+    return this.hasLoadedRemotePredownloadCandidatesForRequestSizes(requestSizes, true);
   }
 
   private async predownloadRemoteAssets(
@@ -2308,6 +2737,7 @@ export class PhotoGridViewModel {
     stopOnInteraction: boolean,
     batchSize: number,
     priorityHint: Thumbnail.HybridRemotePredownloadPriorityHint,
+    persistedOnly: boolean = false,
   ): Promise<number> {
     if (!Shared.HYBRID_ENABLE_REMOTE_THUMBNAIL_DISK_WRITES ||
       sections.length <= 0 ||
@@ -2316,13 +2746,85 @@ export class PhotoGridViewModel {
       return 0;
     }
 
-    const candidates = this.collectRemotePredownloadCandidates(sections, includeAllAssets, requestSize, limit);
+    const candidates = this.collectRemotePredownloadCandidates(
+      sections,
+      includeAllAssets,
+      requestSize,
+      limit,
+      persistedOnly,
+    );
     return await this.predownloadRemoteAssets(
       candidates,
       requestSize,
       stopOnInteraction,
       batchSize,
       priorityHint,
+    );
+  }
+
+  private async predownloadGridRangeToDiskUpToLimit(
+    startIndex: number,
+    endIndex: number,
+    requestSize: number,
+    limit: number,
+    priorityHint: Thumbnail.HybridRemotePredownloadPriorityHint,
+  ): Promise<number> {
+    if (!Shared.HYBRID_ENABLE_REMOTE_THUMBNAIL_DISK_WRITES ||
+      this.currentGridItems.length <= 0 ||
+      this.pinchActive ||
+      this.isGridScrolling ||
+      limit <= 0 ||
+      Thumbnail.shouldThrottleRemoteDiskPredownload()) {
+      return 0;
+    }
+
+    const candidates = this.collectGridRangeRemotePredownloadCandidates(
+      startIndex,
+      endIndex,
+      requestSize,
+      limit,
+    );
+    return await this.predownloadRemoteAssets(
+      candidates,
+      requestSize,
+      true,
+      Shared.HYBRID_BACKGROUND_PREDOWNLOAD_BATCH_SIZE,
+      priorityHint,
+    );
+  }
+
+  private async predownloadViewportRunwayToDisk(requestSizes: Array<number>): Promise<number> {
+    const range = this.resolveScrollStopPrefetchRange();
+    if (!range || requestSizes.length <= 0) {
+      return 0;
+    }
+
+    let scheduledCount = 0;
+    for (let index = 0; index < requestSizes.length; index += 1) {
+      scheduledCount += await this.predownloadGridRangeToDiskUpToLimit(
+        range.startIndex,
+        range.endIndex,
+        requestSizes[index],
+        Number.MAX_SAFE_INTEGER,
+        Thumbnail.HybridRemotePredownloadPriorityHint.NEARBY,
+      );
+      if (this.isGridScrolling || this.pinchActive) {
+        return scheduledCount;
+      }
+    }
+    return scheduledCount;
+  }
+
+  private async predownloadLoadedResidualSections(requestSizes: Array<number>): Promise<number> {
+    return await this.predownloadSectionsForRequestSizes(
+      this.timelineDataManager.getSourceSectionsForForm(FormIndex.DAY),
+      true,
+      requestSizes,
+      Shared.HYBRID_BACKGROUND_PREDOWNLOAD_PAGE_SIZE,
+      true,
+      Shared.HYBRID_BACKGROUND_PREDOWNLOAD_BATCH_SIZE,
+      Thumbnail.HybridRemotePredownloadPriorityHint.BACKGROUND,
+      true,
     );
   }
 
@@ -2336,7 +2838,8 @@ export class PhotoGridViewModel {
     }
 
     const requestSize = this.resolveInitialRemotePredownloadRequestSize();
-    if (requestSize <= 0) {
+    const requestSizes = this.resolveRemotePredownloadRequestSizes(requestSize);
+    if (requestSize <= 0 || requestSizes.length <= 0) {
       return;
     }
 
@@ -2369,9 +2872,9 @@ export class PhotoGridViewModel {
     this.initialRemotePredownloadRequestSize = requestSize;
     console.info(
       `[PhotoGridViewModel] initial remote predownload start: ready=${readyCount}/${targetCount}, ` +
-        `requestSize=${requestSize}`,
+        `requestSize=${requestSize} requestSizeFamily=${requestSizes.join(',')}`,
     );
-    void this.runInitialRemotePredownload(token, requestSize, readyCount).finally(() => {
+    void this.runInitialRemotePredownload(token, requestSize, readyCount, requestSizes).finally(() => {
       if (token === this.initialRemotePredownloadToken) {
         this.initialRemotePredownloadRunning = false;
       }
@@ -2382,6 +2885,7 @@ export class PhotoGridViewModel {
     token: number,
     requestSize: number,
     initialReadyCount: number,
+    requestSizes: Array<number>,
   ): Promise<void> {
     const targetCount = Shared.HYBRID_INITIAL_REMOTE_PREDOWNLOAD_TARGET;
     let readyCount = initialReadyCount;
@@ -2389,10 +2893,10 @@ export class PhotoGridViewModel {
     let exhaustedPages = offset <= 0;
 
     if (readyCount < targetCount) {
-      await this.predownloadSectionsUpToLimit(
+      await this.predownloadSectionsForRequestSizes(
         this.timelineDataManager.getSourceSectionsForForm(FormIndex.DAY),
         true,
-        requestSize,
+        requestSizes,
         targetCount - readyCount,
         true,
         Shared.HYBRID_INITIAL_REMOTE_PREDOWNLOAD_BATCH_SIZE,
@@ -2461,10 +2965,10 @@ export class PhotoGridViewModel {
           FormIndex.DAY,
         );
 
-        await this.predownloadSectionsUpToLimit(
+        await this.predownloadSectionsForRequestSizes(
           page.sections,
           true,
-          requestSize,
+          requestSizes,
           targetCount - readyCount,
           true,
           Shared.HYBRID_INITIAL_REMOTE_PREDOWNLOAD_BATCH_SIZE,
@@ -2496,7 +3000,8 @@ export class PhotoGridViewModel {
     this.initialRemotePredownloadCompleted = completed;
     console.info(
       `[PhotoGridViewModel] initial remote predownload finish: ready=${readyCount}/${targetCount}, ` +
-        `completed=${completed ? 1 : 0}, exhaustedPages=${exhaustedPages ? 1 : 0}`,
+        `completed=${completed ? 1 : 0}, exhaustedPages=${exhaustedPages ? 1 : 0} ` +
+        `requestSize=${requestSize} requestSizeFamily=${requestSizes.join(',')}`,
     );
     if (completed) {
       this.startBackgroundPredownload();
@@ -2554,9 +3059,9 @@ export class PhotoGridViewModel {
       return;
     }
 
-    if (!this.hasMore) {
+    if (!canContinueBackgroundPredownload) {
       this.logBackgroundPredownloadSkip(
-        'has-more-false',
+        'should-continue-false',
         throttled,
         underPressure,
         canContinueBackgroundPredownload,
@@ -2564,9 +3069,22 @@ export class PhotoGridViewModel {
       return;
     }
 
-    if (!canContinueBackgroundPredownload) {
+    const requestSize = this.resolveRequestSize(this.activeForm);
+    const requestSizes = this.resolveRemotePredownloadRequestSizes(requestSize);
+    if (requestSize <= 0 || requestSizes.length <= 0) {
       this.logBackgroundPredownloadSkip(
-        'should-continue-false',
+        'request-size<=0',
+        throttled,
+        underPressure,
+        canContinueBackgroundPredownload,
+      );
+      return;
+    }
+
+    const hasBackgroundCoverageWork = this.hasBackgroundCoverageWork(requestSizes);
+    if (!hasBackgroundCoverageWork) {
+      this.logBackgroundPredownloadSkip(
+        'coverage-complete',
         throttled,
         underPressure,
         canContinueBackgroundPredownload,
@@ -2586,7 +3104,7 @@ export class PhotoGridViewModel {
     }
 
     const startOffset = this.timelineViewModel.getNextOffset();
-    if (startOffset <= 0) {
+    if (startOffset <= 0 && !this.hasLoadedRemotePredownloadCandidatesForRequestSizes(requestSizes, true)) {
       this.logBackgroundPredownloadSkip(
         'next-offset<=0',
         throttled,
@@ -2598,16 +3116,17 @@ export class PhotoGridViewModel {
     }
 
     const token = ++this.backgroundPredownloadToken;
-    const requestSize = this.resolveRequestSize(this.activeForm);
     this.backgroundPredownloadRunning = true;
-    void this.runBackgroundPredownload(token, startOffset, requestSize).finally(() => {
+    void this.runBackgroundPredownload(token, startOffset, requestSizes).finally(() => {
       if (token === this.backgroundPredownloadToken) {
         this.backgroundPredownloadRunning = false;
       }
+      const currentRequestSizes = this.resolveRemotePredownloadRequestSizes(this.resolveRequestSize(this.activeForm));
+      const hasBackgroundCoverageWorkAfterRun = this.hasBackgroundCoverageWork(currentRequestSizes);
       if (!this.isGridScrolling &&
         !this.pinchActive &&
         !this.backgroundPredownloadRunning &&
-        this.hasMore &&
+        hasBackgroundCoverageWorkAfterRun &&
         (Thumbnail.shouldThrottleRemoteDiskPredownload() ||
           Thumbnail.ThumbnailRequestLimiter.isUnderPressure())) {
         this.scheduleBackgroundPredownloadRetry();
@@ -2634,13 +3153,17 @@ export class PhotoGridViewModel {
   }
 
   private scheduleBackgroundPredownloadRetry(): void {
+    const requestSize = this.resolveRequestSize(this.activeForm);
+    const requestSizes = this.resolveRemotePredownloadRequestSizes(requestSize);
     if (!Shared.HYBRID_ENABLE_REMOTE_THUMBNAIL_DISK_WRITES ||
       !this.initialized ||
+      requestSize <= 0 ||
+      requestSizes.length <= 0 ||
       !this.initialRemotePredownloadCompleted ||
       this.isGridScrolling ||
       this.pinchActive ||
       this.backgroundPredownloadRunning ||
-      !this.hasMore ||
+      !this.hasBackgroundCoverageWork(requestSizes) ||
       this.backgroundPredownloadRetryTimeoutId !== undefined) {
       return;
     }
@@ -2658,9 +3181,20 @@ export class PhotoGridViewModel {
   private async runBackgroundPredownload(
     token: number,
     startOffset: number,
-    requestSize: number,
+    requestSizes: Array<number>,
   ): Promise<void> {
     let offset = startOffset;
+    const primaryRequestSize = requestSizes.length > 0 ? requestSizes[0] : 0;
+    const requestSizeFamily = requestSizes.join(',');
+    const initialLoadedCoverage = this.buildLoadedRemotePredownloadCoverageSnapshot(requestSizes);
+    console.info(
+      `[PhotoGridViewModel] background predownload run start: startOffset=${startOffset} ` +
+        `requestSize=${primaryRequestSize} requestSizeFamily=${requestSizeFamily} ` +
+        `hasMore=${this.hasMore ? 1 : 0} totalBucketEntryCount=${initialLoadedCoverage.totalBucketEntryCount} ` +
+        `persistedGapCount=${initialLoadedCoverage.persistedGapCount} ` +
+        `transientOnlyGapCount=${initialLoadedCoverage.transientOnlyGapCount} ` +
+        `fullMissGapCount=${initialLoadedCoverage.fullMissGapCount}`,
+    );
 
     while (token === this.backgroundPredownloadToken && Thumbnail.shouldContinueBackgroundPredownload(this.context)) {
       if (
@@ -2674,12 +3208,54 @@ export class PhotoGridViewModel {
         continue;
       }
 
+      const runwayScheduled = await this.predownloadViewportRunwayToDisk(requestSizes);
+      if (runwayScheduled > 0) {
+        await Shared.delay(Shared.HYBRID_BACKGROUND_PREDOWNLOAD_YIELD_MS);
+        continue;
+      }
+
+      const residualScheduled = await this.predownloadLoadedResidualSections(requestSizes);
+      if (residualScheduled > 0) {
+        await Shared.delay(Shared.HYBRID_BACKGROUND_PREDOWNLOAD_YIELD_MS);
+        continue;
+      }
+
+      if (!this.hasMore) {
+        const loadedCoverage = this.buildLoadedRemotePredownloadCoverageSnapshot(requestSizes);
+        console.info(
+          `[PhotoGridViewModel] background predownload stop: reason=loaded-residual-complete ` +
+            `offset=${offset} nextOffset=${this.timelineViewModel.getNextOffset()} ` +
+            `windowEndOffset=${this.timelineDataManager.getSourceWindowEndOffset()} ` +
+            `requestSize=${primaryRequestSize} requestSizeFamily=${requestSizeFamily} ` +
+            `totalRemote=${loadedCoverage.totalRemoteAssetCount} ` +
+            `totalBucketEntryCount=${loadedCoverage.totalBucketEntryCount} ` +
+            `persistedGapCount=${loadedCoverage.persistedGapCount} ` +
+            `transientOnlyGapCount=${loadedCoverage.transientOnlyGapCount} ` +
+            `fullMissGapCount=${loadedCoverage.fullMissGapCount}`,
+        );
+        break;
+      }
+
       try {
         const payload = await HybridFlutterBridge.fetchTimelineWindow(offset, Shared.HYBRID_BACKGROUND_PREDOWNLOAD_PAGE_SIZE);
         const page = this.timelineLayoutBuilder.parsePageResult(payload);
         if (!page.ready || page.sections.length <= 0) {
+          console.info(
+            `[PhotoGridViewModel] background predownload stop: reason=page-not-ready-or-empty ` +
+              `offset=${offset} ready=${page.ready ? 1 : 0} sections=${page.sections.length}`,
+          );
           break;
         }
+
+        await this.predownloadSectionsForRequestSizes(
+          page.sections,
+          true,
+          requestSizes,
+          Number.MAX_SAFE_INTEGER,
+          true,
+          Shared.HYBRID_BACKGROUND_PREDOWNLOAD_BATCH_SIZE,
+          Thumbnail.HybridRemotePredownloadPriorityHint.BACKGROUND,
+        );
 
         this.logDuplicateAssetKeysOnce(
           'appendSourcePage:pre',
@@ -2708,20 +3284,28 @@ export class PhotoGridViewModel {
           FormIndex.DAY,
         );
 
-        await this.predownloadSections(
-          page.sections,
-          true,
-          requestSize,
-          Thumbnail.HybridRemotePredownloadPriorityHint.BACKGROUND,
-        );
+        if (!page.hasMore) {
+          console.info(
+            `[PhotoGridViewModel] background predownload page tail reached: ` +
+              `offset=${offset} nextOffset=${page.nextOffset} windowEndOffset=${page.windowEndOffset}`,
+          );
+        }
 
-        if (!page.hasMore || page.nextOffset <= offset) {
+        if (page.nextOffset <= offset) {
+          console.info(
+            `[PhotoGridViewModel] background predownload stop: reason=page-nextOffset<=offset ` +
+              `offset=${offset} nextOffset=${page.nextOffset} windowEndOffset=${page.windowEndOffset}`,
+          );
           break;
         }
 
         offset = page.nextOffset;
         await Shared.delay(Shared.HYBRID_BACKGROUND_PREDOWNLOAD_YIELD_MS);
-      } catch (_error) {
+      } catch (error) {
+        console.warn(
+          `[PhotoGridViewModel] background predownload stop: reason=exception ` +
+            `offset=${offset} error=${error instanceof Error ? error.message : String(error)}`,
+        );
         break;
       }
     }
@@ -2746,24 +3330,30 @@ export class PhotoGridViewModel {
     windowEndOffset: number,
     form: FormIndex,
   ): void {
-    const stats = this.collectDuplicateAssetKeyStats(sections);
-    if (stats.duplicateKeyCount <= 0) {
-      return;
-    }
     if (stage === 'appendSourcePage:pre') {
       if (this.appendSourcePagePreDuplicateLogged) {
         return;
       }
-      this.appendSourcePagePreDuplicateLogged = true;
     } else if (stage === 'appendSourcePage:post') {
       if (this.appendSourcePagePostDuplicateLogged) {
         return;
       }
-      this.appendSourcePagePostDuplicateLogged = true;
     } else if (stage === 'syncActiveSourceProjection:pre') {
       if (this.syncActiveProjectionPreDuplicateLogged) {
         return;
       }
+    }
+
+    const stats = this.collectDuplicateAssetKeyStats(sections);
+    if (stats.duplicateKeyCount <= 0) {
+      return;
+    }
+
+    if (stage === 'appendSourcePage:pre') {
+      this.appendSourcePagePreDuplicateLogged = true;
+    } else if (stage === 'appendSourcePage:post') {
+      this.appendSourcePagePostDuplicateLogged = true;
+    } else if (stage === 'syncActiveSourceProjection:pre') {
       this.syncActiveProjectionPreDuplicateLogged = true;
     }
     console.warn(
@@ -2844,6 +3434,8 @@ export class PhotoGridViewModel {
       return;
     }
 
+    const requestSizes = this.resolveRemotePredownloadRequestSizes(requestSize);
+
     Thumbnail.flushDeferredThumbnailWritesIfIdle();
     await Shared.delay(Shared.HYBRID_BACKGROUND_PREDOWNLOAD_YIELD_MS);
     if (this.shouldAbortIdlePrefetchWork(token)) {
@@ -2861,10 +3453,13 @@ export class PhotoGridViewModel {
       return;
     }
 
-    await this.predownloadSections(
+    await this.predownloadSectionsForRequestSizes(
       this.sections,
       true,
-      requestSize,
+      requestSizes,
+      Number.MAX_SAFE_INTEGER,
+      true,
+      Shared.HYBRID_BACKGROUND_PREDOWNLOAD_BATCH_SIZE,
       Thumbnail.HybridRemotePredownloadPriorityHint.NEARBY,
     );
     if (this.shouldAbortIdlePrefetchWork(token)) {
@@ -2873,10 +3468,13 @@ export class PhotoGridViewModel {
 
     const pendingSections = this.pendingWarmupSections.splice(0, this.pendingWarmupSections.length);
     if (pendingSections.length > 0) {
-      await this.predownloadSections(
+      await this.predownloadSectionsForRequestSizes(
         pendingSections,
         false,
-        requestSize,
+        requestSizes,
+        Number.MAX_SAFE_INTEGER,
+        true,
+        Shared.HYBRID_BACKGROUND_PREDOWNLOAD_BATCH_SIZE,
         Thumbnail.HybridRemotePredownloadPriorityHint.NEARBY,
       );
       if (this.shouldAbortIdlePrefetchWork(token)) {
