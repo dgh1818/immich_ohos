@@ -51,6 +51,7 @@ class HashService {
   Future<void> hashAssets() async {
     _startedBackgroundTransfer = false;
     _log.info("Starting hashing of assets");
+    final processedAssetIds = <String>{};
 
     //hash资产时避免息屏
     unawaited(WakelockPlus.enable());
@@ -69,7 +70,15 @@ class HashService {
           break;
         }
 
-        final assetsToHash = await _localAlbumRepository.getAssetsToHash(album.id);
+        final assetsToHash = <LocalAsset>[];
+        final albumAssetsToHash = await _localAlbumRepository.getAssetsToHash(album.id);
+        for (final asset in albumAssetsToHash) {
+          if (processedAssetIds.contains(asset.id)) {
+            continue;
+          }
+          processedAssetIds.add(asset.id);
+          assetsToHash.add(asset);
+        }
 
         //开启后台保活
         if (assetsToHash.isNotEmpty && !_startedBackgroundTransfer && Platform.isOhos) {
@@ -133,8 +142,6 @@ class HashService {
       }
     }
 
-    stopwatch.stop();
-    _log.info("Hashing took - ${stopwatch.elapsedMilliseconds}ms");
   }
 
   /// Processes a list of [LocalAsset]s, storing their hash and updating the assets in the DB
