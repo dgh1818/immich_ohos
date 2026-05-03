@@ -98,7 +98,9 @@ struct Index {
         }
         .width('100%')
         .height('100%')
-        .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP]);
+        .clip(false)
+        .backgroundColor($r('app.color.start_window_background'))
+        .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM]);
       } else {
         FlutterPage({ viewId: this.viewId })
           .layoutWeight(1);
@@ -106,6 +108,8 @@ struct Index {
     }
     .width('100%')
     .height('100%')
+    .clip(false)
+    .backgroundColor($r('app.color.start_window_background'))
   }
 
   onBackPress(): boolean {

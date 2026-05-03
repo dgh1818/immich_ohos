@@ -22,6 +22,33 @@ interface TimelineSlidingWindowUpdateResult {
   fillPosition: number;
 }
 
+interface SourceSectionIndexEntry {
+  key: string;
+  title: string;
+  startOffset: number;
+  endOffset: number;
+  count: number;
+  flatStartIndex: number;
+  flatEndIndex: number;
+}
+
+class SourceSectionIndexEntryRecord implements SourceSectionIndexEntry {
+  key: string = '';
+  title: string = '';
+  startOffset: number = 0;
+  endOffset: number = 0;
+  count: number = 0;
+  flatStartIndex: number = 0;
+  flatEndIndex: number = 0;
+}
+
+class GroupInfoRecord implements GroupInfo {
+  key: string = '';
+  title: string = '';
+  count: number = 0;
+  offset: number = 0;
+}
+
 export interface TimelineDataSourceState {
   sections: Array<PhotoSection>;
   groupDayGroups: Array<GroupInfo>;
@@ -59,11 +86,178 @@ export interface TimelinePreloadResult {
   fillPosition: number;
 }
 
+interface TimelineWindowUpdateMetricBucket {
+  reason: TimelinePreloadReason;
+  startedAt: number;
+  eventCount: number;
+  totalMs: number;
+  maxMs: number;
+  over8MsCount: number;
+  buildDefaultTotalMs: number;
+  buildDefaultMaxMs: number;
+  flattenAssetsTotalMs: number;
+  flattenAssetsMaxMs: number;
+  rangeResolveTotalMs: number;
+  rangeResolveMaxMs: number;
+  sliceSectionsTotalMs: number;
+  sliceSectionsMaxMs: number;
+  groupDayGroupsTotalMs: number;
+  groupDayGroupsMaxMs: number;
+  fillPositionTotalMs: number;
+  fillPositionMaxMs: number;
+  buildGridItemsTotalMs: number;
+  buildGridItemsMaxMs: number;
+  anchorResolveTotalMs: number;
+  anchorResolveMaxMs: number;
+}
+
+class TimelineWindowPerfStats {
+  private static readonly SUMMARY_INTERVAL_MS: number = 2000;
+  private static readonly MAX_EVENT_COUNT: number = 32;
+  private static readonly SLOW_WINDOW_UPDATE_MS: number = 8;
+  private static bucket: TimelineWindowUpdateMetricBucket = TimelineWindowPerfStats.createBucket(
+    TimelinePreloadReason.ACTIVE_VISIBLE_WINDOW,
+  );
+
+  private static createBucket(reason: TimelinePreloadReason): TimelineWindowUpdateMetricBucket {
+    return {
+      reason: reason,
+      startedAt: Date.now(),
+      eventCount: 0,
+      totalMs: 0,
+      maxMs: 0,
+      over8MsCount: 0,
+      buildDefaultTotalMs: 0,
+      buildDefaultMaxMs: 0,
+      flattenAssetsTotalMs: 0,
+      flattenAssetsMaxMs: 0,
+      rangeResolveTotalMs: 0,
+      rangeResolveMaxMs: 0,
+      sliceSectionsTotalMs: 0,
+      sliceSectionsMaxMs: 0,
+      groupDayGroupsTotalMs: 0,
+      groupDayGroupsMaxMs: 0,
+      fillPositionTotalMs: 0,
+      fillPositionMaxMs: 0,
+      buildGridItemsTotalMs: 0,
+      buildGridItemsMaxMs: 0,
+      anchorResolveTotalMs: 0,
+      anchorResolveMaxMs: 0,
+    };
+  }
+
+  private static hasMetrics(): boolean {
+    return TimelineWindowPerfStats.bucket.eventCount > 0;
+  }
+
+  private static ensureBucket(reason: TimelinePreloadReason): void {
+    if (!TimelineWindowPerfStats.hasMetrics()) {
+      TimelineWindowPerfStats.bucket = TimelineWindowPerfStats.createBucket(reason);
+      return;
+    }
+    if (TimelineWindowPerfStats.bucket.reason !== reason) {
+      TimelineWindowPerfStats.flush('reason-switch');
+      TimelineWindowPerfStats.bucket = TimelineWindowPerfStats.createBucket(reason);
+    }
+  }
+
+  private static resolveReasonLabel(reason: TimelinePreloadReason): string {
+    switch (reason) {
+      case TimelinePreloadReason.ADJACENT_PRELOAD:
+        return 'ADJACENT_PRELOAD';
+      case TimelinePreloadReason.PINCH_PRE_SWITCH:
+        return 'PINCH_PRE_SWITCH';
+      case TimelinePreloadReason.POST_COMMIT:
+        return 'POST_COMMIT';
+      case TimelinePreloadReason.ACTIVE_VISIBLE_WINDOW:
+      default:
+        return 'ACTIVE_VISIBLE_WINDOW';
+    }
+  }
+
+  static noteWindowUpdate(
+    reason: TimelinePreloadReason,
+    totalMs: number,
+    buildDefaultMs: number,
+    flattenAssetsMs: number,
+    rangeResolveMs: number,
+    sliceSectionsMs: number,
+    groupDayGroupsMs: number,
+    fillPositionMs: number,
+    buildGridItemsMs: number,
+    anchorResolveMs: number,
+  ): void {
+    TimelineWindowPerfStats.ensureBucket(reason);
+    const bucket = TimelineWindowPerfStats.bucket;
+    bucket.eventCount += 1;
+    bucket.totalMs += totalMs;
+    bucket.maxMs = Math.max(bucket.maxMs, totalMs);
+    if (totalMs > TimelineWindowPerfStats.SLOW_WINDOW_UPDATE_MS) {
+      bucket.over8MsCount += 1;
+    }
+    bucket.buildDefaultTotalMs += buildDefaultMs;
+    bucket.buildDefaultMaxMs = Math.max(bucket.buildDefaultMaxMs, buildDefaultMs);
+    bucket.flattenAssetsTotalMs += flattenAssetsMs;
+    bucket.flattenAssetsMaxMs = Math.max(bucket.flattenAssetsMaxMs, flattenAssetsMs);
+    bucket.rangeResolveTotalMs += rangeResolveMs;
+    bucket.rangeResolveMaxMs = Math.max(bucket.rangeResolveMaxMs, rangeResolveMs);
+    bucket.sliceSectionsTotalMs += sliceSectionsMs;
+    bucket.sliceSectionsMaxMs = Math.max(bucket.sliceSectionsMaxMs, sliceSectionsMs);
+    bucket.groupDayGroupsTotalMs += groupDayGroupsMs;
+    bucket.groupDayGroupsMaxMs = Math.max(bucket.groupDayGroupsMaxMs, groupDayGroupsMs);
+    bucket.fillPositionTotalMs += fillPositionMs;
+    bucket.fillPositionMaxMs = Math.max(bucket.fillPositionMaxMs, fillPositionMs);
+    bucket.buildGridItemsTotalMs += buildGridItemsMs;
+    bucket.buildGridItemsMaxMs = Math.max(bucket.buildGridItemsMaxMs, buildGridItemsMs);
+    bucket.anchorResolveTotalMs += anchorResolveMs;
+    bucket.anchorResolveMaxMs = Math.max(bucket.anchorResolveMaxMs, anchorResolveMs);
+    TimelineWindowPerfStats.maybeFlush('interval');
+  }
+
+  private static maybeFlush(reason: string): void {
+    if (!TimelineWindowPerfStats.hasMetrics()) {
+      return;
+    }
+    if (
+      TimelineWindowPerfStats.bucket.eventCount < TimelineWindowPerfStats.MAX_EVENT_COUNT &&
+      Date.now() - TimelineWindowPerfStats.bucket.startedAt < TimelineWindowPerfStats.SUMMARY_INTERVAL_MS
+    ) {
+      return;
+    }
+    TimelineWindowPerfStats.flush(reason);
+  }
+
+  static flush(reason: string): void {
+    if (!TimelineWindowPerfStats.hasMetrics()) {
+      return;
+    }
+    const bucket = TimelineWindowPerfStats.bucket;
+    const durationMs = Math.max(1, Date.now() - bucket.startedAt);
+    const avgMs = Math.round(bucket.totalMs / Math.max(1, bucket.eventCount));
+    console.info(
+      `[TimelineDataManager] windowUpdateMetrics reason=${TimelineWindowPerfStats.resolveReasonLabel(bucket.reason)} ` +
+      `flush=${reason} durationMs=${durationMs} events=${bucket.eventCount} totalMs=${bucket.totalMs} avgMs=${avgMs} ` +
+      `maxMs=${bucket.maxMs} over8Ms=${bucket.over8MsCount} ` +
+      `buildDefaultMs=${bucket.buildDefaultTotalMs} buildDefaultMaxMs=${bucket.buildDefaultMaxMs} ` +
+      `flattenAssetsMs=${bucket.flattenAssetsTotalMs} flattenAssetsMaxMs=${bucket.flattenAssetsMaxMs} ` +
+      `rangeResolveMs=${bucket.rangeResolveTotalMs} rangeResolveMaxMs=${bucket.rangeResolveMaxMs} ` +
+      `sliceSectionsMs=${bucket.sliceSectionsTotalMs} sliceSectionsMaxMs=${bucket.sliceSectionsMaxMs} ` +
+      `groupDayGroupsMs=${bucket.groupDayGroupsTotalMs} groupDayGroupsMaxMs=${bucket.groupDayGroupsMaxMs} ` +
+      `fillPositionMs=${bucket.fillPositionTotalMs} fillPositionMaxMs=${bucket.fillPositionMaxMs} ` +
+      `buildGridItemsMs=${bucket.buildGridItemsTotalMs} buildGridItemsMaxMs=${bucket.buildGridItemsMaxMs} ` +
+      `anchorResolveMs=${bucket.anchorResolveTotalMs} anchorResolveMaxMs=${bucket.anchorResolveMaxMs}`,
+    );
+    TimelineWindowPerfStats.bucket = TimelineWindowPerfStats.createBucket(bucket.reason);
+  }
+}
+
 export class TimelineDataManager {
   private readonly dataAdapter: PhotoGridDataAdapter = new PhotoGridDataAdapter();
   private readonly formWindowStates: Array<TimelineFormWindowState | undefined> = [undefined, undefined, undefined, undefined];
   private sections: Array<PhotoSection> = [];
-  private groupDayGroups: Array<GroupInfo> = [];
+  private sourceFlatAssets: Array<PhotoAsset> = [];
+  private sourceSectionIndexEntries: Array<SourceSectionIndexEntry> = [];
+  private sourceGroupDayGroups: Array<GroupInfo> = [];
   private yearBuckets: Array<BucketInfo> = [];
   private monthBuckets: Array<BucketInfo> = [];
   private windowStartOffset: number = 0;
@@ -99,7 +293,9 @@ export class TimelineDataManager {
 
   public reset(): void {
     this.sections = [];
-    this.groupDayGroups = [];
+    this.sourceFlatAssets = [];
+    this.sourceSectionIndexEntries = [];
+    this.sourceGroupDayGroups = [];
     this.yearBuckets = [];
     this.monthBuckets = [];
     this.windowStartOffset = 0;
@@ -127,7 +323,7 @@ export class TimelineDataManager {
     if (form !== FormIndex.GROUP_DAY) {
       return [];
     }
-    return this.buildSourceWindowState(form).groupDayGroups.slice();
+    return this.cloneGroups(this.sourceGroupDayGroups);
   }
 
   public buildSourceGridItemsForForm(form: FormIndex): Array<GridItem> {
@@ -301,6 +497,20 @@ export class TimelineDataManager {
     return this.dataAdapter.flattenAssets(this.resolveOwnedWindowState(form).sections);
   }
 
+  private resolveSourcePhotoAssets(form: FormIndex, sections: Array<PhotoSection>): Array<PhotoAsset> {
+    if (form === FormIndex.DAY || form === FormIndex.GROUP_DAY) {
+      return this.sourceFlatAssets;
+    }
+    return this.dataAdapter.flattenAssets(sections);
+  }
+
+  private resolveSourcePhotoCount(form: FormIndex, sections: Array<PhotoSection>): number {
+    if (form === FormIndex.DAY || form === FormIndex.GROUP_DAY) {
+      return this.sourceFlatAssets.length;
+    }
+    return this.dataAdapter.countAssets(sections);
+  }
+
   private resolveOwnedWindowState(form: FormIndex): TimelineFormWindowState {
     if (!this.isValidForm(form)) {
       return {
@@ -324,7 +534,9 @@ export class TimelineDataManager {
     if (incomingSections.length <= 0 || incomingPhotoCount <= 0) {
       if (replaceExisting) {
         this.sections = [];
-        this.groupDayGroups = [];
+        this.sourceFlatAssets = [];
+        this.sourceSectionIndexEntries = [];
+        this.sourceGroupDayGroups = [];
         this.windowStartOffset = 0;
         this.windowEndOffset = 0;
       }
@@ -332,7 +544,7 @@ export class TimelineDataManager {
     }
 
     if (this.sections.length <= 0) {
-      this.applySourceSections(incomingSections, incomingStartOffset, incomingEndOffset);
+      this.applySourceSections(incomingSections, incomingStartOffset, incomingEndOffset, state.groupDayGroups);
       return;
     }
 
@@ -340,7 +552,7 @@ export class TimelineDataManager {
     const currentEndOffset = this.windowEndOffset;
 
     if (incomingStartOffset <= currentStartOffset && incomingEndOffset >= currentEndOffset) {
-      this.applySourceSections(incomingSections, incomingStartOffset, incomingEndOffset);
+      this.applySourceSections(incomingSections, incomingStartOffset, incomingEndOffset, state.groupDayGroups);
       return;
     }
 
@@ -353,6 +565,7 @@ export class TimelineDataManager {
         this.mergeContiguousSections(this.sections, incomingSections),
         currentStartOffset,
         Math.max(currentEndOffset, incomingEndOffset),
+        [],
       );
       return;
     }
@@ -362,12 +575,13 @@ export class TimelineDataManager {
         this.mergeContiguousSections(incomingSections, this.sections),
         incomingStartOffset,
         currentEndOffset,
+        [],
       );
       return;
     }
 
     if (replaceExisting) {
-      this.applySourceSections(incomingSections, incomingStartOffset, incomingEndOffset);
+      this.applySourceSections(incomingSections, incomingStartOffset, incomingEndOffset, state.groupDayGroups);
     }
   }
 
@@ -375,11 +589,93 @@ export class TimelineDataManager {
     sections: Array<PhotoSection>,
     startOffset: number,
     endOffset: number,
+    sourceGroups: Array<GroupInfo>,
   ): void {
     this.sections = this.dataAdapter.cloneSections(sections);
+    this.sourceFlatAssets = this.dataAdapter.flattenAssets(this.sections);
     this.windowStartOffset = Math.max(0, startOffset);
     this.windowEndOffset = Math.max(this.windowStartOffset, endOffset);
-    this.groupDayGroups = this.deriveGroupsForSections(this.sections, this.windowStartOffset);
+    this.sourceGroupDayGroups = this.resolveSourceGroupDayGroups(this.sections, this.windowStartOffset, sourceGroups);
+    this.sourceSectionIndexEntries = this.buildSourceSectionIndexEntries(this.sections, this.sourceGroupDayGroups, this.windowStartOffset);
+  }
+
+  private cloneGroups(groups: Array<GroupInfo>): Array<GroupInfo> {
+    const clonedGroups: Array<GroupInfo> = [];
+    groups.forEach((group: GroupInfo) => {
+      const record = new GroupInfoRecord();
+      record.key = group.key;
+      record.title = group.title;
+      record.count = group.count;
+      record.offset = group.offset;
+      clonedGroups.push(record);
+    });
+    return clonedGroups;
+  }
+
+  private resolveSourceGroupDayGroups(
+    sections: Array<PhotoSection>,
+    windowStartOffset: number,
+    sourceGroups: Array<GroupInfo>,
+  ): Array<GroupInfo> {
+    if (this.areGroupsAlignedToSections(sourceGroups, sections, windowStartOffset)) {
+      return this.cloneGroups(sourceGroups);
+    }
+    return this.deriveGroupsForSections(sections, windowStartOffset);
+  }
+
+  private areGroupsAlignedToSections(
+    groups: Array<GroupInfo>,
+    sections: Array<PhotoSection>,
+    windowStartOffset: number,
+  ): boolean {
+    if (groups.length !== sections.length) {
+      return false;
+    }
+
+    let expectedOffset = Math.max(0, windowStartOffset);
+    for (let index = 0; index < sections.length; index += 1) {
+      const section = sections[index];
+      const group = groups[index];
+      const sectionCount = this.dataAdapter.countSectionAssets(section);
+      if (!group || group.key !== section.key || group.title !== section.title) {
+        return false;
+      }
+      if (group.offset !== expectedOffset || group.count !== sectionCount) {
+        return false;
+      }
+      expectedOffset += sectionCount;
+    }
+
+    return true;
+  }
+
+  private buildSourceSectionIndexEntries(
+    sections: Array<PhotoSection>,
+    groups: Array<GroupInfo>,
+    startOffset: number,
+  ): Array<SourceSectionIndexEntry> {
+    const entries: Array<SourceSectionIndexEntry> = [];
+    let runningOffset = Math.max(0, startOffset);
+    let runningFlatIndex = 0;
+    for (let index = 0; index < sections.length; index += 1) {
+      const section = sections[index];
+      const group = groups[index];
+      const count = this.dataAdapter.countSectionAssets(section);
+      const sectionStartOffset = group ? group.offset : runningOffset;
+      const sectionEndOffset = sectionStartOffset + count;
+      const entry = new SourceSectionIndexEntryRecord();
+      entry.key = section.key;
+      entry.title = section.title;
+      entry.startOffset = sectionStartOffset;
+      entry.endOffset = sectionEndOffset;
+      entry.count = count;
+      entry.flatStartIndex = runningFlatIndex;
+      entry.flatEndIndex = runningFlatIndex + count;
+      entries.push(entry);
+      runningOffset = sectionEndOffset;
+      runningFlatIndex = entry.flatEndIndex;
+    }
+    return entries;
   }
 
   private mergeContiguousSections(
@@ -416,6 +712,7 @@ export class TimelineDataManager {
   private appendDedupedSectionRows(targetSection: PhotoSection, incomingSection: PhotoSection): number {
     const seenAssetKeys: Set<string> = new Set();
     let dedupedCount = 0;
+    let appendedAssetCount = 0;
 
     targetSection.rows.forEach((row: Array<PhotoAsset>) => {
       row.forEach((asset: PhotoAsset) => {
@@ -436,11 +733,24 @@ export class TimelineDataManager {
       });
 
       if (filteredRow.length > 0) {
+        appendedAssetCount += filteredRow.length;
         targetSection.rows.push(filteredRow);
       }
     });
 
+    if (appendedAssetCount > 0) {
+      this.invalidateSectionDerivedMetadata(targetSection);
+    }
+
     return dedupedCount;
+  }
+
+  private invalidateSectionDerivedMetadata(section: PhotoSection): void {
+    section.assetCount = undefined;
+    section.sourceStartOffset = undefined;
+    section.sourceEndOffsetExclusive = undefined;
+    section.sourceFlatStartIndex = undefined;
+    section.sourceFlatEndIndexExclusive = undefined;
   }
 
   private assetStableKey(asset: PhotoAsset): string {
@@ -464,10 +774,10 @@ export class TimelineDataManager {
     return {
       sections: this.dataAdapter.cloneSections(sections),
       groupDayGroups: form === FormIndex.GROUP_DAY
-        ? this.buildCanonicalGroupWindowGroups(sections, this.windowStartOffset)
+        ? this.cloneGroups(this.sourceGroupDayGroups)
         : [],
       windowStartOffset: this.windowStartOffset,
-      windowPhotoCount: this.dataAdapter.countAssets(sections),
+      windowPhotoCount: this.resolveSourcePhotoCount(form, sections),
     };
   }
 
@@ -476,19 +786,45 @@ export class TimelineDataManager {
     return {
       sections: sections,
       groupDayGroups: form === FormIndex.GROUP_DAY
-        ? this.buildCanonicalGroupWindowGroups(sections, this.windowStartOffset)
+        ? this.cloneGroups(this.sourceGroupDayGroups)
         : [],
       windowStartOffset: this.windowStartOffset,
-      windowPhotoCount: this.dataAdapter.countAssets(sections),
+      windowPhotoCount: this.resolveSourcePhotoCount(form, sections),
     };
   }
 
   private buildWindowUpdateResult(request: TimelinePreloadRequest): TimelineSlidingWindowUpdateResult {
-    const fullWindowState = this.buildDefaultWindowState(request.form);
-    const fullSections = fullWindowState.sections;
-    const formPhotoAssets = this.dataAdapter.flattenAssets(fullSections);
+    const startedAt = Date.now();
+    const buildDefaultStartedAt = Date.now();
+    const fullSections = this.resolveSourceSectionsForForm(request.form);
+    const fullWindowState: TimelineFormWindowState = {
+      sections: fullSections,
+      groupDayGroups: request.form === FormIndex.GROUP_DAY
+        ? this.cloneGroups(this.sourceGroupDayGroups)
+        : [],
+      windowStartOffset: this.windowStartOffset,
+      windowPhotoCount: 0,
+    };
+    const buildDefaultMs = Date.now() - buildDefaultStartedAt;
+
+    const flattenAssetsStartedAt = Date.now();
+    const formPhotoAssets = this.resolveSourcePhotoAssets(request.form, fullSections);
+    const flattenAssetsMs = Date.now() - flattenAssetsStartedAt;
     const totalPhotoCount = formPhotoAssets.length;
+    fullWindowState.windowPhotoCount = totalPhotoCount;
     if (totalPhotoCount <= 0) {
+      TimelineWindowPerfStats.noteWindowUpdate(
+        request.reason,
+        Date.now() - startedAt,
+        buildDefaultMs,
+        flattenAssetsMs,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+      );
       return {
         windowState: {
           sections: [],
@@ -502,6 +838,8 @@ export class TimelineDataManager {
     }
 
     const columns = getColumnsByFormIndex(request.form);
+
+    const rangeResolveStartedAt = Date.now();
     const anchorLocalPhotoIndex = this.resolveLocalPhotoOffsetForWindow(
       request.anchorPhotoOffset,
       fullWindowState.windowStartOffset,
@@ -512,31 +850,62 @@ export class TimelineDataManager {
       totalPhotoCount,
       anchorLocalPhotoIndex,
     );
+    const rangeResolveMs = Date.now() - rangeResolveStartedAt;
     const startLocalPhotoIndex = preloadPhotoRange[0];
     const endLocalPhotoIndexExclusive = preloadPhotoRange[1];
     const windowStartOffset = fullWindowState.windowStartOffset + startLocalPhotoIndex;
+
+    const sliceSectionsStartedAt = Date.now();
     const slicedSections = this.sliceSectionsByPhotoRange(
       fullSections,
       startLocalPhotoIndex,
       endLocalPhotoIndexExclusive,
       columns,
+      request.form === FormIndex.DAY || request.form === FormIndex.GROUP_DAY ? this.sourceSectionIndexEntries : [],
     );
+    const sliceSectionsMs = Date.now() - sliceSectionsStartedAt;
+
+    const groupDayGroupsStartedAt = Date.now();
+    const groupDayGroups = request.form === FormIndex.GROUP_DAY
+      ? this.sliceSourceGroupsByPhotoRange(windowStartOffset, endLocalPhotoIndexExclusive - startLocalPhotoIndex)
+      : [];
+    const groupDayGroupsMs = Date.now() - groupDayGroupsStartedAt;
     const windowState: TimelineFormWindowState = {
       sections: slicedSections,
-      groupDayGroups: request.form === FormIndex.GROUP_DAY
-        ? this.buildCanonicalGroupWindowGroups(slicedSections, windowStartOffset)
-        : [],
+      groupDayGroups: groupDayGroups,
       windowStartOffset: windowStartOffset,
       windowPhotoCount: Math.max(0, endLocalPhotoIndexExclusive - startLocalPhotoIndex),
     };
+
+    const fillPositionStartedAt = Date.now();
     const resolvedFillPosition = request.fillPosition >= 0
       ? Math.max(0, request.fillPosition)
       : this.resolveSourceFillPositionForWindowStart(request.form, fullWindowState, windowState.windowStartOffset);
+    const fillPositionMs = Date.now() - fillPositionStartedAt;
+
+    const buildGridItemsStartedAt = Date.now();
     const gridItems = this.buildGridItemsFromWindowState(request.form, windowState);
+    const buildGridItemsMs = Date.now() - buildGridItemsStartedAt;
     const anchorAssetId = formPhotoAssets[anchorLocalPhotoIndex]?.id;
+
+    const anchorResolveStartedAt = Date.now();
+    const anchorGridIndex = this.resolveAnchorGridIndex(gridItems, anchorAssetId, resolvedFillPosition);
+    const anchorResolveMs = Date.now() - anchorResolveStartedAt;
+    TimelineWindowPerfStats.noteWindowUpdate(
+      request.reason,
+      Date.now() - startedAt,
+      buildDefaultMs,
+      flattenAssetsMs,
+      rangeResolveMs,
+      sliceSectionsMs,
+      groupDayGroupsMs,
+      fillPositionMs,
+      buildGridItemsMs,
+      anchorResolveMs,
+    );
     return {
       windowState: windowState,
-      anchorGridIndex: this.resolveAnchorGridIndex(gridItems, anchorAssetId, resolvedFillPosition),
+      anchorGridIndex: anchorGridIndex,
       fillPosition: resolvedFillPosition,
     };
   }
@@ -580,12 +949,26 @@ export class TimelineDataManager {
   ): Array<GridItem> {
     const columns = getColumnsByFormIndex(form);
     if (form === FormIndex.GROUP_DAY) {
-      return this.buildGroupGridItems(windowState.sections, windowState.groupDayGroups, windowState.windowStartOffset);
+      return this.buildGroupGridItems(
+        windowState.sections,
+        windowState.groupDayGroups,
+        windowState.windowStartOffset,
+        this.sourceFlatAssets,
+      );
     }
     if (this.shouldUseBucketProjection(form)) {
-      return this.dataAdapter.buildGridItemsFromSections(windowState.sections, windowState.windowStartOffset);
+      return this.dataAdapter.buildGridItemsFromSections(
+        windowState.sections,
+        windowState.windowStartOffset,
+        this.sourceFlatAssets,
+      );
     }
-    return this.dataAdapter.buildGridItemsForColumns(windowState.sections, columns, windowState.windowStartOffset);
+    return this.dataAdapter.buildGridItemsForColumns(
+      windowState.sections,
+      columns,
+      windowState.windowStartOffset,
+      this.sourceFlatAssets,
+    );
   }
 
   private buildTimelineItemsFromWindowState(
@@ -693,7 +1076,7 @@ export class TimelineDataManager {
       return this.sections;
     }
 
-    const assets = this.dataAdapter.flattenAssets(this.sections);
+    const assets = this.sourceFlatAssets;
     if (assets.length <= 0) {
       return [];
     }
@@ -716,6 +1099,11 @@ export class TimelineDataManager {
         key: bucket.date,
         title: bucket.date,
         rows: this.chunkAssets(sectionAssets, columns),
+        assetCount: sectionAssets.length,
+        sourceStartOffset: bucketStartOffset,
+        sourceEndOffsetExclusive: bucketStartOffset + sectionAssets.length,
+        sourceFlatStartIndex: localStart,
+        sourceFlatEndIndexExclusive: localStart + sectionAssets.length,
       });
     });
 
@@ -743,8 +1131,9 @@ export class TimelineDataManager {
     sections: Array<PhotoSection>,
     groups: Array<GroupInfo>,
     sourceStartOffset: number = 0,
+    sourceFlatAssets?: Array<PhotoAsset>,
   ): Array<GridItem> {
-    return this.dataAdapter.buildGroupGridItems(sections, groups, sourceStartOffset);
+    return this.dataAdapter.buildGroupGridItems(sections, groups, sourceStartOffset, sourceFlatAssets);
   }
 
   private resolvePreloadPhotoRange(
@@ -826,6 +1215,7 @@ export class TimelineDataManager {
     startLocalPhotoIndex: number,
     endLocalPhotoIndexExclusive: number,
     columns: number,
+    sectionIndexEntries: Array<SourceSectionIndexEntry> = [],
   ): Array<PhotoSection> {
     if (sections.length <= 0 || endLocalPhotoIndexExclusive <= startLocalPhotoIndex) {
       return [];
@@ -833,10 +1223,10 @@ export class TimelineDataManager {
 
     const slicedSections: Array<PhotoSection> = [];
     let currentPhotoOffset = 0;
-    sections.forEach((section: PhotoSection) => {
-      const sectionAssets = this.dataAdapter.flattenSectionAssets(section);
-      const sectionPhotoCount = sectionAssets.length;
-      const sectionStartOffset = currentPhotoOffset;
+    sections.forEach((section: PhotoSection, sectionIndex: number) => {
+      const sectionIndexEntry = sectionIndexEntries.length === sections.length ? sectionIndexEntries[sectionIndex] : undefined;
+      const sectionPhotoCount = sectionIndexEntry ? sectionIndexEntry.count : this.dataAdapter.countSectionAssets(section);
+      const sectionStartOffset = sectionIndexEntry ? sectionIndexEntry.startOffset - this.windowStartOffset : currentPhotoOffset;
       const sectionEndOffset = sectionStartOffset + sectionPhotoCount;
       currentPhotoOffset = sectionEndOffset;
       if (sectionPhotoCount <= 0 || startLocalPhotoIndex >= sectionEndOffset || endLocalPhotoIndexExclusive <= sectionStartOffset) {
@@ -845,18 +1235,114 @@ export class TimelineDataManager {
 
       const localStartOffset = Math.max(0, startLocalPhotoIndex - sectionStartOffset);
       const localEndOffset = Math.min(sectionPhotoCount, endLocalPhotoIndexExclusive - sectionStartOffset);
-      const slicedAssets = sectionAssets.slice(localStartOffset, localEndOffset);
+      const slicedAssets = sectionIndexEntry
+        ? this.sliceSourceFlatAssetsBySectionRange(sectionIndexEntry, localStartOffset, localEndOffset)
+        : this.sliceSectionAssets(section, localStartOffset, localEndOffset);
       if (slicedAssets.length <= 0) {
         return;
       }
 
+      const sourceStartOffset = this.windowStartOffset + sectionStartOffset + localStartOffset;
+      const sourceFlatStartIndex = sectionIndexEntry
+        ? sectionIndexEntry.flatStartIndex + localStartOffset
+        : undefined;
       slicedSections.push({
         key: section.key,
         title: section.title,
         rows: this.chunkAssets(slicedAssets, Math.max(1, columns)),
+        assetCount: slicedAssets.length,
+        sourceStartOffset: sourceStartOffset,
+        sourceEndOffsetExclusive: sourceStartOffset + slicedAssets.length,
+        sourceFlatStartIndex: sourceFlatStartIndex,
+        sourceFlatEndIndexExclusive: typeof sourceFlatStartIndex === 'number'
+          ? sourceFlatStartIndex + slicedAssets.length
+          : undefined,
       });
     });
     return slicedSections;
+  }
+
+  private sliceSourceGroupsByPhotoRange(windowStartOffset: number, windowPhotoCount: number): Array<GroupInfo> {
+    if (windowPhotoCount <= 0 || this.sourceSectionIndexEntries.length <= 0) {
+      return [];
+    }
+
+    const windowEndOffset = windowStartOffset + windowPhotoCount;
+    const groups: Array<GroupInfo> = [];
+    for (let index = 0; index < this.sourceSectionIndexEntries.length; index += 1) {
+      const entry = this.sourceSectionIndexEntries[index];
+      if (windowStartOffset >= entry.endOffset || windowEndOffset <= entry.startOffset) {
+        continue;
+      }
+
+      const clippedStart = Math.max(windowStartOffset, entry.startOffset);
+      const clippedEnd = Math.min(windowEndOffset, entry.endOffset);
+      const clippedCount = Math.max(0, clippedEnd - clippedStart);
+      if (clippedCount <= 0) {
+        continue;
+      }
+
+      const group = new GroupInfoRecord();
+      group.key = entry.key;
+      group.title = entry.title;
+      group.count = clippedCount;
+      group.offset = clippedStart;
+      groups.push(group);
+    }
+    return groups;
+  }
+
+  private sliceSourceFlatAssetsBySectionRange(
+    sectionIndexEntry: SourceSectionIndexEntry,
+    startOffset: number,
+    endOffsetExclusive: number,
+  ): Array<PhotoAsset> {
+    if (endOffsetExclusive <= startOffset) {
+      return [];
+    }
+
+    const flatStartIndex = Math.max(
+      sectionIndexEntry.flatStartIndex,
+      sectionIndexEntry.flatStartIndex + startOffset,
+    );
+    const flatEndIndex = Math.min(
+      sectionIndexEntry.flatEndIndex,
+      sectionIndexEntry.flatStartIndex + endOffsetExclusive,
+    );
+    if (flatEndIndex <= flatStartIndex) {
+      return [];
+    }
+
+    return this.sourceFlatAssets.slice(flatStartIndex, flatEndIndex);
+  }
+
+  private sliceSectionAssets(
+    section: PhotoSection,
+    startOffset: number,
+    endOffsetExclusive: number,
+  ): Array<PhotoAsset> {
+    if (endOffsetExclusive <= startOffset) {
+      return [];
+    }
+
+    const slicedAssets: Array<PhotoAsset> = [];
+    let currentOffset = 0;
+    for (let rowIndex = 0; rowIndex < section.rows.length; rowIndex += 1) {
+      const row = section.rows[rowIndex];
+      const rowStartOffset = currentOffset;
+      const rowEndOffset = rowStartOffset + row.length;
+      currentOffset = rowEndOffset;
+      if (startOffset >= rowEndOffset || endOffsetExclusive <= rowStartOffset) {
+        continue;
+      }
+
+      const localRowStart = Math.max(0, startOffset - rowStartOffset);
+      const localRowEnd = Math.min(row.length, endOffsetExclusive - rowStartOffset);
+      for (let assetIndex = localRowStart; assetIndex < localRowEnd; assetIndex += 1) {
+        slicedAssets.push(row[assetIndex]);
+      }
+    }
+    return slicedAssets;
   }
 
   private resolveAnchorGridIndex(

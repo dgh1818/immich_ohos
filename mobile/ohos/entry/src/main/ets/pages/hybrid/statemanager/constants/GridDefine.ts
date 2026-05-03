@@ -26,7 +26,7 @@ export const DEFAULT_COLUMN: number[] = [16, 8, 4, 3];
 /**
  * 默认宫格图片间距
  */
-export const DEFAULT_GUTTER: number[] = [0, 0, 2, 2];
+export const DEFAULT_GUTTER: number[] = [0, 0, 0, 2];
 
 /**
  * 默认宫格缓存量

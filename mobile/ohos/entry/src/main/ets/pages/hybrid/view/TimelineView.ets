@@ -2,7 +2,7 @@ import common from '@ohos.app.ability.common';
 import * as Shared from '../PhotoGridShared';
 import { GridSnapshotController } from '../viewcontroller/GridSnapshotController';
 import { GridTitleBarMaskController } from '../viewcontroller/GridTitleBarMaskController';
-import { PhotoGridViewController, PhotoGridViewId } from '../viewcontroller/PhotoGridViewController';
+import { PhotoGridViewController, PhotoGridViewId, PhotoGridZIndex } from '../viewcontroller/PhotoGridViewController';
 import { PhotoGridViewModel } from '../viewmodel/PhotoGridViewModel';
 import { FixedIrregularView } from './FixedIrregularView';
 import { FloatingSectionOverlayView } from './FloatingSectionOverlayView';
@@ -57,6 +57,7 @@ export struct TimelineView {
     }
     .width('100%')
     .height('100%')
+    .backgroundColor($r('app.color.start_window_background'))
     .justifyContent(FlexAlign.Center)
     .alignItems(HorizontalAlign.Center);
   }
@@ -83,6 +84,7 @@ export struct TimelineView {
     }
     .width('100%')
     .height('100%')
+    .backgroundColor($r('app.color.start_window_background'))
     .justifyContent(FlexAlign.Center)
     .alignItems(HorizontalAlign.Center);
   }
@@ -153,7 +155,6 @@ export struct TimelineView {
       });
 
       MonthGridView({
-        visible: this.viewModel.monthGridState.visible,
         interactive: this.viewModel.monthGridState.interactive,
         warmActive: this.viewModel.monthGridState.warmActive,
         columns: this.viewModel.monthGridState.columns,
@@ -348,7 +349,8 @@ export struct TimelineView {
     .width('100%')
     .height('100%')
     .clip(false)
-    .backgroundColor(Color.Transparent)
+    .backgroundColor($r('app.color.start_window_background'))
+    .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
     .alignRules({
       top: { anchor: PhotoGridViewId.CONTAINER, align: VerticalAlign.Top },
       bottom: { anchor: PhotoGridViewId.CONTAINER, align: VerticalAlign.Bottom },
@@ -392,6 +394,8 @@ export struct TimelineView {
         this.buildGridLayers();
       }
 
+      this.buildBottomSafeAreaMask();
+
       if (this.viewController.isTitleBarMaskInit) {
         GridTitleBarMaskView({
           maskHeight: this.titleBarMaskController.height,
@@ -403,7 +407,8 @@ export struct TimelineView {
     .width('100%')
     .height('100%')
     .clip(false)
-    .backgroundColor(Color.Transparent);
+    .backgroundColor($r('app.color.start_window_background'))
+    .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM]);
   }
 
   build() {
@@ -418,7 +423,32 @@ export struct TimelineView {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor($r('sys.color.ohos_id_color_sub_background'))
-    .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP]);
+    .backgroundColor($r('app.color.start_window_background'))
+    .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM]);
+  }
+
+  @Builder
+  private buildBottomSafeAreaMask() {
+    if (this.viewModel.bottomAvoidHeight > 0) {
+      Column() {}
+        .width('100%')
+        .height(this.viewModel.bottomAvoidHeight + 18)
+        .zIndex(PhotoGridZIndex.GRID_SNAPSHOT + 1)
+        .alignRules({
+          bottom: { anchor: PhotoGridViewId.CONTAINER, align: VerticalAlign.Bottom },
+          start: { anchor: PhotoGridViewId.CONTAINER, align: HorizontalAlign.Start },
+          end: { anchor: PhotoGridViewId.CONTAINER, align: HorizontalAlign.End },
+        })
+        .linearGradient({
+          angle: 0,
+          colors: [
+            [0x0010141A, 0],
+            [0x4A10141A, 0.32],
+            [0xC610141A, 0.78],
+            [0xF010141A, 1],
+          ],
+        })
+        .hitTestBehavior(HitTestMode.None);
+    }
   }
 }

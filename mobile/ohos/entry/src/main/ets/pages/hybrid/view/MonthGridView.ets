@@ -91,8 +91,7 @@ export struct MonthGridView {
       .width('100%')
       .clip(false)
       .aspectRatio(1)
-      .visibility(Visibility.Hidden)
-      .backgroundColor(Color.Transparent);
+      .backgroundColor($r('app.color.start_window_background'));
   }
 
   @Builder
@@ -102,7 +101,7 @@ export struct MonthGridView {
         Column() {}
           .width('100%')
           .height(this.headSpacerHeight)
-          .backgroundColor(Color.Transparent);
+          .backgroundColor($r('app.color.start_window_background'));
       }
       .columnStart(0)
       .columnEnd(this.columns + 1);
@@ -126,7 +125,7 @@ export struct MonthGridView {
         Column() {}
           .width('100%')
           .height(this.tailSpacerHeight)
-          .backgroundColor(Color.Transparent);
+          .backgroundColor($r('app.color.start_window_background'));
       }
       .columnStart(0)
       .columnEnd(this.columns + 1);
@@ -160,12 +159,13 @@ export struct MonthGridView {
       .columnsGap(this.gap)
       .cachedCount(Math.max(1, this.cacheRows))
       .scrollBar(BarState.Off)
-      .edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
+      .edgeEffect(EdgeEffect.None)
       .draggable(false)
       .clip(false)
       .width('100%')
       .height('100%')
-      .backgroundColor(Color.Transparent)
+      .backgroundColor($r('app.color.start_window_background'))
+      .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
       .hitTestBehavior(this.visible && this.interactive ? HitTestMode.Default : HitTestMode.None)
       .onAreaChange((_oldValue: Area, newValue: Area): void => {
         this.areaChangeHandler(Number(newValue.width), Number(newValue.height));

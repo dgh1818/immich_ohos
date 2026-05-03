@@ -1,4 +1,6 @@
 import { common } from '@kit.AbilityKit';
+import { FlutterManager } from '@ohos/flutter_ohos';
+import window from '@ohos.window';
 import { LengthMetrics } from '@kit.ArkUI';
 import { HybridFlutterBridge } from '../../../bridge/HybridFlutterBridge';
 import * as Shared from '../PhotoGridShared';
@@ -109,6 +111,132 @@ const PRELOAD_TIMEOUT_MS: number = 180;
 const PINCH_SHRINK_ENTER_SCALE: number = 0.98;
 const EXPAND_MIN_OPACITY: number = 0.15;
 const GRID_CACHED_COUNT: number = 8;
+
+interface PhotoGridScrollIndexMetricBucket {
+  startedAt: number;
+  eventCount: number;
+  totalMs: number;
+  maxMs: number;
+  over16MsCount: number;
+  syncOffsetTotalMs: number;
+  syncOffsetMaxMs: number;
+  activeWindowTotalMs: number;
+  activeWindowMaxMs: number;
+  rowResolveTotalMs: number;
+  rowResolveMaxMs: number;
+  floatingSectionTotalMs: number;
+  floatingSectionMaxMs: number;
+  timelineVmTotalMs: number;
+  timelineVmMaxMs: number;
+  prefetchTotalMs: number;
+  prefetchMaxMs: number;
+  keepKeysTotalMs: number;
+  keepKeysMaxMs: number;
+}
+
+class PhotoGridScrollPerfStats {
+  private static readonly SUMMARY_INTERVAL_MS: number = 2000;
+  private static readonly SLOW_SCROLL_INDEX_MS: number = 16;
+  private static bucket: PhotoGridScrollIndexMetricBucket = PhotoGridScrollPerfStats.createBucket();
+
+  private static createBucket(): PhotoGridScrollIndexMetricBucket {
+    return {
+      startedAt: Date.now(),
+      eventCount: 0,
+      totalMs: 0,
+      maxMs: 0,
+      over16MsCount: 0,
+      syncOffsetTotalMs: 0,
+      syncOffsetMaxMs: 0,
+      activeWindowTotalMs: 0,
+      activeWindowMaxMs: 0,
+      rowResolveTotalMs: 0,
+      rowResolveMaxMs: 0,
+      floatingSectionTotalMs: 0,
+      floatingSectionMaxMs: 0,
+      timelineVmTotalMs: 0,
+      timelineVmMaxMs: 0,
+      prefetchTotalMs: 0,
+      prefetchMaxMs: 0,
+      keepKeysTotalMs: 0,
+      keepKeysMaxMs: 0,
+    };
+  }
+
+  private static hasMetrics(): boolean {
+    return PhotoGridScrollPerfStats.bucket.eventCount > 0;
+  }
+
+  private static reset(): void {
+    PhotoGridScrollPerfStats.bucket = PhotoGridScrollPerfStats.createBucket();
+  }
+
+  static noteScrollIndex(
+    totalMs: number,
+    syncOffsetMs: number,
+    activeWindowMs: number,
+    rowResolveMs: number,
+    floatingSectionMs: number,
+    timelineVmMs: number,
+    prefetchMs: number,
+    keepKeysMs: number,
+  ): void {
+    const bucket = PhotoGridScrollPerfStats.bucket;
+    bucket.eventCount += 1;
+    bucket.totalMs += totalMs;
+    bucket.maxMs = Math.max(bucket.maxMs, totalMs);
+    if (totalMs > PhotoGridScrollPerfStats.SLOW_SCROLL_INDEX_MS) {
+      bucket.over16MsCount += 1;
+    }
+    bucket.syncOffsetTotalMs += syncOffsetMs;
+    bucket.syncOffsetMaxMs = Math.max(bucket.syncOffsetMaxMs, syncOffsetMs);
+    bucket.activeWindowTotalMs += activeWindowMs;
+    bucket.activeWindowMaxMs = Math.max(bucket.activeWindowMaxMs, activeWindowMs);
+    bucket.rowResolveTotalMs += rowResolveMs;
+    bucket.rowResolveMaxMs = Math.max(bucket.rowResolveMaxMs, rowResolveMs);
+    bucket.floatingSectionTotalMs += floatingSectionMs;
+    bucket.floatingSectionMaxMs = Math.max(bucket.floatingSectionMaxMs, floatingSectionMs);
+    bucket.timelineVmTotalMs += timelineVmMs;
+    bucket.timelineVmMaxMs = Math.max(bucket.timelineVmMaxMs, timelineVmMs);
+    bucket.prefetchTotalMs += prefetchMs;
+    bucket.prefetchMaxMs = Math.max(bucket.prefetchMaxMs, prefetchMs);
+    bucket.keepKeysTotalMs += keepKeysMs;
+    bucket.keepKeysMaxMs = Math.max(bucket.keepKeysMaxMs, keepKeysMs);
+    PhotoGridScrollPerfStats.maybeFlush('interval');
+  }
+
+  private static maybeFlush(reason: string): void {
+    if (!PhotoGridScrollPerfStats.hasMetrics()) {
+      return;
+    }
+    if (Date.now() - PhotoGridScrollPerfStats.bucket.startedAt < PhotoGridScrollPerfStats.SUMMARY_INTERVAL_MS) {
+      return;
+    }
+    PhotoGridScrollPerfStats.flush(reason);
+  }
+
+  static flush(reason: string): void {
+    if (!PhotoGridScrollPerfStats.hasMetrics()) {
+      PhotoGridScrollPerfStats.reset();
+      return;
+    }
+    const bucket = PhotoGridScrollPerfStats.bucket;
+    const durationMs = Math.max(1, Date.now() - bucket.startedAt);
+    const avgMs = Math.round(bucket.totalMs / Math.max(1, bucket.eventCount));
+    console.info(
+      `[PhotoGridViewModel] scrollIndexMetrics reason=${reason} durationMs=${durationMs} ` +
+      `events=${bucket.eventCount} totalMs=${bucket.totalMs} avgMs=${avgMs} maxMs=${bucket.maxMs} over16Ms=${bucket.over16MsCount} ` +
+      `syncOffsetMs=${bucket.syncOffsetTotalMs} syncOffsetMaxMs=${bucket.syncOffsetMaxMs} ` +
+      `activeWindowMs=${bucket.activeWindowTotalMs} activeWindowMaxMs=${bucket.activeWindowMaxMs} ` +
+      `rowResolveMs=${bucket.rowResolveTotalMs} rowResolveMaxMs=${bucket.rowResolveMaxMs} ` +
+      `floatingSectionMs=${bucket.floatingSectionTotalMs} floatingSectionMaxMs=${bucket.floatingSectionMaxMs} ` +
+      `timelineVmMs=${bucket.timelineVmTotalMs} timelineVmMaxMs=${bucket.timelineVmMaxMs} ` +
+      `prefetchMs=${bucket.prefetchTotalMs} prefetchMaxMs=${bucket.prefetchMaxMs} ` +
+      `keepKeysMs=${bucket.keepKeysTotalMs} keepKeysMaxMs=${bucket.keepKeysMaxMs}`,
+    );
+    PhotoGridScrollPerfStats.reset();
+  }
+}
 
 const FORM_ORDER: Array<FormIndex> = [
   FormIndex.YEAR,
@@ -265,6 +393,10 @@ export class PhotoGridViewModel {
   public topInsetHeight: number = 56;
   public bottomAvoidHeight: number = 0;
   private gridHeadSpacerHeight: number = 0;
+  private mainWindow?: window.Window = undefined;
+  private readonly avoidAreaChangeCallback = (data: window.AvoidAreaOptions): void => {
+    this.syncBottomAvoidHeightFromWindow(`avoidAreaChange:${data.type}`);
+  };
 
   private readonly dataLoadListener: DataLoadListener = {
     onDataLoaded: (): void => {
@@ -344,6 +476,7 @@ export class PhotoGridViewModel {
     Thumbnail.setPrefetchRuntimeMode(Shared.PrefetchRuntimeMode.NORMAL);
     this.applyBaseFormState();
     this.syncFormFsmToActiveForm();
+    this.attachMainWindowAvoidAreaObserver();
     this.syncStateProxyRuntime('constructor');
   }
 
@@ -373,6 +506,7 @@ export class PhotoGridViewModel {
     }
 
     this.initialized = true;
+    this.attachMainWindowAvoidAreaObserver();
     Thumbnail.primeRemoteThumbnailCacheIndex(this.context);
     this.initGridVcs();
     this.timelineViewModel.addDataLoadListener(this.dataLoadListener);
@@ -384,6 +518,7 @@ export class PhotoGridViewModel {
   }
 
   public release(): void {
+    this.detachMainWindowAvoidAreaObserver();
     this.cancelPendingAnimations();
     this.initialRemotePredownloadToken += 1;
     this.initialRemotePredownloadRunning = false;
@@ -446,6 +581,70 @@ export class PhotoGridViewModel {
     this.syncStateProxyRuntime('release');
   }
 
+  private attachMainWindowAvoidAreaObserver(): void {
+    if (this.mainWindow !== undefined) {
+      this.syncBottomAvoidHeightFromWindow('attachAvoidAreaObserver:reuse');
+      return;
+    }
+
+    try {
+      const flutterManager = FlutterManager.getInstance();
+      const uiAbility = flutterManager.getUIAbility(this.context);
+      const windowStage = flutterManager.getWindowStage(uiAbility);
+      this.mainWindow = windowStage.getMainWindowSync();
+      this.mainWindow.on('avoidAreaChange', this.avoidAreaChangeCallback);
+      this.syncBottomAvoidHeightFromWindow('attachAvoidAreaObserver');
+    } catch (error) {
+      console.error(`[PhotoGridViewModel] failed to attach avoid area observer: ${JSON.stringify(error)}`);
+    }
+  }
+
+  private detachMainWindowAvoidAreaObserver(): void {
+    if (this.mainWindow === undefined) {
+      return;
+    }
+
+    try {
+      this.mainWindow.off('avoidAreaChange', this.avoidAreaChangeCallback);
+    } catch (error) {
+      console.error(`[PhotoGridViewModel] failed to detach avoid area observer: ${JSON.stringify(error)}`);
+    }
+    this.mainWindow = undefined;
+  }
+
+  private syncBottomAvoidHeightFromWindow(reason: string): void {
+    const nextBottomAvoidHeight = this.resolveBottomAvoidHeightFromWindow();
+    if (Math.abs(this.bottomAvoidHeight - nextBottomAvoidHeight) <= 0.5) {
+      return;
+    }
+
+    this.bottomAvoidHeight = nextBottomAvoidHeight;
+    console.info(
+      `[PhotoGridViewModel] bottomAvoidHeight reason=${reason} value=${this.bottomAvoidHeight}`,
+    );
+    this.syncStateProxyRuntime(reason);
+    this.notifyStateChanged();
+  }
+
+  private resolveBottomAvoidHeightFromWindow(): number {
+    if (this.mainWindow === undefined) {
+      return this.bottomAvoidHeight;
+    }
+
+    try {
+      const systemAvoidArea = this.mainWindow.getWindowAvoidArea(window.AvoidAreaType.TYPE_SYSTEM);
+      const navigationAvoidArea = this.mainWindow.getWindowAvoidArea(window.AvoidAreaType.TYPE_NAVIGATION_INDICATOR);
+      const gestureAvoidArea = this.mainWindow.getWindowAvoidArea(window.AvoidAreaType.TYPE_SYSTEM_GESTURE);
+      const systemBottom = systemAvoidArea?.bottomRect.height ?? 0;
+      const navigationBottom = navigationAvoidArea?.bottomRect.height ?? 0;
+      const gestureBottom = gestureAvoidArea?.bottomRect.height ?? 0;
+      return Math.max(0, systemBottom, navigationBottom, gestureBottom);
+    } catch (error) {
+      console.error(`[PhotoGridViewModel] failed to resolve bottom avoid height: ${JSON.stringify(error)}`);
+      return this.bottomAvoidHeight;
+    }
+  }
+
   public async reload(): Promise<void> {
     this.hasCompletedFirstLoad = false;
     this.isLoading = true;
@@ -500,7 +699,6 @@ export class PhotoGridViewModel {
     const heightChanged = Math.abs(this.listHeight - height) > 0.5;
     this.listWidth = width;
     this.listHeight = height;
-    this.syncRequestSizes();
     this.refreshCacheRows();
     if (widthChanged || heightChanged) {
       if (this.hasCompletedFirstLoad && !this.isGridScrolling && !this.pinchActive) {
@@ -544,7 +742,6 @@ export class PhotoGridViewModel {
     this.lastForwardPrefetchEnd = this.lastVisibleGridEnd;
     this.lastBackwardPrefetchStart = this.lastVisibleGridStart;
     Thumbnail.setRuntimeScrollActive(true);
-    Thumbnail.ThumbnailRequestLimiter.drainStalePrefetchWaiters();
     this.timelineViewModel.onScrollStart();
     this.notifyStateChanged();
   }
@@ -556,6 +753,7 @@ export class PhotoGridViewModel {
     this.syncCurrentScrollOffset(form);
     this.isGridScrolling = false;
     this.updateTouchScrollEnd();
+    this.updateViewportThumbnailKeepKeys(true);
     Thumbnail.setRuntimeScrollActive(false);
     this.timelineViewModel.onScrollStop();
     this.syncSourceWhileScrolling(false);
@@ -565,6 +763,7 @@ export class PhotoGridViewModel {
     this.reconcileFormGridItems(this.activeForm, this.currentGridItems);
     this.prefetchVisibleAndAheadAfterScrollStop(false);
     this.scheduleIdlePrefetchWork();
+    PhotoGridScrollPerfStats.flush('scroll-stop');
     this.notifyStateChanged();
   }
 
@@ -581,20 +780,53 @@ export class PhotoGridViewModel {
       return;
     }
 
+    const startedAt = Date.now();
     const previousGridStart = this.lastVisibleGridStart;
     const previousGridEnd = this.lastVisibleGridEnd;
     this.lastVisibleGridStart = Math.max(0, start);
     this.lastVisibleGridEnd = Math.max(this.lastVisibleGridStart, end);
     this.visibleGridCapacity = Math.max(1, this.lastVisibleGridEnd - this.lastVisibleGridStart + 1);
     this.updateLastScrollDirection(previousGridStart, previousGridEnd, this.lastVisibleGridStart, this.lastVisibleGridEnd);
+
+    const syncOffsetStartedAt = Date.now();
     this.syncCurrentScrollOffset(form);
+    const syncOffsetMs = Date.now() - syncOffsetStartedAt;
+
+    const activeWindowStartedAt = Date.now();
     this.maybeShiftActiveWindowWhileScrolling();
+    const activeWindowMs = Date.now() - activeWindowStartedAt;
+
+    const rowResolveStartedAt = Date.now();
     const rowStart = this.resolveTimelineRowIndexFromGridIndex(start, form);
     const rowEnd = this.resolveTimelineRowIndexFromGridIndex(end, form);
+    const rowResolveMs = Date.now() - rowResolveStartedAt;
+
+    const floatingSectionStartedAt = Date.now();
     this.updateFloatingSection(rowStart);
+    const floatingSectionMs = Date.now() - floatingSectionStartedAt;
+
+    const timelineVmStartedAt = Date.now();
     this.timelineViewModel.onScrollIndex(rowStart, rowEnd);
-    this.prefetchAheadWhileScrolling(previousGridStart, previousGridEnd, this.lastVisibleGridStart, this.lastVisibleGridEnd);
+    const timelineVmMs = Date.now() - timelineVmStartedAt;
+
+    const keepKeysStartedAt = Date.now();
     this.updateViewportThumbnailKeepKeys(false);
+    const keepKeysMs = Date.now() - keepKeysStartedAt;
+
+    const prefetchStartedAt = Date.now();
+    this.prefetchAheadWhileScrolling(previousGridStart, previousGridEnd, this.lastVisibleGridStart, this.lastVisibleGridEnd);
+    const prefetchMs = Date.now() - prefetchStartedAt;
+
+    PhotoGridScrollPerfStats.noteScrollIndex(
+      Date.now() - startedAt,
+      syncOffsetMs,
+      activeWindowMs,
+      rowResolveMs,
+      floatingSectionMs,
+      timelineVmMs,
+      prefetchMs,
+      keepKeysMs,
+    );
   }
 
   public onFormDidScroll(form: FormIndex, _offset: number, _state: number): void {
@@ -721,9 +953,6 @@ export class PhotoGridViewModel {
     this.showPreviewForm(this.targetForm);
     this.setFormWarmActive(this.targetForm, true);
     this.syncLivePinchShadowState(this.pinchState);
-
-    this.getGridState(this.activeForm).cacheRows = GRID_CACHED_COUNT;
-    this.getGridState(this.targetForm).cacheRows = GRID_CACHED_COUNT;
     this.refreshFormZIndices(this.targetForm);
     this.notifyStateChanged();
   }
@@ -892,7 +1121,7 @@ export class PhotoGridViewModel {
     if (form === FormIndex.INVALID) {
       return 0;
     }
-    return Math.max(0, this.bottomAvoidHeight);
+    return 0;
   }
 
   public resolveTailFillPositions(form: FormIndex): Array<number> {
@@ -1123,8 +1352,8 @@ export class PhotoGridViewModel {
     FORM_ORDER.forEach((form: FormIndex) => {
       const state = this.getGridState(form);
       const isActiveForm = form === this.activeForm;
-      state.cacheRows = GRID_CACHED_COUNT;
       state.warmActive = false;
+      state.cacheRows = this.resolveCacheRowsForForm(form);
       state.scaleValue = 1;
       state.opacityValue = isActiveForm ? 1 : 0;
       state.zIndexValue = this.resolveBaseZIndex(form);
@@ -1171,7 +1400,9 @@ export class PhotoGridViewModel {
   }
 
   private setFormWarmActive(form: FormIndex, value: boolean): void {
-    this.getGridState(form).warmActive = value;
+    const state = this.getGridState(form);
+    state.warmActive = value;
+    state.cacheRows = this.resolveCacheRowsForForm(form);
   }
 
   private setFormOpacity(form: FormIndex, value: number): void {
@@ -1197,15 +1428,47 @@ export class PhotoGridViewModel {
     state.attributeUpdater.updateZIndex(value);
   }
 
-  private syncRequestSizes(): void {
-    FORM_ORDER.forEach((form: FormIndex) => {
-      const state = this.getGridState(form);
-      state.cacheRows = GRID_CACHED_COUNT;
-    });
+  private resolveScreenRowsForColumns(columns: number): number {
+    if (this.listWidth <= 0 || this.listHeight <= 0 || columns <= 0) {
+      if (columns >= 8) {
+        return 12;
+      }
+      return columns >= Shared.GRID_COLUMNS ? 8 : 6;
+    }
+
+    const totalGap = this.resolveGridGap(getFormIndexByColumns(columns)) * Math.max(0, columns - 1);
+    const rowHeight = Math.max(1, (this.listWidth - totalGap) / columns);
+    return Math.max(1, Math.ceil(this.listHeight / rowHeight));
+  }
+
+  private resolveActiveCacheRows(columns: number): number {
+    if (columns > Shared.GRID_COLUMNS) {
+      return Math.max(GRID_CACHED_COUNT, Shared.resolveListCacheCount(columns));
+    }
+
+    const screenRows = this.resolveScreenRowsForColumns(columns);
+    return Math.max(
+      GRID_CACHED_COUNT,
+      screenRows * Shared.HYBRID_ACTIVE_TILE_RUNWAY_SCREEN_MULTIPLIER,
+    );
+  }
+
+  private resolveDormantCacheRows(columns: number): number {
+    return Math.max(1, this.resolveViewportRowsForColumns(columns));
+  }
+
+  private resolveCacheRowsForForm(form: FormIndex): number {
+    const state = this.getGridState(form);
+    if (form === this.activeForm || state.warmActive) {
+      return this.resolveActiveCacheRows(state.columns);
+    }
+    return this.resolveDormantCacheRows(state.columns);
   }
 
   private refreshCacheRows(): void {
-    this.syncRequestSizes();
+    FORM_ORDER.forEach((form: FormIndex) => {
+      this.getGridState(form).cacheRows = this.resolveCacheRowsForForm(form);
+    });
   }
 
   private resolveViewportRowsForColumns(columns: number): number {
@@ -1426,16 +1689,18 @@ export class PhotoGridViewModel {
     this.preparedTargetForm = FormIndex.INVALID;
     this.preparedTargetVersion = -1;
     this.resetPreloadedForms();
+    Thumbnail.ThumbnailCache.setActiveColumns(this.getGridState(this.activeForm).columns);
+    this.updatePrefetchRuntimeMode();
+    if (!this.isGridScrolling && !this.pinchActive) {
+      this.prefetchVisibleAndAheadAfterScrollStop(false);
+    }
     this.syncCommittedFormDataSource();
     this.applyBaseFormState();
     this.updateFloatingSection(this.resolveVisibleTimelineRowIndex());
     if (this.shouldKeepAdjacentFormsWarm()) {
       this.preloadAdjacentForms(true);
     }
-    Thumbnail.ThumbnailCache.setActiveColumns(this.getGridState(this.activeForm).columns);
-    this.updatePrefetchRuntimeMode();
     if (!this.isGridScrolling && !this.pinchActive) {
-      this.prefetchVisibleAndAheadAfterScrollStop(false);
       this.scheduleIdlePrefetchWork();
     }
     this.notifyStateChanged();
@@ -1628,6 +1893,7 @@ export class PhotoGridViewModel {
     this.transitionFromForm = targetForm;
     this.transitionToForm = targetForm;
     this.updateSwitchTransitionState(true, sourceForm, targetForm, 'commitPinchTransition');
+    this.refreshCacheRows();
     this.currentScrollOffsetY = commitState.targetScrollOffset;
     this.timelineViewModel.silentSetGridColumns(this.getGridState(targetForm).columns, commitState);
     this.syncCommittedLocalState();
@@ -2011,6 +2277,20 @@ export class PhotoGridViewModel {
       return 0;
     }
 
+    const effectiveBudget = this.isGridScrolling
+      ? Math.min(
+        budget,
+        Math.max(
+          0,
+          Shared.HYBRID_SCROLL_COMPRESSED_BUFFER_PRELOAD_LOW_WATERMARK -
+            Thumbnail.getRemoteThumbnailStatsSnapshot().compressedBufferCacheEntryCount,
+        ),
+      )
+      : budget;
+    if (effectiveBudget <= 0) {
+      return 0;
+    }
+
     const requestSize = this.resolveRequestSize(this.activeForm);
     const safeStart = Math.max(0, startIndex);
     const safeEnd = Math.min(endIndex, this.currentGridItems.length - 1);
@@ -2018,7 +2298,7 @@ export class PhotoGridViewModel {
       return 0;
     }
 
-    let remainingBudget = budget;
+    let remainingBudget = effectiveBudget;
     let scheduledCount = 0;
     const effectiveSeenRemoteUrls: Set<string> = seenRemoteUrls ?? new Set<string>();
     for (let index = safeStart; index <= safeEnd; index += 1) {
@@ -2319,8 +2599,8 @@ export class PhotoGridViewModel {
       : range.startIndex;
     const memoryAheadCount = Math.max(0, memoryBudget);
     const memoryEnd = Math.min(range.endIndex, visibleEnd + memoryAheadCount);
-    this.preloadNearbyVisibleRunwayToMemory(allowDiskPredownload);
     this.updateViewportThumbnailKeepKeys(true);
+    this.preloadNearbyVisibleRunwayToMemory(allowDiskPredownload);
     if (!allowDiskPredownload) {
       return;
     }
@@ -2373,8 +2653,13 @@ export class PhotoGridViewModel {
     const visibleStart = Math.max(0, Math.min(this.lastVisibleGridStart, this.currentGridItems.length - 1));
     const visibleEnd = Math.max(visibleStart, Math.min(this.lastVisibleGridEnd, this.currentGridItems.length - 1));
     const visibleCapacity = Math.max(1, visibleEnd - visibleStart + 1);
-    const forwardKeepCount = Shared.resolveNearbyMemoryPredecodeBudget(visibleCapacity);
-    const reverseKeepCount = visibleCapacity;
+    const nearbyKeepCount = Shared.resolveNearbyMemoryPredecodeBudget(visibleCapacity);
+    const forwardKeepCount = this.lastScrollDirection >= 0
+      ? nearbyKeepCount
+      : visibleCapacity;
+    const reverseKeepCount = this.lastScrollDirection >= 0
+      ? visibleCapacity
+      : nearbyKeepCount;
     const keepStart = this.lastScrollDirection >= 0
       ? Math.max(0, visibleStart - reverseKeepCount)
       : Math.max(0, visibleStart - forwardKeepCount);
@@ -2391,9 +2676,6 @@ export class PhotoGridViewModel {
     }
 
     Thumbnail.ThumbnailCache.updateViewportKeepKeys(keepKeys);
-    if (keepKeys.size > 0) {
-      Thumbnail.ThumbnailCache.pruneOutsideKeys(keepKeys);
-    }
   }
 
   private maybeShiftActiveWindowWhileScrolling(): void {
@@ -2532,6 +2814,43 @@ export class PhotoGridViewModel {
       }
       selected.push(asset);
     }
+    return selected;
+  }
+
+  private collectCompressedBufferPreloadCandidates(
+    sections: Array<PhotoSection>,
+    includeAllAssets: boolean,
+    requestSize: number,
+    limit: number,
+  ): Array<PhotoAsset> {
+    if (sections.length <= 0 || limit <= 0) {
+      return [];
+    }
+
+    const assets = this.timelineLayoutBuilder.collectPredownloadAssets(sections, includeAllAssets);
+    const selected: Array<PhotoAsset> = [];
+    const seenRemoteUrls: Set<string> = new Set();
+    for (let index = 0; index < assets.length; index += 1) {
+      if (selected.length >= limit) {
+        return selected;
+      }
+
+      const asset = assets[index];
+      const remoteUrl = asset.thumbnailUrl;
+      if (!remoteUrl || remoteUrl.length <= 0 || seenRemoteUrls.has(remoteUrl)) {
+        continue;
+      }
+      seenRemoteUrls.add(remoteUrl);
+
+      if (Thumbnail.hasRemoteThumbnailCompressedData(remoteUrl, requestSize)) {
+        continue;
+      }
+      if (!Thumbnail.hasPersistedRemoteThumbnailCache(this.context, remoteUrl, requestSize, false)) {
+        continue;
+      }
+      selected.push(asset);
+    }
+
     return selected;
   }
 
@@ -2726,6 +3045,67 @@ export class PhotoGridViewModel {
       scheduledCount += batch.length;
       await Shared.delay(Shared.HYBRID_BACKGROUND_PREDOWNLOAD_YIELD_MS);
     }
+    return scheduledCount;
+  }
+
+  private async preloadCompressedBufferAssets(
+    assets: Array<PhotoAsset>,
+    requestSize: number,
+    stopOnInteraction: boolean,
+    batchSize: number,
+  ): Promise<number> {
+    if (assets.length <= 0) {
+      return 0;
+    }
+
+    const safeBatchSize = Math.max(1, batchSize);
+    let scheduledCount = 0;
+    for (let index = 0; index < assets.length; index += safeBatchSize) {
+      if (stopOnInteraction && (this.isGridScrolling || this.pinchActive)) {
+        return scheduledCount;
+      }
+
+      const batch = assets.slice(index, index + safeBatchSize);
+      for (let batchIndex = 0; batchIndex < batch.length; batchIndex += 1) {
+        if (Thumbnail.preloadRemoteAssetThumbnailCompressedData(this.context, batch[batchIndex], requestSize)) {
+          scheduledCount += 1;
+        }
+      }
+
+      await Shared.delay(Shared.HYBRID_BACKGROUND_PREDOWNLOAD_YIELD_MS);
+    }
+
+    return scheduledCount;
+  }
+
+  private async preloadLoadedCompressedBuffersToTarget(): Promise<number> {
+    const targetCount = Thumbnail.resolveIdleCompressedBufferPreloadTarget();
+    const requestSize = Shared.resolveCanonicalRequestSizeBucket();
+    const currentCount = Thumbnail.getRemoteThumbnailStatsSnapshot().compressedBufferCacheEntryCount;
+    if (currentCount >= targetCount) {
+      return 0;
+    }
+
+    const candidates = this.collectCompressedBufferPreloadCandidates(
+      this.timelineDataManager.getSourceSectionsForForm(FormIndex.DAY),
+      true,
+      requestSize,
+      targetCount - currentCount,
+    );
+    if (candidates.length <= 0) {
+      return 0;
+    }
+
+    const scheduledCount = await this.preloadCompressedBufferAssets(
+      candidates,
+      requestSize,
+      true,
+      Shared.HYBRID_BACKGROUND_PREDOWNLOAD_BATCH_SIZE,
+    );
+    console.info(
+      `[PhotoGridViewModel] idle compressed buffer preload: current=${currentCount} target=${targetCount} ` +
+        `candidates=${candidates.length} scheduled=${scheduledCount}`,
+    );
     return scheduledCount;
   }
 
@@ -3445,10 +3825,19 @@ export class PhotoGridViewModel {
     Thumbnail.trimRemoteThumbnailCacheIfNeeded(this.context);
     this.startInitialRemotePredownloadIfNeeded();
     if (this.initialRemotePredownloadRunning || !this.initialRemotePredownloadCompleted) {
+      this.prefetchVisibleAndAheadAfterScrollStop(false);
+      if (!this.shouldAbortIdlePrefetchWork(token)) {
+        this.scheduleIdlePrefetchWork();
+      }
       return;
     }
 
     this.prefetchVisibleAndAheadAfterScrollStop(true);
+    if (this.shouldAbortIdlePrefetchWork(token)) {
+      return;
+    }
+
+    await this.preloadLoadedCompressedBuffersToTarget();
     if (this.shouldAbortIdlePrefetchWork(token)) {
       return;
     }

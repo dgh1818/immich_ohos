@@ -6,7 +6,7 @@
   - `F:\immich_ohos\mobile\ohos\entry\src\main\ets\pages\hybrid`
 - The current active hybrid timeline entry path is:
   - `PhotoGridPage -> PhotoGridBasePage -> PhotoGridViewBuilder -> TimelinePageLoader -> TimelineView`
-- The `HybridPhotoGridView` / `HybridPhotoGridVm` 3-grid pipeline exists in the same directory, but it is not the current active entry path.
+- The legacy `HybridPhotoGrid*` experimental implementations have been removed from this directory.
 
 ## Alignment target
 
@@ -25,17 +25,20 @@
   - `MonthGridView`
   - `DayGridView`
   - `GroupGridView`
-- Unless explicitly requested, do not treat the inactive 3-grid path as the source of truth for timeline behavior.
+- Treat the active multi-form/FSM path as the only source of truth for timeline behavior unless a new alternative path is explicitly introduced.
 
 ## Validation
 
 - Validate hybrid timeline changes from:
   - `F:\immich_ohos\mobile`
-- Preferred build command:
-  - `flutter build hap --release`
-- Do not prepend the build command with an inline PowerShell environment assignment such as:
-  - `{ $env:DEVECO_SDK_HOME = 'C:\Program Files\Huawei\DevEco Studio\sdk' }`
-- If the plain `flutter build hap --release` command succeeds, ignore warnings about missing `DEVECO_SDK_HOME`.
+- Preferred build and run method:
+  - use codegenie MCP build via `mcp_codegenie-mcp_build_project`
+  - use codegenie MCP app launch via `mcp_codegenie-mcp_start_app`
+  - prefer `build_intent: 'Release'` for hybrid timeline validation unless the task needs another intent
+- When a codegenie build writes a large output artifact file, determine success from a terminal tail first:
+  - run `Get-Content <codegenie-output-file> -Tail 30 | Out-String`
+  - use the tail result to check for final `BUILD SUCCESSFUL` / failure lines instead of reading the full artifact file first
+- Do not use terminal `flutter build hap --release`, `flutter run`, `hdc install`, `hdc shell aa start`, or workspace build/run tasks for routine hybrid timeline validation unless explicitly requested.
 
 ## Automated timeline stress test
 
@@ -50,9 +53,12 @@
 
 ## Recommended test sequence
 
-- Build from repo root:
-  - `flutter build hap --release`
-- Install and launch on device before running the stress script.
+- Build from repo root with codegenie MCP:
+  - `mcp_codegenie-mcp_build_project` with `build_intent: 'Release'`
+- For routine launch/run, start the app with codegenie MCP:
+  - `mcp_codegenie-mcp_start_app`
+  - unless the task requires another target, use the default `entry` / `EntryAbility` / `default`
+- Only use the stress script's install/launch flags when the stress run specifically needs a fresh install and automated launch.
 - Keep the device awake before and during the test:
   - `power-shell wakeup`
   - `power-shell timeout -o 3600000`
@@ -106,4 +112,4 @@
 - A large memory jump after stress, especially in:
   - `ark ts heap`
   - `Graph`
-  means the timeline still has a real performance problem even when hitch counters stay at zero.codegenie
+  means the timeline still has a real performance problem even when hitch counters stay at zero.

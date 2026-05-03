@@ -4,10 +4,12 @@ import { photoAccessHelper } from '@kit.MediaLibraryKit';
 import {
   HYBRID_ENABLE_REMOTE_THUMBNAIL_DISK_WRITES,
   HYBRID_GRID_COLUMNS,
+  HYBRID_IDLE_COMPRESSED_BUFFER_PRELOAD_TARGET,
   HYBRID_MAX_CONCURRENT_REMOTE_WARMUP_DOWNLOADS,
   HYBRID_MAX_CONCURRENT_THUMBNAIL_REQUESTS,
   HYBRID_PREFETCH_READY_RETENTION_MS,
   HYBRID_REMOTE_THUMBNAIL_CACHE_TRIM_TARGET_BYTES,
+  HYBRID_SCROLL_COMPRESSED_BUFFER_PRELOAD_LOW_WATERMARK,
   HYBRID_SCROLL_PREFETCH_LIMIT,
   HYBRID_SCROLL_VISIBLE_THUMBNAIL_LIMIT,
   HYBRID_THUMBNAIL_RELEASE_DELAY_MS,
@@ -52,6 +54,29 @@ interface HybridPrefetchWaiter {
 interface HybridLoadedThumbnail {
   pixelMap: PixelMap;
   remoteSourceKind: Disk.HybridRemoteThumbnailSourceKind;
+  remoteLoadPath: Disk.HybridRemoteThumbnailLoadPath;
+}
+
+enum HybridReadyAcquireState {
+  HIT = 0,
+  MISS_NO_ENTRY = 1,
+  MISS_LOADING_PREFETCH = 2,
+  MISS_LOADING_VISIBLE = 3,
+  MISS_NOT_READY = 4,
+}
+
+enum HybridRemotePrefetchRequestState {
+  SCHEDULED = 0,
+  SKIP_READY = 1,
+  SKIP_LOADING_PREFETCH = 2,
+  SKIP_LOADING_VISIBLE = 3,
+}
+
+enum HybridRemotePrefetchResultState {
+  COMPLETE = 0,
+  FAIL = 1,
+  STALE = 2,
+  READY_EVICT = 3,
 }
 
 interface HybridThumbnailMetricBucket {
@@ -62,10 +87,30 @@ interface HybridThumbnailMetricBucket {
   visibleLoadOver16Ms: number;
   visibleRemoteLoadCount: number;
   visibleRemoteMemoryReadyCount: number;
+  visibleRemoteResidentReadyCount: number;
   visibleRemotePrefetchJoinCount: number;
+  visibleRemotePrefetchUpgradeCount: number;
+  visibleRemoteCompressedBufferHitCount: number;
+  visibleRemoteDeferredWriteHitCount: number;
+  visibleRemotePersistedFileReadCount: number;
   visibleRemoteFileHitCount: number;
   visibleRemotePendingHitCount: number;
   visibleRemoteNetworkMissCount: number;
+  visibleRemoteReadyAcquireHitCount: number;
+  visibleRemoteReadyAcquireMissCount: number;
+  visibleRemoteReadyAcquireMissNoEntryCount: number;
+  visibleRemoteReadyAcquireMissLoadingPrefetchCount: number;
+  visibleRemoteReadyAcquireMissLoadingVisibleCount: number;
+  visibleRemoteReadyAcquireMissNotReadyCount: number;
+  remotePrefetchRequestCount: number;
+  remotePrefetchScheduledCount: number;
+  remotePrefetchSkipReadyCount: number;
+  remotePrefetchSkipLoadingPrefetchCount: number;
+  remotePrefetchSkipLoadingVisibleCount: number;
+  remotePrefetchCompleteCount: number;
+  remotePrefetchFailCount: number;
+  remotePrefetchStaleCount: number;
+  remotePrefetchReadyEvictCount: number;
   releaseCount: number;
   releaseZeroRefCount: number;
   releaseRetainedCount: number;
@@ -91,6 +136,8 @@ interface HybridRemoteThumbnailStatsDelta {
   highWaterMaxWaitMs: number;
   deferredWriteQueueSize: number;
   deferredWriteQueueBytes: number;
+  compressedBufferCacheEntryCount: number;
+  compressedBufferCacheBytes: number;
 }
 
 class HybridThumbnailPerfStats {
@@ -108,10 +155,30 @@ class HybridThumbnailPerfStats {
       visibleLoadOver16Ms: 0,
       visibleRemoteLoadCount: 0,
       visibleRemoteMemoryReadyCount: 0,
+      visibleRemoteResidentReadyCount: 0,
       visibleRemotePrefetchJoinCount: 0,
+      visibleRemotePrefetchUpgradeCount: 0,
+      visibleRemoteCompressedBufferHitCount: 0,
+      visibleRemoteDeferredWriteHitCount: 0,
+      visibleRemotePersistedFileReadCount: 0,
       visibleRemoteFileHitCount: 0,
       visibleRemotePendingHitCount: 0,
       visibleRemoteNetworkMissCount: 0,
+      visibleRemoteReadyAcquireHitCount: 0,
+      visibleRemoteReadyAcquireMissCount: 0,
+      visibleRemoteReadyAcquireMissNoEntryCount: 0,
+      visibleRemoteReadyAcquireMissLoadingPrefetchCount: 0,
+      visibleRemoteReadyAcquireMissLoadingVisibleCount: 0,
+      visibleRemoteReadyAcquireMissNotReadyCount: 0,
+      remotePrefetchRequestCount: 0,
+      remotePrefetchScheduledCount: 0,
+      remotePrefetchSkipReadyCount: 0,
+      remotePrefetchSkipLoadingPrefetchCount: 0,
+      remotePrefetchSkipLoadingVisibleCount: 0,
+      remotePrefetchCompleteCount: 0,
+      remotePrefetchFailCount: 0,
+      remotePrefetchStaleCount: 0,
+      remotePrefetchReadyEvictCount: 0,
       releaseCount: 0,
       releaseZeroRefCount: 0,
       releaseRetainedCount: 0,
@@ -140,6 +207,13 @@ class HybridThumbnailPerfStats {
 
   private static hasMetrics(bucket: HybridThumbnailMetricBucket): boolean {
     return bucket.visibleLoadCount > 0 ||
+      bucket.visibleRemoteReadyAcquireHitCount > 0 ||
+      bucket.visibleRemoteReadyAcquireMissCount > 0 ||
+      bucket.remotePrefetchRequestCount > 0 ||
+      bucket.remotePrefetchCompleteCount > 0 ||
+      bucket.remotePrefetchFailCount > 0 ||
+      bucket.remotePrefetchStaleCount > 0 ||
+      bucket.remotePrefetchReadyEvictCount > 0 ||
       bucket.releaseCount > 0 ||
       bucket.pruneCount > 0 ||
       bucket.pruneDeferredCount > 0;
@@ -162,6 +236,7 @@ class HybridThumbnailPerfStats {
     remoteVisibleLoad: boolean,
     remoteMemoryReady: boolean,
     remoteSourceKind: Disk.HybridRemoteThumbnailSourceKind,
+    remoteLoadPath: Disk.HybridRemoteThumbnailLoadPath,
     joinedInflightPrefetch: boolean,
   ): void {
     const bucket = HybridThumbnailPerfStats.resolveBucket(scrolling);
@@ -176,8 +251,22 @@ class HybridThumbnailPerfStats {
       if (remoteMemoryReady) {
         bucket.visibleRemoteMemoryReadyCount += 1;
       }
+      if (
+        remoteMemoryReady ||
+        remoteSourceKind === Disk.HybridRemoteThumbnailSourceKind.PERSISTED_FILE ||
+        remoteSourceKind === Disk.HybridRemoteThumbnailSourceKind.PENDING_WRITE
+      ) {
+        bucket.visibleRemoteResidentReadyCount += 1;
+      }
       if (joinedInflightPrefetch) {
         bucket.visibleRemotePrefetchJoinCount += 1;
+      }
+      if (remoteLoadPath === Disk.HybridRemoteThumbnailLoadPath.COMPRESSED_BUFFER) {
+        bucket.visibleRemoteCompressedBufferHitCount += 1;
+      } else if (remoteLoadPath === Disk.HybridRemoteThumbnailLoadPath.DEFERRED_WRITE) {
+        bucket.visibleRemoteDeferredWriteHitCount += 1;
+      } else if (remoteLoadPath === Disk.HybridRemoteThumbnailLoadPath.PERSISTED_FILE) {
+        bucket.visibleRemotePersistedFileReadCount += 1;
       }
       if (remoteSourceKind === Disk.HybridRemoteThumbnailSourceKind.PERSISTED_FILE) {
         bucket.visibleRemoteFileHitCount += 1;
@@ -186,6 +275,88 @@ class HybridThumbnailPerfStats {
       } else if (remoteSourceKind === Disk.HybridRemoteThumbnailSourceKind.NETWORK_MISS) {
         bucket.visibleRemoteNetworkMissCount += 1;
       }
+    }
+    HybridThumbnailPerfStats.maybeFlush(scrolling, 'interval');
+  }
+
+  static noteVisibleReadyAcquire(
+    scrolling: boolean,
+    isRemoteAsset: boolean,
+    state: HybridReadyAcquireState,
+  ): void {
+    if (!isRemoteAsset) {
+      return;
+    }
+
+    const bucket = HybridThumbnailPerfStats.resolveBucket(scrolling);
+    if (state === HybridReadyAcquireState.HIT) {
+      bucket.visibleRemoteReadyAcquireHitCount += 1;
+    } else {
+      bucket.visibleRemoteReadyAcquireMissCount += 1;
+      if (state === HybridReadyAcquireState.MISS_NO_ENTRY) {
+        bucket.visibleRemoteReadyAcquireMissNoEntryCount += 1;
+      } else if (state === HybridReadyAcquireState.MISS_LOADING_PREFETCH) {
+        bucket.visibleRemoteReadyAcquireMissLoadingPrefetchCount += 1;
+      } else if (state === HybridReadyAcquireState.MISS_LOADING_VISIBLE) {
+        bucket.visibleRemoteReadyAcquireMissLoadingVisibleCount += 1;
+      } else if (state === HybridReadyAcquireState.MISS_NOT_READY) {
+        bucket.visibleRemoteReadyAcquireMissNotReadyCount += 1;
+      }
+    }
+    HybridThumbnailPerfStats.maybeFlush(scrolling, 'interval');
+  }
+
+  static noteVisibleRemotePrefetchUpgrade(scrolling: boolean, isRemoteAsset: boolean): void {
+    if (!isRemoteAsset) {
+      return;
+    }
+
+    const bucket = HybridThumbnailPerfStats.resolveBucket(scrolling);
+    bucket.visibleRemotePrefetchUpgradeCount += 1;
+    HybridThumbnailPerfStats.maybeFlush(scrolling, 'interval');
+  }
+
+  static noteRemotePrefetchRequest(
+    scrolling: boolean,
+    isRemoteAsset: boolean,
+    state: HybridRemotePrefetchRequestState,
+  ): void {
+    if (!isRemoteAsset) {
+      return;
+    }
+
+    const bucket = HybridThumbnailPerfStats.resolveBucket(scrolling);
+    bucket.remotePrefetchRequestCount += 1;
+    if (state === HybridRemotePrefetchRequestState.SCHEDULED) {
+      bucket.remotePrefetchScheduledCount += 1;
+    } else if (state === HybridRemotePrefetchRequestState.SKIP_READY) {
+      bucket.remotePrefetchSkipReadyCount += 1;
+    } else if (state === HybridRemotePrefetchRequestState.SKIP_LOADING_PREFETCH) {
+      bucket.remotePrefetchSkipLoadingPrefetchCount += 1;
+    } else if (state === HybridRemotePrefetchRequestState.SKIP_LOADING_VISIBLE) {
+      bucket.remotePrefetchSkipLoadingVisibleCount += 1;
+    }
+    HybridThumbnailPerfStats.maybeFlush(scrolling, 'interval');
+  }
+
+  static noteRemotePrefetchResult(
+    scrolling: boolean,
+    isRemoteAsset: boolean,
+    state: HybridRemotePrefetchResultState,
+  ): void {
+    if (!isRemoteAsset) {
+      return;
+    }
+
+    const bucket = HybridThumbnailPerfStats.resolveBucket(scrolling);
+    if (state === HybridRemotePrefetchResultState.COMPLETE) {
+      bucket.remotePrefetchCompleteCount += 1;
+    } else if (state === HybridRemotePrefetchResultState.FAIL) {
+      bucket.remotePrefetchFailCount += 1;
+    } else if (state === HybridRemotePrefetchResultState.STALE) {
+      bucket.remotePrefetchStaleCount += 1;
+    } else if (state === HybridRemotePrefetchResultState.READY_EVICT) {
+      bucket.remotePrefetchReadyEvictCount += 1;
     }
     HybridThumbnailPerfStats.maybeFlush(scrolling, 'interval');
   }
@@ -227,6 +398,8 @@ class HybridThumbnailPerfStats {
       highWaterMaxWaitMs: currentStats.highWaterMaxWaitMs,
       deferredWriteQueueSize: currentStats.deferredWriteQueueSize,
       deferredWriteQueueBytes: currentStats.deferredWriteQueueBytes,
+      compressedBufferCacheEntryCount: currentStats.compressedBufferCacheEntryCount,
+      compressedBufferCacheBytes: currentStats.compressedBufferCacheBytes,
     };
   }
 
@@ -281,6 +454,9 @@ class HybridThumbnailPerfStats {
     const visibleRemoteMemoryReadyRate = bucket.visibleRemoteLoadCount > 0
       ? Math.round((bucket.visibleRemoteMemoryReadyCount * 100) / bucket.visibleRemoteLoadCount)
       : 0;
+    const visibleRemoteResidentReadyRate = bucket.visibleRemoteLoadCount > 0
+      ? Math.round((bucket.visibleRemoteResidentReadyCount * 100) / bucket.visibleRemoteLoadCount)
+      : 0;
     const remoteStatsDelta = HybridThumbnailPerfStats.resolveRemoteStatsDelta(bucket);
     console.info(
       `[HybridPhotoThumbnail] metrics stage=${scrolling ? 'scrolling' : 'idle'} reason=${reason} durationMs=${durationMs} ` +
@@ -289,10 +465,31 @@ class HybridThumbnailPerfStats {
       `visibleLoadOver16Ms=${bucket.visibleLoadOver16Ms} visibleRemoteLoads=${bucket.visibleRemoteLoadCount} ` +
       `visibleRemoteMemoryReady=${bucket.visibleRemoteMemoryReadyCount} ` +
       `visibleRemoteMemoryReadyRate=${visibleRemoteMemoryReadyRate} ` +
+      `visibleRemoteResidentReady=${bucket.visibleRemoteResidentReadyCount} ` +
+      `visibleRemoteResidentReadyRate=${visibleRemoteResidentReadyRate} ` +
       `visibleRemotePrefetchJoin=${bucket.visibleRemotePrefetchJoinCount} ` +
+      `visibleRemotePrefetchUpgrade=${bucket.visibleRemotePrefetchUpgradeCount} ` +
+      `visibleRemoteReadyAcquireHit=${bucket.visibleRemoteReadyAcquireHitCount} ` +
+      `visibleRemoteReadyAcquireMiss=${bucket.visibleRemoteReadyAcquireMissCount} ` +
+      `visibleRemoteReadyAcquireMissNoEntry=${bucket.visibleRemoteReadyAcquireMissNoEntryCount} ` +
+      `visibleRemoteReadyAcquireMissLoadingPrefetch=${bucket.visibleRemoteReadyAcquireMissLoadingPrefetchCount} ` +
+      `visibleRemoteReadyAcquireMissLoadingVisible=${bucket.visibleRemoteReadyAcquireMissLoadingVisibleCount} ` +
+      `visibleRemoteReadyAcquireMissNotReady=${bucket.visibleRemoteReadyAcquireMissNotReadyCount} ` +
+      `visibleRemoteCompressedBufferHit=${bucket.visibleRemoteCompressedBufferHitCount} ` +
+      `visibleRemoteDeferredWriteHit=${bucket.visibleRemoteDeferredWriteHitCount} ` +
+      `visibleRemotePersistedFileRead=${bucket.visibleRemotePersistedFileReadCount} ` +
       `visibleRemoteFileHit=${bucket.visibleRemoteFileHitCount} ` +
       `visibleRemotePendingHit=${bucket.visibleRemotePendingHitCount} ` +
       `visibleRemoteNetworkMiss=${bucket.visibleRemoteNetworkMissCount} ` +
+      `remotePrefetchRequests=${bucket.remotePrefetchRequestCount} ` +
+      `remotePrefetchScheduled=${bucket.remotePrefetchScheduledCount} ` +
+      `remotePrefetchSkipReady=${bucket.remotePrefetchSkipReadyCount} ` +
+      `remotePrefetchSkipLoadingPrefetch=${bucket.remotePrefetchSkipLoadingPrefetchCount} ` +
+      `remotePrefetchSkipLoadingVisible=${bucket.remotePrefetchSkipLoadingVisibleCount} ` +
+      `remotePrefetchComplete=${bucket.remotePrefetchCompleteCount} ` +
+      `remotePrefetchFail=${bucket.remotePrefetchFailCount} ` +
+      `remotePrefetchStale=${bucket.remotePrefetchStaleCount} ` +
+      `remotePrefetchReadyEvict=${bucket.remotePrefetchReadyEvictCount} ` +
       `remoteNetworkFetchCount=${remoteStatsDelta.remoteNetworkFetchCount} ` +
       `remoteAstcDecodeCount=${remoteStatsDelta.remoteAstcDecodeCount} ` +
       `remoteAstcFallbackCount=${remoteStatsDelta.remoteAstcFallbackCount} ` +
@@ -304,6 +501,8 @@ class HybridThumbnailPerfStats {
       `highWaterMaxWaitMs=${remoteStatsDelta.highWaterMaxWaitMs} ` +
       `deferredWriteQueueSize=${remoteStatsDelta.deferredWriteQueueSize} ` +
       `deferredWriteQueueBytes=${remoteStatsDelta.deferredWriteQueueBytes} ` +
+      `compressedBufferEntries=${remoteStatsDelta.compressedBufferCacheEntryCount} ` +
+      `compressedBufferBytes=${remoteStatsDelta.compressedBufferCacheBytes} ` +
       `releaseCount=${bucket.releaseCount} ` +
       `releaseZeroRef=${bucket.releaseZeroRefCount} releaseRetained=${bucket.releaseRetainedCount} ` +
       `releaseTotalMs=${bucket.releaseTotalMs} pruneCount=${bucket.pruneCount} ` +
@@ -380,6 +579,7 @@ class HybridLocalPhotoAssetCache {
 export class HybridThumbnailCache {
   private static entries: Map<string, HybridThumbnailCacheEntry> = new Map();
   private static remoteSourceKinds: Map<string, Disk.HybridRemoteThumbnailSourceKind> = new Map();
+  private static remoteLoadPaths: Map<string, Disk.HybridRemoteThumbnailLoadPath> = new Map();
   private static viewportKeepKeys: Set<string> = new Set<string>();
   private static activeColumns: number = HYBRID_GRID_COLUMNS;
   private static pendingPrune: boolean = false;
@@ -388,8 +588,8 @@ export class HybridThumbnailCache {
   private static readonly SCROLL_PRUNE_OVERFLOW_TILES_PER_COLUMN: number = 40;
   private static readonly MAX_RELEASES_PER_PRUNE_PASS: number = 96;
   private static readonly SCROLL_RELEASE_RETENTION_MS: number = Math.max(
-    1200,
-    HYBRID_THUMBNAIL_RELEASE_DELAY_MS * 6,
+    600,
+    HYBRID_THUMBNAIL_RELEASE_DELAY_MS * 3,
   );
   private static deferredPruneTimeoutId?: number = undefined;
 
@@ -418,7 +618,7 @@ export class HybridThumbnailCache {
       return;
     }
 
-    HybridThumbnailCache.prune(true);
+      HybridThumbnailCache.prune();
   }
 
   static hasReady(key: string): boolean {
@@ -436,25 +636,138 @@ export class HybridThumbnailCache {
     HybridThumbnailCache.remoteSourceKinds.set(key, sourceKind);
   }
 
+  private static recordRemoteLoadPath(
+    key: string,
+    loadPath: Disk.HybridRemoteThumbnailLoadPath,
+  ): void {
+    if (loadPath === Disk.HybridRemoteThumbnailLoadPath.NONE) {
+      HybridThumbnailCache.remoteLoadPaths.delete(key);
+      return;
+    }
+    HybridThumbnailCache.remoteLoadPaths.set(key, loadPath);
+  }
+
   private static resolveRemoteSourceKind(key: string): Disk.HybridRemoteThumbnailSourceKind {
     return HybridThumbnailCache.remoteSourceKinds.get(key) ?? Disk.HybridRemoteThumbnailSourceKind.NONE;
   }
 
-  private static deleteEntry(key: string): void {
-    HybridThumbnailCache.entries.delete(key);
-    HybridThumbnailCache.remoteSourceKinds.delete(key);
+  private static resolveRemoteLoadPath(key: string): Disk.HybridRemoteThumbnailLoadPath {
+    return HybridThumbnailCache.remoteLoadPaths.get(key) ?? Disk.HybridRemoteThumbnailLoadPath.NONE;
   }
 
-  static acquire(key: string): PixelMap | undefined {
+  private static deleteEntry(key: string): void {
     const entry = HybridThumbnailCache.entries.get(key);
-    if (!entry?.pixelMap) {
+    HybridThumbnailCache.noteRemotePrefetchReadyEvict(entry);
+    HybridThumbnailCache.entries.delete(key);
+    HybridThumbnailCache.remoteSourceKinds.delete(key);
+    HybridThumbnailCache.remoteLoadPaths.delete(key);
+  }
+
+  private static noteRemotePrefetchReadyEvict(entry: HybridThumbnailCacheEntry | undefined): void {
+    if (!entry?.pixelMap || entry.readyOriginPrefetch !== true || entry.readyPrefetchAcquired === true) {
+      return;
+    }
+
+    HybridThumbnailPerfStats.noteRemotePrefetchResult(
+      HybridThumbnailRequestLimiter.isScrollActive(),
+      true,
+      HybridRemotePrefetchResultState.READY_EVICT,
+    );
+  }
+
+  static acquire(key: string, isRemoteAsset: boolean = false): PixelMap | undefined {
+    const scrolling = HybridThumbnailRequestLimiter.isScrollActive();
+    const entry = HybridThumbnailCache.entries.get(key);
+    if (!entry) {
+      HybridThumbnailPerfStats.noteVisibleReadyAcquire(
+        scrolling,
+        isRemoteAsset,
+        HybridReadyAcquireState.MISS_NO_ENTRY,
+      );
+      return undefined;
+    }
+
+    if (!entry.pixelMap) {
+      HybridThumbnailPerfStats.noteVisibleReadyAcquire(
+        scrolling,
+        isRemoteAsset,
+        entry.loadingPromise
+          ? (entry.loadingIsPrefetch === true
+            ? HybridReadyAcquireState.MISS_LOADING_PREFETCH
+            : HybridReadyAcquireState.MISS_LOADING_VISIBLE)
+          : HybridReadyAcquireState.MISS_NOT_READY,
+      );
       return undefined;
     }
 
     entry.refCount += 1;
     entry.lastUsedAt = Date.now();
     entry.retainUntilAt = 0;
+    if (entry.readyOriginPrefetch === true) {
+      entry.readyPrefetchAcquired = true;
+    }
+    HybridThumbnailPerfStats.noteVisibleReadyAcquire(
+      scrolling,
+      isRemoteAsset,
+      HybridReadyAcquireState.HIT,
+    );
     return entry.pixelMap;
+  }
+
+  private static startVisibleLoad(
+    key: string,
+    entry: HybridThumbnailCacheEntry,
+    loader: () => Promise<HybridLoadedThumbnail>,
+  ): Promise<PixelMap> {
+    const nextLoadingToken = (entry.loadingToken ?? 0) + 1;
+    entry.loadingToken = nextLoadingToken;
+    entry.loadingIsPrefetch = false;
+    entry.loadingStarted = false;
+
+    const loadingPromise = loader()
+      .then((loadedThumbnail: HybridLoadedThumbnail) => {
+        const loaded: HybridThumbnailCacheEntry = HybridThumbnailCache.entries.get(key) ?? {
+          refCount: 0,
+          lastUsedAt: Date.now(),
+        };
+        if ((loaded.loadingToken ?? 0) !== nextLoadingToken) {
+          try {
+            loadedThumbnail.pixelMap.release();
+          } catch (_) {}
+          throw new HybridStalePrefetchError();
+        }
+        HybridThumbnailCache.recordRemoteSourceKind(key, loadedThumbnail.remoteSourceKind);
+        HybridThumbnailCache.recordRemoteLoadPath(key, loadedThumbnail.remoteLoadPath);
+        const pixelMap = loadedThumbnail.pixelMap;
+        loaded.pixelMap = pixelMap;
+        loaded.loadingPromise = undefined;
+        loaded.loadingIsPrefetch = false;
+        loaded.loadingStarted = false;
+        loaded.loadingToken = nextLoadingToken;
+        loaded.readyOriginPrefetch = false;
+        loaded.readyPrefetchAcquired = false;
+        loaded.lastUsedAt = Date.now();
+        loaded.retainUntilAt = 0;
+        HybridThumbnailCache.entries.set(key, loaded);
+        HybridThumbnailCache.prune();
+        return pixelMap;
+      })
+      .catch((error: Error) => {
+        const failed = HybridThumbnailCache.entries.get(key);
+        if (failed && (failed.loadingToken ?? 0) === nextLoadingToken) {
+          failed.loadingPromise = undefined;
+          failed.loadingIsPrefetch = false;
+          failed.loadingStarted = false;
+          if (!failed.pixelMap && failed.refCount <= 0) {
+            HybridThumbnailCache.deleteEntry(key);
+          }
+        }
+        throw toError(error);
+      });
+
+    entry.loadingPromise = loadingPromise;
+    HybridThumbnailCache.entries.set(key, entry);
+    return loadingPromise;
   }
 
   static async load(
@@ -465,8 +778,8 @@ export class HybridThumbnailCache {
     const startedAt = Date.now();
     const scrolling = HybridThumbnailRequestLimiter.isScrollActive();
     let remoteMemoryReady = false;
-    let joinedInflightPrefetch = false;
     let remoteSourceKind = HybridThumbnailCache.resolveRemoteSourceKind(key);
+    let remoteLoadPath = HybridThumbnailCache.resolveRemoteLoadPath(key);
     let entry = HybridThumbnailCache.entries.get(key);
     const now = Date.now();
     if (!entry) {
@@ -482,6 +795,9 @@ export class HybridThumbnailCache {
       existing.refCount += 1;
       existing.lastUsedAt = now;
       existing.retainUntilAt = 0;
+      if (existing.readyOriginPrefetch === true) {
+        existing.readyPrefetchAcquired = true;
+      }
       remoteMemoryReady = true;
       try {
         return existing.pixelMap;
@@ -492,6 +808,7 @@ export class HybridThumbnailCache {
           isRemoteAsset,
           remoteMemoryReady,
           remoteSourceKind,
+          remoteLoadPath,
           false,
         );
       }
@@ -501,23 +818,57 @@ export class HybridThumbnailCache {
       existing.refCount += 1;
       existing.lastUsedAt = now;
       existing.retainUntilAt = 0;
-      joinedInflightPrefetch = existing.loadingIsPrefetch === true;
+      const joinedInflightPrefetch = existing.loadingIsPrefetch === true && existing.loadingStarted === true;
+      if (existing.loadingIsPrefetch === true && !joinedInflightPrefetch) {
+        HybridThumbnailPerfStats.noteVisibleRemotePrefetchUpgrade(scrolling, isRemoteAsset);
+      }
+      const loadingPromise = joinedInflightPrefetch
+        ? existing.loadingPromise.catch((error: Error) => {
+            if (!(error instanceof HybridStalePrefetchError)) {
+              throw toError(error);
+            }
+
+            const currentEntry = HybridThumbnailCache.entries.get(key);
+            if (currentEntry?.pixelMap) {
+              currentEntry.lastUsedAt = Date.now();
+              currentEntry.retainUntilAt = 0;
+              if (currentEntry.readyOriginPrefetch === true) {
+                currentEntry.readyPrefetchAcquired = true;
+              }
+              remoteMemoryReady = true;
+              return currentEntry.pixelMap;
+            }
+
+            return HybridThumbnailCache.startVisibleLoad(key, currentEntry ?? existing, loader);
+          })
+        : (existing.loadingIsPrefetch === true
+          ? HybridThumbnailCache.startVisibleLoad(key, existing, loader)
+          : existing.loadingPromise);
       try {
-        const pixelMap = await existing.loadingPromise;
+        const pixelMap = await loadingPromise;
         const loaded = HybridThumbnailCache.entries.get(key);
         if (loaded) {
           loaded.lastUsedAt = Date.now();
           loaded.retainUntilAt = 0;
         }
         remoteSourceKind = HybridThumbnailCache.resolveRemoteSourceKind(key);
+        remoteLoadPath = HybridThumbnailCache.resolveRemoteLoadPath(key);
         return pixelMap;
+      } catch (error) {
+        existing.refCount = Math.max(0, existing.refCount - 1);
+        existing.lastUsedAt = Date.now();
+        if (!existing.pixelMap && !existing.loadingPromise && existing.refCount <= 0) {
+          HybridThumbnailCache.deleteEntry(key);
+        }
+        throw toError(error);
       } finally {
         HybridThumbnailPerfStats.noteVisibleLoad(
           Date.now() - startedAt,
           scrolling,
           isRemoteAsset,
-          false,
+          remoteMemoryReady,
           remoteSourceKind,
+          remoteLoadPath,
           joinedInflightPrefetch,
         );
       }
@@ -525,51 +876,11 @@ export class HybridThumbnailCache {
 
     existing.refCount += 1;
     existing.lastUsedAt = now;
-    const nextLoadingToken = (existing.loadingToken ?? 0) + 1;
-    existing.loadingToken = nextLoadingToken;
-    existing.loadingIsPrefetch = false;
-
-    existing.loadingPromise = loader()
-      .then((loadedThumbnail: HybridLoadedThumbnail) => {
-        const loaded: HybridThumbnailCacheEntry = HybridThumbnailCache.entries.get(key) ?? {
-          refCount: 0,
-          lastUsedAt: Date.now(),
-        };
-        if ((loaded.loadingToken ?? 0) !== nextLoadingToken) {
-          try {
-            loadedThumbnail.pixelMap.release();
-          } catch (_) {}
-          throw new HybridStalePrefetchError();
-        }
-        HybridThumbnailCache.recordRemoteSourceKind(key, loadedThumbnail.remoteSourceKind);
-        const pixelMap = loadedThumbnail.pixelMap;
-        loaded.pixelMap = pixelMap;
-        loaded.loadingPromise = undefined;
-        loaded.loadingIsPrefetch = false;
-        loaded.loadingToken = nextLoadingToken;
-        loaded.lastUsedAt = Date.now();
-        loaded.retainUntilAt = 0;
-        HybridThumbnailCache.entries.set(key, loaded);
-        HybridThumbnailCache.prune();
-        return pixelMap;
-      })
-      .catch((error: Error) => {
-        const failed = HybridThumbnailCache.entries.get(key);
-        if (failed && (failed.loadingToken ?? 0) === nextLoadingToken) {
-          failed.loadingPromise = undefined;
-          failed.loadingIsPrefetch = false;
-          if (!failed.pixelMap && failed.refCount <= 0) {
-            HybridThumbnailCache.deleteEntry(key);
-          }
-        }
-        throw toError(error);
-      });
-
-    HybridThumbnailCache.entries.set(key, existing);
 
     try {
-      const pixelMap = await existing.loadingPromise;
+      const pixelMap = await HybridThumbnailCache.startVisibleLoad(key, existing, loader);
       remoteSourceKind = HybridThumbnailCache.resolveRemoteSourceKind(key);
+      remoteLoadPath = HybridThumbnailCache.resolveRemoteLoadPath(key);
       return pixelMap;
     } catch (error) {
       existing.refCount = Math.max(0, existing.refCount - 1);
@@ -585,16 +896,44 @@ export class HybridThumbnailCache {
         isRemoteAsset,
         false,
         remoteSourceKind,
+        remoteLoadPath,
         false,
       );
     }
   }
 
-  static prefetch(key: string, loader: () => Promise<HybridLoadedThumbnail>): boolean {
+  static prefetch(
+    key: string,
+    isRemoteAsset: boolean,
+    loader: (onStart: () => void) => Promise<HybridLoadedThumbnail>,
+  ): boolean {
+    const scrolling = HybridThumbnailRequestLimiter.isScrollActive();
     const existing = HybridThumbnailCache.entries.get(key);
-    if (existing?.pixelMap || existing?.loadingPromise) {
+    if (existing?.pixelMap) {
+      HybridThumbnailPerfStats.noteRemotePrefetchRequest(
+        scrolling,
+        isRemoteAsset,
+        HybridRemotePrefetchRequestState.SKIP_READY,
+      );
       return false;
     }
+
+    if (existing?.loadingPromise) {
+      HybridThumbnailPerfStats.noteRemotePrefetchRequest(
+        scrolling,
+        isRemoteAsset,
+        existing.loadingIsPrefetch === true
+          ? HybridRemotePrefetchRequestState.SKIP_LOADING_PREFETCH
+          : HybridRemotePrefetchRequestState.SKIP_LOADING_VISIBLE,
+      );
+      return false;
+    }
+
+    HybridThumbnailPerfStats.noteRemotePrefetchRequest(
+      scrolling,
+      isRemoteAsset,
+      HybridRemotePrefetchRequestState.SCHEDULED,
+    );
 
     const entry: HybridThumbnailCacheEntry = existing ?? {
       refCount: 0,
@@ -603,8 +942,16 @@ export class HybridThumbnailCache {
     const nextLoadingToken = (entry.loadingToken ?? 0) + 1;
     entry.loadingToken = nextLoadingToken;
     entry.loadingIsPrefetch = true;
+    entry.loadingStarted = false;
 
-    entry.loadingPromise = loader()
+    const markLoadingStarted = (): void => {
+      const current = HybridThumbnailCache.entries.get(key);
+      if (current && (current.loadingToken ?? 0) === nextLoadingToken) {
+        current.loadingStarted = true;
+      }
+    };
+
+    entry.loadingPromise = loader(markLoadingStarted)
       .then((loadedThumbnail: HybridLoadedThumbnail) => {
         const loaded: HybridThumbnailCacheEntry = HybridThumbnailCache.entries.get(key) ?? {
           refCount: 0,
@@ -617,15 +964,24 @@ export class HybridThumbnailCache {
           throw new HybridStalePrefetchError();
         }
         HybridThumbnailCache.recordRemoteSourceKind(key, loadedThumbnail.remoteSourceKind);
+        HybridThumbnailCache.recordRemoteLoadPath(key, loadedThumbnail.remoteLoadPath);
         const pixelMap = loadedThumbnail.pixelMap;
         loaded.pixelMap = pixelMap;
         loaded.loadingPromise = undefined;
         loaded.loadingIsPrefetch = false;
+        loaded.loadingStarted = false;
         loaded.loadingToken = nextLoadingToken;
+        loaded.readyOriginPrefetch = true;
+        loaded.readyPrefetchAcquired = false;
         loaded.lastUsedAt = Date.now();
         loaded.retainUntilAt = loaded.lastUsedAt + HYBRID_PREFETCH_READY_RETENTION_MS;
         HybridThumbnailCache.entries.set(key, loaded);
         HybridThumbnailCache.prune();
+        HybridThumbnailPerfStats.noteRemotePrefetchResult(
+          HybridThumbnailRequestLimiter.isScrollActive(),
+          isRemoteAsset,
+          HybridRemotePrefetchResultState.COMPLETE,
+        );
         return pixelMap;
       })
       .catch((error: Error) => {
@@ -633,10 +989,18 @@ export class HybridThumbnailCache {
         if (failed && (failed.loadingToken ?? 0) === nextLoadingToken) {
           failed.loadingPromise = undefined;
           failed.loadingIsPrefetch = false;
+          failed.loadingStarted = false;
           if (!failed.pixelMap && failed.refCount <= 0) {
             HybridThumbnailCache.deleteEntry(key);
           }
         }
+        HybridThumbnailPerfStats.noteRemotePrefetchResult(
+          HybridThumbnailRequestLimiter.isScrollActive(),
+          isRemoteAsset,
+          error instanceof HybridStalePrefetchError
+            ? HybridRemotePrefetchResultState.STALE
+            : HybridRemotePrefetchResultState.FAIL,
+        );
         throw toError(error);
       });
 
@@ -848,7 +1212,7 @@ export class HybridThumbnailCache {
     const overflowKeys: Array<string> = [];
     HybridThumbnailCache.entries.forEach((entry: HybridThumbnailCacheEntry, key: string) => {
       if (
-        HybridThumbnailCache.viewportKeepKeys.has(key) ||
+        !HybridThumbnailCache.viewportKeepKeys.has(key) &&
         entry.refCount <= 0 &&
         !entry.loadingPromise &&
         !HybridThumbnailCache.shouldRetainEntry(entry, now, force)
@@ -917,8 +1281,8 @@ class HybridRemoteThumbnailWarmup {
     const cacheKey = buildThumbnailCacheKey(asset.id, requestSize);
     const prefetchGeneration = HybridThumbnailRequestLimiter.getPrefetchGeneration();
     if (!HYBRID_ENABLE_REMOTE_THUMBNAIL_DISK_WRITES) {
-      HybridThumbnailCache.prefetch(cacheKey, () =>
-        loadThumbnailForPrefetchAsset(ctx, asset, requestSize, prefetchGeneration)
+      HybridThumbnailCache.prefetch(cacheKey, true, (onStart: () => void) =>
+        loadThumbnailForPrefetchAsset(ctx, asset, requestSize, prefetchGeneration, onStart)
       );
       return;
     }
@@ -929,8 +1293,8 @@ class HybridRemoteThumbnailWarmup {
 
     const remoteDiskRequestSize = resolveHybridCanonicalRequestSizeBucket();
     if (Disk.hasRemoteThumbnailCache(ctx, asset.thumbnailUrl, remoteDiskRequestSize)) {
-      HybridThumbnailCache.prefetch(cacheKey, () =>
-        loadThumbnailForPrefetchAsset(ctx, asset, requestSize, prefetchGeneration)
+      HybridThumbnailCache.prefetch(cacheKey, true, (onStart: () => void) =>
+        loadThumbnailForPrefetchAsset(ctx, asset, requestSize, prefetchGeneration, onStart)
       );
       return;
     }
@@ -947,8 +1311,8 @@ class HybridRemoteThumbnailWarmup {
     )
       .then(() => {
         const nextPrefetchGeneration = HybridThumbnailRequestLimiter.getPrefetchGeneration();
-        HybridThumbnailCache.prefetch(cacheKey, () =>
-          loadThumbnailForPrefetchAsset(ctx, asset, requestSize, nextPrefetchGeneration)
+        HybridThumbnailCache.prefetch(cacheKey, true, (onStart: () => void) =>
+          loadThumbnailForPrefetchAsset(ctx, asset, requestSize, nextPrefetchGeneration, onStart)
         );
       })
       .catch(() => {})
@@ -1070,6 +1434,10 @@ export class HybridThumbnailRequestLimiter {
     12,
     HYBRID_SCROLL_PREFETCH_LIMIT * 4,
   );
+  private static readonly SCROLL_NEAR_VISIBLE_PREFETCH_BACKLOG_ALLOWANCE: number = Math.max(
+    6,
+    Math.floor(HYBRID_SCROLL_PREFETCH_LIMIT / 2),
+  );
 
   static getPrefetchGeneration(): number {
     return HybridThumbnailRequestLimiter.prefetchGeneration;
@@ -1079,6 +1447,7 @@ export class HybridThumbnailRequestLimiter {
     task: () => Promise<T>,
     isPrefetch: boolean,
     prefetchGeneration: number = HybridThumbnailRequestLimiter.prefetchGeneration,
+    onAcquired?: () => void,
   ): Promise<T> {
     const acquired = await HybridThumbnailRequestLimiter.acquire(isPrefetch, prefetchGeneration);
     if (!acquired) {
@@ -1089,6 +1458,8 @@ export class HybridThumbnailRequestLimiter {
       HybridThumbnailRequestLimiter.release(isPrefetch);
       throw new HybridStalePrefetchError();
     }
+
+    onAcquired?.();
 
     try {
       return await task();
@@ -1125,6 +1496,17 @@ export class HybridThumbnailRequestLimiter {
     return HybridThumbnailRequestLimiter.activePrefetchCount +
       HybridThumbnailRequestLimiter.prefetchWaiters.length >=
       HybridThumbnailRequestLimiter.SCROLL_PREFETCH_BACKLOG_LIMIT;
+  }
+
+  static shouldPauseNearVisiblePrefetch(): boolean {
+    if (!HybridThumbnailRequestLimiter.scrollActive) {
+      return false;
+    }
+
+    return HybridThumbnailRequestLimiter.activePrefetchCount +
+      HybridThumbnailRequestLimiter.prefetchWaiters.length >=
+      HybridThumbnailRequestLimiter.SCROLL_PREFETCH_BACKLOG_LIMIT +
+        HybridThumbnailRequestLimiter.SCROLL_NEAR_VISIBLE_PREFETCH_BACKLOG_ALLOWANCE;
   }
 
   /**
@@ -1239,6 +1621,7 @@ async function loadThumbnailForAsset(
   requestSize: number,
   isPrefetch: boolean,
   prefetchGeneration?: number,
+  onStart?: () => void,
 ): Promise<HybridLoadedThumbnail> {
   return await HybridThumbnailRequestLimiter.run(async () => {
     if (asset.localId) {
@@ -1246,6 +1629,7 @@ async function loadThumbnailForAsset(
         const localThumbnail: HybridLoadedThumbnail = {
           pixelMap: await loadLocalThumbnail(ctx, asset.localId, requestSize),
           remoteSourceKind: Disk.HybridRemoteThumbnailSourceKind.NONE,
+          remoteLoadPath: Disk.HybridRemoteThumbnailLoadPath.NONE,
         };
         return localThumbnail;
       } catch (error) {
@@ -1267,12 +1651,13 @@ async function loadThumbnailForAsset(
       const remoteThumbnail: HybridLoadedThumbnail = {
         pixelMap: remoteResult.pixelMap,
         remoteSourceKind: remoteResult.sourceKind,
+        remoteLoadPath: remoteResult.loadPath,
       };
       return remoteThumbnail;
     }
 
     throw new Error('No thumbnail source available');
-  }, isPrefetch, prefetchGeneration);
+  }, isPrefetch, prefetchGeneration, onStart);
 }
 
 async function loadThumbnailForVisibleAsset(
@@ -1288,8 +1673,9 @@ async function loadThumbnailForPrefetchAsset(
   asset: HybridPhotoAsset,
   requestSize: number,
   prefetchGeneration?: number,
+  onStart?: () => void,
 ): Promise<HybridLoadedThumbnail> {
-  return await loadThumbnailForAsset(ctx, asset, requestSize, true, prefetchGeneration);
+  return await loadThumbnailForAsset(ctx, asset, requestSize, true, prefetchGeneration, onStart);
 }
 
 async function loadLocalThumbnail(
@@ -1369,12 +1755,13 @@ export function warmupAssetThumbnail(
   }
 
   if (asset.localId) {
-    HybridThumbnailCache.prefetch(buildThumbnailCacheKey(asset.id, requestSize), () =>
+    HybridThumbnailCache.prefetch(buildThumbnailCacheKey(asset.id, requestSize), false, (onStart: () => void) =>
       loadThumbnailForPrefetchAsset(
         ctx,
         asset,
         requestSize,
         HybridThumbnailRequestLimiter.getPrefetchGeneration(),
+        onStart,
       )
     );
     return;
@@ -1408,12 +1795,44 @@ export function prefetchAssetThumbnail(
   }
 
   const cacheKey = buildThumbnailCacheKey(asset.id, requestSize);
-  return HybridThumbnailCache.prefetch(cacheKey, () =>
+  return HybridThumbnailCache.prefetch(cacheKey, asset.thumbnailUrl !== undefined, (onStart: () => void) =>
     loadThumbnailForPrefetchAsset(
       ctx,
       asset,
       requestSize,
       HybridThumbnailRequestLimiter.getPrefetchGeneration(),
+      onStart,
+    )
+  );
+}
+
+export function prefetchResidentRemoteAssetThumbnail(
+  ctx: common.UIAbilityContext,
+  asset: HybridPhotoAsset,
+  requestSize: number,
+): boolean {
+  const remoteUrl = asset.thumbnailUrl;
+  void ctx;
+  if (!remoteUrl || remoteUrl.length <= 0) {
+    return false;
+  }
+
+  if (!Disk.hasRemoteThumbnailCompressedData(remoteUrl, requestSize)) {
+    return false;
+  }
+
+  if (HybridThumbnailRequestLimiter.shouldPauseNearVisiblePrefetch()) {
+    return false;
+  }
+
+  const cacheKey = buildThumbnailCacheKey(asset.id, requestSize);
+  return HybridThumbnailCache.prefetch(cacheKey, true, (onStart: () => void) =>
+    loadThumbnailForPrefetchAsset(
+      ctx,
+      asset,
+      requestSize,
+      HybridThumbnailRequestLimiter.getPrefetchGeneration(),
+      onStart,
     )
   );
 }
@@ -1452,7 +1871,18 @@ export function preloadRemoteAssetThumbnailCompressedData(
   asset: HybridPhotoAsset,
   requestSize: number,
 ): boolean {
+  if (
+    HybridThumbnailRequestLimiter.isScrollActive() &&
+    Disk.getRemoteThumbnailStatsSnapshot().compressedBufferCacheEntryCount >=
+      HYBRID_SCROLL_COMPRESSED_BUFFER_PRELOAD_LOW_WATERMARK
+  ) {
+    return false;
+  }
   return HybridRemoteThumbnailBufferWarmup.preload(ctx, asset, requestSize);
+}
+
+export function resolveIdleCompressedBufferPreloadTarget(): number {
+  return HYBRID_IDLE_COMPRESSED_BUFFER_PRELOAD_TARGET;
 }
 
 export function hasRemoteThumbnailCache(
@@ -1515,6 +1945,8 @@ export function setRuntimeScrollActive(active: boolean): void {
   Disk.HybridScrollState.isScrolling = active;
   if (!active) {
     HybridThumbnailCache.flushDeferredPrune();
+    Disk.flushDeferredThumbnailWritesIfIdle();
+    Disk.trimCompressedRemoteThumbnailBufferCache();
   }
 }
 

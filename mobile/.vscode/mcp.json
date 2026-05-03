@@ -1,13 +1,30 @@
 {
-  "servers": {
-    "codegenieMcp": {
-      "type": "stdio",
-      "command": "npx",
-      "args": ["-y", "@deveco-codegenie/mcp"],
-      "env": {
+	"servers": {
+		"codegenieMcp": {
+			"type": "stdio",
+			"command": "npx",
+			"args": [
+				"-y",
+				"@deveco-codegenie/mcp"
+			],
+			"env": {
+				"DEVECO_PATH": "C:\\Program Files\\Huawei\\DevEco Studio",
+				"PROJECT_PATH": "F:\\immich_ohos\\mobile\\ohos"
+			}
+		},
+		"codegenie-mcp": {
+			"args": [
+				"-y",
+				"@deveco-codegenie/mcp"
+			],
+			"command": "npx",
+			"env": {
+				"MANAGED_BY_UI": "1",
         "DEVECO_PATH": "C:\\Program Files\\Huawei\\DevEco Studio",
-        "PROJECT_PATH": "F:\\immich_ohos\\mobile\\ohos"
-      }
-    }
-  }
+				"PROJECT_PATH": "F:\\immich_ohos\\mobile\\ohos"
+			},
+			"type": "stdio"
+		}
+	},
+	"inputs": []
 }

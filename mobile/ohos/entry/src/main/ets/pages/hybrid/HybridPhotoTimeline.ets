@@ -15,17 +15,22 @@ class HybridSectionBucket {
   key: string = '';
   title: string = '';
   assets: Array<HybridPhotoAsset> = [];
-}
-
-class HybridSectionDescriptor {
-  key: string = '';
-  title: string = '';
+  sourceStartOffset?: number = undefined;
+  sourceEndOffsetExclusive?: number = undefined;
+  sourceFlatStartIndex?: number = undefined;
+  sourceFlatEndIndexExclusive?: number = undefined;
 }
 
 class HybridDateParts {
   year: number = 0;
   month: number = 0;
   day: number = 0;
+}
+
+class HybridTimelineKeySet {
+  yearKey: string = '';
+  monthKey: string = '';
+  dayKey: string = '';
 }
 
 export class HybridPhotoTimelineBuilder {
@@ -120,6 +125,7 @@ export class HybridPhotoTimelineBuilder {
         const combinedCountBeforeAppend = combinedAssets.length;
         incomingAssets.forEach((asset: HybridPhotoAsset) => combinedAssets.push(asset));
         last.rows = this.chunkAssets(combinedAssets, columns);
+        last.assetCount = combinedAssets.length;
         incomingAssets.forEach((asset: HybridPhotoAsset, assetIndex: number) => {
           appendedEntries.push({
             asset: asset,
@@ -161,26 +167,25 @@ export class HybridPhotoTimelineBuilder {
   ): Array<HybridTimelineItem> {
     const items: Array<HybridTimelineItem> = [];
 
-    const entries: Array<HybridTimelineAssetEntry> = [];
-    sections.forEach((section: HybridPhotoSection) => {
-      const sectionAssets = this.flattenRows(section.rows);
-      sectionAssets.forEach((asset: HybridPhotoAsset, assetIndex: number) => {
-        entries.push({
-          asset: asset,
-          sectionKey: section.key,
-          sectionTitle: section.title,
-          sectionCount: sectionAssets.length,
-          isSectionLead: assetIndex === 0,
-        });
-      });
-    });
+    for (let sectionIndex = 0; sectionIndex < sections.length; sectionIndex += 1) {
+      const section = sections[sectionIndex];
+      const sectionCount = this.resolveSectionAssetCount(section);
+      let isFirstInSection = true;
 
-    for (let index = 0; index < entries.length; index += columns) {
-      const rowEntries = entries.slice(index, index + columns);
-      if (rowEntries.length <= 0) {
-        continue;
+      for (let rowIndex = 0; rowIndex < section.rows.length; rowIndex += 1) {
+        const row = section.rows[rowIndex];
+        if (row.length <= 0) {
+          continue;
+        }
+        items.push(this.createTimelineRowItemFromAssets(
+          row,
+          section.key,
+          section.title,
+          sectionCount,
+          isFirstInSection,
+        ));
+        isFirstInSection = false;
       }
-      items.push(this.createTimelineRowItem(rowEntries));
     }
 
     return items;
@@ -292,24 +297,42 @@ export class HybridPhotoTimelineBuilder {
     const safeColumns = Math.max(1, columns);
     const form = getFormIndexByColumns(safeColumns);
     const buckets = this.bucketSectionsByForm(sections, form);
-    return buckets.map((bucket: HybridSectionBucket) =>
-      this.createSection(
+    return buckets.map((bucket: HybridSectionBucket) => {
+      const section = this.createSection(
         bucket.key,
         bucket.title,
         this.chunkAssets(bucket.assets, safeColumns),
-      ),
-    );
+      );
+      this.applyBucketSourceMetadata(section, bucket);
+      return section;
+    });
   }
 
   private parseSection(raw: Record<string, Object>): HybridPhotoSection {
+    const key = typeof raw["key"] === "string" ? raw["key"] : "";
+    const title = typeof raw["title"] === "string" ? raw["title"] : "";
     const rowsRaw = Array.isArray(raw["rows"])
       ? (raw["rows"] as Array<Array<Record<string, Object>>>)
       : [];
-    return {
-      key: typeof raw["key"] === "string" ? raw["key"] : "",
-      title: typeof raw["title"] === "string" ? raw["title"] : "",
-      rows: rowsRaw.map((row) => row.map((asset) => this.parseAsset(asset))),
-    };
+    const rows = rowsRaw.map((row) => row.map((asset) => this.parseAsset(asset)));
+    const section = this.createSection(key, title, rows);
+    if (typeof raw["assetCount"] === "number") {
+      section.assetCount = Number(raw["assetCount"]);
+    }
+    if (typeof raw["sourceStartOffset"] === "number") {
+      section.sourceStartOffset = Number(raw["sourceStartOffset"]);
+    }
+    if (typeof raw["sourceEndOffsetExclusive"] === "number") {
+      section.sourceEndOffsetExclusive = Number(raw["sourceEndOffsetExclusive"]);
+    }
+    if (typeof raw["sourceFlatStartIndex"] === "number") {
+      section.sourceFlatStartIndex = Number(raw["sourceFlatStartIndex"]);
+    }
+    if (typeof raw["sourceFlatEndIndexExclusive"] === "number") {
+      section.sourceFlatEndIndexExclusive = Number(raw["sourceFlatEndIndexExclusive"]);
+    }
+    this.primeSectionTimelineKeys(section);
+    return section;
   }
 
   private parseBucketInfo(raw: Record<string, Object>): HybridBucketInfo {
@@ -353,56 +376,170 @@ export class HybridPhotoTimelineBuilder {
     const buckets: Array<HybridSectionBucket> = [];
     const bucketIndexByKey: Map<string, number> = new Map();
 
-    sections.forEach((section: HybridPhotoSection) => {
-      this.flattenRows(section.rows).forEach((asset: HybridPhotoAsset) => {
-        const descriptor = this.resolveSectionDescriptor(asset, section, form);
-        const existingIndex = bucketIndexByKey.get(descriptor.key);
-        if (existingIndex !== undefined) {
-          buckets[existingIndex].assets.push(asset);
-          return;
-        }
+    for (let sectionIndex = 0; sectionIndex < sections.length; sectionIndex += 1) {
+      const section = sections[sectionIndex];
+      for (let rowIndex = 0; rowIndex < section.rows.length; rowIndex += 1) {
+        const row = section.rows[rowIndex];
+        for (let assetIndex = 0; assetIndex < row.length; assetIndex += 1) {
+          const asset = row[assetIndex];
+          const bucketKey = this.resolveSectionBucketKey(asset, section, form);
+          const existingIndex = bucketIndexByKey.get(bucketKey);
+          if (existingIndex !== undefined) {
+            buckets[existingIndex].assets.push(asset);
+            this.mergeBucketSourceMetadata(buckets[existingIndex], section);
+            continue;
+          }
 
-        const bucket = new HybridSectionBucket();
-        bucket.key = descriptor.key;
-        bucket.title = descriptor.title;
-        bucket.assets.push(asset);
-        bucketIndexByKey.set(bucket.key, buckets.length);
-        buckets.push(bucket);
-      });
-    });
+          const bucket = new HybridSectionBucket();
+          bucket.key = bucketKey;
+          bucket.title = this.resolveSectionBucketTitle(section, form, bucketKey);
+          bucket.assets.push(asset);
+          this.seedBucketSourceMetadata(bucket, section);
+          bucketIndexByKey.set(bucket.key, buckets.length);
+          buckets.push(bucket);
+          continue;
+        }
+      }
+    }
 
     return buckets;
   }
 
-  private resolveSectionDescriptor(
+  private seedBucketSourceMetadata(
+    bucket: HybridSectionBucket,
+    section: HybridPhotoSection,
+  ): void {
+    if (typeof section.sourceStartOffset === 'number') {
+      bucket.sourceStartOffset = section.sourceStartOffset;
+    }
+    if (typeof section.sourceEndOffsetExclusive === 'number') {
+      bucket.sourceEndOffsetExclusive = section.sourceEndOffsetExclusive;
+    }
+    if (typeof section.sourceFlatStartIndex === 'number') {
+      bucket.sourceFlatStartIndex = section.sourceFlatStartIndex;
+    }
+    if (typeof section.sourceFlatEndIndexExclusive === 'number') {
+      bucket.sourceFlatEndIndexExclusive = section.sourceFlatEndIndexExclusive;
+    }
+  }
+
+  private mergeBucketSourceMetadata(
+    bucket: HybridSectionBucket,
+    section: HybridPhotoSection,
+  ): void {
+    if (typeof section.sourceStartOffset === 'number') {
+      bucket.sourceStartOffset = typeof bucket.sourceStartOffset === 'number'
+        ? Math.min(bucket.sourceStartOffset, section.sourceStartOffset)
+        : section.sourceStartOffset;
+    }
+    if (typeof section.sourceEndOffsetExclusive === 'number') {
+      bucket.sourceEndOffsetExclusive = typeof bucket.sourceEndOffsetExclusive === 'number'
+        ? Math.max(bucket.sourceEndOffsetExclusive, section.sourceEndOffsetExclusive)
+        : section.sourceEndOffsetExclusive;
+    }
+    if (typeof section.sourceFlatStartIndex === 'number') {
+      bucket.sourceFlatStartIndex = typeof bucket.sourceFlatStartIndex === 'number'
+        ? Math.min(bucket.sourceFlatStartIndex, section.sourceFlatStartIndex)
+        : section.sourceFlatStartIndex;
+    }
+    if (typeof section.sourceFlatEndIndexExclusive === 'number') {
+      bucket.sourceFlatEndIndexExclusive = typeof bucket.sourceFlatEndIndexExclusive === 'number'
+        ? Math.max(bucket.sourceFlatEndIndexExclusive, section.sourceFlatEndIndexExclusive)
+        : section.sourceFlatEndIndexExclusive;
+    }
+  }
+
+  private applyBucketSourceMetadata(
+    section: HybridPhotoSection,
+    bucket: HybridSectionBucket,
+  ): void {
+    if (typeof bucket.sourceStartOffset === 'number') {
+      section.sourceStartOffset = bucket.sourceStartOffset;
+    }
+    if (typeof bucket.sourceEndOffsetExclusive === 'number') {
+      section.sourceEndOffsetExclusive = bucket.sourceEndOffsetExclusive;
+    }
+    if (typeof bucket.sourceFlatStartIndex === 'number') {
+      section.sourceFlatStartIndex = bucket.sourceFlatStartIndex;
+    }
+    if (typeof bucket.sourceFlatEndIndexExclusive === 'number') {
+      section.sourceFlatEndIndexExclusive = bucket.sourceFlatEndIndexExclusive;
+    }
+  }
+
+  private resolveSectionBucketKey(
     asset: HybridPhotoAsset,
     fallbackSection: HybridPhotoSection,
     form: FormIndex,
-  ): HybridSectionDescriptor {
-    const dateParts = this.resolveAssetDateParts(asset, fallbackSection);
-    const descriptor = new HybridSectionDescriptor();
-    if (!dateParts) {
-      const fallbackKey = fallbackSection.key || fallbackSection.title || asset.id;
-      descriptor.key = fallbackKey;
-      descriptor.title = fallbackSection.title || fallbackKey;
-      return descriptor;
-    }
+  ): string {
+    this.ensureAssetTimelineKeys(asset, fallbackSection);
 
     if (form === FormIndex.YEAR) {
-      descriptor.key = `${dateParts.year}`;
-      descriptor.title = descriptor.key;
-      return descriptor;
+      return asset.timelineYearKey ?? (fallbackSection.key || fallbackSection.title || asset.id);
     }
 
     if (form === FormIndex.MONTH) {
-      descriptor.key = `${dateParts.year}-${this.pad2(dateParts.month)}`;
-      descriptor.title = descriptor.key;
-      return descriptor;
+      return asset.timelineMonthKey ?? (fallbackSection.key || fallbackSection.title || asset.id);
     }
 
-    descriptor.key = `${dateParts.year}-${this.pad2(dateParts.month)}-${this.pad2(dateParts.day)}`;
-    descriptor.title = fallbackSection.title || descriptor.key;
-    return descriptor;
+    return asset.timelineDayKey ?? (fallbackSection.key || fallbackSection.title || asset.id);
+  }
+
+  private resolveSectionBucketTitle(
+    fallbackSection: HybridPhotoSection,
+    form: FormIndex,
+    bucketKey: string,
+  ): string {
+    if (form === FormIndex.YEAR || form === FormIndex.MONTH) {
+      return bucketKey;
+    }
+    return fallbackSection.title || bucketKey;
+  }
+
+  private primeSectionTimelineKeys(section: HybridPhotoSection): void {
+    for (let rowIndex = 0; rowIndex < section.rows.length; rowIndex += 1) {
+      const row = section.rows[rowIndex];
+      for (let assetIndex = 0; assetIndex < row.length; assetIndex += 1) {
+        this.ensureAssetTimelineKeys(row[assetIndex], section);
+      }
+    }
+  }
+
+  private ensureAssetTimelineKeys(
+    asset: HybridPhotoAsset,
+    fallbackSection: HybridPhotoSection,
+  ): void {
+    if (asset.timelineYearKey && asset.timelineMonthKey && asset.timelineDayKey) {
+      return;
+    }
+
+    const dateParts = this.resolveAssetDateParts(asset, fallbackSection);
+    if (dateParts) {
+      const keySet = this.buildTimelineKeySet(dateParts);
+      asset.timelineYearKey = keySet.yearKey;
+      asset.timelineMonthKey = keySet.monthKey;
+      asset.timelineDayKey = keySet.dayKey;
+      return;
+    }
+
+    const fallbackKey = fallbackSection.key || fallbackSection.title || asset.id;
+    asset.timelineYearKey = fallbackKey;
+    asset.timelineMonthKey = fallbackKey;
+    asset.timelineDayKey = fallbackKey;
+  }
+
+  private buildTimelineKeySet(dateParts: HybridDateParts): HybridTimelineKeySet {
+    const keySet = new HybridTimelineKeySet();
+    const monthText = this.formatTwoDigits(dateParts.month);
+    const dayText = this.formatTwoDigits(dateParts.day);
+    keySet.yearKey = `${dateParts.year}`;
+    keySet.monthKey = `${keySet.yearKey}-${monthText}`;
+    keySet.dayKey = `${keySet.monthKey}-${dayText}`;
+    return keySet;
+  }
+
+  private formatTwoDigits(value: number): string {
+    return value < 10 ? `0${value}` : `${value}`;
   }
 
   private resolveAssetDateParts(
@@ -433,8 +570,14 @@ export class HybridPhotoTimelineBuilder {
     return dateParts;
   }
 
-  private pad2(value: number): string {
-    return `${value}`.padStart(2, '0');
+  private resolveSectionAssetCount(section: HybridPhotoSection): number {
+    if (typeof section.assetCount === 'number' && section.assetCount >= 0) {
+      return section.assetCount;
+    }
+
+    const assetCount = this.countRowsAssets(section.rows);
+    section.assetCount = assetCount;
+    return assetCount;
   }
 
   private isSameVisualSection(left: HybridPhotoSection, right: HybridPhotoSection): boolean {
@@ -458,7 +601,16 @@ export class HybridPhotoTimelineBuilder {
       key: key,
       title: title,
       rows: rows,
+      assetCount: this.countRowsAssets(rows),
     };
+  }
+
+  private countRowsAssets(rows: Array<Array<HybridPhotoAsset>>): number {
+    let count = 0;
+    for (let rowIndex = 0; rowIndex < rows.length; rowIndex += 1) {
+      count += rows[rowIndex].length;
+    }
+    return count;
   }
 
   private flattenRows(rows: Array<Array<HybridPhotoAsset>>): Array<HybridPhotoAsset> {
@@ -496,6 +648,28 @@ export class HybridPhotoTimelineBuilder {
       sectionCount: firstEntry.sectionCount,
       assets: rowEntries.map((entry: HybridTimelineAssetEntry) => entry.asset),
       isFirstInSection: firstEntry.isSectionLead,
+    };
+  }
+
+  private createTimelineRowItemFromAssets(
+    assets: Array<HybridPhotoAsset>,
+    sectionKey: string,
+    sectionTitle: string,
+    sectionCount: number,
+    isFirstInSection: boolean,
+    layoutId?: number,
+  ): HybridTimelineItem {
+    const stableLayoutId = layoutId ?? this.nextTimelineLayoutId++;
+    return {
+      layoutId: stableLayoutId,
+      key: `row_${stableLayoutId}`,
+      kind: 'row',
+      count: assets.length,
+      sectionKey: sectionKey,
+      sectionTitle: sectionTitle,
+      sectionCount: sectionCount,
+      assets: assets.slice(),
+      isFirstInSection: isFirstInSection,
     };
   }
 

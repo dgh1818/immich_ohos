@@ -12,6 +12,7 @@ export class GridAttributeUpdater extends AttributeUpdater<GridAttribute> {
   private isLowGrid: boolean = false;
   private hitTestMode: HitTestMode = HitTestMode.Default;
   private showBackground: boolean = true;
+  private originalBgColor?: Resource = undefined;
   private enabledValue: boolean = true;
 
   public override initializeModifier(instance: GridAttribute): void {
@@ -24,6 +25,7 @@ export class GridAttributeUpdater extends AttributeUpdater<GridAttribute> {
       .zIndex(this.zIndexValue)
       .hitTestBehavior(this.hitTestMode)
       .enabled(this.enabledValue);
+    this.applyBackgroundColor(instance);
   }
 
   public override onComponentChanged(instance: GridAttribute): void {
@@ -36,6 +38,18 @@ export class GridAttributeUpdater extends AttributeUpdater<GridAttribute> {
       .zIndex(this.zIndexValue)
       .hitTestBehavior(this.hitTestMode)
       .enabled(this.enabledValue);
+    this.applyBackgroundColor(instance);
+  }
+
+  private applyBackgroundColor(instance: GridAttribute | null | undefined): void {
+    if (instance === undefined || instance === null) {
+      return;
+    }
+    if (this.originalBgColor !== undefined) {
+      instance.backgroundColor(this.originalBgColor);
+      return;
+    }
+    instance.backgroundColor(Color.Transparent);
   }
 
   public updateScale(scaleOptions: ScaleOptions): void {
@@ -81,8 +95,19 @@ export class GridAttributeUpdater extends AttributeUpdater<GridAttribute> {
     this.attribute?.hitTestBehavior(this.hitTestMode);
   }
 
+  public updateOriginalBackgroundColor(originalBgColor: Resource): void {
+    this.originalBgColor = originalBgColor;
+    const currentAttribute = this.attribute;
+    this.applyBackgroundColor(currentAttribute);
+  }
+
   public updateShowBackground(showBackground: boolean): void {
+    if (this.showBackground === showBackground) {
+      return;
+    }
     this.showBackground = showBackground;
+    const currentAttribute = this.attribute;
+    this.applyBackgroundColor(currentAttribute);
   }
 
   public updateEnable(enabled: boolean): void {

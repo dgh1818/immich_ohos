@@ -16,6 +16,7 @@ class HybridPhotoSectionRecord implements Shared.HybridPhotoSection {
   key: string = '';
   title: string = '';
   rows: Array<Array<HybridPhotoAsset>> = [];
+  assetCount?: number = undefined;
 }
 
 class HybridGridItemRecord implements Shared.HybridGridItem {
@@ -52,6 +53,7 @@ export class HybridPhotoGridDataAdapter {
       record.key = section.key;
       record.title = section.title;
       record.rows = section.rows.map((row: Array<HybridPhotoAsset>) => row.slice());
+      record.assetCount = section.assetCount;
       return record;
     });
   }

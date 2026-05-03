@@ -9,14 +9,23 @@ export struct GridSnapshotView {
 
   build() {
     if (this.visible && this.snapshotImage) {
-      Image(this.snapshotImage as PixelMap)
+      Stack() {
+        Column() {}
+          .width('100%')
+          .height('100%')
+          .backgroundColor($r('app.color.start_window_background'));
+
+        Image(this.snapshotImage as PixelMap)
+          .width('100%')
+          .height('100%')
+          .objectFit(ImageFit.Cover)
+          .opacity(this.opacityValue)
+          .translate({ x: 0, y: this.offsetY });
+      }
         .id(PhotoGridViewId.GRID_SNAPSHOT)
         .zIndex(PhotoGridZIndex.GRID_SNAPSHOT)
         .width('100%')
         .height('100%')
-        .objectFit(ImageFit.Cover)
-        .opacity(this.opacityValue)
-        .translate({ x: 0, y: this.offsetY })
         .hitTestBehavior(HitTestMode.None);
     }
   }

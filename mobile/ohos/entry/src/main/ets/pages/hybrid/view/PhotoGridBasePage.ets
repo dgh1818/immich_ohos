@@ -16,6 +16,8 @@ export struct PhotoGridBasePage {
       this.buildPhotoGridView();
     }
     .width('100%')
-    .height('100%');
+    .height('100%')
+    .clip(false)
+    .backgroundColor($r('app.color.start_window_background'));
   }
 }

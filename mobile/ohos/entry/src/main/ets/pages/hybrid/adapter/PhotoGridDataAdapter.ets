@@ -11,6 +11,11 @@ class PhotoSectionRecord implements Shared.PhotoSection {
   key: string = '';
   title: string = '';
   rows: Array<Array<PhotoAsset>> = [];
+  assetCount?: number = undefined;
+  sourceStartOffset?: number = undefined;
+  sourceEndOffsetExclusive?: number = undefined;
+  sourceFlatStartIndex?: number = undefined;
+  sourceFlatEndIndexExclusive?: number = undefined;
 }
 
 class GridItemRecord implements Shared.GridItem {
@@ -52,6 +57,21 @@ export class PhotoGridDataAdapter {
       record.key = section.key;
       record.title = section.title;
       record.rows = section.rows.map((row: Array<PhotoAsset>) => row.slice());
+      record.assetCount = typeof section.assetCount === 'number'
+        ? section.assetCount
+        : this.countSectionAssets(section);
+      record.sourceStartOffset = typeof section.sourceStartOffset === 'number'
+        ? section.sourceStartOffset
+        : undefined;
+      record.sourceEndOffsetExclusive = typeof section.sourceEndOffsetExclusive === 'number'
+        ? section.sourceEndOffsetExclusive
+        : undefined;
+      record.sourceFlatStartIndex = typeof section.sourceFlatStartIndex === 'number'
+        ? section.sourceFlatStartIndex
+        : undefined;
+      record.sourceFlatEndIndexExclusive = typeof section.sourceFlatEndIndexExclusive === 'number'
+        ? section.sourceFlatEndIndexExclusive
+        : undefined;
       return record;
     });
   }
@@ -77,18 +97,42 @@ export class PhotoGridDataAdapter {
     sections: Array<PhotoSection>,
     columns: number,
     sourceStartOffset: number = 0,
+    sourceFlatAssets?: Array<PhotoAsset>,
   ): Array<GridItem> {
     const reflowedSections = this.timelineBuilder.reflowSections(sections, columns);
-    return this.buildGridItemsFromSections(reflowedSections, sourceStartOffset);
+    return this.buildGridItemsFromSections(reflowedSections, sourceStartOffset, sourceFlatAssets);
   }
 
   public buildGridItemsFromSections(
     sections: Array<PhotoSection>,
     sourceStartOffset: number = 0,
+    sourceFlatAssets?: Array<PhotoAsset>,
   ): Array<GridItem> {
     const items: Array<GridItem> = [];
     let sourceIndex = Math.max(0, sourceStartOffset);
+    const flatAssets = sourceFlatAssets;
     sections.forEach((section: PhotoSection) => {
+      const sectionSourceStartOffset = this.resolveSectionSourceStartOffset(section, sourceIndex);
+      let sectionLocalIndex = 0;
+      const sectionFlatStartIndex = this.resolveSectionFlatStartIndex(section);
+      const sectionFlatEndIndexExclusive = this.resolveSectionFlatEndIndexExclusive(section);
+      if (flatAssets !== undefined &&
+        this.canUseSectionFlatRange(sectionFlatStartIndex, sectionFlatEndIndexExclusive, flatAssets)) {
+        for (let flatIndex = sectionFlatStartIndex; flatIndex < sectionFlatEndIndexExclusive; flatIndex += 1) {
+          const asset = flatAssets[flatIndex];
+          const photoItem = new GridItemRecord();
+          photoItem.id = this.buildStablePhotoItemId(asset, section.key);
+          photoItem.kind = 'photo';
+          photoItem.asset = asset;
+          photoItem.sectionKey = section.key;
+          photoItem.sourceIndex = sectionSourceStartOffset + sectionLocalIndex;
+          items.push(photoItem);
+          sectionLocalIndex += 1;
+        }
+        sourceIndex = sectionSourceStartOffset + sectionLocalIndex;
+        return;
+      }
+
       section.rows.forEach((row: Array<PhotoAsset>) => {
         row.forEach((asset: PhotoAsset) => {
           const photoItem = new GridItemRecord();
@@ -96,11 +140,12 @@ export class PhotoGridDataAdapter {
           photoItem.kind = 'photo';
           photoItem.asset = asset;
           photoItem.sectionKey = section.key;
-          photoItem.sourceIndex = sourceIndex;
+          photoItem.sourceIndex = sectionSourceStartOffset + sectionLocalIndex;
           items.push(photoItem);
-          sourceIndex += 1;
+          sectionLocalIndex += 1;
         });
       });
+      sourceIndex = sectionSourceStartOffset + sectionLocalIndex;
     });
 
     return items;
@@ -110,13 +155,23 @@ export class PhotoGridDataAdapter {
     sections: Array<PhotoSection>,
     groups: Array<GroupInfo>,
     sourceStartOffset: number = 0,
+    sourceFlatAssets?: Array<PhotoAsset>,
   ): Array<GridItem> {
     const items: Array<GridItem> = [];
 
     let sourceIndex = Math.max(0, sourceStartOffset);
+    const flatAssets = sourceFlatAssets;
     sections.forEach((section: PhotoSection, sectionIndex: number) => {
       const group = groups[sectionIndex];
-      const sectionAssetCount = this.countSectionAssets(section);
+      const sectionFlatStartIndex = this.resolveSectionFlatStartIndex(section);
+      const sectionFlatEndIndexExclusive = this.resolveSectionFlatEndIndexExclusive(section);
+      const sectionAssetCount = this.canUseSectionFlatRange(
+        sectionFlatStartIndex,
+        sectionFlatEndIndexExclusive,
+        flatAssets,
+      )
+        ? sectionFlatEndIndexExclusive - sectionFlatStartIndex
+        : this.countSectionAssets(section);
       if (sectionAssetCount <= 0) {
         return;
       }
@@ -129,7 +184,28 @@ export class PhotoGridDataAdapter {
       headerItem.sectionKey = section.key;
       items.push(headerItem);
 
+      const sectionSourceStartOffset = this.resolveSectionSourceStartOffset(
+        section,
+        group?.offset ?? sourceIndex,
+      );
       let sectionLocalIndex = 0;
+      if (flatAssets !== undefined &&
+        this.canUseSectionFlatRange(sectionFlatStartIndex, sectionFlatEndIndexExclusive, flatAssets)) {
+        for (let flatIndex = sectionFlatStartIndex; flatIndex < sectionFlatEndIndexExclusive; flatIndex += 1) {
+          const asset = flatAssets[flatIndex];
+          const photoItem = new GridItemRecord();
+          photoItem.id = this.buildStablePhotoItemId(asset, section.key);
+          photoItem.kind = 'photo';
+          photoItem.asset = asset;
+          photoItem.sectionKey = section.key;
+          photoItem.sourceIndex = sectionSourceStartOffset + sectionLocalIndex;
+          items.push(photoItem);
+          sectionLocalIndex += 1;
+        }
+        sourceIndex = sectionSourceStartOffset + sectionLocalIndex;
+        return;
+      }
+
       section.rows.forEach((row: Array<PhotoAsset>) => {
         row.forEach((asset: PhotoAsset) => {
           const photoItem = new GridItemRecord();
@@ -137,14 +213,12 @@ export class PhotoGridDataAdapter {
           photoItem.kind = 'photo';
           photoItem.asset = asset;
           photoItem.sectionKey = section.key;
-          photoItem.sourceIndex = group?.offset !== undefined
-            ? group.offset + sectionLocalIndex
-            : sourceIndex;
+          photoItem.sourceIndex = sectionSourceStartOffset + sectionLocalIndex;
           items.push(photoItem);
           sectionLocalIndex += 1;
-          sourceIndex += 1;
         });
       });
+      sourceIndex = sectionSourceStartOffset + sectionLocalIndex;
     });
 
     return items;
@@ -213,10 +287,52 @@ export class PhotoGridDataAdapter {
   }
 
   public countSectionAssets(section: PhotoSection): number {
+    if (typeof section.assetCount === 'number' && section.assetCount >= 0) {
+      return section.assetCount;
+    }
+
+    const sectionFlatStartIndex = this.resolveSectionFlatStartIndex(section);
+    const sectionFlatEndIndexExclusive = this.resolveSectionFlatEndIndexExclusive(section);
+    if (sectionFlatStartIndex >= 0 && sectionFlatEndIndexExclusive >= sectionFlatStartIndex) {
+      const assetCount = sectionFlatEndIndexExclusive - sectionFlatStartIndex;
+      section.assetCount = assetCount;
+      return assetCount;
+    }
+
     let count = 0;
-    section.rows.forEach((row: Array<PhotoAsset>) => {
-      count += row.length;
-    });
+    for (let rowIndex = 0; rowIndex < section.rows.length; rowIndex += 1) {
+      count += section.rows[rowIndex].length;
+    }
+    section.assetCount = count;
     return count;
+  }
+
+  private resolveSectionSourceStartOffset(section: PhotoSection, fallbackOffset: number): number {
+    return typeof section.sourceStartOffset === 'number'
+      ? Math.max(0, section.sourceStartOffset)
+      : Math.max(0, fallbackOffset);
+  }
+
+  private resolveSectionFlatStartIndex(section: PhotoSection): number {
+    return typeof section.sourceFlatStartIndex === 'number'
+      ? section.sourceFlatStartIndex
+      : -1;
+  }
+
+  private resolveSectionFlatEndIndexExclusive(section: PhotoSection): number {
+    return typeof section.sourceFlatEndIndexExclusive === 'number'
+      ? section.sourceFlatEndIndexExclusive
+      : -1;
+  }
+
+  private canUseSectionFlatRange(
+    flatStartIndex: number,
+    flatEndIndexExclusive: number,
+    sourceFlatAssets?: Array<PhotoAsset>,
+  ): boolean {
+    return sourceFlatAssets !== undefined &&
+      flatStartIndex >= 0 &&
+      flatEndIndexExclusive > flatStartIndex &&
+      flatEndIndexExclusive <= sourceFlatAssets.length;
   }
 }

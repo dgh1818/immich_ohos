@@ -75,14 +75,17 @@
   - `C:\Program Files\Huawei\DevEco Studio\sdk\default`
 - For OHOS ArkTS or hybrid timeline changes, validate from:
   - `F:\immich_ohos\mobile`
-- Preferred OHOS validation command:
-  - `flutter build hap --release`
-- Do not prepend the build command with an inline PowerShell environment assignment such as:
-  - `{ $env:DEVECO_SDK_HOME = 'C:\Program Files\Huawei\DevEco Studio\sdk' }`
-- For this workspace, ignore warnings about missing `DEVECO_SDK_HOME` when the plain `flutter build hap --release` command succeeds.
+- Preferred OHOS build and run method:
+  - use codegenie MCP build via `mcp_codegenie-mcp_build_project`
+  - use codegenie MCP app launch via `mcp_codegenie-mcp_start_app`
+  - prefer `build_intent: 'Release'` for release validation unless the task needs another intent
+- When a codegenie build writes a large output artifact file, determine success from a terminal tail first:
+  - run `Get-Content <codegenie-output-file> -Tail 30 | Out-String`
+  - use the tail result to check for final `BUILD SUCCESSFUL` / failure lines instead of reading the full artifact file first
+- Do not use terminal commands, `flutter run`, `hdc install`, `hdc shell aa start`, or workspace build/run tasks for routine OHOS validation unless explicitly requested.
 - Before using `codegenie_mcp` to check ArkTS syntax, `git add` every newly created `.ets` file first.
   - Newly added untracked `.ets` files may be skipped by `codegenie_mcp` until they are staged.
-- If `flutter build hap --release` fails, clearly distinguish:
+- If the codegenie MCP build fails, clearly distinguish:
   - code or ArkTS compilation failures
   - signing, certificate, or local toolchain/environment failures
 - Before finishing, clearly report:

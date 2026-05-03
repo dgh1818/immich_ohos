@@ -8,6 +8,7 @@ import {
   delay,
   HYBRID_BACKGROUND_PREDOWNLOAD_YIELD_MS,
   HYBRID_COMPRESSED_BUFFER_CACHE_MAX_BYTES,
+  HYBRID_COMPRESSED_BUFFER_CACHE_IDLE_TARGET_BYTES,
   HYBRID_MAX_CONCURRENT_BACKGROUND_PREDOWNLOADS,
   HYBRID_MAX_CONCURRENT_INITIAL_REMOTE_PREDOWNLOADS,
   HYBRID_MAX_CONCURRENT_NEARBY_REMOTE_PREDOWNLOADS,
@@ -154,6 +155,14 @@ export enum HybridRemoteThumbnailSourceKind {
   NETWORK_MISS = 3,
 }
 
+export enum HybridRemoteThumbnailLoadPath {
+  NONE = 0,
+  COMPRESSED_BUFFER = 1,
+  DEFERRED_WRITE = 2,
+  PERSISTED_FILE = 3,
+  NETWORK = 4,
+}
+
 export enum HybridRemotePredownloadPriorityHint {
   NEARBY = 0,
   INITIAL = 1,
@@ -163,6 +172,7 @@ export enum HybridRemotePredownloadPriorityHint {
 export interface HybridRemoteThumbnailLoadResult {
   pixelMap: PixelMap;
   sourceKind: HybridRemoteThumbnailSourceKind;
+  loadPath: HybridRemoteThumbnailLoadPath;
 }
 
 interface HybridCompressedRemoteThumbnailBufferEntry {
@@ -192,6 +202,8 @@ export interface HybridRemoteThumbnailStatsSnapshot {
   highWaterMaxWaitMs: number;
   deferredWriteQueueSize: number;
   deferredWriteQueueBytes: number;
+  compressedBufferCacheEntryCount: number;
+  compressedBufferCacheBytes: number;
 }
 
 interface HybridBackgroundPredownloadWaiter {
@@ -259,6 +271,22 @@ class HybridCompressedRemoteThumbnailBufferCache {
 
   private static trimOverflow(): void {
     while (HybridCompressedRemoteThumbnailBufferCache.totalBytes > HYBRID_COMPRESSED_BUFFER_CACHE_MAX_BYTES) {
+      const oldestKey = HybridCompressedRemoteThumbnailBufferCache.entries.keys().next().value as string | undefined;
+      if (!oldestKey) {
+        return;
+      }
+      const oldestEntry = HybridCompressedRemoteThumbnailBufferCache.entries.get(oldestKey);
+      if (!oldestEntry) {
+        HybridCompressedRemoteThumbnailBufferCache.entries.delete(oldestKey);
+        continue;
+      }
+      HybridCompressedRemoteThumbnailBufferCache.dropEntry(oldestKey, oldestEntry);
+    }
+  }
+
+  private static trimToTarget(targetBytes: number): void {
+    const safeTargetBytes = Math.max(0, targetBytes);
+    while (HybridCompressedRemoteThumbnailBufferCache.totalBytes > safeTargetBytes) {
       const oldestKey = HybridCompressedRemoteThumbnailBufferCache.entries.keys().next().value as string | undefined;
       if (!oldestKey) {
         return;
@@ -374,6 +402,21 @@ class HybridCompressedRemoteThumbnailBufferCache {
       `invalidSizes=[${invalidSizes.join(',')}] cacheEntries=${HybridCompressedRemoteThumbnailBufferCache.entries.size} ` +
       `cacheBytes=${HybridCompressedRemoteThumbnailBufferCache.totalBytes}`;
   }
+
+  static entryCount(): number {
+    return HybridCompressedRemoteThumbnailBufferCache.entries.size;
+  }
+
+  static bytes(): number {
+    return HybridCompressedRemoteThumbnailBufferCache.totalBytes;
+  }
+
+  static trimIfNeeded(targetBytes: number = HYBRID_COMPRESSED_BUFFER_CACHE_IDLE_TARGET_BYTES): void {
+    if (HybridCompressedRemoteThumbnailBufferCache.totalBytes <= targetBytes) {
+      return;
+    }
+    HybridCompressedRemoteThumbnailBufferCache.trimToTarget(targetBytes);
+  }
 }
 
 class HybridRemoteThumbnailStats {
@@ -459,6 +502,8 @@ class HybridRemoteThumbnailStats {
       highWaterMaxWaitMs: HybridRemoteThumbnailStats.highWaterMaxWaitMs,
       deferredWriteQueueSize: HybridDeferredRemoteThumbnailWriter.size(),
       deferredWriteQueueBytes: HybridDeferredRemoteThumbnailWriter.bytes(),
+      compressedBufferCacheEntryCount: HybridCompressedRemoteThumbnailBufferCache.entryCount(),
+      compressedBufferCacheBytes: HybridCompressedRemoteThumbnailBufferCache.bytes(),
     };
   }
 }
@@ -467,6 +512,9 @@ let visibleRemoteThumbnailDiskTimingLogged: boolean = false;
 
 function resolveRemoteThumbnailTaskPriority(loadKind: HybridRemoteThumbnailLoadKind): taskpool.Priority {
   if (loadKind === HybridRemoteThumbnailLoadKind.VISIBLE) {
+    return taskpool.Priority.MEDIUM;
+  }
+  if (HybridScrollState.isScrolling) {
     return taskpool.Priority.MEDIUM;
   }
   return taskpool.Priority.LOW;
@@ -1423,6 +1471,7 @@ export async function loadRemoteThumbnail(
         loadKind,
       ),
       sourceKind: compressedBufferHit.sourceKind,
+      loadPath: HybridRemoteThumbnailLoadPath.COMPRESSED_BUFFER,
     };
   }
 
@@ -1442,6 +1491,7 @@ export async function loadRemoteThumbnail(
         loadKind,
       ),
       sourceKind: HybridRemoteThumbnailSourceKind.PENDING_WRITE,
+      loadPath: HybridRemoteThumbnailLoadPath.DEFERRED_WRITE,
     };
   }
 
@@ -1453,6 +1503,7 @@ export async function loadRemoteThumbnail(
       return {
         pixelMap: pixelMap,
         sourceKind: HybridRemoteThumbnailSourceKind.PERSISTED_FILE,
+        loadPath: HybridRemoteThumbnailLoadPath.PERSISTED_FILE,
       };
     } catch (error) {
       const resolvedError = error as Error;
@@ -1520,6 +1571,7 @@ export async function loadRemoteThumbnail(
     return {
       pixelMap: await decodeRemoteThumbnailFromBuffer(data, requestSize, loadKind),
       sourceKind: HybridRemoteThumbnailSourceKind.NETWORK_MISS,
+      loadPath: HybridRemoteThumbnailLoadPath.NETWORK,
     };
   } finally {
     request.destroy();
@@ -1776,6 +1828,12 @@ export function flushDeferredThumbnailWritesIfIdle(): void {
 
 export function getRemoteThumbnailStatsSnapshot(): HybridRemoteThumbnailStatsSnapshot {
   return HybridRemoteThumbnailStats.snapshot();
+}
+
+export function trimCompressedRemoteThumbnailBufferCache(
+  targetBytes: number = HYBRID_COMPRESSED_BUFFER_CACHE_IDLE_TARGET_BYTES,
+): void {
+  HybridCompressedRemoteThumbnailBufferCache.trimIfNeeded(targetBytes);
 }
 
 export function shouldThrottleRemoteDiskPredownload(): boolean {

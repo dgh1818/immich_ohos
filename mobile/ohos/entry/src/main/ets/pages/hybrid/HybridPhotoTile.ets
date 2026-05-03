@@ -1,6 +1,12 @@
 import { common } from "@kit.AbilityKit";
 import { HYBRID_REQUEST_SIZE, HybridPhotoAsset } from "./HybridPhotoGridShared";
-import { buildThumbnailCacheKey, HybridThumbnailCache, loadVisibleAssetThumbnail } from "./HybridPhotoThumbnail";
+import {
+  buildThumbnailCacheKey,
+  HybridThumbnailCache,
+  loadVisibleAssetThumbnail,
+  prefetchResidentRemoteAssetThumbnail,
+  warmupAssetThumbnail,
+} from "./HybridPhotoThumbnail";
 
 export enum HybridPhotoTileReleasePolicy {
   DELAYED = 0,
@@ -117,6 +123,10 @@ export struct HybridPhotoTile {
   private reloadForCurrentAsset(): void {
     this.cancelPendingRelease();
     this.loadVersion += 1;
+    if (!this.shouldRetainDisplayedContent()) {
+      this.releaseDisplayedAsset();
+      this.pixelMap = undefined;
+    }
     // Keep stale pixelMap visible while new image loads to avoid white flash
     this.hasError = false;
     this.isLoading = true;
@@ -125,6 +135,39 @@ export struct HybridPhotoTile {
 
   private shouldKeepReady(): boolean {
     return this.layerActive || this.warmActive;
+  }
+
+  private shouldLoadContentNow(): boolean {
+    return this.isInVisibleArea || this.layerActive || this.warmActive;
+  }
+
+  private shouldRetainDisplayedContent(): boolean {
+    return this.isInVisibleArea || this.layerActive || this.warmActive;
+  }
+
+  private isRemoteAsset(asset: HybridPhotoAsset): boolean {
+    return asset.thumbnailUrl !== undefined && asset.thumbnailUrl.length > 0;
+  }
+
+  private shouldWarmRemoteOffscreen(asset: HybridPhotoAsset): boolean {
+    return !this.isInVisibleArea && this.layerActive && !this.warmActive && this.isRemoteAsset(asset);
+  }
+
+  private tryAcquireReadyCache(cacheKey: string): boolean {
+    const cachedPixelMap = HybridThumbnailCache.acquire(
+      cacheKey,
+      this.asset.thumbnailUrl !== undefined && this.asset.thumbnailUrl.length > 0,
+    );
+    if (!cachedPixelMap) {
+      return false;
+    }
+
+    this.releaseDisplayedAsset();
+    this.displayedAssetId = cacheKey;
+    this.pixelMap = cachedPixelMap;
+    this.isLoading = false;
+    this.hasError = false;
+    return true;
   }
 
   private handleVisibleAreaChange(isVisible: boolean, currentRatio: number): void {
@@ -140,7 +183,7 @@ export struct HybridPhotoTile {
       return;
     }
 
-    if (this.shouldKeepReady()) {
+    if (this.shouldRetainDisplayedContent()) {
       return;
     }
 
@@ -205,7 +248,7 @@ export struct HybridPhotoTile {
   }
 
   private async ensureLoaded(): Promise<void> {
-    if (!this.shouldKeepReady()) {
+    if (!this.shouldLoadContentNow()) {
       return;
     }
     // Skip if already displaying the correct asset and has no error
@@ -221,6 +264,18 @@ export struct HybridPhotoTile {
     // Already displaying this exact asset — nothing to do
     if (this.pixelMap && this.displayedAssetId === cacheKey) {
       this.isLoading = false;
+      return;
+    }
+
+    if (this.tryAcquireReadyCache(cacheKey)) {
+      return;
+    }
+
+    if (this.shouldWarmRemoteOffscreen(asset)) {
+      if (prefetchResidentRemoteAssetThumbnail(this.context, asset, requestSize)) {
+        return;
+      }
+      warmupAssetThumbnail(this.context, asset, requestSize);
       return;
     }
 
@@ -284,12 +339,12 @@ export struct HybridPhotoTile {
           .width("64%")
           .height(14)
           .borderRadius(8)
-          .backgroundColor(0x42ffffff)
+          .backgroundColor(0x18364759)
         Blank()
           .width("38%")
           .height(14)
           .borderRadius(8)
-          .backgroundColor(0x30ffffff)
+          .backgroundColor(0x12364759)
       }
       .width("100%")
       .height("100%")
@@ -302,17 +357,12 @@ export struct HybridPhotoTile {
     .linearGradient({
       angle: 135,
       colors: [
-        [0x66f8fafc, 0.0],
-        [0x52e2e8f0, 0.52],
-        [0x3ad1d9e6, 1.0],
+        [0x14cbd5e1, 0.0],
+        [0x10b6c2cf, 0.52],
+        [0x0aa7b4c2, 1.0],
       ],
     })
-    .backgroundColor(0x40ffffff)
-    .backgroundBlurStyle(BlurStyle.COMPONENT_ULTRA_THIN)
-    .border({
-      width: 0.6,
-      color: 0x28ffffff,
-    });
+    .backgroundColor($r('app.color.start_window_background'));
   }
 
   @Builder
@@ -320,7 +370,7 @@ export struct HybridPhotoTile {
     Column() {}
       .width("100%")
       .height("100%")
-      .backgroundColor(0xffffffff);
+      .backgroundColor($r('app.color.start_window_background'));
   }
 
   build() {
@@ -348,7 +398,7 @@ export struct HybridPhotoTile {
         .height("100%")
         .justifyContent(FlexAlign.Center)
         .alignItems(HorizontalAlign.Center)
-        .backgroundColor(0xfff1f5f9);
+        .backgroundColor($r('app.color.start_window_background'));
       }
 
       if (this.asset.isVideo) {
@@ -372,6 +422,6 @@ export struct HybridPhotoTile {
     .onVisibleAreaChange([0.0, 0.01], (isVisible: boolean, currentRatio: number) => {
       this.handleVisibleAreaChange(isVisible, currentRatio);
     })
-    .backgroundColor(0xfff1f5f9);
+    .backgroundColor($r('app.color.start_window_background'));
   }
 }

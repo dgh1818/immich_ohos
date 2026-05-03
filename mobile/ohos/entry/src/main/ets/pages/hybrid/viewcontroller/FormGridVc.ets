@@ -17,6 +17,7 @@ export class FormGridVc extends AbstractGridVc {
     callbacks?: FormGridVcCallbacks,
   ) {
     super(gridForm, formFsm, pinchStateManager, attributeUpdater);
+    this.attributeUpdater.updateOriginalBackgroundColor($r('app.color.start_window_background'));
     this.switchAnimationEndCallback = callbacks?.onSwitchAnimationEnd;
   }
 
