@@ -262,6 +262,14 @@ class _NativeVideoViewerState extends ConsumerState<NativeVideoViewer> with Widg
   Widget build(BuildContext context) {
     final isCasting = ref.watch(castProvider.select((c) => c.isCasting));
     final status = ref.watch(videoPlayerProvider(widget.asset.heroTag).select((v) => v.status));
+    final videoInfo = _controller?.videoInfo;
+    final width = widget.asset.width;
+    final height = widget.asset.height;
+    final aspectRatio = videoInfo != null && videoInfo.width > 0 && videoInfo.height > 0
+        ? videoInfo.width / videoInfo.height
+        : width != null && height != null && width > 0 && height > 0
+        ? width / height
+        : 1.0;
 
     return Stack(
       children: [
@@ -272,7 +280,12 @@ class _NativeVideoViewerState extends ConsumerState<NativeVideoViewer> with Widg
               if (!isCasting) ...[
                 Visibility.maintain(
                   visible: _isVideoReady,
-                  child: NativeVideoPlayerView(onViewReady: _initController),
+                  child: Center(
+                    child: AspectRatio(
+                      aspectRatio: aspectRatio,
+                      child: NativeVideoPlayerView(onViewReady: _initController),
+                    ),
+                  ),
                 ),
                 Center(
                   child: AnimatedOpacity(
