@@ -32,7 +32,7 @@ class NetworkRepository {
     }
     _clientPointer = clientPointer;
     _allowSelfSignedSsl = allowSelfSignedSsl;
-    final previousClient = _client;
+    _client?.close();
     if (defaultTargetPlatform == TargetPlatform.ohos) {
       _client = OhosHttpClient(
         connectTimeout: const Duration(seconds: 30),
@@ -51,9 +51,6 @@ class NetworkRepository {
           writeTimeout: Duration(seconds: 60),
         ),
       );
-    }
-    if (defaultTargetPlatform != TargetPlatform.ohos) {
-      previousClient?.close();
     }
   }
 
