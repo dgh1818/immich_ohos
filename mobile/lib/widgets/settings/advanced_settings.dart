@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:device_info_plus/device_info_plus.dart';
@@ -10,6 +11,8 @@ import 'package:immich_mobile/entities/store.entity.dart';
 import 'package:immich_mobile/extensions/build_context_extensions.dart';
 import 'package:immich_mobile/providers/infrastructure/platform.provider.dart';
 import 'package:immich_mobile/providers/infrastructure/readonly_mode.provider.dart';
+import 'package:immich_mobile/providers/api.provider.dart';
+import 'package:immich_mobile/infrastructure/repositories/network.repository.dart';
 import 'package:immich_mobile/repositories/local_files_manager.repository.dart';
 import 'package:immich_mobile/services/app_settings.service.dart';
 import 'package:immich_mobile/utils/bytes_units.dart';
@@ -35,6 +38,7 @@ class AdvancedSettings extends HookConsumerWidget {
     final manageMediaAndroidPermission = useState(false);
     final levelId = useAppSettingsState(AppSettingsEnum.logLevel);
     final preferRemote = useAppSettingsState(AppSettingsEnum.preferRemoteImage);
+    final allowSelfSigned = useAppSettingsState(AppSettingsEnum.allowSelfSignedSSLCert);
     final useAlternatePMFilter = useAppSettingsState(AppSettingsEnum.photoManagerCustomFilter);
     final readonlyModeEnabled = useAppSettingsState(AppSettingsEnum.readonlyModeEnabled);
 
@@ -113,6 +117,14 @@ class AdvancedSettings extends HookConsumerWidget {
         valueNotifier: preferRemote,
         title: "advanced_settings_prefer_remote_title".tr(),
         subtitle: "advanced_settings_prefer_remote_subtitle".tr(),
+      ),
+      SettingsSwitchListTile(
+        valueNotifier: allowSelfSigned,
+        title: "advanced_settings_self_signed_ssl_title".tr(),
+        subtitle: "advanced_settings_self_signed_ssl_subtitle".tr(),
+        onChanged: (_) {
+          unawaited(NetworkRepository.init().then((_) => ref.read(apiServiceProvider).updateHeaders()));
+        },
       ),
       if (!Store.isBetaTimelineEnabled) const LocalStorageSettings(),
       const CustomProxyHeaderSettings(),
