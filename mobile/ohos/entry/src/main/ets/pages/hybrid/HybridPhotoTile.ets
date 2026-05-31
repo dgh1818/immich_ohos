@@ -362,7 +362,7 @@ export struct HybridPhotoTile {
         [0x0aa7b4c2, 1.0],
       ],
     })
-    .backgroundColor($r('app.color.start_window_background'));
+    .backgroundColor('#E0E0E0');
   }
 
   @Builder
@@ -370,7 +370,7 @@ export struct HybridPhotoTile {
     Column() {}
       .width("100%")
       .height("100%")
-      .backgroundColor($r('app.color.start_window_background'));
+      .backgroundColor('#E0E0E0');
   }
 
   build() {
@@ -398,7 +398,7 @@ export struct HybridPhotoTile {
         .height("100%")
         .justifyContent(FlexAlign.Center)
         .alignItems(HorizontalAlign.Center)
-        .backgroundColor($r('app.color.start_window_background'));
+        .backgroundColor('#E0E0E0');
       }
 
       if (this.asset.isVideo) {
@@ -422,6 +422,6 @@ export struct HybridPhotoTile {
     .onVisibleAreaChange([0.0, 0.01], (isVisible: boolean, currentRatio: number) => {
       this.handleVisibleAreaChange(isVisible, currentRatio);
     })
-    .backgroundColor($r('app.color.start_window_background'));
+    .backgroundColor('#E0E0E0');
   }
 }

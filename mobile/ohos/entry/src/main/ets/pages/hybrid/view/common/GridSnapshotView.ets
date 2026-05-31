@@ -13,7 +13,7 @@ export struct GridSnapshotView {
         Column() {}
           .width('100%')
           .height('100%')
-          .backgroundColor($r('app.color.start_window_background'));
+          .backgroundColor('#E0E0E0');
 
         Image(this.snapshotImage as PixelMap)
           .width('100%')

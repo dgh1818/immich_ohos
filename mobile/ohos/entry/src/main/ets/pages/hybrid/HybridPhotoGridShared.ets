@@ -186,10 +186,11 @@ export function resolveAdaptiveCacheLimit(columns: number): number {
 
 /**
  * Adaptive UI cachedCount: dense grids need more component cache.
+ * Scales with column count to maintain at least 16 rows of cache.
  */
 export function resolveListCacheCount(columns: number): number {
   if (columns >= 5) {
-    return 60;
+    return Math.max(64, columns * 18);
   }
   return HYBRID_LIST_CACHE_COUNT;
 }

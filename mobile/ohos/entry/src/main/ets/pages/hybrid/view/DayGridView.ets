@@ -119,7 +119,7 @@ export struct DayGridView {
       .width('100%')
       .clip(false)
       .aspectRatio(1)
-      .backgroundColor($r('app.color.start_window_background'));
+      .backgroundColor('#E0E0E0');
   }
 
   @Builder
@@ -129,7 +129,7 @@ export struct DayGridView {
         Column() {}
           .width('100%')
           .height(this.headSpacerHeight)
-          .backgroundColor($r('app.color.start_window_background'));
+          .backgroundColor('#E0E0E0');
       }
       .columnStart(0)
       .columnEnd(this.columns + 1);
@@ -153,7 +153,7 @@ export struct DayGridView {
         Column() {}
           .width('100%')
           .height(this.tailSpacerHeight)
-          .backgroundColor($r('app.color.start_window_background'));
+          .backgroundColor('#E0E0E0');
       }
       .columnStart(0)
       .columnEnd(this.columns + 1);
@@ -192,7 +192,7 @@ export struct DayGridView {
       .clip(false)
       .width('100%')
       .height('100%')
-      .backgroundColor($r('app.color.start_window_background'))
+      .backgroundColor('#E0E0E0')
       .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
       .hitTestBehavior(this.visible && this.interactive ? HitTestMode.Default : HitTestMode.None)
       .onAreaChange((_oldValue: Area, newValue: Area): void => {

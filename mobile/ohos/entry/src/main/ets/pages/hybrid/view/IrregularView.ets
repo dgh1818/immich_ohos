@@ -25,7 +25,7 @@ export struct IrregularView {
         start: { anchor: PhotoGridViewId.CONTAINER, align: HorizontalAlign.Start },
       })
       .padding({ left: 12, right: 12, top: 10, bottom: 10 })
-      .backgroundColor($r('app.color.start_window_background'))
+      .backgroundColor('#E0E0E0')
       .borderRadius(18)
       .margin({ left: 8, top: this.topInset + 4 })
       .hitTestBehavior(HitTestMode.None);

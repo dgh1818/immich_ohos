@@ -57,7 +57,7 @@ export struct TimelineView {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor($r('app.color.start_window_background'))
+    .backgroundColor('#E0E0E0')
     .justifyContent(FlexAlign.Center)
     .alignItems(HorizontalAlign.Center);
   }
@@ -84,7 +84,7 @@ export struct TimelineView {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor($r('app.color.start_window_background'))
+    .backgroundColor('#E0E0E0')
     .justifyContent(FlexAlign.Center)
     .alignItems(HorizontalAlign.Center);
   }
@@ -349,7 +349,7 @@ export struct TimelineView {
     .width('100%')
     .height('100%')
     .clip(false)
-    .backgroundColor($r('app.color.start_window_background'))
+    .backgroundColor('#E0E0E0')
     .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
     .alignRules({
       top: { anchor: PhotoGridViewId.CONTAINER, align: VerticalAlign.Top },
@@ -407,7 +407,7 @@ export struct TimelineView {
     .width('100%')
     .height('100%')
     .clip(false)
-    .backgroundColor($r('app.color.start_window_background'))
+    .backgroundColor('#E0E0E0')
     .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM]);
   }
 
@@ -423,7 +423,7 @@ export struct TimelineView {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor($r('app.color.start_window_background'))
+    .backgroundColor('#E0E0E0')
     .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM]);
   }
 

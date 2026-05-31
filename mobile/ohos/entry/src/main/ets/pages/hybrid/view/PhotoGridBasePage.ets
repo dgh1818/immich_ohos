@@ -18,6 +18,6 @@ export struct PhotoGridBasePage {
     .width('100%')
     .height('100%')
     .clip(false)
-    .backgroundColor($r('app.color.start_window_background'));
+    .backgroundColor('#E0E0E0');
   }
 }

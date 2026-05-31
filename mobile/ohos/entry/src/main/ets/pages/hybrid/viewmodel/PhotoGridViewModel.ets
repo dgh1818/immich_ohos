@@ -1442,15 +1442,15 @@ export class PhotoGridViewModel {
   }
 
   private resolveActiveCacheRows(columns: number): number {
-    if (columns > Shared.GRID_COLUMNS) {
-      return Math.max(GRID_CACHED_COUNT, Shared.resolveListCacheCount(columns));
-    }
-
     const screenRows = this.resolveScreenRowsForColumns(columns);
-    return Math.max(
+    const baseCache = Math.max(
       GRID_CACHED_COUNT,
       screenRows * Shared.HYBRID_ACTIVE_TILE_RUNWAY_SCREEN_MULTIPLIER,
     );
+    if (columns > Shared.GRID_COLUMNS) {
+      return Math.max(baseCache, Shared.resolveListCacheCount(columns));
+    }
+    return baseCache;
   }
 
   private resolveDormantCacheRows(columns: number): number {
@@ -2535,10 +2535,6 @@ export class PhotoGridViewModel {
     endIndex: number,
   ): void {
     if (!this.isGridScrolling || this.currentGridItems.length <= 0) {
-      return;
-    }
-
-    if (this.shouldUseGridDataSourcePrefetch(this.activeForm)) {
       return;
     }
 

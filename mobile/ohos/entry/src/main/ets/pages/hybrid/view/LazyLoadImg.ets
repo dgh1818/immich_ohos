@@ -7,7 +7,14 @@ export struct LazyLoadImg {
 
   build() {
     Row() {
-      this.child();
+      if (!this.touchScrollEnd && !this.allowLoadWhileScrolling) {
+        Row()
+          .width('100%')
+          .aspectRatio(1)
+          .backgroundColor('#E0E0E0')
+      } else {
+        this.child();
+      }
     }
     .width('100%')
     .height('100%');
