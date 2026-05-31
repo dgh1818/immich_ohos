@@ -1,6 +1,9 @@
 **/node_modules/**
 
 .DS_Store
+.tmp/
+tmp/
+tmp_*/
 .vscode/*
 !.vscode/launch.json
 !.vscode/extensions.json
