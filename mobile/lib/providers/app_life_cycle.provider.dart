@@ -210,8 +210,19 @@ class AppLifeCycleNotifier extends StateNotifier<AppLifeCycleEnum> {
 
   // Helper method to check if operations should continue
   bool _shouldContinueOperation() {
-    return [AppLifeCycleEnum.resumed, AppLifeCycleEnum.active].contains(state) &&
-        (_resumeOperation?.isCompleted == false || _resumeOperation == null);
+    final allowedStates = CurrentPlatform.isOhos
+        ? [
+            AppLifeCycleEnum.resumed,
+            AppLifeCycleEnum.active,
+            AppLifeCycleEnum.inactive,
+            AppLifeCycleEnum.paused,
+            AppLifeCycleEnum.hidden,
+          ]
+        : [AppLifeCycleEnum.resumed, AppLifeCycleEnum.active];
+    if (CurrentPlatform.isOhos) {
+      return allowedStates.contains(state);
+    }
+    return allowedStates.contains(state) && (_resumeOperation?.isCompleted == false || _resumeOperation == null);
   }
 
   void handleAppInactivity() {

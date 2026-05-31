@@ -6,4 +6,7 @@ extension CurrentPlatform on TargetPlatform {
 
   @pragma('vm:prefer-inline')
   static bool get isAndroid => defaultTargetPlatform == TargetPlatform.android;
+
+  @pragma('vm:prefer-inline')
+  static bool get isOhos => defaultTargetPlatform == TargetPlatform.ohos;
 }

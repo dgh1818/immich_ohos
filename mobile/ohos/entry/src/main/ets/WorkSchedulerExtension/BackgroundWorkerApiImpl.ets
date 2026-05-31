@@ -67,9 +67,8 @@ export class BackgroundWorkerApiImpl extends BackgroundWorkerFgHostApi {
     bundleName: 'com.dgh18.immich',
     abilityName: 'MediaObserverScheduler',
     batteryStatus: workScheduler.BatteryStatus.BATTERY_STATUS_OKAY,
-    isCharging:true,
-    isDeepIdle:true,
-    networkType: workScheduler.NetworkType.NETWORK_TYPE_WIFI,
+    isCharging:false,
+    networkType: workScheduler.NetworkType.NETWORK_TYPE_ANY,
   };
 
   static updateUploadEnabled(context: common.ApplicationContext, enabled: Boolean) {
@@ -85,6 +84,7 @@ export class BackgroundWorkerApiImpl extends BackgroundWorkerFgHostApi {
     let constraints: workScheduler.WorkInfo = BackgroundWorkerApiImpl.MEDIAOBSERVER_WORKER_INFO;
     const settings = new BackgroundWorkerPreferences(ctx).getSettings();
     constraints.isCharging = settings.requiresCharging;
+    constraints.networkType = workScheduler.NetworkType.NETWORK_TYPE_ANY;
     workScheduler.startWork(constraints);
     console.info(BackgroundWorkerApiImpl.TAG, "Enqueued media observer worker with name" + BackgroundWorkerApiImpl.OBSERVER_WORKER_NAME +
     BackgroundWorkerApiImpl.MediaObserver_WORKER_ID);

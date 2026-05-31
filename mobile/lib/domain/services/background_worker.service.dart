@@ -282,13 +282,13 @@ class BackgroundWorkerLockService {
   const BackgroundWorkerLockService(this._hostApi);
 
   Future<void> lock() async {
-    if (CurrentPlatform.isAndroid) {
+    if (CurrentPlatform.isAndroid || CurrentPlatform.isOhos) {
       return _hostApi.lock();
     }
   }
 
   Future<void> unlock() async {
-    if (CurrentPlatform.isAndroid) {
+    if (CurrentPlatform.isAndroid || CurrentPlatform.isOhos) {
       return _hostApi.unlock();
     }
   }
