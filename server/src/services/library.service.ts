@@ -403,8 +403,8 @@ export class LibraryService extends BaseService {
     return {
       ownerId,
       libraryId,
-      checksum: this.cryptoRepository.hashSha1(`path:${assetPath}`),
-      checksumAlgorithm: ChecksumAlgorithm.sha1Path,
+      checksum: await this.cryptoRepository.hashFile(assetPath),
+      checksumAlgorithm: ChecksumAlgorithm.sha1File,
       originalPath: assetPath,
 
       fileCreatedAt: stat.mtime,
