@@ -17,7 +17,7 @@ import { InjectKysely } from 'nestjs-kysely';
 import { LockableProperty, Stack } from 'src/database';
 import { Chunked, ChunkedArray, DummyValue, GenerateSql } from 'src/decorators';
 import { AuthDto } from 'src/dtos/auth.dto';
-import { AssetFileType, AssetOrder, AssetStatus, AssetType, AssetVisibility } from 'src/enum';
+import { AssetFileType, AssetOrder, AssetStatus, AssetType, AssetVisibility, ChecksumAlgorithm } from 'src/enum';
 import { DB } from 'src/schema';
 import { AssetExifTable } from 'src/schema/tables/asset-exif.table';
 import { AssetFileTable } from 'src/schema/tables/asset-file.table';
@@ -132,6 +132,11 @@ interface AssetGetByChecksumOptions {
   ownerId: string;
   checksum: Buffer;
   libraryId?: string;
+}
+
+interface ExternalLibraryChecksumBackfillOptions {
+  afterId?: string;
+  limit: number;
 }
 
 interface GetByIdsRelations {
@@ -601,6 +606,29 @@ export class AssetRepository {
 
   async updateByLibraryId(libraryId: string, options: Updateable<AssetTable>): Promise<void> {
     await this.db.updateTable('asset').set(options).where('libraryId', '=', asUuid(libraryId)).execute();
+  }
+
+  async updateChecksum(id: string, checksum: Buffer, checksumAlgorithm: ChecksumAlgorithm): Promise<void> {
+    await this.db
+      .updateTable('asset')
+      .set({ checksum, checksumAlgorithm })
+      .where('id', '=', asUuid(id))
+      .where('checksumAlgorithm', '=', ChecksumAlgorithm.sha1Path)
+      .execute();
+  }
+
+  @GenerateSql({ params: [{ afterId: DummyValue.UUID, limit: 100 }] })
+  getExternalLibraryChecksumBackfillPage({ afterId, limit }: ExternalLibraryChecksumBackfillOptions) {
+    return this.db
+      .selectFrom('asset')
+      .select(['id', 'ownerId', 'libraryId', 'originalPath', 'checksum'])
+      .where('isExternal', '=', true)
+      .where('libraryId', 'is not', null)
+      .where('checksumAlgorithm', '=', ChecksumAlgorithm.sha1Path)
+      .$if(!!afterId, (qb) => qb.where('id', '>', afterId!))
+      .orderBy('id')
+      .limit(limit)
+      .execute();
   }
 
   async update(asset: Updateable<AssetTable> & { id: string }) {

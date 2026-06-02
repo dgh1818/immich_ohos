@@ -27,12 +27,14 @@ import {
   JobName,
   JobStatus,
   QueueName,
+  SystemMetadataKey,
 } from 'src/enum';
 import { ArgOf } from 'src/repositories/event.repository';
 import { AssetSyncResult } from 'src/repositories/library.repository';
 import { AssetTable } from 'src/schema/tables/asset.table';
 import { BaseService } from 'src/services/base.service';
-import { JobOf } from 'src/types';
+import { ExternalLibraryChecksumBackfillState, JobOf } from 'src/types';
+import { isAssetChecksumConstraint } from 'src/utils/database';
 import { mimeTypes } from 'src/utils/mime-types';
 import { handlePromiseError } from 'src/utils/misc';
 
@@ -60,6 +62,8 @@ export class LibraryService extends BaseService {
         onTick: () => handlePromiseError(this.jobRepository.queue({ name: JobName.LibraryScanQueueAll }), this.logger),
         start: scan.enabled,
       });
+
+      await this.queueExternalLibraryChecksumBackfill();
     }
 
     if (this.watchLibraries) {
@@ -226,6 +230,91 @@ export class LibraryService extends BaseService {
     }
 
     return JobStatus.Success;
+  }
+
+  @OnJob({ name: JobName.LibraryBackfillChecksums, queue: QueueName.Library })
+  async handleBackfillChecksums(): Promise<JobStatus> {
+    const currentState = await this.systemMetadataRepository.get(SystemMetadataKey.ExternalLibraryChecksumBackfill);
+    if (currentState?.completedAt) {
+      return JobStatus.Skipped;
+    }
+
+    const state: ExternalLibraryChecksumBackfillState = {
+      startedAt: new Date().toISOString(),
+      scanned: 0,
+      updated: 0,
+      duplicates: 0,
+      failed: 0,
+    };
+
+    await this.systemMetadataRepository.set(SystemMetadataKey.ExternalLibraryChecksumBackfill, state);
+    this.logger.log('Starting external library checksum backfill');
+
+    let afterId: string | undefined;
+    while (true) {
+      const assets = await this.assetRepository.getExternalLibraryChecksumBackfillPage({
+        afterId,
+        limit: JOBS_LIBRARY_PAGINATION_SIZE,
+      });
+
+      if (assets.length === 0) {
+        break;
+      }
+
+      afterId = assets[assets.length - 1].id;
+
+      for (const asset of assets) {
+        state.scanned++;
+
+        let checksum: Buffer;
+        try {
+          checksum = await this.cryptoRepository.hashFile(asset.originalPath);
+        } catch (error: Error | any) {
+          state.failed++;
+          this.logger.warn(`Unable to hash external asset ${asset.id}: ${asset.originalPath}: ${error}`);
+          continue;
+        }
+
+        try {
+          await this.assetRepository.updateChecksum(asset.id, checksum, ChecksumAlgorithm.sha1File);
+          state.updated++;
+        } catch (error: Error | any) {
+          if (isAssetChecksumConstraint(error)) {
+            state.duplicates++;
+            this.logger.warn(
+              `Skipping external asset ${asset.id}: ${asset.originalPath}: checksum ${checksum.toString(
+                'base64',
+              )} already exists in this library`,
+            );
+            continue;
+          }
+
+          state.failed++;
+          this.logger.warn(`Unable to update checksum for external asset ${asset.id}: ${asset.originalPath}: ${error}`);
+        }
+      }
+
+      this.logger.log(
+        `External library checksum backfill progress: ${state.scanned} scanned, ${state.updated} updated, ${state.duplicates} duplicates, ${state.failed} failed`,
+      );
+    }
+
+    state.completedAt = new Date().toISOString();
+    await this.systemMetadataRepository.set(SystemMetadataKey.ExternalLibraryChecksumBackfill, state);
+    this.logger.log(
+      `Finished external library checksum backfill: ${state.scanned} scanned, ${state.updated} updated, ${state.duplicates} duplicates, ${state.failed} failed`,
+    );
+
+    return JobStatus.Success;
+  }
+
+  private async queueExternalLibraryChecksumBackfill(): Promise<void> {
+    const state = await this.systemMetadataRepository.get(SystemMetadataKey.ExternalLibraryChecksumBackfill);
+    if (state?.completedAt) {
+      return;
+    }
+
+    await this.jobRepository.queue({ name: JobName.LibraryBackfillChecksums });
   }
 
   async create(dto: CreateLibraryDto): Promise<LibraryResponseDto> {

@@ -1,9 +1,10 @@
 import { BadRequestException } from '@nestjs/common';
 import { Stats } from 'node:fs';
+import { normalize } from 'node:path';
 import { defaults, SystemConfig } from 'src/config';
 import { JOBS_LIBRARY_PAGINATION_SIZE } from 'src/constants';
 import { mapLibrary } from 'src/dtos/library.dto';
-import { AssetType, CronJob, ImmichWorker, JobName, JobStatus } from 'src/enum';
+import { AssetType, ChecksumAlgorithm, CronJob, ImmichWorker, JobName, JobStatus, SystemMetadataKey } from 'src/enum';
 import { LibraryService } from 'src/services/library.service';
 import { ILibraryBulkIdsJob, ILibraryFileJob } from 'src/types';
 import { AssetFactory } from 'test/factories/asset.factory';
@@ -28,6 +29,20 @@ describe(LibraryService.name, () => {
 
     mocks.database.tryLock.mockResolvedValue(true);
     mocks.config.getWorker.mockReturnValue(ImmichWorker.Microservices);
+    mocks.systemMetadata.get.mockImplementation((key) => {
+      if (key === SystemMetadataKey.ExternalLibraryChecksumBackfill) {
+        return Promise.resolve({
+          startedAt: '2026-01-01T00:00:00.000Z',
+          completedAt: '2026-01-01T00:00:00.000Z',
+          scanned: 0,
+          updated: 0,
+          duplicates: 0,
+          failed: 0,
+        });
+      }
+
+      return Promise.resolve(null);
+    });
   });
 
   it('should work', () => {
@@ -104,6 +119,23 @@ describe(LibraryService.name, () => {
 
       expect(mocks.cron.create).not.toHaveBeenCalled();
     });
+
+    it('should queue the external library checksum backfill once', async () => {
+      mocks.systemMetadata.get.mockResolvedValue(null);
+      mocks.cron.create.mockResolvedValue();
+
+      await sut.onConfigInit({ newConfig: systemConfigStub.libraryWatchDisabled as SystemConfig });
+
+      expect(mocks.job.queue).toHaveBeenCalledWith({ name: JobName.LibraryBackfillChecksums });
+    });
+
+    it('should not queue the external library checksum backfill after it completed', async () => {
+      mocks.cron.create.mockResolvedValue();
+
+      await sut.onConfigInit({ newConfig: systemConfigStub.libraryWatchDisabled as SystemConfig });
+
+      expect(mocks.job.queue).not.toHaveBeenCalledWith({ name: JobName.LibraryBackfillChecksums });
+    });
   });
 
   describe('onConfigUpdateEvent', () => {
@@ -157,6 +189,73 @@ describe(LibraryService.name, () => {
         expression: systemConfigStub.libraryScan.library.scan.cronExpression,
         start: systemConfigStub.libraryScan.library.scan.enabled,
       });
+    });
+  });
+
+  describe('handleBackfillChecksums', () => {
+    it('should skip after the backfill has completed', async () => {
+      await expect(sut.handleBackfillChecksums()).resolves.toBe(JobStatus.Skipped);
+
+      expect(mocks.asset.getExternalLibraryChecksumBackfillPage).not.toHaveBeenCalled();
+    });
+
+    it('should recalculate sha1 checksums for external library assets', async () => {
+      const checksum = Buffer.from('file checksum');
+      const asset = AssetFactory.create({
+        checksum: Buffer.from('path checksum'),
+        checksumAlgorithm: ChecksumAlgorithm.sha1Path,
+        isExternal: true,
+        libraryId: newUuid(),
+        originalPath: '/data/user1/photo.jpg',
+      });
+
+      mocks.systemMetadata.get.mockResolvedValue(null);
+      mocks.crypto.hashFile.mockResolvedValue(checksum);
+      mocks.asset.getExternalLibraryChecksumBackfillPage.mockResolvedValueOnce([asset]).mockResolvedValueOnce([]);
+
+      await expect(sut.handleBackfillChecksums()).resolves.toBe(JobStatus.Success);
+
+      expect(mocks.crypto.hashFile).toHaveBeenCalledWith(asset.originalPath);
+      expect(mocks.asset.updateChecksum).toHaveBeenCalledWith(asset.id, checksum, ChecksumAlgorithm.sha1File);
+      expect(mocks.systemMetadata.set).toHaveBeenLastCalledWith(
+        SystemMetadataKey.ExternalLibraryChecksumBackfill,
+        expect.objectContaining({
+          scanned: 1,
+          updated: 1,
+          duplicates: 0,
+          failed: 0,
+          completedAt: expect.any(String),
+        }),
+      );
+    });
+
+    it('should skip duplicate external library checksums', async () => {
+      const checksum = Buffer.from('file checksum');
+      const asset = AssetFactory.create({
+        checksum: Buffer.from('path checksum'),
+        checksumAlgorithm: ChecksumAlgorithm.sha1Path,
+        isExternal: true,
+        libraryId: newUuid(),
+        originalPath: '/data/user1/photo.jpg',
+      });
+
+      mocks.systemMetadata.get.mockResolvedValue(null);
+      mocks.crypto.hashFile.mockResolvedValue(checksum);
+      mocks.asset.getExternalLibraryChecksumBackfillPage.mockResolvedValueOnce([asset]).mockResolvedValueOnce([]);
+      mocks.asset.updateChecksum.mockRejectedValue({ constraint_name: 'asset_ownerId_libraryId_checksum_idx' });
+
+      await expect(sut.handleBackfillChecksums()).resolves.toBe(JobStatus.Success);
+
+      expect(mocks.systemMetadata.set).toHaveBeenLastCalledWith(
+        SystemMetadataKey.ExternalLibraryChecksumBackfill,
+        expect.objectContaining({
+          scanned: 1,
+          updated: 0,
+          duplicates: 1,
+          failed: 0,
+          completedAt: expect.any(String),
+        }),
+      );
     });
   });
 
@@ -554,13 +653,17 @@ describe(LibraryService.name, () => {
     it('should import a new asset', async () => {
       const library = factory.library();
       const asset = AssetFactory.create();
+      const importedPath = '/data/user1/photo.jpg';
+      const normalizedPath = normalize(importedPath);
+      const checksum = Buffer.from('file checksum');
 
       const mockLibraryJob: ILibraryFileJob = {
         libraryId: library.id,
-        paths: ['/data/user1/photo.jpg'],
+        paths: [importedPath],
       };
 
       mocks.asset.createAll.mockResolvedValue([asset.id]);
+      mocks.crypto.hashFile.mockResolvedValue(checksum);
       mocks.library.get.mockResolvedValue(library);
 
       await expect(sut.handleSyncFiles(mockLibraryJob)).resolves.toBe(JobStatus.Success);
@@ -569,13 +672,16 @@ describe(LibraryService.name, () => {
         expect.objectContaining({
           ownerId: library.ownerId,
           libraryId: library.id,
-          originalPath: '/data/user1/photo.jpg',
+          checksum,
+          checksumAlgorithm: ChecksumAlgorithm.sha1File,
+          originalPath: normalizedPath,
           deviceId: 'Library Import',
           type: AssetType.Image,
           originalFileName: 'photo.jpg',
           isExternal: true,
         }),
       ]);
+      expect(mocks.crypto.hashFile).toHaveBeenCalledWith(normalizedPath);
 
       expect(mocks.job.queueAll).toHaveBeenCalledWith([
         {

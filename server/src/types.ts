@@ -371,6 +371,7 @@ export type JobItem =
   | { name: JobName.LibraryDelete; data: IEntityJob }
   | { name: JobName.LibraryScanQueueAll; data?: IBaseJob }
   | { name: JobName.LibraryDeleteCheck; data: IBaseJob }
+  | { name: JobName.LibraryBackfillChecksums; data?: IBaseJob }
 
   // Notification
   | { name: JobName.SendMail; data: IEmailJob }
@@ -472,6 +473,14 @@ export interface MemoryData {
 
 export type VersionCheckMetadata = { checkedAt: string; releaseVersion: string };
 export type SystemFlags = { mountChecks: Record<StorageFolder, boolean> };
+export type ExternalLibraryChecksumBackfillState = {
+  startedAt: string;
+  completedAt?: string;
+  scanned: number;
+  updated: number;
+  duplicates: number;
+  failed: number;
+};
 export type MaintenanceModeState =
   | { isMaintenanceMode: true; secret: string; action?: SetMaintenanceModeDto }
   | { isMaintenanceMode: false };
@@ -487,6 +496,7 @@ export interface SystemMetadata extends Record<SystemMetadataKey, Record<string,
   [SystemMetadataKey.License]: { licenseKey: string; activationKey: string; activatedAt: Date };
   [SystemMetadataKey.MaintenanceMode]: MaintenanceModeState;
   [SystemMetadataKey.MediaLocation]: MediaLocation;
+  [SystemMetadataKey.ExternalLibraryChecksumBackfill]: ExternalLibraryChecksumBackfillState;
   [SystemMetadataKey.ReverseGeocodingState]: { lastUpdate?: string; lastImportFileName?: string };
   [SystemMetadataKey.SystemConfig]: DeepPartial<SystemConfig>;
   [SystemMetadataKey.SystemFlags]: DeepPartial<SystemFlags>;

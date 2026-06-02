@@ -71,9 +71,11 @@ export const removeUndefinedKeys = <T extends object>(update: T, template: unkno
 };
 
 export const ASSET_CHECKSUM_CONSTRAINT = 'UQ_assets_owner_checksum';
+export const ASSET_LIBRARY_CHECKSUM_CONSTRAINT = 'asset_ownerId_libraryId_checksum_idx';
 
 export const isAssetChecksumConstraint = (error: unknown) => {
-  return (error as PostgresError)?.constraint_name === 'UQ_assets_owner_checksum';
+  const constraintName = (error as PostgresError)?.constraint_name;
+  return constraintName === ASSET_CHECKSUM_CONSTRAINT || constraintName === ASSET_LIBRARY_CHECKSUM_CONSTRAINT;
 };
 
 export function withDefaultVisibility<O>(qb: SelectQueryBuilder<DB, 'asset', O>) {

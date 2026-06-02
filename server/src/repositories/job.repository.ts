@@ -236,6 +236,9 @@ export class JobRepository {
       case JobName.VersionCheck: {
         return { jobId: JobName.VersionCheck };
       }
+      case JobName.LibraryBackfillChecksums: {
+        return { jobId: JobName.LibraryBackfillChecksums };
+      }
       default: {
         return null;
       }
