@@ -43,7 +43,8 @@
 
 为了解决云图下载后缓存过大的问题，华为的解决方法如下，因此关于备份云端照片以后不可能再支持：
 
-![Uploading e768ff15125690d0a43a9cc0b025db39.jpg…]()
+<img width="1320" height="1690" alt="e768ff15125690d0a43a9cc0b025db39" src="https://github.com/user-attachments/assets/44e3a49d-f88f-41ad-ac6a-7ad16a86bdd9" />
+
 
 
 # 网页版查看HDR照片小技巧 <br/>
