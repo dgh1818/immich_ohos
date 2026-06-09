@@ -41,6 +41,11 @@
 
 # Harmonyos Next 鸿蒙端的 Immich <br/>
 
+为了解决云图下载后缓存过大的问题，华为的解决方法如下，因此关于备份云端照片以后不可能再支持：
+
+![Uploading e768ff15125690d0a43a9cc0b025db39.jpg…]()
+
+
 # 网页版查看HDR照片小技巧 <br/>
 
 打开edge或者chrome的硬件加速，并打开Windows显示设置中的“使用HDR”，并打开 Immich账户设置->应用设置->显示原始照片即可 <br/>
