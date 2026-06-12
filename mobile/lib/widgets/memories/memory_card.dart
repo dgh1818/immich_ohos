@@ -5,7 +5,7 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:immich_mobile/entities/asset.entity.dart';
 import 'package:immich_mobile/extensions/build_context_extensions.dart';
 import 'package:immich_mobile/pages/common/native_video_viewer.page.dart';
-import 'package:immich_mobile/utils/hooks/blurhash_hook.dart';
+// import 'package:immich_mobile/utils/hooks/blurhash_hook.dart';
 import 'package:immich_mobile/widgets/common/immich_image.dart';
 
 class MemoryCard extends StatelessWidget {
@@ -58,12 +58,7 @@ class MemoryCard extends StatelessWidget {
                       asset: asset,
                       showControls: false,
                       playbackDelayFactor: 2,
-                      image: ImmichImage(
-                        asset,
-                        width: context.width,
-                        height: context.height,
-                        fit: BoxFit.contain,
-                      ),
+                      image: ImmichImage(asset, width: context.width, height: context.height, fit: BoxFit.contain),
                     ),
                   ),
                 );
@@ -92,7 +87,6 @@ class _BlurredBackdrop extends HookWidget {
 
   @override
   Widget build(BuildContext context) {
-    final blurhash = null;
     /*
     final blurhash = useBlurHashRef(asset).value;
     if (blurhash != null) {

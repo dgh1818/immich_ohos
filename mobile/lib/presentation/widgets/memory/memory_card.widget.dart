@@ -7,7 +7,7 @@ import 'package:immich_mobile/extensions/build_context_extensions.dart';
 import 'package:immich_mobile/presentation/widgets/asset_viewer/video_viewer.widget.dart';
 import 'package:immich_mobile/presentation/widgets/images/full_image.widget.dart';
 import 'package:immich_mobile/presentation/widgets/images/image_provider.dart';
-import 'package:immich_mobile/utils/hooks/blurhash_hook.dart';
+// import 'package:immich_mobile/utils/hooks/blurhash_hook.dart';
 
 class DriftMemoryCard extends StatelessWidget {
   final RemoteAsset asset;

@@ -1,12 +1,12 @@
 import 'package:flutter/painting.dart';
 import 'package:immich_mobile/presentation/widgets/images/local_image_provider.dart';
 import 'package:immich_mobile/presentation/widgets/images/remote_image_provider.dart';
-import 'package:immich_mobile/presentation/widgets/images/thumb_hash_provider.dart';
+// import 'package:immich_mobile/presentation/widgets/images/thumb_hash_provider.dart';
 
 /// [ImageCache] that uses two caches for small and large images
 /// so that a single large image does not evict all small images
 final class CustomImageCache implements ImageCache {
-  final _thumbhash = ImageCache()..maximumSize = 0;
+  // final _thumbhash = ImageCache()..maximumSize = 0;
   final _small = ImageCache()..maximumSizeBytes = 500 * 1024 * 1024;
   final _large = ImageCache()..maximumSize = 5; // Maximum 5 images
 
@@ -38,7 +38,7 @@ final class CustomImageCache implements ImageCache {
   ImageCache _cacheForKey(Object key) {
     return switch (key) {
       LocalFullImageProvider() || RemoteFullImageProvider() => _large,
-      ThumbHashProvider() => _thumbhash,
+      // ThumbHashProvider() => _thumbhash,
       _ => _small,
     };
   }
