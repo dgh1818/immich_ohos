@@ -21,7 +21,7 @@ import 'package:immich_mobile/widgets/settings/setting_list_tile.dart';
 import 'package:immich_mobile/widgets/settings/settings_sub_page_scaffold.dart';
 
 const _huaweiCloudPhotoBackupUnavailableMessage =
-    '非常抱歉，这边上升后经内部评审，因为后续规划三方应用无法获取云图，不涉及到云图的同步的场景，所以本工单需求被驳回，给您带来的不便深感抱歉。';
+    '非常抱歉，这边上升后经内部评审，因为后续规划三方应用无法获取云图，不涉及到云图的同步的场景，所以本工单需求被驳回，给您带来的不便深感抱歉。--华为官方 建议用户向华为客服多多反馈，争取开放云图接口';
 
 class DriftBackupSettings extends ConsumerWidget {
   const DriftBackupSettings({super.key});
