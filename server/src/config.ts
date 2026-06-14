@@ -310,9 +310,9 @@ export const defaults = Object.freeze<SystemConfig>({
     enabled: true,
   },
   storageTemplate: {
-    enabled: false,
+    enabled: true,
     hashVerificationEnabled: true,
-    template: '{{y}}/{{y}}-{{MM}}-{{dd}}/{{filename}}',
+    template: '{{album}}/{{filename}}',
   },
   image: {
     thumbnail: {

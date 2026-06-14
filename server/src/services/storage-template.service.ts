@@ -11,10 +11,12 @@ import {
   AssetPathType,
   AssetType,
   DatabaseLock,
+  ImmichWorker,
   JobName,
   JobStatus,
   QueueName,
   StorageFolder,
+  SystemMetadataKey,
 } from 'src/enum';
 import { ArgOf } from 'src/repositories/event.repository';
 import { BaseService } from 'src/services/base.service';
@@ -96,6 +98,24 @@ export class StorageTemplateService extends BaseService {
       this.logger.debug(`Compiling new storage template: ${template}`);
       this._template = this.compile(template);
     }
+  }
+
+  @OnEvent({ name: 'ConfigInit', workers: [ImmichWorker.Microservices] })
+  async queueMigrationOnUpgrade({ newConfig }: ArgOf<'ConfigInit'>) {
+    if (!newConfig.storageTemplate.enabled) {
+      return;
+    }
+
+    const state = await this.systemMetadataRepository.get(SystemMetadataKey.StorageTemplateMigration);
+    if (state?.queuedAt) {
+      return;
+    }
+
+    this.logger.log('Queueing one-time storage template migration');
+    await this.jobRepository.queue({ name: JobName.StorageTemplateMigration });
+    await this.systemMetadataRepository.set(SystemMetadataKey.StorageTemplateMigration, {
+      queuedAt: new Date().toISOString(),
+    });
   }
 
   @OnEvent({ name: 'ConfigUpdate', server: true })

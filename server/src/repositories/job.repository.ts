@@ -227,6 +227,9 @@ export class JobRepository {
       case JobName.StorageTemplateMigrationSingle: {
         return { jobId: item.data.id };
       }
+      case JobName.StorageTemplateMigration: {
+        return { jobId: JobName.StorageTemplateMigration };
+      }
       case JobName.PersonGenerateThumbnail: {
         return { priority: 1 };
       }

@@ -318,6 +318,7 @@ export enum SystemMetadataKey {
   FacialRecognitionState = 'facial-recognition-state',
   MemoriesState = 'memories-state',
   ExternalLibraryChecksumBackfill = 'external-library-checksum-backfill',
+  StorageTemplateMigration = 'storage-template-migration',
   AdminOnboarding = 'admin-onboarding',
   MaintenanceMode = 'maintenance-mode',
   SystemConfig = 'system-config',

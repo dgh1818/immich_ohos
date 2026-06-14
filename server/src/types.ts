@@ -481,6 +481,7 @@ export type ExternalLibraryChecksumBackfillState = {
   duplicates: number;
   failed: number;
 };
+export type StorageTemplateMigrationState = { queuedAt: string };
 export type MaintenanceModeState =
   | { isMaintenanceMode: true; secret: string; action?: SetMaintenanceModeDto }
   | { isMaintenanceMode: false };
@@ -497,6 +498,7 @@ export interface SystemMetadata extends Record<SystemMetadataKey, Record<string,
   [SystemMetadataKey.MaintenanceMode]: MaintenanceModeState;
   [SystemMetadataKey.MediaLocation]: MediaLocation;
   [SystemMetadataKey.ExternalLibraryChecksumBackfill]: ExternalLibraryChecksumBackfillState;
+  [SystemMetadataKey.StorageTemplateMigration]: StorageTemplateMigrationState;
   [SystemMetadataKey.ReverseGeocodingState]: { lastUpdate?: string; lastImportFileName?: string };
   [SystemMetadataKey.SystemConfig]: DeepPartial<SystemConfig>;
   [SystemMetadataKey.SystemFlags]: DeepPartial<SystemFlags>;

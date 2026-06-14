@@ -1,6 +1,6 @@
 import { Stats } from 'node:fs';
 import { defaults, SystemConfig } from 'src/config';
-import { AssetPathType, AssetType, JobStatus } from 'src/enum';
+import { AssetPathType, AssetType, JobName, JobStatus, SystemMetadataKey } from 'src/enum';
 import { StorageTemplateService } from 'src/services/storage-template.service';
 import { AlbumFactory } from 'test/factories/album.factory';
 import { AssetFactory } from 'test/factories/asset.factory';
@@ -54,6 +54,42 @@ describe(StorageTemplateService.name, () => {
           oldConfig: {} as SystemConfig,
         }),
       ).toThrow(/Invalid storage template.*/);
+    });
+  });
+
+  describe('queueMigrationOnUpgrade', () => {
+    it('should queue storage template migration once when enabled', async () => {
+      mocks.systemMetadata.get.mockResolvedValueOnce(null);
+
+      await sut.queueMigrationOnUpgrade({ newConfig: defaults });
+
+      expect(mocks.systemMetadata.get).toHaveBeenCalledWith(SystemMetadataKey.StorageTemplateMigration);
+      expect(mocks.job.queue).toHaveBeenCalledWith({ name: JobName.StorageTemplateMigration });
+      expect(mocks.systemMetadata.set).toHaveBeenCalledWith(SystemMetadataKey.StorageTemplateMigration, {
+        queuedAt: expect.any(String),
+      });
+    });
+
+    it('should skip when storage template migration was already queued', async () => {
+      mocks.systemMetadata.get.mockResolvedValueOnce({ queuedAt: '2026-06-09T00:00:00.000Z' });
+
+      await sut.queueMigrationOnUpgrade({ newConfig: defaults });
+
+      expect(mocks.job.queue).not.toHaveBeenCalledWith({ name: JobName.StorageTemplateMigration });
+      expect(mocks.systemMetadata.set).not.toHaveBeenCalledWith(
+        SystemMetadataKey.StorageTemplateMigration,
+        expect.any(Object),
+      );
+    });
+
+    it('should skip when storage template is disabled', async () => {
+      const config = structuredClone(defaults);
+      config.storageTemplate.enabled = false;
+
+      await sut.queueMigrationOnUpgrade({ newConfig: config });
+
+      expect(mocks.systemMetadata.get).not.toHaveBeenCalledWith(SystemMetadataKey.StorageTemplateMigration);
+      expect(mocks.job.queue).not.toHaveBeenCalledWith({ name: JobName.StorageTemplateMigration });
     });
   });
 
