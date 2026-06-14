@@ -54,7 +54,11 @@ class StoreService {
   /// Disposes the store and cancels the subscription. To reuse the store call init() again
   Future<void> dispose() async {
     await _storeUpdateSubscription?.cancel();
+    _storeUpdateSubscription = null;
     _cache.clear();
+    if (identical(_instance, this)) {
+      _instance = null;
+    }
   }
 
   /// Returns the cached value for [key], or `null`

@@ -68,6 +68,20 @@ void main() {
       expect(sut.tryGet(StoreKey.currentUser), isNull);
     });
 
+    test('Repopulates the internal cache after dispose and init', () async {
+      await sut.dispose();
+      clearInteractions(mockStoreRepo);
+
+      final first = await StoreService.init(storeRepository: mockStoreRepo);
+      await first.dispose();
+
+      final second = await StoreService.init(storeRepository: mockStoreRepo);
+      sut = second;
+
+      expect(second.tryGet(StoreKey.accessToken), _kAccessToken);
+      verify(() => mockStoreRepo.getAll()).called(2);
+    });
+
     test('Listens to stream of store updates', () async {
       final event = StoreDto(StoreKey.accessToken, _kAccessToken.toUpperCase());
       controller.add([event]);
