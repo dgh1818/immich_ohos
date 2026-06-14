@@ -14,6 +14,9 @@ import 'package:immich_mobile/widgets/settings/settings_sub_page_scaffold.dart';
 import 'package:immich_mobile/widgets/settings/settings_switch_list_tile.dart';
 import 'package:immich_mobile/utils/hooks/app_settings_update_hook.dart';
 
+const _huaweiCloudPhotoBackupUnavailableMessage =
+    '非常抱歉，这边上升后经内部评审，因为后续规划三方应用无法获取云图，不涉及到云图的同步的场景，所以本工单需求被驳回，给您带来的不便深感抱歉。--华为官方 建议用户向华为客服多多反馈，争取开放云图接口';
+
 class BackupSettings extends HookConsumerWidget {
   const BackupSettings({super.key});
 
@@ -24,6 +27,7 @@ class BackupSettings extends HookConsumerWidget {
     final albumSync = useAppSettingsState(AppSettingsEnum.syncAlbums);
     final isCorruptCheckInProgress = ref.watch(backupVerificationProvider);
     final isAlbumSyncInProgress = useState(false);
+    final backupCloudPhotos = useState(false);
     useEffect(() {
       if (!ignoreIcloudAssets.value) {
         ignoreIcloudAssets.value = true;
@@ -46,7 +50,15 @@ class BackupSettings extends HookConsumerWidget {
     final backupSettings = [
       const ForegroundBackupSettings(),
       const BackgroundBackupSettings(), //上架屏蔽
-      if (Platform.isIOS || Platform.isOhos)
+      if (Platform.isOhos)
+        SettingsSwitchListTile(
+          valueNotifier: backupCloudPhotos,
+          title: '备份云端照片',
+          subtitle: _huaweiCloudPhotoBackupUnavailableMessage,
+          enabled: false,
+          onChanged: null,
+        )
+      else if (Platform.isIOS)
         SettingsSwitchListTile(
           valueNotifier: ignoreIcloudAssets,
           title: 'ignore_icloud_photos'.tr(),

@@ -20,6 +20,9 @@ import 'package:immich_mobile/widgets/settings/setting_group_title.dart';
 import 'package:immich_mobile/widgets/settings/setting_list_tile.dart';
 import 'package:immich_mobile/widgets/settings/settings_sub_page_scaffold.dart';
 
+const _huaweiCloudPhotoBackupUnavailableMessage =
+    '非常抱歉，这边上升后经内部评审，因为后续规划三方应用无法获取云图，不涉及到云图的同步的场景，所以本工单需求被驳回，给您带来的不便深感抱歉。';
+
 class DriftBackupSettings extends ConsumerWidget {
   const DriftBackupSettings({super.key});
 
@@ -41,6 +44,27 @@ class DriftBackupSettings extends ConsumerWidget {
           ),
           const _BackupOnlyWhenChargingButton(),
           const _BackupDelaySlider(),
+        ],
+        if (CurrentPlatform.isOhos) ...[
+          const Divider(),
+          SwitchListTile.adaptive(
+            contentPadding: const EdgeInsets.symmetric(horizontal: 20),
+            value: false,
+            onChanged: null,
+            dense: true,
+            title: Text(
+              '备份云端照片',
+              style: context.textTheme.bodyLarge?.copyWith(
+                fontWeight: FontWeight.w500,
+                color: context.themeData.disabledColor,
+                height: 1.5,
+              ),
+            ),
+            subtitle: Text(
+              _huaweiCloudPhotoBackupUnavailableMessage,
+              style: context.textTheme.bodyMedium?.copyWith(color: context.themeData.disabledColor),
+            ),
+          ),
         ],
         const Divider(),
         SettingGroupTitle(
@@ -103,9 +127,9 @@ class _AlbumSyncActionButtonState extends ConsumerState<_AlbumSyncActionButton> 
         children: [
           StreamBuilder(
             stream: Store.watch(StoreKey.syncAlbums),
-            initialData: Store.tryGet(StoreKey.syncAlbums) ?? false,
+            initialData: Store.tryGet(StoreKey.syncAlbums) ?? true,
             builder: (context, snapshot) {
-              final albumSyncEnable = snapshot.data ?? false;
+              final albumSyncEnable = snapshot.data ?? true;
               return Column(
                 children: [
                   SettingListTile(
