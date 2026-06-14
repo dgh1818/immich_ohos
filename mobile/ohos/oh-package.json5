@@ -13,7 +13,7 @@
     "@ohos/hypium": "1.0.6"
   },
   "overrides": {
-    "integration_test": "file:./har/integration_test.har",
+    "integration_test": "../../../fvm/versions/custom_3.35.7/packages/integration_test/ohos",
     "photo_manager": "file:./har/photo_manager.har",
     "background_downloader": "file:./har/background_downloader.har",
     "maplibre_gl": "file:./har/maplibre_gl.har",

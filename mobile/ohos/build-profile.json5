@@ -6,9 +6,9 @@
         "type": "HarmonyOS",
         "material": {
           "storeFile": "F:/immich_sign/immich_ohos.p12",
-          "storePassword": "0000001B64377E58B63FD9B9E73B4E9CFCC635EBE42D093153B48E6E5263F62E80C441D5BFF9F1CC93C39E",
+          "storePassword": "0000001BED0A5526543349CCB46DB10A1CBFC2CB04063739C6DC43643B3E1168FF0687B5269039DF3A4AD7",
           "keyAlias": "dgh18",
-          "keyPassword": "0000001B0EF16FEA4937F18FF1C8D1F816B1D0F02ED85C16A8648FD71FA0948793962590621C11CA3B84FE",
+          "keyPassword": "0000001B5320C73CC98C7B25005B60398556F4198829B2FD9A6B5E44BC19CFB98A4B53B1DFBEB9053F585C",
           "signAlg": "SHA256withECDSA",
           "profile": "F:/immich_sign/immich_testRelease.p7b",
           "certpath": "F:/immich_sign/immich_release.cer"
@@ -42,6 +42,18 @@
     {
       "name": "entry",
       "srcPath": "./entry",
+      "targets": [
+        {
+          "name": "default",
+          "applyToProducts": [
+            "default"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "integration_test",
+      "srcPath": "../../../fvm/versions/custom_3.35.7/packages/integration_test/ohos",
       "targets": [
         {
           "name": "default",
