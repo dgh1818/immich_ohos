@@ -6,6 +6,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart' hide Store;
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:immich_mobile/domain/models/store.model.dart';
 import 'package:immich_mobile/domain/services/log.service.dart';
 import 'package:immich_mobile/entities/store.entity.dart';
 import 'package:immich_mobile/extensions/build_context_extensions.dart';
@@ -122,8 +123,13 @@ class AdvancedSettings extends HookConsumerWidget {
         valueNotifier: allowSelfSigned,
         title: "advanced_settings_self_signed_ssl_title".tr(),
         subtitle: "advanced_settings_self_signed_ssl_subtitle".tr(),
-        onChanged: (_) {
-          unawaited(NetworkRepository.init().then((_) => ref.read(apiServiceProvider).updateHeaders()));
+        onChanged: (value) {
+          unawaited(
+            Store.put(
+              StoreKey.selfSignedCert,
+              value,
+            ).then((_) => NetworkRepository.init()).then((_) => ref.read(apiServiceProvider).updateHeaders()),
+          );
         },
       ),
       if (!Store.isBetaTimelineEnabled) const LocalStorageSettings(),

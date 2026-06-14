@@ -120,10 +120,29 @@ class SyncApiRepository {
         await onData(_parseLines(lines), abort, reset);
       }
     } catch (error, stack) {
+      final allowSelfSignedSsl = Store.get(StoreKey.selfSignedCert, false);
+      _logger.severe(
+        "Sync stream failed for ${_redactEndpoint(endpoint)} "
+        "(storeAllowSelfSignedSsl=$allowSelfSignedSsl, "
+        "networkAllowSelfSignedSsl=${NetworkRepository.allowSelfSignedSsl}, "
+        "client=${client.runtimeType})",
+        error,
+        stack,
+      );
       return Future.error(error, stack);
     }
     stopwatch.stop();
     _logger.info("Remote Sync completed in ${stopwatch.elapsed.inMilliseconds}ms");
+  }
+
+  String _redactEndpoint(String endpoint) {
+    try {
+      final uri = Uri.parse(endpoint);
+      final port = uri.hasPort ? ':${uri.port}' : '';
+      return '${uri.scheme}://${uri.host}$port${uri.path}';
+    } catch (_) {
+      return '<invalid endpoint>';
+    }
   }
 
   List<SyncEvent> _parseLines(List<String> lines) {

@@ -91,6 +91,8 @@ class NetworkRepository {
   /// Must call [init] before using this method.
   static http.Client get client => _client!;
 
+  static bool? get allowSelfSignedSsl => _allowSelfSignedSsl;
+
   static Map<String, String> _withOhosTransportHeaders(Map<String, String> headers) {
     final result = Map<String, String>.from(headers);
     if (defaultTargetPlatform == TargetPlatform.ohos && Store.get(StoreKey.selfSignedCert, false)) {
