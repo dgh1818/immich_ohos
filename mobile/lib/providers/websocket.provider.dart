@@ -320,7 +320,7 @@ class WebsocketNotifier extends StateNotifier<WebsocketState> {
       return;
     }
 
-    final isSyncAlbumEnabled = Store.get(StoreKey.syncAlbums, false);
+    final isSyncAlbumEnabled = Store.get(StoreKey.syncAlbums, true);
     try {
       unawaited(
         _ref.read(backgroundSyncProvider).syncWebsocketBatch(_batchedAssetUploadReady.toList()).then((_) {

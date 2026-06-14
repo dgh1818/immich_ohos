@@ -343,7 +343,7 @@ class SplashScreenPageState extends ConsumerState<SplashScreenPage> {
                   await backgroundManager.hashAssets();
                 }
 
-                if (Store.get(StoreKey.syncAlbums, false)) {
+                if (Store.get(StoreKey.syncAlbums, true)) {
                   await backgroundManager.syncLinkedAlbum();
                 }
               }
