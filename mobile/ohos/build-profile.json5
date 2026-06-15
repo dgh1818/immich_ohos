@@ -6,12 +6,12 @@
         "type": "HarmonyOS",
         "material": {
           "storeFile": "F:/immich_sign/immich_ohos.p12",
-          "storePassword": "0000001BED0A5526543349CCB46DB10A1CBFC2CB04063739C6DC43643B3E1168FF0687B5269039DF3A4AD7",
+          "storePassword": "0000001BDC0B3242708F20084888407DABD8E8C293E2EA0C5A398A0D355D9C2D3BCFE4E733E08A3514591B",
           "keyAlias": "dgh18",
-          "keyPassword": "0000001B5320C73CC98C7B25005B60398556F4198829B2FD9A6B5E44BC19CFB98A4B53B1DFBEB9053F585C",
+          "keyPassword": "0000001BE4C9C8A946042636487B3BE6260B0F700BAE5B82BA17B2F89E0A73FA6068EE17EB4B1BDADA0828",
           "signAlg": "SHA256withECDSA",
-          "profile": "F:/immich_sign/immich_testRelease.p7b",
-          "certpath": "F:/immich_sign/immich_release.cer"
+          "profile": "F:/immich_sign/April_debugDebug.p7b",
+          "certpath": "F:/immich_sign/immich_20260408.cer"
         }
       }
     ],
