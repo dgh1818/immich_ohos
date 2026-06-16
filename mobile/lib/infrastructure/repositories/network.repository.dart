@@ -55,7 +55,7 @@ class NetworkRepository {
   }
 
   static Future<void> setHeaders(Map<String, String> headers, List<String> serverUrls, {String? token}) async {
-    final transportHeaders = _withOhosTransportHeaders(headers);
+    final transportHeaders = applyTransportHeaders(headers);
     await networkApi.setRequestHeaders(transportHeaders, serverUrls, token);
     if (Platform.isIOS) {
       await init();
@@ -93,7 +93,7 @@ class NetworkRepository {
 
   static bool? get allowSelfSignedSsl => _allowSelfSignedSsl;
 
-  static Map<String, String> _withOhosTransportHeaders(Map<String, String> headers) {
+  static Map<String, String> applyTransportHeaders(Map<String, String> headers) {
     final result = Map<String, String>.from(headers);
     if (defaultTargetPlatform == TargetPlatform.ohos && Store.get(StoreKey.selfSignedCert, false)) {
       result[_ohosRemoteValidationHeader] = _ohosRemoteValidationSkip;

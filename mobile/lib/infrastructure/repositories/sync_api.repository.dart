@@ -36,11 +36,11 @@ class SyncApiRepository {
     final client = httpClient ?? NetworkRepository.client;
     final endpoint = "${_api.apiClient.basePath}/sync/stream";
 
-    final headers = <String, String>{
+    final headers = NetworkRepository.applyTransportHeaders(<String, String>{
       ...ApiService.getAuthenticatedRequestHeaders(endpoint),
       'Content-Type': 'application/json',
       'Accept': 'application/jsonlines+json',
-    };
+    });
 
     final shouldReset = Store.get(StoreKey.shouldResetSync, false);
     final request = http.Request('POST', Uri.parse(endpoint));
