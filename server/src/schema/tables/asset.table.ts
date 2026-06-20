@@ -38,6 +38,7 @@ import { ASSET_CHECKSUM_CONSTRAINT, ASSET_LIBRARY_CHECKSUM_CONSTRAINT } from 'sr
 @Index({
   name: ASSET_LIBRARY_CHECKSUM_CONSTRAINT,
   columns: ['ownerId', 'libraryId', 'checksum'],
+  unique: true,
   where: '("libraryId" IS NOT NULL)',
 })
 @Index({
