@@ -150,6 +150,7 @@ class ForegroundUploadService {
   Future<void> uploadShareIntent(
     List<File> files, {
     Completer<void>? cancelToken,
+    bool mergeOhosLivePhotos = false,
     void Function(String fileId, int bytes, int totalBytes)? onProgress,
     void Function(String fileId, String remoteAssetId)? onSuccess,
     void Function(String fileId, String errorMessage)? onError,
@@ -160,10 +161,27 @@ class ForegroundUploadService {
 
     final effectiveCancelToken = cancelToken ?? Completer<void>();
 
-    await _executeWithWorkerPool<File>(
-      items: files,
+    final items = Platform.isOhos && mergeOhosLivePhotos
+        ? _mergeOhosPickedLivePhotos(files)
+        : files.map(_ShareIntentUploadItem.file).toList();
+
+    await _executeWithWorkerPool<_ShareIntentUploadItem>(
+      items: items,
       cancelToken: effectiveCancelToken,
-      processItem: (file) async {
+      processItem: (item) async {
+        final livePhotoPair = item.livePhotoPair;
+        if (livePhotoPair != null) {
+          await _uploadShareIntentLivePhotoPair(
+            livePhotoPair,
+            cancelToken: effectiveCancelToken,
+            onProgress: onProgress,
+            onSuccess: onSuccess,
+            onError: onError,
+          );
+          return;
+        }
+
+        final file = item.file!;
         final originalPath = file.path;
         final fileId = p.hash(originalPath).toString();
         final resolvedFile = await _resolveShareIntentFile(file);
@@ -192,6 +210,82 @@ class ForegroundUploadService {
         }
       },
     );
+  }
+
+  Future<void> _uploadShareIntentLivePhotoPair(
+    _OhosPickedLivePhotoPair pair, {
+    required Completer<void> cancelToken,
+    void Function(String fileId, int bytes, int totalBytes)? onProgress,
+    void Function(String fileId, String remoteAssetId)? onSuccess,
+    void Function(String fileId, String errorMessage)? onError,
+  }) async {
+    final imageOriginalPath = pair.image.path;
+    final videoOriginalPath = pair.video.path;
+    final imageFileId = p.hash(imageOriginalPath).toString();
+    final videoFileId = p.hash(videoOriginalPath).toString();
+
+    final imageFile = await _resolveShareIntentFile(pair.image);
+    final videoFile = await _resolveShareIntentFile(pair.video);
+    if (imageFile == null || videoFile == null) {
+      onError?.call(imageFileId, "Unable to resolve live photo files from URI");
+      onError?.call(videoFileId, "Unable to resolve live photo files from URI");
+      return;
+    }
+
+    try {
+      final imageStats = await imageFile.stat();
+      final imageName = _fileNameFromUriOrPath(imageOriginalPath);
+      final videoName = p.setExtension(imageName, p.extension(_fileNameFromUriOrPath(videoOriginalPath)));
+      final fields = {
+        // deviceAssetId/deviceId required by server v2.7.5 and below (drop in v4.0 per #27818).
+        'deviceAssetId': imageFileId,
+        'deviceId': Store.get(StoreKey.deviceId),
+        'fileCreatedAt': imageStats.changed.toUtc().toIso8601String(),
+        'fileModifiedAt': imageStats.modified.toUtc().toIso8601String(),
+        'isFavorite': 'false',
+        'duration': '0',
+      };
+
+      final videoResult = await _uploadRepository.uploadFile(
+        file: videoFile,
+        originalFileName: videoName,
+        fields: fields,
+        cancelToken: cancelToken,
+        onProgress: (bytes, totalBytes) => onProgress?.call(videoFileId, bytes, totalBytes),
+        logContext: 'shareLivePhotoVideo[$imageFileId]',
+      );
+
+      if (!videoResult.isSuccess || videoResult.remoteAssetId == null) {
+        if (!videoResult.isCancelled && videoResult.errorMessage != null) {
+          onError?.call(imageFileId, videoResult.errorMessage!);
+          onError?.call(videoFileId, videoResult.errorMessage!);
+        }
+        return;
+      }
+
+      final imageResult = await _uploadRepository.uploadFile(
+        file: imageFile,
+        originalFileName: imageName,
+        fields: {...fields, 'livePhotoVideoId': videoResult.remoteAssetId!},
+        cancelToken: cancelToken,
+        onProgress: (bytes, totalBytes) => onProgress?.call(imageFileId, bytes, totalBytes),
+        logContext: 'shareLivePhotoImage[$imageFileId]',
+      );
+
+      if (imageResult.isSuccess && imageResult.remoteAssetId != null) {
+        onSuccess?.call(videoFileId, videoResult.remoteAssetId!);
+        onSuccess?.call(imageFileId, imageResult.remoteAssetId!);
+      } else if (!imageResult.isCancelled && imageResult.errorMessage != null) {
+        onError?.call(imageFileId, imageResult.errorMessage!);
+        onError?.call(videoFileId, imageResult.errorMessage!);
+      }
+    } catch (e) {
+      onError?.call(imageFileId, e.toString());
+      onError?.call(videoFileId, e.toString());
+    } finally {
+      await _cleanupShareIntentTempFile(imageOriginalPath, imageFile);
+      await _cleanupShareIntentTempFile(videoOriginalPath, videoFile);
+    }
   }
 
   void cancel() {
@@ -554,4 +648,71 @@ class ForegroundUploadService {
       }
     } catch (_) {}
   }
+
+  List<_ShareIntentUploadItem> _mergeOhosPickedLivePhotos(List<File> files) {
+    final candidates = <String, List<File>>{};
+    for (final file in files) {
+      final key = _ohosPickedLivePhotoKey(file);
+      if (key == null) {
+        continue;
+      }
+      candidates.putIfAbsent(key, () => []).add(file);
+    }
+
+    final pairs = <String, _OhosPickedLivePhotoPair>{};
+    for (final entry in candidates.entries) {
+      final images = entry.value.where(_isOhosPickedImage).toList();
+      final videos = entry.value.where(_isOhosPickedLivePhotoVideo).toList();
+      if (images.length == 1 && videos.length == 1) {
+        pairs[entry.key] = _OhosPickedLivePhotoPair(image: images.single, video: videos.single);
+      }
+    }
+
+    final items = <_ShareIntentUploadItem>[];
+    final emittedPairs = <String>{};
+    for (final file in files) {
+      final key = _ohosPickedLivePhotoKey(file);
+      final pair = key == null ? null : pairs[key];
+      if (pair == null) {
+        items.add(_ShareIntentUploadItem.file(file));
+      } else if (emittedPairs.add(key!)) {
+        items.add(_ShareIntentUploadItem.livePhotoPair(pair));
+      }
+    }
+    return items;
+  }
+
+  String? _ohosPickedLivePhotoKey(File file) {
+    final name = _fileNameFromUriOrPath(file.path);
+    final extension = p.extension(name).toLowerCase();
+    if (!_ohosPickedImageExtensions.contains(extension) && extension != '.mp4') {
+      return null;
+    }
+    return p.basenameWithoutExtension(name).toLowerCase();
+  }
+
+  bool _isOhosPickedImage(File file) {
+    return _ohosPickedImageExtensions.contains(p.extension(_fileNameFromUriOrPath(file.path)).toLowerCase());
+  }
+
+  bool _isOhosPickedLivePhotoVideo(File file) {
+    return p.extension(_fileNameFromUriOrPath(file.path)).toLowerCase() == '.mp4';
+  }
+}
+
+const _ohosPickedImageExtensions = {'.jpg', '.jpeg', '.heic', '.heif', '.png', '.webp'};
+
+class _ShareIntentUploadItem {
+  final File? file;
+  final _OhosPickedLivePhotoPair? livePhotoPair;
+
+  const _ShareIntentUploadItem.file(this.file) : livePhotoPair = null;
+  const _ShareIntentUploadItem.livePhotoPair(this.livePhotoPair) : file = null;
+}
+
+class _OhosPickedLivePhotoPair {
+  final File image;
+  final File video;
+
+  const _OhosPickedLivePhotoPair({required this.image, required this.video});
 }

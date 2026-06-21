@@ -102,6 +102,7 @@ class ShareIntentUploadStateNotifier extends StateNotifier<List<ShareIntentAttac
 
     await _foregroundUploadService.uploadShareIntent(
       normalFiles,
+      mergeOhosLivePhotos: Platform.isOhos,
       onProgress: (fileId, bytes, totalBytes) {
         final progress = totalBytes > 0 ? bytes / totalBytes : 0.0;
         _updateProgress(fileId, progress);

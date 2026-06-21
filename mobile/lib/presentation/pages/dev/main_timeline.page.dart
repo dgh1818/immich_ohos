@@ -1,13 +1,13 @@
+import 'dart:io';
+
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:immich_mobile/presentation/widgets/memory/memory_lane.widget.dart';
 import 'package:immich_mobile/presentation/widgets/timeline/timeline.widget.dart';
 import 'package:immich_mobile/providers/infrastructure/memory.provider.dart';
-
-import 'package:immich_mobile/services/backup.service.dart';
+import 'package:immich_mobile/services/foreground_upload.service.dart';
 import 'package:immich_mobile/widgets/common/immich_sliver_app_bar.dart';
-import 'package:path/path.dart' as p;
 import 'package:flutter_svg/svg.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -24,48 +24,38 @@ class MainTimelinePage extends ConsumerWidget {
 
     Future<void> pickUploadImage() async {
       final List<XFile> medias = await ImagePicker().pickMultipleMedia();
-      if (medias.isEmpty) return;
+      if (medias.isEmpty) {
+        return;
+      }
 
-      final backupService = ref.read(backupServiceProvider);
+      final uploadService = ref.read(foregroundUploadServiceProvider);
       int successCount = 0;
+      int errorCount = 0;
 
-      for (int i = 0; i < medias.length; i++) {
-        final current = medias[i];
-        final next = i + 1 < medias.length ? medias[i + 1] : null;
-        final sameStem =
-            next != null && p.basenameWithoutExtension(current.name) == p.basenameWithoutExtension(next.name);
+      await uploadService.uploadShareIntent(
+        medias.map((media) => File(media.path)).toList(),
+        mergeOhosLivePhotos: true,
+        onSuccess: (_, __) => successCount++,
+        onError: (_, error) {
+          errorCount++;
+          debugPrint('上传失败: $error');
+        },
+      );
 
-        try {
-          if (sameStem) {
-            await backupService.uploadImageDirectly(next, current);
-            successCount += 2;
-            i++;
-          } else {
-            await backupService.uploadImageDirectly(current, null);
-            successCount++;
-          }
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('“${current.name}” 上传成功: $successCount / ${medias.length}'),
-              duration: const Duration(seconds: 1),
-            ),
-          );
-        } catch (e) {
-          debugPrint('上传失败: ${current.name} — $e');
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('“${current.name}” 上传失败: ${e.toString()}'),
-              backgroundColor: Colors.redAccent,
-              duration: const Duration(seconds: 10),
-            ),
-          );
-        }
+      if (!context.mounted) {
+        return;
       }
 
       if (successCount > 0) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('✅$successCount 个照片/视频上传完成'), duration: const Duration(seconds: 2)));
+      }
+
+      if (errorCount > 0) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('$errorCount 个照片/视频上传失败'), backgroundColor: Colors.redAccent));
       }
     }
 
@@ -87,9 +77,7 @@ class MainTimelinePage extends ConsumerWidget {
             child: InkWell(
               onTap: pickUploadImage,
               borderRadius: BorderRadius.circular(12),
-              child: Center(
-                child: SvgPicture.asset('assets/HMOS_arrowshape_up.svg', height: uploadIconSize),
-              ),
+              child: Center(child: SvgPicture.asset('assets/HMOS_arrowshape_up.svg', height: uploadIconSize)),
             ),
           ),
         ),
