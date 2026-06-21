@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:immich_mobile/domain/models/store.model.dart';
 import 'package:immich_mobile/entities/store.entity.dart';
 import 'package:immich_mobile/extensions/build_context_extensions.dart';
 import 'package:immich_mobile/extensions/theme_extensions.dart';
@@ -105,7 +106,8 @@ class _SslClientCertSettingsState extends State<SslClientCertSettings> {
         await networkApi.addCertificate(ClientCertData(data: cert.data, password: password));
       }
 
-      await SSLClientCertStoreVal.delete();
+      await Store.delete(StoreKey.sslClientCertData);
+      await Store.delete(StoreKey.sslClientPasswd);
       setState(() => isCertExist = true);
       showMessage("client_cert_import_success_msg".tr());
     } catch (e) {
@@ -120,7 +122,8 @@ class _SslClientCertSettingsState extends State<SslClientCertSettings> {
   Future<void> removeCert() async {
     try {
       await networkApi.removeCertificate();
-      await SSLClientCertStoreVal.delete();
+      await Store.delete(StoreKey.sslClientCertData);
+      await Store.delete(StoreKey.sslClientPasswd);
       setState(() => isCertExist = false);
       showMessage("client_cert_remove_msg".tr());
     } catch (e) {

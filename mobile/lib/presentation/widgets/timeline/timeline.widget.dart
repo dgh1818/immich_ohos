@@ -78,7 +78,7 @@ class _TimelineState extends ConsumerState<Timeline> {
   @override
   Widget build(BuildContext context) {
     final effectiveColumnCount =
-        widget.tilesPerRowOverride ?? ref.watch(appConfigProvider.select((config) => config.timeline.tilesPerRow));
+        widget.tilesPerRowOverride ?? ref.watch(appConfigProvider.select((config) => config.timeline.tilesPerRow)) ?? 4;
 
     return LayoutBuilder(
       builder: (_, constraints) => ProviderScope(
@@ -491,7 +491,7 @@ class _SliverTimelineState extends ConsumerState<_SliverTimeline> {
               final grid = CustomScrollView(
                 primary: true,
                 physics: _scrollPhysics,
-                scrollCacheExtent: .pixels(maxHeight * 2),
+                cacheExtent: maxHeight * 2,
                 slivers: [
                   if (isSelectionMode) const SelectionSliverAppBar() else if (widget.appBar != null) widget.appBar!,
                   if (widget.topSliverWidget != null) widget.topSliverWidget!,

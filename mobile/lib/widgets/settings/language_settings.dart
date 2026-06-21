@@ -85,7 +85,7 @@ class LanguageSettings extends HookConsumerWidget {
                     padding: const EdgeInsets.all(8),
                     itemCount: filteredLocaleEntries.value.length,
                     itemExtent: 64.0,
-                    scrollCacheExtent: const .pixels(100),
+                    cacheExtent: 100.0,
                     itemBuilder: (context, index) {
                       final countryName = filteredLocaleEntries.value[index].key;
                       final localeValue = filteredLocaleEntries.value[index].value;

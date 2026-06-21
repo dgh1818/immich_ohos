@@ -11,6 +11,7 @@ import 'package:immich_mobile/presentation/widgets/images/remote_image_provider.
 import 'package:immich_mobile/presentation/widgets/people/partner_user_avatar.widget.dart';
 import 'package:immich_mobile/providers/infrastructure/album.provider.dart';
 import 'package:immich_mobile/providers/infrastructure/people.provider.dart';
+import 'package:immich_mobile/providers/infrastructure/user.provider.dart';
 import 'package:immich_mobile/providers/server_info.provider.dart';
 import 'package:immich_mobile/presentation/widgets/map/map_utils.dart';
 import 'package:immich_mobile/providers/user.provider.dart';
@@ -223,7 +224,7 @@ class _PlacesCollectionCard extends StatelessWidget {
               return;
             }
 
-            context.pushRoute(
+            await context.pushRoute(
               DriftPlaceRoute(
                 currentLocation: location == null ? null : LatLng(location.latitude, location.longitude),
               ),

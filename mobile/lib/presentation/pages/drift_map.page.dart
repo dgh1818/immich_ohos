@@ -124,7 +124,7 @@ class _DriftMapPageState extends ConsumerState<DriftMapPage> {
           top: 70,
           child: IconButton.filled(
             color: Colors.white,
-            onPressed: () => context.pop(),
+            onPressed: () => context.router.pop(),
             icon: const Icon(Icons.arrow_back_ios_new_rounded),
             style: IconButton.styleFrom(
               padding: const EdgeInsets.all(8),

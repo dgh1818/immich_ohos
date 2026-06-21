@@ -392,7 +392,7 @@ class DriftBackupNotifier extends StateNotifier<DriftBackupState> {
     final progress = update.progress;
     final currentItem = state.uploadItems[taskId];
     if (currentItem != null) {
-      if (progress == kUploadStatusCanceled) {
+      if (progress == progressCanceled) {
         _removeUploadItem(update.task.taskId);
         return;
       }
