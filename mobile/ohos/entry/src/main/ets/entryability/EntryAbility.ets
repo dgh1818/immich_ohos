@@ -13,7 +13,7 @@
 * limitations under the License.
 */
 
-import { FlutterAbility, FlutterEngine } from '@ohos/flutter_ohos';
+import { FlutterAbility, FlutterEngine, FlutterShellArgs } from '@ohos/flutter_ohos';
 import { GeneratedPluginRegistrant } from '../plugins/GeneratedPluginRegistrant';
 import { BackgroundServicePlugin } from '../../../main/ets/plugins/BackgroundServicePlugin';
 import { NativeSyncApiOhos } from '../../../main/ets/plugins/sync/Messages_ohos.g';
@@ -42,6 +42,12 @@ import { ViewIntentApiImpl } from '../plugins/viewintent/ViewIntentApiImpl';
 
 export default class EntryAbility extends FlutterAbility {
   private pendingDeepLink: string | null = null;
+
+  getFlutterShellArgs(): FlutterShellArgs {
+    const args = super.getFlutterShellArgs();
+    args.add('--no-enable-merged-platform-ui-thread');
+    return args;
+  }
 
   onCreate(want: Want, launchParam: AbilityConstant.LaunchParam): void {
     super.onCreate(want, launchParam);
