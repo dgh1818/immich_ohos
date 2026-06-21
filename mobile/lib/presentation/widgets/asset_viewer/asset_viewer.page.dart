@@ -28,6 +28,7 @@ import 'package:immich_mobile/providers/asset_viewer/is_motion_video_playing.pro
 import 'package:immich_mobile/providers/asset_viewer/video_player_provider.dart';
 import 'package:immich_mobile/providers/cast.provider.dart';
 import 'package:immich_mobile/providers/infrastructure/current_album.provider.dart';
+import 'package:immich_mobile/providers/infrastructure/setting.provider.dart' as store_settings;
 import 'package:immich_mobile/providers/infrastructure/timeline.provider.dart';
 import 'package:immich_mobile/utils/viewer_hdr.dart';
 import 'package:immich_mobile/widgets/photo_view/photo_view.dart';
@@ -99,8 +100,11 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
   StreamSubscription? _reloadSubscription;
   KeepAliveLink? _stackChildrenKeepAlive;
 
-  ImageProvider? _currentImageProvider;
+  ImageStream? _currentImageStream;
   ImageStreamListener? _imageListener;
+
+  final Map<String, int> _assetHdrModeCache = {};
+
   int _hdrToken = 0;
   bool _isDisposing = false;
   ModalRoute<dynamic>? _subscribedRoute;
@@ -202,7 +206,9 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
   }
 
   void _onAssetInit(Duration timeStamp) {
-    if (!_canUseRef) return;
+    if (!_canUseRef) {
+      return;
+    }
     final asset = ref.read(assetViewerProvider).currentAsset;
     if (asset != null) {
       _syncHdrForAsset(asset);
@@ -212,12 +218,16 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
   }
 
   void _onAssetChanged(int index) async {
-    if (!_canUseRef) return;
+    if (!_canUseRef) {
+      return;
+    }
     _stopMotionPlayback(restoreControls: false);
     _currentPage = index;
 
     final asset = await ref.read(timelineServiceProvider).getAssetAsync(index);
-    if (!_canUseRef || asset == null) return;
+    if (!_canUseRef || asset == null) {
+      return;
+    }
 
     AssetViewer._setAsset(ref, asset);
     _syncHdrForAsset(asset);
@@ -228,8 +238,12 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
   }
 
   void _handleCasting() {
-    if (!_canUseRef) return;
-    if (!ref.read(castProvider).isCasting) return;
+    if (!_canUseRef) {
+      return;
+    }
+    if (!ref.read(castProvider).isCasting) {
+      return;
+    }
     final asset = ref.read(assetViewerProvider).currentAsset;
     if (asset == null) {
       return;
@@ -255,7 +269,9 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
   }
 
   void _onEvent(Event event) {
-    if (!_canUseRef) return;
+    if (!_canUseRef) {
+      return;
+    }
     switch (event) {
       case TimelineReloadEvent():
         _onTimelineReloadEvent();
@@ -266,8 +282,12 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
   }
 
   void _onViewerReloadEvent() {
-    if (!_canUseRef) return;
-    if (_totalAssets <= 1) return;
+    if (!_canUseRef) {
+      return;
+    }
+    if (_totalAssets <= 1) {
+      return;
+    }
 
     final index = _pageController.page?.round() ?? 0;
     final target = index >= _totalAssets - 1 ? index - 1 : index + 1;
@@ -276,7 +296,9 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
   }
 
   void _onTimelineReloadEvent() {
-    if (!_canUseRef) return;
+    if (!_canUseRef) {
+      return;
+    }
     final timelineService = ref.read(timelineServiceProvider);
     final totalAssets = timelineService.totalAssets;
 
@@ -316,12 +338,15 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
   }
 
   void _removeImageListener() {
-    final provider = _currentImageProvider;
+    final stream = _currentImageStream;
     final listener = _imageListener;
-    if (provider == null || listener == null) return;
+    if (stream == null || listener == null) {
+      return;
+    }
 
-    provider.resolve(ImageConfiguration.empty).removeListener(listener);
-    _currentImageProvider = null;
+    stream.removeListener(listener);
+
+    _currentImageStream = null;
     _imageListener = null;
   }
 
@@ -330,21 +355,43 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
     return getFullImageProvider(asset, size: useLocalAsset ? const Size(-1, -1) : const Size(1080, 1920));
   }
 
-  void _watchImageHdr(ImageProvider provider) {
+  void _watchImageHdr(BaseAsset asset, ImageProvider provider, {required bool resetToSdrIfNoSyncImage}) {
     _removeImageListener();
 
     final token = ++_hdrToken;
     final stream = provider.resolve(ImageConfiguration.empty);
-    _currentImageProvider = provider;
-    _imageListener = ImageStreamListener((info, _) {
-      if (!_canUseRef || !mounted || token != _hdrToken) return;
-      if (ref.read(isPlayingMotionVideoProvider)) return;
-      ViewerHdr.applyImageMode(
-        enabled: _isImageHdrEnabled,
-        hdr: ViewerHdr.imageModeFromColorSpace(info.image.colorSpace),
-      );
+
+    _currentImageStream = stream;
+
+    bool gotSyncImage = false;
+
+    _imageListener = ImageStreamListener((info, synchronousCall) {
+      if (!_canUseRef || !mounted || token != _hdrToken) {
+        return;
+      }
+      if (ref.read(isPlayingMotionVideoProvider)) {
+        return;
+      }
+
+      if (synchronousCall) {
+        gotSyncImage = true;
+      }
+
+      final hdr = ViewerHdr.imageModeFromColorSpace(info.image.colorSpace);
+
+      _assetHdrModeCache[asset.heroTag] = hdr;
+
+      ViewerHdr.applyImageMode(enabled: _isImageHdrEnabled, hdr: hdr);
     }, onError: (_, __) {});
+
     stream.addListener(_imageListener!);
+
+    // 关键点：
+    // 如果 addListener 后没有同步拿到任何已解码图像，
+    // 才说明当前图还没 ready，这时清 SDR，防止上一张 HLG 污染当前预览图。
+    if (resetToSdrIfNoSyncImage && !gotSyncImage) {
+      ViewerHdr.applyImageMode(enabled: _isImageHdrEnabled, hdr: 0);
+    }
   }
 
   void _syncHdrForAsset(BaseAsset asset) {
@@ -353,6 +400,7 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
     if (!asset.isImage) {
       _hdrToken++;
       _removeImageListener();
+
       ViewerHdr.applyImageMode(enabled: _isImageHdrEnabled, hdr: 0);
       ViewerHdr.applyVideoMode(enabled: _isVideoHdrEnabled);
       return;
@@ -361,11 +409,19 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
     if (!_isImageHdrEnabled) {
       _hdrToken++;
       _removeImageListener();
+
       ViewerHdr.applyImageMode(enabled: false, hdr: 0);
       return;
     }
 
-    _watchImageHdr(_getHdrImageProvider(asset));
+    final cachedHdr = _assetHdrModeCache[asset.heroTag];
+
+    if (cachedHdr != null) {
+      // 如果这张图之前已经解码/判断过，先用上次结果，避免 HDR 图先闪 SDR
+      ViewerHdr.applyImageMode(enabled: _isImageHdrEnabled, hdr: cachedHdr);
+    }
+
+    _watchImageHdr(asset, _getHdrImageProvider(asset), resetToSdrIfNoSyncImage: cachedHdr == null);
   }
 
   void _applyMotionVideoHdr() {
@@ -377,9 +433,13 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
   }
 
   void _stopMotionPlayback({bool restoreControls = true}) {
-    if (!_canUseRef) return;
+    if (!_canUseRef) {
+      return;
+    }
     final asset = ref.read(assetViewerProvider).currentAsset;
-    if (asset?.isMotionPhoto != true || !ref.read(isPlayingMotionVideoProvider)) return;
+    if (asset?.isMotionPhoto != true || !ref.read(isPlayingMotionVideoProvider)) {
+      return;
+    }
 
     ref.read(isPlayingMotionVideoProvider.notifier).playing = false;
     unawaited(ref.read(videoPlayerProvider(asset!.heroTag).notifier).pause());
@@ -399,10 +459,16 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
 
     // Listen for casting changes and send initial asset to the cast provider
     ref.listen(castProvider.select((value) => value.isCasting), (_, isCasting) {
-      if (!_canUseRef) return;
-      if (!isCasting) return;
+      if (!_canUseRef) {
+        return;
+      }
+      if (!isCasting) {
+        return;
+      }
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!_canUseRef) return;
+        if (!_canUseRef) {
+          return;
+        }
         _handleCasting();
       });
     });
@@ -413,15 +479,21 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
     });
 
     ref.listen(assetViewerProvider.select((value) => value.currentAsset?.heroTag), (_, __) {
-      if (!_canUseRef) return;
+      if (!_canUseRef) {
+        return;
+      }
       final asset = ref.read(assetViewerProvider).currentAsset;
-      if (asset == null || ref.read(isPlayingMotionVideoProvider)) return;
+      if (asset == null || ref.read(isPlayingMotionVideoProvider)) {
+        return;
+      }
       _syncHdrForAsset(asset);
       _handleCasting();
     });
 
     ref.listen(isPlayingMotionVideoProvider, (_, isPlaying) {
-      if (!_canUseRef) return;
+      if (!_canUseRef) {
+        return;
+      }
       if (isPlaying) {
         _applyMotionVideoHdr();
         return;
@@ -432,6 +504,21 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
         _syncHdrForAsset(asset);
       }
     });
+
+    ref.listen(
+      store_settings.settingsProvider.select(
+        (settings) => (settings.get(Setting.imageHdr), settings.get(Setting.videoHdr)),
+      ),
+      (_, __) {
+        if (!_canUseRef) {
+          return;
+        }
+        final asset = ref.read(assetViewerProvider).currentAsset;
+        if (asset != null) {
+          _syncHdrForAsset(asset);
+        }
+      },
+    );
 
     return Scaffold(
       backgroundColor: backgroundColor,

@@ -1,11 +1,13 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:immich_mobile/domain/models/setting.model.dart';
 import 'package:immich_mobile/extensions/translate_extensions.dart';
 import 'package:immich_mobile/providers/app_settings.provider.dart';
+import 'package:immich_mobile/providers/infrastructure/setting.provider.dart' as store_settings;
 import 'package:immich_mobile/providers/infrastructure/settings.provider.dart';
-import 'package:immich_mobile/services/app_settings.service.dart';
-import 'package:immich_mobile/utils/hooks/app_settings_update_hook.dart';
 import 'package:immich_mobile/widgets/settings/setting_group_title.dart';
 import 'package:immich_mobile/widgets/settings/settings_switch_list_tile.dart';
 
@@ -18,7 +20,10 @@ class ImageViewerQualitySetting extends HookConsumerWidget {
     useValueChanged<bool, void>(isOriginal.value, (_, __) {
       ref.read(settingsProvider).write(.imageLoadOriginal, isOriginal.value);
     });
-    final imageHdr = useAppSettingsState(AppSettingsEnum.imageHdr);
+    final imageHdr = useState(ref.read(store_settings.settingsProvider.notifier).get(Setting.imageHdr));
+    useValueChanged<bool, void>(imageHdr.value, (_, __) {
+      unawaited(ref.read(store_settings.settingsProvider.notifier).set(Setting.imageHdr, imageHdr.value));
+    });
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -34,12 +39,7 @@ class ImageViewerQualitySetting extends HookConsumerWidget {
           subtitle: "setting_image_viewer_original_subtitle".t(context: context),
           onChanged: (_) => ref.invalidate(appSettingsServiceProvider),
         ),
-        SettingsSwitchListTile(
-          valueNotifier: imageHdr,
-          title: "图片 HDR",
-          subtitle: "在支持 HDR 的设备上以 HDR 方式显示图片",
-          onChanged: (_) => ref.invalidate(appSettingsServiceProvider),
-        ),
+        SettingsSwitchListTile(valueNotifier: imageHdr, title: "图片 HDR", subtitle: "在支持 HDR 的设备上以 HDR 方式显示图片"),
       ],
     );
   }

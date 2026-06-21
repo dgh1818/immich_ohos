@@ -1,11 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:immich_mobile/domain/models/setting.model.dart';
 import 'package:immich_mobile/extensions/translate_extensions.dart';
-import 'package:immich_mobile/providers/app_settings.provider.dart';
+import 'package:immich_mobile/providers/infrastructure/setting.provider.dart' as store_settings;
 import 'package:immich_mobile/providers/infrastructure/settings.provider.dart';
-import 'package:immich_mobile/services/app_settings.service.dart';
-import 'package:immich_mobile/utils/hooks/app_settings_update_hook.dart';
 import 'package:immich_mobile/widgets/settings/setting_group_title.dart';
 import 'package:immich_mobile/widgets/settings/settings_switch_list_tile.dart';
 
@@ -28,7 +29,10 @@ class VideoViewerSettings extends HookConsumerWidget {
     useValueChanged<bool, void>(useOriginalVideo.value, (_, __) {
       ref.read(settingsProvider).write(.viewerLoadOriginalVideo, useOriginalVideo.value);
     });
-    final useVideoHdr = useAppSettingsState(AppSettingsEnum.videoHdr);
+    final useVideoHdr = useState(ref.read(store_settings.settingsProvider.notifier).get(Setting.videoHdr));
+    useValueChanged<bool, void>(useVideoHdr.value, (_, __) {
+      unawaited(ref.read(store_settings.settingsProvider.notifier).set(Setting.videoHdr, useVideoHdr.value));
+    });
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -52,12 +56,7 @@ class VideoViewerSettings extends HookConsumerWidget {
           title: "setting_video_viewer_original_video_title".t(context: context),
           subtitle: "setting_video_viewer_original_video_subtitle".t(context: context),
         ),
-        SettingsSwitchListTile(
-          valueNotifier: useVideoHdr,
-          title: "视频 HDR",
-          subtitle: "在支持 HDR 的设备上以 HDR 方式播放视频",
-          onChanged: (_) => ref.invalidate(appSettingsServiceProvider),
-        ),
+        SettingsSwitchListTile(valueNotifier: useVideoHdr, title: "视频 HDR", subtitle: "在支持 HDR 的设备上以 HDR 方式播放视频"),
       ],
     );
   }

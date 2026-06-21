@@ -2,7 +2,7 @@ class ImageConfig {
   final bool preferRemote;
   final bool loadOriginal;
 
-  const ImageConfig({this.preferRemote = false, this.loadOriginal = false});
+  const ImageConfig({this.preferRemote = false, this.loadOriginal = true});
 
   ImageConfig copyWith({bool? preferRemote, bool? loadOriginal}) =>
       ImageConfig(preferRemote: preferRemote ?? this.preferRemote, loadOriginal: loadOriginal ?? this.loadOriginal);
