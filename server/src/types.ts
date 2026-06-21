@@ -480,6 +480,8 @@ export type ExternalLibraryChecksumBackfillState = {
   updated: number;
   duplicates: number;
   failed: number;
+  /** last processed asset id for resuming after crash */
+  afterId?: string;
 };
 export type MaintenanceModeState =
   | { isMaintenanceMode: true; secret: string; action?: SetMaintenanceModeDto }
