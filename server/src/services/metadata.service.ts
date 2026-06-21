@@ -1197,8 +1197,10 @@ export class MetadataService extends BaseService {
       case 3: {
         return ExifOrientation.Rotate90CW;
       }
+      default: {
+        return null;
+      }
     }
-    return null;
   }
 
   private async processOhosLivePhoto(filePath: string, fileSize: number, offset: number): Promise<Buffer> {

@@ -222,10 +222,13 @@ class _SliverTimelineState extends ConsumerState<_SliverTimeline> {
   void _onEvent(Event event) {
     switch (event) {
       case ScrollToTopEvent():
-        ref.read(timelineStateProvider.notifier).setScrubbing(true);
-        _scrollController
-            .animateTo(0, duration: const Duration(milliseconds: 250), curve: Curves.easeInOut)
-            .whenComplete(() => ref.read(timelineStateProvider.notifier).setScrubbing(false));
+        {
+          final timelineState = ref.read(timelineStateProvider.notifier);
+          timelineState.setScrubbing(true);
+          _scrollController
+              .animateTo(0, duration: const Duration(milliseconds: 250), curve: Curves.easeInOut)
+              .whenComplete(() => timelineState.setScrubbing(false));
+        }
 
       case ScrollToDateEvent scrollToDateEvent:
         _scrollToDate(scrollToDateEvent.date);
@@ -353,6 +356,7 @@ class _SliverTimelineState extends ConsumerState<_SliverTimeline> {
   }
 
   void _scrollToDate(DateTime date) {
+    final timelineState = ref.read(timelineStateProvider.notifier);
     final asyncSegments = ref.read(timelineSegmentProvider);
     asyncSegments.whenData((segments) {
       final targetSegment = segments.firstWhereOrNull((segment) {
@@ -375,16 +379,16 @@ class _SliverTimelineState extends ConsumerState<_SliverTimeline> {
 
       if (fallbackSegment != null) {
         final targetOffset = fallbackSegment.startOffset - 50;
-        ref.read(timelineStateProvider.notifier).setScrubbing(true);
+        timelineState.setScrubbing(true);
         _scrollController
             .animateTo(
               targetOffset.clamp(0.0, _scrollController.position.maxScrollExtent),
               duration: const Duration(milliseconds: 500),
               curve: Curves.easeInOut,
             )
-            .whenComplete(() => ref.read(timelineStateProvider.notifier).setScrubbing(false));
+            .whenComplete(() => timelineState.setScrubbing(false));
       } else {
-        ref.read(timelineStateProvider.notifier).setScrubbing(false);
+        timelineState.setScrubbing(false);
       }
     });
   }
@@ -399,9 +403,12 @@ class _SliverTimelineState extends ConsumerState<_SliverTimeline> {
 
   void _stopDrag() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      setState(() {
-        _scrollPhysics = null;
-      });
+      // Update the physics post frame to prevent sudden change in physics on iOS.
+      if (mounted) {
+        setState(() {
+          _scrollPhysics = null;
+        });
+      }
     });
     setState(() {
       _dragging = false;
