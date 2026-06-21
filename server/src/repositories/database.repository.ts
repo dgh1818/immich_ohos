@@ -389,6 +389,8 @@ export class DatabaseRepository {
   async runMigrations(): Promise<void> {
     this.logger.log('Running migrations');
 
+    await this.fixExternalLibraryChecksumMigrationOrder();
+
     const migrator = this.createMigrator();
 
     const { error, results } = await migrator.migrateToLatest();
@@ -409,6 +411,24 @@ export class DatabaseRepository {
     }
 
     this.logger.log('Finished running migrations');
+  }
+
+  private async fixExternalLibraryChecksumMigrationOrder(): Promise<void> {
+    await sql`
+      DO $$
+      BEGIN
+        IF to_regclass('kysely_migrations') IS NOT NULL
+          AND NOT EXISTS (
+            SELECT 1
+            FROM "kysely_migrations"
+            WHERE "name" = '1781748259837-AllowDuplicateExternalLibraryChecksums'
+          )
+        THEN
+          DELETE FROM "kysely_migrations"
+          WHERE "name" = '1781960000000-RestoreExternalLibraryChecksumUniqueness';
+        END IF;
+      END $$;
+    `.execute(this.db);
   }
 
   async migrateFilePaths(sourceFolder: string, targetFolder: string): Promise<void> {
