@@ -607,7 +607,8 @@ jobs:
   ml-unit-tests:
     name: Unit Test ML
     needs: pre-job
-    if: ${{ fromJSON(needs.pre-job.outputs.should_run).machine-learning == true }}
+    # OHOS: ML jobs are disabled for this fork.
+    if: ${{ false }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
