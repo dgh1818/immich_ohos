@@ -84,7 +84,8 @@ jobs:
     permissions:
       contents: read
       packages: write
-    if: ${{ fromJSON(needs.pre-job.outputs.should_run).server == false && !github.event.pull_request.head.repo.fork }}
+    # OHOS: server image publishing is disabled for this fork.
+    if: ${{ false }}
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -156,7 +157,8 @@ jobs:
   server:
     name: Build and Push Server
     needs: pre-job
-    if: ${{ fromJSON(needs.pre-job.outputs.should_run).server == true }}
+    # OHOS: server image building/publishing is disabled for this fork.
+    if: ${{ false }}
     uses: immich-app/devtools/.github/workflows/multi-runner-build.yml@db54dcf16fbb12c43479a23749ceea0ad1b4a704 # multi-runner-build-workflow-v3.0.0
     permissions:
       contents: read
@@ -178,7 +180,8 @@ jobs:
     needs: [server, retag_server]
     permissions: {}
     runs-on: ubuntu-latest
-    if: always()
+    # OHOS: server image jobs are disabled.
+    if: ${{ false }}
     steps:
       - uses: immich-app/devtools/actions/success-check@81113db03f6d743efee81e0058c0b43f6cd6f36d # success-check-action-v0.0.6
         with:
