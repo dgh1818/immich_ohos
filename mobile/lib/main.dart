@@ -204,6 +204,7 @@ class ImmichAppState extends ConsumerState<ImmichApp> with WidgetsBindingObserve
       const InitializationSettings(
         android: AndroidInitializationSettings('@drawable/notification_icon'),
         iOS: DarwinInitializationSettings(),
+        ohos: OhosInitializationSettings('app_icon'),
       ),
     );
   }
