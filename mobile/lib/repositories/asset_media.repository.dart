@@ -11,7 +11,7 @@ import 'package:immich_mobile/domain/models/asset/base_asset.model.dart';
 import 'package:immich_mobile/extensions/build_context_extensions.dart';
 import 'package:immich_mobile/extensions/platform_extensions.dart';
 import 'package:immich_mobile/infrastructure/repositories/storage.repository.dart';
-import 'package:immich_mobile/platform/native_sync_api.g.dart';
+import 'package:immich_mobile/platform/native_sync_api_ohos.g.dart';
 import 'package:immich_mobile/providers/infrastructure/platform.provider.dart';
 import 'package:immich_mobile/providers/infrastructure/storage.provider.dart';
 import 'package:immich_mobile/services/api.service.dart';
@@ -29,7 +29,7 @@ final assetMediaRepositoryProvider = Provider(
 );
 
 class AssetMediaRepository {
-  final NativeSyncApi _nativeSyncApi;
+  final NativeSyncApiOhos _nativeSyncApi;
   final StorageRepository _storageRepository;
   static final Logger _log = Logger("AssetMediaRepository");
 
@@ -334,7 +334,7 @@ class AssetMediaRepository {
       Share.shareXFiles(
         downloadedXFiles,
         sharePositionOrigin: Rect.fromPoints(Offset.zero, Offset(size.width / 3, size.height)),
-      ).then((result) async {
+      ).whenComplete(() async {
         await _cleanupTempFiles(tempFiles);
       }),
     );
