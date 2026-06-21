@@ -22,6 +22,8 @@ jobs:
   publish:
     name: CLI Publish
     runs-on: ubuntu-latest
+    # OHOS: CLI publishing is disabled for this fork.
+    if: ${{ false }}
     permissions:
       contents: read
       id-token: write
@@ -60,6 +62,8 @@ jobs:
       contents: read
       packages: write
     needs: publish
+    # OHOS: CLI Docker image publishing is disabled for this fork.
+    if: ${{ false }}
 
     steps:
       - id: token
