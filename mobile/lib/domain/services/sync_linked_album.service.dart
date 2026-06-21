@@ -35,8 +35,8 @@ class SyncLinkedAlbumService {
     this._remoteAlbumRepository,
     this._albumApiRepository,
     this._storeService, {
-    this._cancellation,
-  });
+    Completer<void>? cancellation,
+  }) : _cancellation = cancellation;
 
   final _log = Logger("SyncLinkedAlbumService");
 

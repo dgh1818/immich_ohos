@@ -54,16 +54,16 @@ void main() {
 
     test('Repopulates the internal cache after dispose and init', () async {
       await sut.dispose();
-      clearInteractions(mockStoreRepo);
+      clearInteractions(mockDriftStoreRepo);
 
-      final first = await StoreService.init(storeRepository: mockStoreRepo);
+      final first = await StoreService.init(storeRepository: mockDriftStoreRepo);
       await first.dispose();
 
-      final second = await StoreService.init(storeRepository: mockStoreRepo);
+      final second = await StoreService.init(storeRepository: mockDriftStoreRepo);
       sut = second;
 
       expect(second.tryGet(StoreKey.accessToken), _kAccessToken);
-      verify(() => mockStoreRepo.getAll()).called(2);
+      verify(() => mockDriftStoreRepo.getAll()).called(2);
     });
 
     test('Listens to stream of store updates', () async {

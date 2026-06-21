@@ -32,13 +32,14 @@ void main() {
   });
 
   test('watch() in main isolate sees a write from a background isolate', () async {
-    final (db, dbConnection, _) = await openDb();
+    final (db, dbConnection, sqlitePool) = await openDb();
     final initialRows = await db.select(db.storeEntity).get();
     expect(initialRows, isEmpty);
 
     addTearDown(() async {
       await db.close();
       await dbConnection.close();
+      sqlitePool.close();
     });
 
     final rowCounts = db.select(db.storeEntity).watch().map((rows) => rows.length);
