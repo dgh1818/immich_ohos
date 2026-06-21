@@ -463,7 +463,14 @@ export class AssetRepository {
 
   @ChunkedArray({ chunkSize: 4000 })
   async createAll(assets: Insertable<AssetTable>[]) {
-    const ids = await this.db.insertInto('asset').values(assets).returning('id').execute();
+    const ids = await this.db
+      .insertInto('asset')
+      .values(assets)
+      .onConflict((oc) =>
+        oc.columns(['ownerId', 'libraryId', 'checksum']).where('libraryId', 'is not', null).doNothing(),
+      )
+      .returning('id')
+      .execute();
     return ids.map(({ id }) => id);
   }
 

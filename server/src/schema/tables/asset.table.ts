@@ -18,7 +18,7 @@ import { asset_delete_audit } from 'src/schema/functions';
 import { LibraryTable } from 'src/schema/tables/library.table';
 import { StackTable } from 'src/schema/tables/stack.table';
 import { UserTable } from 'src/schema/tables/user.table';
-import { ASSET_CHECKSUM_CONSTRAINT } from 'src/utils/database';
+import { ASSET_CHECKSUM_CONSTRAINT, ASSET_LIBRARY_CHECKSUM_CONSTRAINT } from 'src/utils/database';
 
 @Table('asset')
 @UpdatedAtTrigger('asset_updatedAt')
@@ -36,6 +36,7 @@ import { ASSET_CHECKSUM_CONSTRAINT } from 'src/utils/database';
   where: '"libraryId" IS NULL',
 })
 @Index({
+  name: ASSET_LIBRARY_CHECKSUM_CONSTRAINT,
   columns: ['ownerId', 'libraryId', 'checksum'],
   unique: true,
   where: '"libraryId" IS NOT NULL',

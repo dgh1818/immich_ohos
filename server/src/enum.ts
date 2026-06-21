@@ -336,7 +336,7 @@ export enum SystemMetadataKey {
   ReverseGeocodingState = 'reverse-geocoding-state',
   FacialRecognitionState = 'facial-recognition-state',
   MemoriesState = 'memories-state',
-  ExternalLibraryChecksumBackfill = 'external-library-checksum-backfill',
+  ExternalLibraryChecksumBackfill = 'external-library-checksum-backfill-v2',
   StorageTemplateMigration = 'storage-template-migration',
   AdminOnboarding = 'admin-onboarding',
   MaintenanceMode = 'maintenance-mode',
