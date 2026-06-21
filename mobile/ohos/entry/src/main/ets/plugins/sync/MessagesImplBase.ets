@@ -468,6 +468,20 @@ export class MessagesImplBase extends NativeSyncApiOhos {
     this.currentTasks = [];
   }
 
+  override cancelSync(): void {
+    this.cancelHashing();
+  }
+
+  override restoreFromTrashById(_mediaId: string, _type: number, result: Result<boolean>): void {
+    result.error(
+      new FlutterError(
+        'UNSUPPORTED_OS',
+        'This feature is not supported on HarmonyOS.',
+        'This feature is not supported on HarmonyOS.'
+      )
+    );
+  }
+
   override async hashAssets(assetIds: string[], allowNetworkAccess: boolean, result: Result<Array<HashResult>>) {
     this.cancelRequested = false;
     this.currentTasks = [];

@@ -79,7 +79,9 @@ class DriftUploadStatus {
 
   @override
   bool operator ==(covariant DriftUploadStatus other) {
-    if (identical(this, other)) return true;
+    if (identical(this, other)) {
+      return true;
+    }
 
     return other.taskId == taskId &&
         other.filename == filename &&
@@ -159,7 +161,9 @@ class DriftBackupState {
 
   @override
   bool operator ==(covariant DriftBackupState other) {
-    if (identical(this, other)) return true;
+    if (identical(this, other)) {
+      return true;
+    }
     final mapEquals = const DeepCollectionEquality().equals;
 
     return other.totalCount == totalCount &&

@@ -1,7 +1,7 @@
 <script lang="ts">
   import { afterNavigate, beforeNavigate } from '$app/navigation';
   import { page } from '$app/state';
-  import Thumbnail from '$lib/components/assets/thumbnail/thumbnail.svelte';
+  import Thumbnail from '$lib/components/assets/thumbnail/Thumbnail.svelte';
   import Month from '$lib/components/timeline/Month.svelte';
   import Scrubber from '$lib/components/timeline/Scrubber.svelte';
   import TimelineAssetViewer from '$lib/components/timeline/TimelineAssetViewer.svelte';
@@ -261,6 +261,7 @@
     if (!enableRouting) {
       invisible = false;
     }
+    scrollableElement?.focus({ preventScroll: true });
   });
 
   const scrollToSegmentPercentage = (segmentTop: number, segmentHeight: number, timelineMonthScrollPercent: number) => {
@@ -616,7 +617,7 @@
 <!-- Right margin MUST be equal to the width of scrubber -->
 <section
   id="asset-grid"
-  class={['scrollbar-hidden h-full overflow-y-auto outline-none', { 'm-0': isEmpty }, { 'ms-0': !isEmpty }]}
+  class={['h-full scrollbar-hidden overflow-y-auto outline-none', { 'm-0': isEmpty }, { 'ms-0': !isEmpty }]}
   style:margin-inline-end={(usingMobileDevice ? 0 : scrubberWidth) + 'px'}
   tabindex="-1"
   bind:clientHeight={timelineManager.viewportHeight}

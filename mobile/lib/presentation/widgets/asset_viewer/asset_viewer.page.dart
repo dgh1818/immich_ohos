@@ -74,7 +74,9 @@ class AssetViewer extends ConsumerStatefulWidget {
     ref.read(assetViewerProvider.notifier).reset();
 
     // Hide controls by default for videos
-    if (asset.isVideo) ref.read(assetViewerProvider.notifier).setControls(false);
+    if (asset.isVideo) {
+      ref.read(assetViewerProvider.notifier).setControls(false);
+    }
 
     _setAsset(ref, asset);
   }
@@ -110,7 +112,9 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
 
   void _onTapNavigate(int direction) {
     final page = _pageController.page?.toInt();
-    if (page == null) return;
+    if (page == null) {
+      return;
+    }
     final target = page + direction;
     final maxPage = _totalAssets - 1;
     if (target >= 0 && target <= maxPage) {
@@ -126,7 +130,9 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
 
     final asset = ref.read(assetViewerProvider).currentAsset;
     assert(asset != null, "Current asset should not be null when opening the AssetViewer");
-    if (asset != null) _stackChildrenKeepAlive = ref.read(stackChildrenNotifier(asset).notifier).ref.keepAlive();
+    if (asset != null) {
+      _stackChildrenKeepAlive = ref.read(stackChildrenNotifier(asset).notifier).ref.keepAlive();
+    }
 
     _reloadSubscription = EventStream.shared.listen(_onEvent);
 
@@ -184,7 +190,9 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
   // playing, and preventing the video on the next page from becoming ready
   // unnecessarily.
   bool _onScrollEnd(ScrollEndNotification notification) {
-    if (notification.depth != 0) return false;
+    if (notification.depth != 0) {
+      return false;
+    }
 
     final page = _pageController.page?.round();
     if (page != null && page != _currentPage) {
@@ -223,7 +231,9 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
     if (!_canUseRef) return;
     if (!ref.read(castProvider).isCasting) return;
     final asset = ref.read(assetViewerProvider).currentAsset;
-    if (asset == null) return;
+    if (asset == null) {
+      return;
+    }
 
     if (asset is RemoteAsset) {
       context.scaffoldMessenger.hideCurrentSnackBar();
@@ -294,7 +304,7 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
   }
 
   void _setSystemUIMode(bool controls, bool details) {
-    final mode = CurrentPlatform.isIOS && details
+    final mode = !controls || (CurrentPlatform.isIOS && details)
         ? SystemUiMode.immersiveSticky
         : SystemUiMode.edgeToEdge;
     unawaited(SystemChrome.setEnabledSystemUIMode(mode));

@@ -98,7 +98,7 @@ class PlatformAsset {
     this.updatedAt,
     this.width,
     this.height,
-    required this.durationInSeconds,
+    required this.durationMs,
     required this.orientation,
     required this.isFavorite,
     this.adjustmentTime,
@@ -121,7 +121,7 @@ class PlatformAsset {
 
   int? height;
 
-  int durationInSeconds;
+  int durationMs;
 
   int orientation;
 
@@ -144,7 +144,7 @@ class PlatformAsset {
       updatedAt,
       width,
       height,
-      durationInSeconds,
+      durationMs,
       orientation,
       isFavorite,
       adjustmentTime,
@@ -167,7 +167,7 @@ class PlatformAsset {
       updatedAt: result[4] as int?,
       width: result[5] as int?,
       height: result[6] as int?,
-      durationInSeconds: result[7]! as int,
+      durationMs: result[7]! as int,
       orientation: result[8]! as int,
       isFavorite: result[9]! as bool,
       adjustmentTime: result[10] as int?,
@@ -694,6 +694,29 @@ class NativeSyncApiOhos {
     }
   }
 
+  Future<void> cancelSync() async {
+    final String pigeonVar_channelName = 'dev.flutter.pigeon.immich_mobile.NativeSyncApiOhos.cancelSync$pigeonVar_messageChannelSuffix';
+    final BasicMessageChannel<Object?> pigeonVar_channel = BasicMessageChannel<Object?>(
+      pigeonVar_channelName,
+      pigeonChannelCodec,
+      binaryMessenger: pigeonVar_binaryMessenger,
+    );
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(null);
+    final List<Object?>? pigeonVar_replyList =
+        await pigeonVar_sendFuture as List<Object?>?;
+    if (pigeonVar_replyList == null) {
+      throw _createConnectionError(pigeonVar_channelName);
+    } else if (pigeonVar_replyList.length > 1) {
+      throw PlatformException(
+        code: pigeonVar_replyList[0]! as String,
+        message: pigeonVar_replyList[1] as String?,
+        details: pigeonVar_replyList[2],
+      );
+    } else {
+      return;
+    }
+  }
+
   Future<int> startBackgroundTransfer() async {
     final String pigeonVar_channelName = 'dev.flutter.pigeon.immich_mobile.NativeSyncApiOhos.startBackgroundTransfer$pigeonVar_messageChannelSuffix';
     final BasicMessageChannel<Object?> pigeonVar_channel = BasicMessageChannel<Object?>(
@@ -793,6 +816,34 @@ class NativeSyncApiOhos {
       );
     } else {
       return (pigeonVar_replyList[0] as Map<Object?, Object?>?)!.cast<String, List<PlatformAsset>>();
+    }
+  }
+
+  Future<bool> restoreFromTrashById(String mediaId, int type) async {
+    final String pigeonVar_channelName = 'dev.flutter.pigeon.immich_mobile.NativeSyncApiOhos.restoreFromTrashById$pigeonVar_messageChannelSuffix';
+    final BasicMessageChannel<Object?> pigeonVar_channel = BasicMessageChannel<Object?>(
+      pigeonVar_channelName,
+      pigeonChannelCodec,
+      binaryMessenger: pigeonVar_binaryMessenger,
+    );
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(<Object?>[mediaId, type]);
+    final List<Object?>? pigeonVar_replyList =
+        await pigeonVar_sendFuture as List<Object?>?;
+    if (pigeonVar_replyList == null) {
+      throw _createConnectionError(pigeonVar_channelName);
+    } else if (pigeonVar_replyList.length > 1) {
+      throw PlatformException(
+        code: pigeonVar_replyList[0]! as String,
+        message: pigeonVar_replyList[1] as String?,
+        details: pigeonVar_replyList[2],
+      );
+    } else if (pigeonVar_replyList[0] == null) {
+      throw PlatformException(
+        code: 'null-error',
+        message: 'Host platform returned null value for non-null return value.',
+      );
+    } else {
+      return (pigeonVar_replyList[0] as bool?)!;
     }
   }
 

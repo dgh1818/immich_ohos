@@ -333,13 +333,13 @@ export class BackgroundWorkerFlutterApi {
           } 
         });
   }
-  onAndroidUpload(callback: Reply<void>):void {
+  onAndroidUpload(maxMinutesArg: number, callback: Reply<void>) {
     const channelName: string = 'dev.flutter.pigeon.immich_mobile.BackgroundWorkerFlutterApi.onAndroidUpload';
     let channel: BasicMessageChannel<Object> = 
         new BasicMessageChannel<Object>(
             this.binaryMessenger, channelName, BackgroundWorkerFlutterApi.getCodec());
     channel.send(
-        null,
+        [maxMinutesArg],
         channelReply => {
           if (Array.isArray(channelReply)) {
             let listReply: ESObject[] = channelReply as ESObject[] ;

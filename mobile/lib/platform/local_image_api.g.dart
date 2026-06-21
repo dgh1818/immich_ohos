@@ -50,14 +50,14 @@ class LocalImageApi {
 
   final String pigeonVar_messageChannelSuffix;
 
-  Future<Map<String, Object>?> requestImage(String assetId, {required int requestId, required int width, required int height, required bool isVideo, }) async {
+  Future<Map<String, int>?> requestImage(String assetId, {required int requestId, required int width, required int height, required bool isVideo, required bool preferEncoded, }) async {
     final String pigeonVar_channelName = 'dev.flutter.pigeon.immich_mobile.LocalImageApi.requestImage$pigeonVar_messageChannelSuffix';
     final BasicMessageChannel<Object?> pigeonVar_channel = BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
       binaryMessenger: pigeonVar_binaryMessenger,
     );
-    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(<Object?>[assetId, requestId, width, height, isVideo]);
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(<Object?>[assetId, requestId, width, height, isVideo, preferEncoded]);
     final List<Object?>? pigeonVar_replyList =
         await pigeonVar_sendFuture as List<Object?>?;
     if (pigeonVar_replyList == null) {
@@ -69,7 +69,7 @@ class LocalImageApi {
         details: pigeonVar_replyList[2],
       );
     } else {
-      return (pigeonVar_replyList[0] as Map<Object?, Object?>?)?.cast<String, Object>();
+      return (pigeonVar_replyList[0] as Map<Object?, Object?>?)?.cast<String, int>();
     }
   }
 

@@ -152,10 +152,12 @@ class _DriftMapState extends ConsumerState<DriftMap> {
       return;
     }
 
-    // await controller.addSource(
-    //   MapUtils.defaultSourceId,
-    //   const CustomSourceProperties(data: {'type': 'FeatureCollection', 'features': []}),
-    // );
+    if (defaultTargetPlatform != TargetPlatform.ohos) {
+      await controller.addSource(
+        MapUtils.defaultSourceId,
+        const CustomSourceProperties(data: {'type': 'FeatureCollection', 'features': []}),
+      );
+    }
 
     if (Platform.isAndroid) {
       await controller.addCircleLayer(
@@ -233,21 +235,20 @@ class _DriftMapState extends ConsumerState<DriftMap> {
         if (mounted && (ref.read(mapStateProvider.notifier).setBounds(bounds) || forceReload)) {
           final markers = await ref.read(mapMarkerProvider(bounds).future);
 
-          final mapService = ref.watch(mapServiceProvider);
-          final markersData = await mapService.getMarkers(bounds);
-
-          final List<LatLng> totalData = [];
-
-          for (final marker in markersData) {
-            final coordinateProcessed = CoordinateTransformUtil.wgs84ToGcj02(
-              marker.location.longitude,
-              marker.location.latitude,
-            );
-            totalData.add(LatLng(coordinateProcessed[1], coordinateProcessed[0]));
-            // 使用 marker 的属性或方法
-          }
-
           if (defaultTargetPlatform == TargetPlatform.ohos) {
+            final mapService = ref.watch(mapServiceProvider);
+            final markersData = await mapService.getMarkers(bounds);
+
+            final List<LatLng> totalData = [];
+
+            for (final marker in markersData) {
+              final coordinateProcessed = CoordinateTransformUtil.wgs84ToGcj02(
+                marker.location.longitude,
+                marker.location.latitude,
+              );
+              totalData.add(LatLng(coordinateProcessed[1], coordinateProcessed[0]));
+            }
+
             await mapController?.addHeatmapData_Ohos(totalData);
           }
 
@@ -263,7 +264,9 @@ class _DriftMapState extends ConsumerState<DriftMap> {
       return;
     }
 
-    //await controller.setGeoJsonSource(MapUtils.defaultSourceId, markers);
+    if (defaultTargetPlatform != TargetPlatform.ohos) {
+      await controller.setGeoJsonSource(MapUtils.defaultSourceId, markers);
+    }
   }
 
   void _onSelectedAssetChanged() {

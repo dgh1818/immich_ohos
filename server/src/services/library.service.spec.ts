@@ -675,7 +675,6 @@ describe(LibraryService.name, () => {
           checksum,
           checksumAlgorithm: ChecksumAlgorithm.sha1File,
           originalPath: normalizedPath,
-          deviceId: 'Library Import',
           type: AssetType.Image,
           originalFileName: 'photo.jpg',
           isExternal: true,

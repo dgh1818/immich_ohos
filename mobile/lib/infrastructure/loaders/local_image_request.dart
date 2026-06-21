@@ -58,7 +58,9 @@ class LocalImageRequest extends ImageRequest {
       isVideo: assetType == AssetType.video,
       preferEncoded: true,
     );
-    if (info == null) return null;
+    if (info == null) {
+      return null;
+    }
 
     final pointer = info['pointer'] as int?;
     if (pointer == null) return null;

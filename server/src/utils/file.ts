@@ -1,4 +1,4 @@
-import { HttpException, StreamableFile } from '@nestjs/common';
+import { HttpException, NotFoundException, StreamableFile } from '@nestjs/common';
 import { NextFunction, Response } from 'express';
 import { access, constants } from 'node:fs/promises';
 import { basename, extname } from 'node:path';
@@ -53,6 +53,9 @@ export const sendFile = async (
 
   try {
     const file = await handler();
+
+    await access(file.path, constants.R_OK);
+
     const cacheControlHeader = cacheControlHeaders[file.cacheControl];
     if (cacheControlHeader) {
       // set the header to Cache-Control
@@ -63,8 +66,6 @@ export const sendFile = async (
     if (file.fileName) {
       res.header('Content-Disposition', `inline; filename*=UTF-8''${encodeURIComponent(file.fileName)}`);
     }
-
-    await access(file.path, constants.R_OK);
 
     try {
       return await _sendFile(file.path, { dotfiles: 'allow' });
@@ -88,8 +89,7 @@ export const sendFile = async (
       logger.error(`Unable to send file: ${error}`, error.stack);
     }
 
-    res.header('Cache-Control', 'none');
-    next(error);
+    next(new NotFoundException());
   }
 };
 

@@ -35,6 +35,10 @@ import HomeWidgetPlugin from '../plugins/widget/HomeWidgetPlugin';
 import { AbilityConstant, Want } from '@kit.AbilityKit';
 import { NetworkApi } from '../plugins/core/Network.g';
 import { NetworkApiImpl } from '../plugins/core/NetworkApiImpl';
+import { PermissionApi } from '../plugins/permission/PermissionApi.g';
+import { PermissionApiImpl } from '../plugins/permission/PermissionApiImpl';
+import { ViewIntentHostApi } from '../plugins/viewintent/ViewIntent.g';
+import { ViewIntentApiImpl } from '../plugins/viewintent/ViewIntentApiImpl';
 
 export default class EntryAbility extends FlutterAbility {
   private pendingDeepLink: string | null = null;
@@ -70,6 +74,8 @@ export default class EntryAbility extends FlutterAbility {
     let connectivityApiImpl = new ConnectivityApiImpl(ctx.getApplicationContext());
     let backgroundEngineLock = new BackgroundEngineLock(ctx.getApplicationContext())
     let networkApiImpl = new NetworkApiImpl(super.getAbility().context);
+    let permissionApiImpl = new PermissionApiImpl(super.getAbility().context);
+    let viewIntentApiImpl = new ViewIntentApiImpl();
     let messenger = flutterEngine.dartExecutor.getBinaryMessenger();
     NativeSyncApiOhos.setup(messenger, nativeSyncApiImpl)
     LocalImageApiOhos.setup(messenger, localImageApiImpl);
@@ -78,6 +84,8 @@ export default class EntryAbility extends FlutterAbility {
     ConnectivityApi.setup(messenger,connectivityApiImpl);
     BackgroundWorkerLockApi.setup(messenger,backgroundEngineLock);
     NetworkApi.setup(messenger, networkApiImpl);
+    PermissionApi.setup(messenger, permissionApiImpl);
+    ViewIntentHostApi.setup(messenger, viewIntentApiImpl);
 
     const constraints: workScheduler.WorkInfo = BackgroundWorkerApiImpl.BACKGROUND_WORKER_INFO;
     try {

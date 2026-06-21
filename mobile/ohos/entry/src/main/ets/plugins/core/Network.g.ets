@@ -45,13 +45,13 @@ function wrapError(error: Error): Array<Object> {
 
 /* Generated class from Pigeon that represents data sent in messages.*/
 export class ClientCertData {
-  private data?: number[];
+  private data?: Uint8Array;
 
-  public setData(data:number[]):void {
+  public setData(data:Uint8Array):void {
     this.data = data;
   }
 
-  getData(): number[] | undefined{
+  getData(): Uint8Array | undefined{
     return this.data;
   }
 
@@ -65,7 +65,7 @@ export class ClientCertData {
     return this.password;
   }
 
-  constructor(data?: number[], password?: string) {
+  constructor(data?: Uint8Array, password?: string) {
     this.data = data;
     this.password = password;
   }
@@ -84,7 +84,7 @@ export class ClientCertData {
   static fromList(arr: Object[]): ClientCertData {
     let pigeonResult: ClientCertData = new ClientCertData();
     let data: Object = arr[0];
-    pigeonResult.setData(data as number[]);
+    pigeonResult.setData(data as Uint8Array);
     let password: Object = arr[1];
     pigeonResult.setPassword(password as string);
     return pigeonResult;
@@ -227,6 +227,8 @@ export abstract class NetworkApi {
   abstract getClientPointer(): number;
 
   abstract setRequestHeaders(headers: Map<string, string> , serverUrls: Array<string> , token: string | null ): void;
+
+  abstract getAppGroupId(): string;
   /** The codec used by NetworkApi. */
   static getCodec(): MessageCodec<Object>{
     return PigeonCodec.INSTANCE;
@@ -372,6 +374,28 @@ export abstract class NetworkApi {
               try {
                 api!.setRequestHeaders(args[0] as Map<string, string>, args[1] as Array<string>, args[2] as string | null);
                 res.push(null);
+              }
+ catch (error) {
+                let wrappedError: Array<Object> = wrapError(error);
+                res = wrappedError;
+              }
+              reply.reply(res);
+            } });
+      } else {
+        channel.setMessageHandler(null);
+      }
+    }
+    {
+      let channel: BasicMessageChannel<Object> =
+          new BasicMessageChannel(
+              binaryMessenger, "dev.flutter.pigeon.immich_mobile.NetworkApi.getAppGroupId", NetworkApi.getCodec());
+      if (api != null) {
+        channel.setMessageHandler({
+            onMessage(message: Object ,reply: Reply<Object> ) {
+              let res: Array<Object> = [];
+              try {
+                let output: string = api!.getAppGroupId();
+                res.push(output);
               }
  catch (error) {
                 let wrappedError: Array<Object> = wrapError(error);

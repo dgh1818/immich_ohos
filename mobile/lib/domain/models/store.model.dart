@@ -96,7 +96,47 @@ enum StoreKey<T> {
   syncMigrationStatus<String>._(1013),
   imageHdr<bool>._(1014),
   videoHdr<bool>._(1015),
-  ohosLocalAssetOrientationBackfill<bool>._(1016);
+  ohosLocalAssetOrientationBackfill<bool>._(1016),
+
+  // Legacy keys that have been migrated to the new metadata store
+  legacyBackupRequireCharging<bool>._(7),
+  legacyBackupTriggerDelay<int>._(8),
+  legacySyncAlbums<bool>._(131),
+  legacyEnableBackup<bool>._(1003),
+  legacyUseWifiForUploadVideos<bool>._(1004),
+  legacyUseWifiForUploadPhotos<bool>._(1005),
+  legacySelectedAlbumSortOrder<int>._(113),
+  legacySelectedAlbumSortReverse<bool>._(123),
+  legacyAlbumGridView<bool>._(140),
+  legacyAutoEndpointSwitching<bool>._(132),
+  legacyPreferredWifiName<String>._(133),
+  legacyLocalEndpoint<String>._(134),
+  legacyExternalEndpointList<String>._(135),
+  legacyCustomHeaders<String>._(127),
+  legacyLoopVideo<bool>._(117),
+  legacyLoadOriginalVideo<bool>._(136),
+  legacyAutoPlayVideo<bool>._(139),
+  legacyTapToNavigate<bool>._(141),
+  legacyPreferRemoteImage<bool>._(116),
+  legacyLoadOriginal<bool>._(101),
+  legacyPrimaryColor<String>._(128),
+  legacyDynamicTheme<bool>._(129),
+  legacyColorfulInterface<bool>._(130),
+  legacyThemeMode<String>._(102),
+  legacyCleanupKeepFavorites<bool>._(1008),
+  legacyCleanupKeepMediaType<int>._(1009),
+  legacyCleanupKeepAlbumIds<String>._(1010),
+  legacyCleanupCutoffDaysAgo<int>._(1011),
+  legacyCleanupDefaultsInitialized<bool>._(1012),
+  legacyTilesPerRow<int>._(103),
+  legacyGroupAssetsBy<int>._(105),
+  legacyStorageIndicator<bool>._(109),
+  legacyMapRelativeDate<int>._(119),
+  legacyMapShowFavoriteOnly<bool>._(118),
+  legacyMapIncludeArchived<bool>._(121),
+  legacyMapThemeMode<int>._(124),
+  legacyMapwithPartners<bool>._(125),
+  legacyLogLevel<int>._(115);
 
   const StoreKey._(this.id);
   final int id;
@@ -120,7 +160,9 @@ StoreDto: {
 
   @override
   bool operator ==(covariant StoreDto<T> other) {
-    if (identical(this, other)) return true;
+    if (identical(this, other)) {
+      return true;
+    }
 
     return other.key == key && other.value == value;
   }

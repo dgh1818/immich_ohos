@@ -3,19 +3,22 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:immich_mobile/domain/models/asset/base_asset.model.dart';
 import 'package:immich_mobile/extensions/build_context_extensions.dart';
 import 'package:immich_mobile/presentation/widgets/bottom_sheet/base_bottom_sheet.widget.dart';
+import 'package:immich_mobile/presentation/widgets/bottom_sheet/general_bottom_sheet.widget.dart';
 import 'package:immich_mobile/presentation/widgets/map/map.state.dart';
 import 'package:immich_mobile/presentation/widgets/timeline/timeline.widget.dart';
 import 'package:immich_mobile/providers/infrastructure/timeline.provider.dart';
 import 'package:immich_mobile/providers/user.provider.dart';
 
 class MapBottomSheet extends StatelessWidget {
-  const MapBottomSheet({super.key, this.onScrollAssetChanged});
-
+  final Key? sheetKey;
   final ValueChanged<BaseAsset?>? onScrollAssetChanged;
+
+  const MapBottomSheet({super.key, this.sheetKey, this.onScrollAssetChanged});
 
   @override
   Widget build(BuildContext context) {
     return BaseBottomSheet(
+      key: sheetKey,
       initialChildSize: 0.25,
       maxChildSize: 0.75,
       shouldCloseOnMinExtent: false,
@@ -24,7 +27,7 @@ class MapBottomSheet extends StatelessWidget {
       backgroundColor: context.themeData.colorScheme.surface,
       slivers: [
         SliverFillRemaining(
-          hasScrollBody: false,
+          hasScrollBody: true,
           child: _ScopedMapTimeline(onScrollAssetChanged: onScrollAssetChanged),
         ),
       ],
@@ -61,7 +64,7 @@ class _ScopedMapTimeline extends StatelessWidget {
       ],
       child: Timeline(
         appBar: null,
-        bottomSheet: null,
+        bottomSheet: const GeneralBottomSheet(minChildSize: 0.23),
         withScrubber: false,
         onScrollAssetChanged: onScrollAssetChanged,
       ),

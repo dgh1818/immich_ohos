@@ -1,9 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:immich_mobile/domain/models/asset/base_asset.model.dart';
-import 'package:immich_mobile/domain/models/setting.model.dart';
-import 'package:immich_mobile/domain/services/setting.service.dart';
 import 'package:immich_mobile/infrastructure/loaders/image_request.dart';
+import 'package:immich_mobile/infrastructure/repositories/settings.repository.dart';
 import 'package:immich_mobile/presentation/widgets/images/animated_image_stream_completer.dart';
 import 'package:immich_mobile/presentation/widgets/images/image_provider.dart';
 import 'package:immich_mobile/presentation/widgets/images/one_frame_multi_image_stream_completer.dart';
@@ -41,15 +40,17 @@ class LocalThumbProvider extends CancellableImageProvider<LocalThumbProvider>
 
   @override
   bool operator ==(Object other) {
-    if (identical(this, other)) return true;
+    if (identical(this, other)) {
+      return true;
+    }
     if (other is LocalThumbProvider) {
-      return id == other.id && size == other.size && assetType == other.assetType;
+      return id == other.id;
     }
     return false;
   }
 
   @override
-  int get hashCode => Object.hash(id, size, assetType);
+  int get hashCode => id.hashCode;
 }
 
 class LocalFullImageProvider extends CancellableImageProvider<LocalFullImageProvider>
@@ -103,7 +104,7 @@ class LocalFullImageProvider extends CancellableImageProvider<LocalFullImageProv
       return;
     }
 
-    final loadOriginal = assetType == AssetType.image && AppSetting.get(Setting.loadOriginal);
+    final loadOriginal = SettingsRepository.instance.appConfig.image.loadOriginal;
     final devicePixelRatio = PlatformDispatcher.instance.views.first.devicePixelRatio;
     var request = this.request = LocalImageRequest(
       localId: key.id,
@@ -148,7 +149,9 @@ class LocalFullImageProvider extends CancellableImageProvider<LocalFullImageProv
     final originalRequest = request = LocalImageRequest(localId: key.id, size: Size.zero, assetType: key.assetType);
     final codec = await loadCodecRequest(originalRequest, isFinal: true);
     if (codec == null) {
-      if (isCancelled) return;
+      if (isCancelled) {
+        return;
+      }
       throw StateError('Failed to load animated codec for local asset ${key.id}');
     }
     yield codec;
@@ -156,16 +159,15 @@ class LocalFullImageProvider extends CancellableImageProvider<LocalFullImageProv
 
   @override
   bool operator ==(Object other) {
-    if (identical(this, other)) return true;
+    if (identical(this, other)) {
+      return true;
+    }
     if (other is LocalFullImageProvider) {
-      return id == other.id &&
-          size == other.size &&
-          assetType == other.assetType &&
-          isAnimated == other.isAnimated;
+      return id == other.id && size == other.size && isAnimated == other.isAnimated;
     }
     return false;
   }
 
   @override
-  int get hashCode => Object.hash(id, size, assetType, isAnimated);
+  int get hashCode => id.hashCode ^ size.hashCode ^ isAnimated.hashCode;
 }

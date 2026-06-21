@@ -29,7 +29,7 @@ class PlatformAsset {
   final int? updatedAt;
   final int? width;
   final int? height;
-  final int durationInSeconds;
+  final int durationMs;
   final int orientation;
   final bool isFavorite;
 
@@ -47,7 +47,7 @@ class PlatformAsset {
     this.updatedAt,
     this.width,
     this.height,
-    this.durationInSeconds = 0,
+    this.durationMs = 0,
     this.orientation = 0,
     this.isFavorite = false,
 
@@ -131,6 +131,8 @@ abstract class NativeSyncApiOhos {
 
   void cancelHashing();
 
+  void cancelSync();
+
   @TaskQueue(type: TaskQueueType.serialBackgroundThread)
   @async
   int startBackgroundTransfer();
@@ -145,6 +147,9 @@ abstract class NativeSyncApiOhos {
 
   @TaskQueue(type: TaskQueueType.serialBackgroundThread)
   Map<String, List<PlatformAsset>> getTrashedAssets();
+
+  @async
+  bool restoreFromTrashById(String mediaId, int type);
 
   @TaskQueue(type: TaskQueueType.serialBackgroundThread)
   @async

@@ -5,18 +5,18 @@ import 'package:background_downloader/background_downloader.dart';
 import 'package:flutter/services.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:immich_mobile/constants/constants.dart';
+import 'package:immich_mobile/domain/models/asset/base_asset.model.dart';
 import 'package:immich_mobile/domain/models/store.model.dart';
-import 'package:immich_mobile/entities/asset.entity.dart';
 import 'package:immich_mobile/entities/store.entity.dart';
 import 'package:immich_mobile/models/download/livephotos_medatada.model.dart';
+import 'package:immich_mobile/providers/infrastructure/asset.provider.dart';
 import 'package:immich_mobile/repositories/download.repository.dart';
 import 'package:immich_mobile/repositories/file_media.repository.dart';
 import 'package:immich_mobile/services/api.service.dart';
 import 'package:logging/logging.dart';
 
 import 'package:path/path.dart' as p;
-import 'package:image_gallery_saver/image_gallery_saver.dart';
-import 'package:immich_mobile/services/asset.service.dart';
+import 'package:immich_mobile/domain/services/asset.service.dart';
 import 'package:video_compress/video_compress.dart';
 
 final downloadServiceProvider = Provider(
@@ -82,24 +82,12 @@ class DownloadService {
     final title = _titleWithoutExtension(task.filename);
     final relativePath = Platform.isAndroid ? 'DCIM/Immich' : null;
     try {
-      if (false) {
-        //To do
-        //if (Platform.isOhos) {
-        final tempFile = File(filePath);
-        if (tempFile.existsSync() == false) {
-          return false;
-        }
-        final resultAsset = await ImageGallerySaver.saveFile(filePath, name: title, isReturnPathOfIOS: true);
-        return resultAsset != null;
-      } else {
-        final Asset? resultAsset = await _fileMediaRepository.saveImageWithFile(
-          //
-          filePath,
-          title: title,
-          relativePath: relativePath,
-        );
-        return resultAsset != null;
-      }
+      final resultAsset = await _fileMediaRepository.saveImageWithFile(
+        filePath,
+        title: title,
+        relativePath: relativePath,
+      );
+      return resultAsset != null;
     } catch (error, stack) {
       _log.severe("Error saving image", error, stack);
       return false;
@@ -267,16 +255,8 @@ class DownloadService {
     final relativePath = Platform.isAndroid ? 'DCIM/Immich' : null;
     final file = File(filePath);
     try {
-      if (false) {
-        //To do
-        //if (Platform.isOhos) {
-        final tempFile = File(filePath);
-        final resultAsset = await ImageGallerySaver.saveFile(tempFile.path, name: title, isReturnPathOfIOS: true);
-        return resultAsset != null;
-      } else {
-        final Asset? resultAsset = await _fileMediaRepository.saveVideo(file, title: title, relativePath: relativePath);
-        return resultAsset != null;
-      }
+      final resultAsset = await _fileMediaRepository.saveVideo(file, title: title, relativePath: relativePath);
+      return resultAsset != null;
     } catch (error, stack) {
       _log.severe("Error saving video", error, stack);
       return false;
@@ -400,7 +380,7 @@ class DownloadService {
     return await FileDownloader().cancelTaskWithId(id);
   }
 
-  Future<List<bool>> downloadAll(List<Asset> assets) async {
+  Future<List<bool>> downloadAll(List<RemoteAsset> assets) async {
     final tasks = <DownloadTask>[];
     for (final asset in assets) {
       tasks.addAll(await _createDownloadTasks(asset));
@@ -408,53 +388,49 @@ class DownloadService {
     return await _downloadRepository.downloadAll(tasks);
   }
 
-  Future<void> download(Asset asset) async {
+  Future<void> download(RemoteAsset asset) async {
     final tasks = await _createDownloadTasks(asset);
     await _downloadRepository.downloadAll(tasks);
   }
 
-  Future<List<DownloadTask>> _createDownloadTasks(Asset asset) async {
+  Future<List<DownloadTask>> _createDownloadTasks(RemoteAsset asset) async {
     if (asset.isImage && asset.livePhotoVideoId != null && (Platform.isIOS || Platform.isOhos)) {
       String videoFileName;
-      final videoAsset = await _assetService.getAssetByRemoteId(asset.livePhotoVideoId!);
-      if (videoAsset != null && videoAsset.fileName.isNotEmpty) {
-        final videoExt = p.extension(videoAsset.fileName);
+      final videoAsset = await _assetService.getRemoteAsset(asset.livePhotoVideoId!);
+      if (videoAsset != null && videoAsset.name.isNotEmpty) {
+        final videoExt = p.extension(videoAsset.name);
         if (videoExt.isNotEmpty) {
-          videoFileName = asset.fileName.toUpperCase().replaceAll(RegExp(r"\.(JPG|HEIC)$"), videoExt.toUpperCase());
+          videoFileName = asset.name.toUpperCase().replaceAll(RegExp(r"\.(JPG|HEIC)$"), videoExt.toUpperCase());
         } else {
-          videoFileName = videoAsset.fileName.toUpperCase();
+          videoFileName = videoAsset.name.toUpperCase();
         }
       } else {
-        videoFileName = asset.fileName.toUpperCase().replaceAll(RegExp(r"\.(JPG|HEIC)$"), '.MP4');
+        videoFileName = asset.name.toUpperCase().replaceAll(RegExp(r"\.(JPG|HEIC)$"), '.MP4');
       }
 
-      pendingLiveVideoTaskByRemoteId[asset.remoteId!] = _buildDownloadTask(
+      pendingLiveVideoTaskByRemoteId[asset.id] = _buildDownloadTask(
         asset.livePhotoVideoId!,
         videoFileName,
         group: kDownloadGroupLivePhoto,
-        metadata: LivePhotosMetadata(part: LivePhotosPart.video, id: asset.remoteId!).toJson(),
+        metadata: LivePhotosMetadata(part: LivePhotosPart.video, id: asset.id).toJson(),
         priority: 1,
       );
 
       return [
         _buildDownloadTask(
-          asset.remoteId!, //
-          asset.fileName,
+          asset.id,
+          asset.name,
           group: kDownloadGroupLivePhoto,
-          metadata: LivePhotosMetadata(part: LivePhotosPart.image, id: asset.remoteId!).toJson(),
+          metadata: LivePhotosMetadata(part: LivePhotosPart.image, id: asset.id).toJson(),
           priority: 0,
         ),
       ];
     }
 
-    if (asset.remoteId == null) {
-      return [];
-    }
-
     return [
       _buildDownloadTask(
-        asset.remoteId!,
-        asset.fileName,
+        asset.id,
+        asset.name,
         group: asset.isImage ? kDownloadGroupImage : kDownloadGroupVideo,
       ),
     ];

@@ -27,6 +27,7 @@ class HashService {
   final NativeSyncApiOhos _nativeSyncApi;
   final DriftTrashedLocalAssetRepository _trashedLocalAssetRepository;
   final bool Function()? _cancelChecker;
+  final Completer<void>? _cancellation;
   final _log = Logger('HashService');
 
   HashService({
@@ -35,15 +36,30 @@ class HashService {
     required NativeSyncApiOhos nativeSyncApi,
     required DriftTrashedLocalAssetRepository trashedLocalAssetRepository,
     bool Function()? cancelChecker,
+    Completer<void>? cancellation,
     int? batchSize,
   }) : _localAlbumRepository = localAlbumRepository,
        _localAssetRepository = localAssetRepository,
        _nativeSyncApi = nativeSyncApi,
        _trashedLocalAssetRepository = trashedLocalAssetRepository,
        _cancelChecker = cancelChecker,
-       _batchSize = batchSize ?? kBatchHashFileLimit;
+       _cancellation = cancellation,
+       _batchSize = batchSize ?? kBatchHashFileLimit {
+    final cancellation = _cancellation;
+    if (cancellation != null) {
+      unawaited(
+        cancellation.future.then((_) async {
+          try {
+            await _nativeSyncApi.cancelHashing();
+          } catch (error, stackTrace) {
+            _log.warning("Failed to cancel native hashing", error, stackTrace);
+          }
+        }),
+      );
+    }
+  }
 
-  bool get isCancelled => _cancelChecker?.call() ?? false;
+  bool get isCancelled => (_cancelChecker?.call() ?? false) || (_cancellation?.isCompleted ?? false);
   int hashedCount = 0;
   int toHashCount = 0;
   bool _startedBackgroundTransfer = false;
@@ -133,8 +149,6 @@ class HashService {
       }
     }
 
-    stopwatch.stop();
-    _log.info("Hashing took - ${stopwatch.elapsedMilliseconds}ms");
   }
 
   /// Processes a list of [LocalAsset]s, storing their hash and updating the assets in the DB

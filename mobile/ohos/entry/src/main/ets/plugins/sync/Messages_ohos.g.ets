@@ -198,14 +198,14 @@ export class PlatformAsset {
     return this.height;
   }
 
-  private durationInSeconds?: number;
+  private durationMs?: number;
 
-  public setDurationInSeconds(durationInSeconds:number):void {
-    this.durationInSeconds = durationInSeconds;
+  public setDurationMs(durationMs:number):void {
+    this.durationMs = durationMs;
   }
 
-  getDurationInSeconds(): number | undefined{
-    return this.durationInSeconds;
+  getDurationMs(): number | undefined{
+    return this.durationMs;
   }
 
   private orientation?: number;
@@ -268,7 +268,7 @@ export class PlatformAsset {
     return this.playbackStyle;
   }
 
-  constructor(id?: string, name?: string, type?: number, createdAt?: number, updatedAt?: number, width?: number, height?: number, durationInSeconds?: number, orientation?: number, isFavorite?: boolean, adjustmentTime?: number, latitude?: number, longitude?: number, playbackStyle?: PlatformAssetPlaybackStyle) {
+  constructor(id?: string, name?: string, type?: number, createdAt?: number, updatedAt?: number, width?: number, height?: number, durationMs?: number, orientation?: number, isFavorite?: boolean, adjustmentTime?: number, latitude?: number, longitude?: number, playbackStyle?: PlatformAssetPlaybackStyle) {
     this.id = id;
     this.name = name;
     this.type = type;
@@ -276,7 +276,7 @@ export class PlatformAsset {
     this.updatedAt = updatedAt;
     this.width = width;
     this.height = height;
-    this.durationInSeconds = durationInSeconds;
+    this.durationMs = durationMs;
     this.orientation = orientation;
     this.isFavorite = isFavorite;
     this.adjustmentTime = adjustmentTime;
@@ -308,8 +308,8 @@ export class PlatformAsset {
     if(this.height !==undefined){
       arr.push(this.height);
     }
-    if(this.durationInSeconds !==undefined){
-      arr.push(this.durationInSeconds);
+    if(this.durationMs !==undefined){
+      arr.push(this.durationMs);
     }
     if(this.orientation !==undefined){
       arr.push(this.orientation);
@@ -349,8 +349,8 @@ export class PlatformAsset {
     pigeonResult.setWidth(width as number);
     let height: Object = arr[6];
     pigeonResult.setHeight(height as number);
-    let durationInSeconds: Object = arr[7];
-    pigeonResult.setDurationInSeconds(durationInSeconds as number);
+    let durationMs: Object = arr[7];
+    pigeonResult.setDurationMs(durationMs as number);
     let orientation: Object = arr[8];
     pigeonResult.setOrientation(orientation as number);
     let isFavorite: Object = arr[9];
@@ -694,6 +694,8 @@ export abstract class NativeSyncApiOhos {
 
   abstract cancelHashing(): void;
 
+  abstract cancelSync(): void;
+
   abstract startBackgroundTransfer(result: Result<number>): void;
 
   abstract updateBackgroundTransferProgress(progress: number , title: string , fileName: string , result: Result<void>): void;
@@ -701,6 +703,8 @@ export abstract class NativeSyncApiOhos {
   abstract stopBackgroundTransfer(result: Result<void>): void;
 
   abstract getTrashedAssets(): Map<string, Array<PlatformAsset>>;
+
+  abstract restoreFromTrashById(mediaId: string , type: number , result: Result<boolean>): void;
 
   abstract getPathFromUri(uri: string , result: Result<string>): void;
 
@@ -963,6 +967,28 @@ export abstract class NativeSyncApiOhos {
     {
       let channel: BasicMessageChannel<Object> =
           new BasicMessageChannel(
+              binaryMessenger, "dev.flutter.pigeon.immich_mobile.NativeSyncApiOhos.cancelSync", NativeSyncApiOhos.getCodec());
+      if (api != null) {
+        channel.setMessageHandler({
+            onMessage(message: Object ,reply: Reply<Object> ) {
+              let res: Array<Object> = [];
+              try {
+                api!.cancelSync();
+                res.push(null);
+              }
+ catch (error) {
+                let wrappedError: Array<Object> = wrapError(error);
+                res = wrappedError;
+              }
+              reply.reply(res);
+            } });
+      } else {
+        channel.setMessageHandler(null);
+      }
+    }
+    {
+      let channel: BasicMessageChannel<Object> =
+          new BasicMessageChannel(
               binaryMessenger, "dev.flutter.pigeon.immich_mobile.NativeSyncApiOhos.startBackgroundTransfer", NativeSyncApiOhos.getCodec());
       if (api != null) {
         channel.setMessageHandler({
@@ -1059,6 +1085,34 @@ export abstract class NativeSyncApiOhos {
                 res = wrappedError;
               }
               reply.reply(res);
+            } });
+      } else {
+        channel.setMessageHandler(null);
+      }
+    }
+    {
+      let channel: BasicMessageChannel<Object> =
+          new BasicMessageChannel(
+              binaryMessenger, "dev.flutter.pigeon.immich_mobile.NativeSyncApiOhos.restoreFromTrashById", NativeSyncApiOhos.getCodec());
+      if (api != null) {
+        channel.setMessageHandler({
+            onMessage(message: Object ,reply: Reply<Object> ) {
+              let args: Array<Object> = message as Array<Object>;
+              class ResultImp implements Result<boolean>{
+                    success(result: boolean): void {
+                      let res: Array<Object> = [];
+                      res.push(result);
+                      reply.reply(res);
+                    }
+
+                    error(error: Error): void {
+                      let wrappedError: Array<Object> = wrapError(error);
+                      reply.reply(wrappedError);
+                    }
+              }
+              let resultCallback: Result<boolean> = new ResultImp();
+
+              api!.restoreFromTrashById(args[0] as string, args[1] as number, resultCallback);
             } });
       } else {
         channel.setMessageHandler(null);

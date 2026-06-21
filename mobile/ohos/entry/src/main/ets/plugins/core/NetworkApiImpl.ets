@@ -68,7 +68,7 @@ export class NetworkApiImpl extends NetworkApi {
         return;
       }
 
-      result.success(new ClientCertData(Array.from(bytes), ''));
+      result.success(new ClientCertData(bytes, ''));
     } catch (e) {
       let error = e as BusinessError;
       if (this.isCancelError(error)) {
@@ -102,6 +102,10 @@ export class NetworkApiImpl extends NetworkApi {
   override getClientPointer(): number {
     // OHOS requests use NetworkKit directly; there is no shared native client pointer.
     return 0;
+  }
+
+  override getAppGroupId(): string {
+    return this.ctx?.applicationInfo.name ?? '';
   }
 
   override setRequestHeaders(headers: Map<string, string>, serverUrls: Array<string>, token: string | null): void {

@@ -21,9 +21,13 @@ class AssetPreloader {
     unawaited(timelineService.preloadAssets(index));
     _timer?.cancel();
     _timer = Timer(Durations.medium4, () async {
-      if (!mounted()) return;
+      if (!mounted()) {
+        return;
+      }
       final current = await timelineService.getAssetAsync(index);
-      if (!mounted()) return;
+      if (!mounted()) {
+        return;
+      }
       if (current?.isVideo == true) {
         _prevStream?.removeListener(_dummyListener);
         _nextStream?.removeListener(_dummyListener);
@@ -35,7 +39,9 @@ class AssetPreloader {
         timelineService.getAssetAsync(index - 1),
         timelineService.getAssetAsync(index + 1),
       ).wait;
-      if (!mounted()) return;
+      if (!mounted()) {
+        return;
+      }
       _prevStream?.removeListener(_dummyListener);
       _nextStream?.removeListener(_dummyListener);
       _prevStream = prev != null ? _resolveImage(prev, size) : null;
