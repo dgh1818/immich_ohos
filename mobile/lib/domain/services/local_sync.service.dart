@@ -84,6 +84,11 @@ class LocalSyncService {
         return await fullSync();
       }
 
+      if (CurrentPlatform.isOhos) {
+        _log.fine("OHOS media change delta sync is not supported. Falling back to full sync");
+        return await fullSync();
+      }
+
       final delta = await _nativeSyncApi.getMediaChanges();
       if (!delta.hasChanges) {
         _log.fine("No media changes detected. Skipping sync");
@@ -228,11 +233,14 @@ class LocalSyncService {
       _log.fine("Syncing device album ${dbAlbum.name}");
 
       if (_albumsEqual(deviceAlbum, dbAlbum)) {
-        _log.fine("Device album ${dbAlbum.name} has not changed. Skipping sync.");
-        return false;
+        if (!await _shouldRefreshOhosZeroDurationVideos(dbAlbum)) {
+          _log.fine("Device album ${dbAlbum.name} has not changed. Skipping sync.");
+          return false;
+        }
+        _log.fine("Device album ${dbAlbum.name} has zero-duration OHOS videos. Refreshing asset metadata.");
+      } else {
+        _log.fine("Device album ${dbAlbum.name} has changed. Syncing...");
       }
-
-      _log.fine("Device album ${dbAlbum.name} has changed. Syncing...");
 
       // Faster path - only new assets added
       if (await checkAddition(dbAlbum, deviceAlbum)) {
@@ -246,6 +254,13 @@ class LocalSyncService {
       _log.warning("Error while diff device album", e, s);
     }
     return true;
+  }
+
+  Future<bool> _shouldRefreshOhosZeroDurationVideos(LocalAlbum dbAlbum) {
+    if (!CurrentPlatform.isOhos || dbAlbum.assetCount == 0) {
+      return Future.value(false);
+    }
+    return _localAlbumRepository.hasZeroDurationVideos(dbAlbum.id);
   }
 
   @visibleForTesting

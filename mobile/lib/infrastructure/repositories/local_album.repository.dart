@@ -194,6 +194,19 @@ class DriftLocalAlbumRepository extends DriftDatabaseRepository {
     return query.map((row) => row.readTable(_db.localAssetEntity).toDto()).get();
   }
 
+  Future<bool> hasZeroDurationVideos(String albumId) async {
+    final query = _db.localAlbumAssetEntity.selectOnly()
+      ..addColumns([_db.localAlbumAssetEntity.assetId])
+      ..join([innerJoin(_db.localAssetEntity, _db.localAlbumAssetEntity.assetId.equalsExp(_db.localAssetEntity.id))])
+      ..where(
+        _db.localAlbumAssetEntity.albumId.equals(albumId) &
+            _db.localAssetEntity.type.equalsValue(AssetType.video) &
+            (_db.localAssetEntity.durationMs.isNull() | _db.localAssetEntity.durationMs.isSmallerOrEqualValue(0)),
+      )
+      ..limit(1);
+    return (await query.get()).isNotEmpty;
+  }
+
   Future<List<String>> getAssetIds(String albumId) {
     final query = _db.localAlbumAssetEntity.selectOnly()
       ..addColumns([_db.localAlbumAssetEntity.assetId])
@@ -265,8 +278,11 @@ class DriftLocalAlbumRepository extends DriftDatabaseRepository {
     });
   }
 
-  Future<void> Function(Iterable<LocalAsset>) get _upsertAssets =>
-      CurrentPlatform.isIOS ? _upsertAssetsDarwin : _upsertAssetsAndroid;
+  Future<void> Function(Iterable<LocalAsset>) get _upsertAssets => CurrentPlatform.isIOS
+      ? _upsertAssetsDarwin
+      : CurrentPlatform.isOhos
+      ? _upsertAssetsOhos
+      : _upsertAssetsAndroid;
 
   Future<void> _upsertAssetsDarwin(Iterable<LocalAsset> localAssets) async {
     if (localAssets.isEmpty) {
@@ -340,6 +356,58 @@ class DriftLocalAlbumRepository extends DriftDatabaseRepository {
           _db.localAssetEntity,
           companion,
           onConflict: DoUpdate((_) => companion, where: (old) => old.updatedAt.isNotValue(asset.updatedAt)),
+        );
+      }
+    });
+  }
+
+  Future<void> _upsertAssetsOhos(Iterable<LocalAsset> localAssets) async {
+    if (localAssets.isEmpty) {
+      return Future.value();
+    }
+
+    await _db.batch((batch) async {
+      for (final asset in localAssets) {
+        batch.update(
+          _db.localAssetEntity,
+          const LocalAssetEntityCompanion(checksum: Value(null)),
+          where: (row) => row.id.equals(asset.id) & row.updatedAt.isNotValue(asset.updatedAt),
+        );
+      }
+    });
+
+    return _db.batch((batch) async {
+      for (final asset in localAssets) {
+        final insertCompanion = LocalAssetEntityCompanion.insert(
+          name: asset.name,
+          type: asset.type,
+          createdAt: Value(asset.createdAt),
+          updatedAt: Value(asset.updatedAt),
+          width: Value(asset.width),
+          height: Value(asset.height),
+          durationMs: Value(asset.durationMs),
+          id: asset.id,
+          checksum: const Value(null),
+          orientation: Value(asset.orientation),
+          isFavorite: Value(asset.isFavorite),
+          playbackStyle: Value(asset.playbackStyle),
+        );
+        final updateCompanion = LocalAssetEntityCompanion(
+          name: Value(asset.name),
+          type: Value(asset.type),
+          createdAt: Value(asset.createdAt),
+          updatedAt: Value(asset.updatedAt),
+          width: Value(asset.width),
+          height: Value(asset.height),
+          durationMs: Value(asset.durationMs),
+          orientation: Value(asset.orientation),
+          isFavorite: Value(asset.isFavorite),
+          playbackStyle: Value(asset.playbackStyle),
+        );
+        batch.insert<$LocalAssetEntityTable, LocalAssetEntityData>(
+          _db.localAssetEntity,
+          insertCompanion,
+          onConflict: DoUpdate((_) => updateCompanion),
         );
       }
     });

@@ -2,6 +2,7 @@ import 'package:drift/drift.dart' as drift;
 import 'package:drift/native.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:immich_mobile/domain/models/album/local_album.model.dart';
 import 'package:immich_mobile/domain/models/asset/base_asset.model.dart';
 import 'package:immich_mobile/domain/models/store.model.dart';
 import 'package:immich_mobile/domain/services/local_sync.service.dart';
@@ -12,7 +13,7 @@ import 'package:immich_mobile/infrastructure/repositories/local_album.repository
 import 'package:immich_mobile/infrastructure/repositories/local_asset.repository.dart';
 import 'package:immich_mobile/infrastructure/repositories/store.repository.dart';
 import 'package:immich_mobile/infrastructure/repositories/trashed_local_asset.repository.dart';
-import 'package:immich_mobile/platform/native_sync_api.g.dart';
+import 'package:immich_mobile/platform/native_sync_api_ohos.g.dart';
 import 'package:immich_mobile/repositories/asset_media.repository.dart';
 import 'package:mocktail/mocktail.dart';
 
@@ -28,12 +29,15 @@ void main() {
   late DriftTrashedLocalAssetRepository mockTrashedLocalAssetRepository;
   late AssetMediaRepository mockAssetMediaRepository;
   late MockPermissionRepository mockPermissionRepository;
-  late MockNativeSyncApi mockNativeSyncApi;
+  late MockNativeSyncApiOhos mockNativeSyncApi;
   late Drift db;
 
   setUpAll(() async {
     TestWidgetsFlutterBinding.ensureInitialized();
     debugDefaultTargetPlatformOverride = TargetPlatform.android;
+    registerFallbackValue(LocalAlbum(id: 'fallback-album', name: 'Fallback', updatedAt: DateTime(2026)));
+    registerFallbackValue(<LocalAsset>[]);
+    registerFallbackValue(<String>[]);
 
     db = Drift(drift.DatabaseConnection(NativeDatabase.memory(), closeStreamsSynchronously: true));
     await StoreService.init(storeRepository: DriftStoreRepository(db));
@@ -51,7 +55,7 @@ void main() {
     mockTrashedLocalAssetRepository = MockTrashedLocalAssetRepository();
     mockAssetMediaRepository = MockAssetMediaRepository();
     mockPermissionRepository = MockPermissionRepository();
-    mockNativeSyncApi = MockNativeSyncApi();
+    mockNativeSyncApi = MockNativeSyncApiOhos();
 
     when(() => mockNativeSyncApi.shouldFullSync()).thenAnswer((_) async => false);
     when(() => mockNativeSyncApi.getMediaChanges()).thenAnswer(
@@ -120,6 +124,85 @@ void main() {
       await sut.sync();
 
       verifyNever(() => mockNativeSyncApi.getTrashedAssets());
+    });
+
+    test('uses full sync on OHOS because media change delta sync is unsupported', () async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.ohos;
+      addTearDown(() => debugDefaultTargetPlatformOverride = TargetPlatform.android);
+
+      when(() => mockNativeSyncApi.getAlbums()).thenAnswer((_) async => []);
+      when(() => mockLocalAlbumRepository.getAll(sortBy: any(named: 'sortBy'))).thenAnswer((_) async => []);
+      when(() => mockNativeSyncApi.checkpointSync()).thenAnswer((_) async {});
+
+      await sut.sync();
+
+      verifyNever(() => mockNativeSyncApi.getMediaChanges());
+      verify(() => mockNativeSyncApi.getAlbums()).called(1);
+    });
+
+    test('refreshes unchanged OHOS albums that contain zero-duration videos', () async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.ohos;
+      addTearDown(() => debugDefaultTargetPlatformOverride = TargetPlatform.android);
+
+      final updatedAt = DateTime.fromMillisecondsSinceEpoch(1700000000000, isUtc: true);
+      final dbAlbum = LocalAlbum(id: 'album', name: 'Camera', updatedAt: updatedAt, assetCount: 1);
+      final oldAsset = LocalAsset(
+        id: 'video',
+        name: 'video.mp4',
+        type: AssetType.video,
+        createdAt: updatedAt,
+        updatedAt: updatedAt,
+        durationMs: 0,
+        playbackStyle: AssetPlaybackStyle.video,
+        isEdited: false,
+      );
+      final platformAsset = PlatformAsset(
+        id: oldAsset.id,
+        name: oldAsset.name,
+        type: AssetType.video.index,
+        createdAt: updatedAt.millisecondsSinceEpoch ~/ 1000,
+        updatedAt: updatedAt.millisecondsSinceEpoch ~/ 1000,
+        durationMs: 123000,
+        orientation: 0,
+        isFavorite: false,
+        playbackStyle: PlatformAssetPlaybackStyle.video,
+      );
+
+      when(() => mockNativeSyncApi.getAlbums()).thenAnswer(
+        (_) async => [
+          PlatformAlbum(
+            id: dbAlbum.id,
+            name: dbAlbum.name,
+            updatedAt: updatedAt.millisecondsSinceEpoch ~/ 1000,
+            isCloud: false,
+            assetCount: dbAlbum.assetCount,
+          ),
+        ],
+      );
+      when(() => mockLocalAlbumRepository.getAll(sortBy: any(named: 'sortBy'))).thenAnswer((_) async => [dbAlbum]);
+      when(() => mockLocalAlbumRepository.hasZeroDurationVideos(dbAlbum.id)).thenAnswer((_) async => true);
+      when(() => mockNativeSyncApi.getAssetsForAlbum(dbAlbum.id)).thenAnswer((_) async => [platformAsset]);
+      when(() => mockLocalAlbumRepository.getAssets(dbAlbum.id)).thenAnswer((_) async => [oldAsset]);
+      when(
+        () => mockLocalAlbumRepository.upsert(
+          any(),
+          toUpsert: any(named: 'toUpsert'),
+          toDelete: any(named: 'toDelete'),
+        ),
+      ).thenAnswer((_) async {});
+      when(() => mockNativeSyncApi.checkpointSync()).thenAnswer((_) async {});
+
+      await sut.fullSync();
+
+      final captured = verify(
+        () => mockLocalAlbumRepository.upsert(
+          captureAny(),
+          toUpsert: captureAny(named: 'toUpsert'),
+          toDelete: any(named: 'toDelete'),
+        ),
+      ).captured;
+      final toUpsert = captured[1] as Iterable<LocalAsset>;
+      expect(toUpsert.single.durationMs, 123000);
     });
   });
 
