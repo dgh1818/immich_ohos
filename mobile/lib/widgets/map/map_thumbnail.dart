@@ -9,10 +9,11 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:immich_mobile/extensions/asyncvalue_extensions.dart';
 import 'package:immich_mobile/extensions/build_context_extensions.dart';
 import 'package:immich_mobile/extensions/maplibrecontroller_extensions.dart';
-import 'package:immich_mobile/widgets/asset_viewer/detail_panel/asset_location.dart';
 import 'package:immich_mobile/widgets/map/map_theme_override.dart';
 import 'package:immich_mobile/widgets/map/positioned_asset_marker_icon.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
+
+final exifLocationTextProvider = StateProvider<String>((ref) => " ");
 
 /// A non-interactive thumbnail of a map in the given coordinates with optional markers
 ///
