@@ -46,49 +46,42 @@ function wrapError(error: Error): Array<Object> {
 
 /* Generated class from Pigeon that represents data sent in messages.*/
 export class BackgroundWorkerSettings {
-  private requiresCharging?: boolean;
+  private requiresCharging: boolean;
 
   public setRequiresCharging(requiresCharging:boolean):void {
     this.requiresCharging = requiresCharging;
   }
 
-  getRequiresCharging(): boolean | undefined{
+  getRequiresCharging(): boolean{
     return this.requiresCharging;
   }
 
-  private minimumDelaySeconds?: number;
+  private minimumDelaySeconds: number;
 
   public setMinimumDelaySeconds(minimumDelaySeconds:number):void {
     this.minimumDelaySeconds = minimumDelaySeconds;
   }
 
-  getMinimumDelaySeconds(): number | undefined{
+  getMinimumDelaySeconds(): number{
     return this.minimumDelaySeconds;
   }
 
-  constructor(requiresCharging?: boolean, minimumDelaySeconds?: number) {
+  constructor(requiresCharging: boolean, minimumDelaySeconds: number) {
     this.requiresCharging = requiresCharging;
     this.minimumDelaySeconds = minimumDelaySeconds;
   }
 
-  toList(): Object[] {
-    let arr: Object[] = new Array();
-    if(this.requiresCharging !==undefined){
-      arr.push(this.requiresCharging);
-    }
-    if(this.minimumDelaySeconds !==undefined){
-      arr.push(this.minimumDelaySeconds);
-    }
+  toList(): (Object | null)[] {
+    let arr: (Object | null)[] = [];
+    arr.push(this.requiresCharging !== undefined ? this.requiresCharging : null);
+    arr.push(this.minimumDelaySeconds !== undefined ? this.minimumDelaySeconds : null);
     return arr;
   }
 
-  static fromList(arr: Object[]): BackgroundWorkerSettings {
-    let pigeonResult: BackgroundWorkerSettings = new BackgroundWorkerSettings();
-    let requiresCharging: Object = arr[0];
-    pigeonResult.setRequiresCharging(requiresCharging as boolean);
-    let minimumDelaySeconds: Object = arr[1];
-    pigeonResult.setMinimumDelaySeconds(minimumDelaySeconds as number);
-    return pigeonResult;
+  static fromList(arr: (Object | null)[]): BackgroundWorkerSettings {
+    let requiresCharging: boolean = arr[0] as boolean;
+    let minimumDelaySeconds: number = arr[1] as number;
+    return new BackgroundWorkerSettings(requiresCharging, minimumDelaySeconds);
   }
 }
 
@@ -107,7 +100,7 @@ export class PigeonCodec extends StandardMessageCodec {
   readValueOfType(type: number,  buffer: ByteBuffer): ESObject {
     switch (type) {
       case this.getByte(129):
-        return BackgroundWorkerSettings.fromList(super.readValue(buffer) as Object[]);
+        return BackgroundWorkerSettings.fromList(super.readValue(buffer) as (Object | null)[]);
       default:
         return super.readValueOfType(type, buffer);
     }

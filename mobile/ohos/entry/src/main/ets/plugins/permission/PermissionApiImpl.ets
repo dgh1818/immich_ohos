@@ -1,11 +1,11 @@
 import { common } from '@kit.AbilityKit';
-import abilityAccessCtrl from '@ohos.abilityAccessCtrl';
+import abilityAccessCtrl, { PermissionRequestResult, Permissions } from '@ohos.abilityAccessCtrl';
 import { PermissionApi, PermissionStatus, Result } from './PermissionApi.g';
 
-const MEDIA_PERMISSIONS: Array<string> = [
+const MEDIA_PERMISSIONS: Array<Permissions> = [
   'ohos.permission.MEDIA_LOCATION',
-  'ohos.permission.READ_MEDIA',
-  'ohos.permission.WRITE_MEDIA',
+  'ohos.permission.READ_IMAGEVIDEO',
+  'ohos.permission.WRITE_IMAGEVIDEO',
 ];
 
 export class PermissionApiImpl extends PermissionApi {
@@ -46,8 +46,8 @@ export class PermissionApiImpl extends PermissionApi {
 
     try {
       const manager = abilityAccessCtrl.createAtManager();
-      const result = await manager.requestPermissionsFromUser(uiContext, MEDIA_PERMISSIONS);
-      return result.authResults.every((authResult: number): boolean => authResult === 0);
+      const permissionResult: PermissionRequestResult = await manager.requestPermissionsFromUser(uiContext, MEDIA_PERMISSIONS);
+      return permissionResult.authResults.every((authResult: number): boolean => authResult === 0);
     } catch (_) {
       return false;
     }

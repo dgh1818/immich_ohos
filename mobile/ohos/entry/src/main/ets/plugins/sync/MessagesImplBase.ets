@@ -368,7 +368,7 @@ async function getAssetsForAlbumTask(
       const size = currentAsset.get(photoAccessHelper.PhotoKeys.SIZE).valueOf() as number;
       const width = currentAsset.get(photoAccessHelper.PhotoKeys.WIDTH).valueOf() as number;
       const height = currentAsset.get(photoAccessHelper.PhotoKeys.HEIGHT).valueOf() as number;
-      const duration = Math.floor((currentAsset.get(photoAccessHelper.PhotoKeys.DURATION).valueOf() as number) / 1000);
+      const duration = Math.floor(currentAsset.get(photoAccessHelper.PhotoKeys.DURATION).valueOf() as number);
       const orientation = currentAsset.get(photoAccessHelper.PhotoKeys.ORIENTATION).valueOf() as number;
       const isFlipped = orientation === 90 || orientation === 270;
       const normalizedWidth = isFlipped ? height : width;
@@ -645,7 +645,7 @@ export class MessagesImplBase extends NativeSyncApiOhos {
     console.error("MessagesImplBase 4 ")
     if (this.isUiContext(this.ctx)) {
       let atManager = abilityAccessCtrl.createAtManager();
-      atManager.requestPermissionsFromUser(this.ctx, ["ohos.permission.MEDIA_LOCATION","ohos.permission.READ_MEDIA","ohos.permission.WRITE_MEDIA"]).then((data) => {
+      atManager.requestPermissionsFromUser(this.ctx, ["ohos.permission.MEDIA_LOCATION","ohos.permission.READ_IMAGEVIDEO","ohos.permission.WRITE_IMAGEVIDEO"]).then((data) => {
         //console.info("data permissions:" + data.permissions);
 
       }).catch((err: BusinessError) => {
@@ -890,7 +890,7 @@ export class MessagesImplBase extends NativeSyncApiOhos {
       return;
     }
     let atManager = abilityAccessCtrl.createAtManager();
-    await atManager.requestPermissionsFromUser(this.ctx, ["ohos.permission.MEDIA_LOCATION","ohos.permission.READ_MEDIA","ohos.permission.WRITE_MEDIA"]).then((data) => {
+    await atManager.requestPermissionsFromUser(this.ctx, ["ohos.permission.MEDIA_LOCATION","ohos.permission.READ_IMAGEVIDEO","ohos.permission.WRITE_IMAGEVIDEO"]).then((data) => {
       //console.info("data permissions:" + data.permissions);
 
     }).catch((err: BusinessError) => {
@@ -914,7 +914,7 @@ export class MessagesImplBase extends NativeSyncApiOhos {
       return;
     }
     let atManager = abilityAccessCtrl.createAtManager();
-    await atManager.requestPermissionsFromUser(this.ctx, ["ohos.permission.MEDIA_LOCATION","ohos.permission.READ_MEDIA","ohos.permission.WRITE_MEDIA"]).then((data) => {
+    await atManager.requestPermissionsFromUser(this.ctx, ["ohos.permission.MEDIA_LOCATION","ohos.permission.READ_IMAGEVIDEO","ohos.permission.WRITE_IMAGEVIDEO"]).then((data) => {
       //console.info("data permissions:" + data.permissions);
 
     }).catch((err: BusinessError) => {
@@ -1229,7 +1229,7 @@ export class MessagesImplBase extends NativeSyncApiOhos {
     }
     if (this.isUiContext(this.ctx)) {
       let atManager = abilityAccessCtrl.createAtManager();
-      await atManager.requestPermissionsFromUser(this.ctx, ["ohos.permission.MEDIA_LOCATION","ohos.permission.READ_MEDIA","ohos.permission.WRITE_MEDIA"]).then((data) => {
+      await atManager.requestPermissionsFromUser(this.ctx, ["ohos.permission.MEDIA_LOCATION","ohos.permission.READ_IMAGEVIDEO","ohos.permission.WRITE_IMAGEVIDEO"]).then((data) => {
         // console.info("data permissions:" + data.permissions);
         // console.info("data permissions:" + data.authResults);
 

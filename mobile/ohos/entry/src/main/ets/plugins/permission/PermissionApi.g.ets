@@ -123,7 +123,7 @@ export abstract class PermissionApi {
             onMessage(message: Object ,reply: Reply<Object> ) {
               let res: Array<Object> = [];
               try {
-                let output: PermissionStatusEnum = new PermissionStatusEnum(api!.isIgnoringBatteryOptimizations(args[0] as PermissionStatus).toString());
+                let output: PermissionStatusEnum = new PermissionStatusEnum(api!.isIgnoringBatteryOptimizations().toString());
                 res.push(output);
               }
  catch (error) {

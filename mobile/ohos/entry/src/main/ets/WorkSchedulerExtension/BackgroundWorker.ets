@@ -46,6 +46,18 @@ export class Deferred<T> {
   }
 }
 
+class BackgroundWorkerReply implements Reply<void> {
+  private readonly success: boolean;
+
+  constructor(success: boolean) {
+    this.success = success;
+  }
+
+  reply(_reply: void): void {
+    BackgroundWorker.backgroundWorkerBgHostApiImpl?.complete(this.success);
+  }
+}
+
 class BackgroundWorker extends WorkSchedulerExtensionAbility {
   private ctx: Context = this.context.getApplicationContext();
   /// The Flutter loader that loads the native Flutter library and resources.
@@ -164,12 +176,7 @@ class BackgroundWorker extends WorkSchedulerExtensionAbility {
     // 尝试调用 FlutterApi cancel
     if (BackgroundWorker.flutterApi != null) {
       try {
-        BackgroundWorker.flutterApi.cancel({
-          reply: () => {
-            // FlutterApi 回调完成，标记失败
-            BackgroundWorker.backgroundWorkerBgHostApiImpl!.complete(false);
-          }
-        });
+        BackgroundWorker.flutterApi.cancel(new BackgroundWorkerReply(false));
       } catch (e) {
         console.error("flutterApi.cancel error:", e);
         // 出错也保证失败
@@ -193,9 +200,7 @@ class BackgroundWorkerBgHostApiImpl extends BackgroundWorkerBgHostApi {
    */
   override onInitialized() {
     try {
-      BackgroundWorker.flutterApi!.onAndroidUpload({
-        reply: () => this.handleHostResult(true)
-      });
+      BackgroundWorker.flutterApi!.onAndroidUpload(20, new BackgroundWorkerReply(true));
     } catch (e) {
       this.handleHostResult(false);
     }
@@ -228,11 +233,7 @@ class BackgroundWorkerBgHostApiImpl extends BackgroundWorkerBgHostApi {
 
     if (BackgroundWorker.flutterApi != null) {
       try {
-        BackgroundWorker.flutterApi.cancel({
-          reply: () => {
-            BackgroundWorker.backgroundWorkerBgHostApiImpl!.complete(false);
-          }
-        });
+        BackgroundWorker.flutterApi.cancel(new BackgroundWorkerReply(false));
       } catch (e) {
         console.error("flutterApi.cancel error:", e);
         BackgroundWorker.backgroundWorkerBgHostApiImpl!.complete(false);
