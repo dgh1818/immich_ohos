@@ -2,7 +2,7 @@ name: immich_mobile
 description: Immich - selfhosted backup media file on mobile phone
 
 publish_to: 'none'
-version: 3.0.0-rc.0+3048
+version: 3.0.0+300000000
 
 environment:
   sdk: '>=3.11.0 <4.0.0'
@@ -105,12 +105,10 @@ dependencies:
     path: ../../package_flutter/ohos_http/
 
   video_compress: ^3.1.0
-  video_player: ^2.9.2
   isar: ^3.1.0+1 #ok
   isar_flutter_libs: ^3.1.0+1 #ok
   # DB
   #drift_sqflite: ^2.0.1   #sqflite
-  pigeon: ^25.3.1
   image_gallery_saver: ^2.0.3
   huawei_cast: ^1.0.0
   coordtransform_dart: ^1.0.4
@@ -141,6 +139,10 @@ dependency_overrides:
       #ref: br_local_auth-v2.3.0_ohos
   background_downloader:
     path: ../../package_flutter/background_downloader_ohos
+  sqlite3:
+    path: ../../package_flutter/sqlite3-ohos/sqlite3
+  sqlite3_connection_pool:
+    path: ../../package_flutter/sqlite3-ohos/sqlite3_connection_pool
   huawei_cast:
     #url: 'https://github.com/dgh1818/huawei_cast_flutter'
     path: ../../package_flutter/huawei_cast
@@ -155,9 +157,9 @@ dependency_overrides:
       path: 'packages/network_info_plus/network_info_plus'
   pigeon:
     git:
-      url: 'https://gitcode.com/openharmony-sig/flutter_packages.git'
+      url: 'https://gitcode.com/CPF-Flutter/flutter_packages.git'
       path: 'packages/pigeon'
-      ref: br_pigeon-v25.3.2_ohos
+      ref: br_pigeon-v26.1.5_ohos_dev
   # sqflite:
   #   git:
   #     url: "https://gitcode.com/dgh18/flutter_sqflite.git"
@@ -178,11 +180,6 @@ dependency_overrides:
   #     url: "https://gitcode.com/dgh18/flutter_sqflite.git"
   #     path: "packages_web/sqflite_common_ffi_web"
   #     ref: br_v2.4.1_ohos
-  sqlite3:
-    path: ../../package_flutter/sqlite3-ohos/sqlite3
-  sqlite3_flutter_libs:
-    path: ../../package_flutter/sqlite3-ohos/sqlite3_flutter_libs
-
   flutter_secure_storage:
     git:
       url: 'https://gitcode.com/dgh18/fluttertpc_flutter_secure_storage.git'
@@ -223,18 +220,6 @@ dependency_overrides:
       url: https://gitcode.com/openharmony-sig/flutter_fluttertoast.git
       path: ./
       ref: br_8.2.8_ohos
-  video_player:
-    git:
-      url: https://gitcode.com/openharmony-sig/flutter_packages.git
-      path: 'packages/video_player/video_player'
-      #ref: br_video_player-v2.10.0_ohos
-      ref: br_video_player-v2.9.2_ohos
-  video_player_android:
-    git:
-      url: https://gitcode.com/openharmony-sig/flutter_packages.git
-      path: 'packages/video_player/video_player_android'
-      ref: br_video_player-v2.9.2_ohos
-      #ref: br_video_player-v2.10.0_ohos
   geolocator:
     git:
       url: https://gitcode.com/dgh18/fluttertpc_geolocator.git
@@ -290,14 +275,6 @@ dependency_overrides:
       url: git@gitcode.com:dgh18/easy_localization_ohos.git
       ref: easy_localization_ohos
       path: ./
-  chewie:
-    git:
-      url: https://gitcode.com/openharmony-sig/fluttertpc_chewie.git
-      #url: https://github.com/dgh1818/chewie_ohos.git
-      path: './'
-      #ref: update_one
-      #ref: ohos_dev
-      ref: br_v1.11.3_ohos
   photo_manager:
     path: ./flutter_photo_manager
   coordtransform_dart:
@@ -323,8 +300,7 @@ dependency_overrides:
   uuid: ^4.4.2
 
   wakelock_plus_platform_interface: 1.2.1
-  analyzer_plugin: 0.13.0
-  source_gen: ^2.0.0
+  analyzer: 10.0.1
   jni:
     path: ./third_party/jni
   #dart_style: 3.0.1
@@ -341,24 +317,9 @@ dev_dependencies:
   flutter_native_splash: ^2.4.7
   flutter_test:
     sdk: flutter
-  integration_test:
-    sdk: flutter
-  #isar_generator: 3.1.0+1
-  isar_generator:
-    git:
-      url: https://github.com/immich-app/isar
-      ref: 'bb1dca40fe87a001122e5d43bc6254718cb49f3a'
-      path: packages/isar_generator/
   mocktail: ^1.0.5
-
-dev_dependency_overrides:
-  isar_generator:
-    git:
-      url: https://github.com/immich-app/isar
-      ref: v3
-      path: 'packages/isar_generator'
   # Type safe platform code
-  pigeon: ^25.3.1
+  pigeon: ^26.3.4
   # riverpod_generator: ^2.6.1
   # riverpod_lint: ^2.6.1
 
@@ -369,9 +330,15 @@ dev_dependency_overrides:
 #       ref: '53ef7e9f19fe8f68416251760b4b99fe43f1c575'
 #       path: drift/
 
+hooks:
+  user_defines:
+    sqlite3:
+      source: system
+
 flutter:
   uses-material-design: true
   assets:
+    - NativeAssetsManifest.json
     - assets/
     - assets/icons/notification_icon.png
   fonts:

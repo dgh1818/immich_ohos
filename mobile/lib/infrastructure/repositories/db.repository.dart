@@ -412,6 +412,10 @@ final class ImmichSqliteOpenFactory extends NativeSqliteOpenFactory {
 }
 
 Future<void> configureSqliteCache() async {
+  if (defaultTargetPlatform == TargetPlatform.ohos) {
+    return;
+  }
+
   // Make sqlite3 pick a more suitable location for temporary files - the
   // one from the system may be inaccessible due to sand-boxing.
   final cacheBase = (await getTemporaryDirectory()).path;

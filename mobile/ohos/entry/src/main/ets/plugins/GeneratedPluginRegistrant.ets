@@ -1,7 +1,6 @@
 import { FlutterEngine, Log } from '@ohos/flutter_ohos';
 import WakelockPlugin from 'wakelock_plus';
 import PackageInfoPlugin from 'package_info_plus';
-import VideoPlayerPlugin from 'video_player_ohos';
 import VideoCompressPlugin from 'video_compress';
 import UrlLauncherPlugin from 'url_launcher_ohos';
 import SharePlusOhosPlugin from 'share_plus';
@@ -24,7 +23,6 @@ import FlutterUdidPlugin from 'flutter_udid';
 import FlutterSecureStorageOhosPlugin from 'flutter_secure_storage_ohos';
 import FlutterLocalNotificationsPlugin from 'flutter_local_notifications';
 import SharedPreferencesPlugin from 'shared_preferences_ohos';
-import Sqlite3FlutterLibsPlugin from 'sqlite3_flutter_libs';
 import DeviceInfoPlusOhosPlugin from 'device_info_plus';
 import ConnectivityPlugin from 'connectivity_plus';
 import BDPlugin from 'background_downloader';
@@ -43,7 +41,6 @@ export class GeneratedPluginRegistrant {
     try {
       flutterEngine.getPlugins()?.add(new WakelockPlugin());
       flutterEngine.getPlugins()?.add(new PackageInfoPlugin());
-      flutterEngine.getPlugins()?.add(new VideoPlayerPlugin());
       flutterEngine.getPlugins()?.add(new VideoCompressPlugin());
       flutterEngine.getPlugins()?.add(new UrlLauncherPlugin());
       flutterEngine.getPlugins()?.add(new SharePlusOhosPlugin());
@@ -66,7 +63,6 @@ export class GeneratedPluginRegistrant {
       flutterEngine.getPlugins()?.add(new FlutterSecureStorageOhosPlugin());
       flutterEngine.getPlugins()?.add(new FlutterLocalNotificationsPlugin());
       flutterEngine.getPlugins()?.add(new SharedPreferencesPlugin());
-      flutterEngine.getPlugins()?.add(new Sqlite3FlutterLibsPlugin());
       flutterEngine.getPlugins()?.add(new DeviceInfoPlusOhosPlugin());
       flutterEngine.getPlugins()?.add(new ConnectivityPlugin());
       flutterEngine.getPlugins()?.add(new BDPlugin());

@@ -6,7 +6,6 @@ import NetworkInfoPlusOhosPlugin from 'network_info_plus_ohos';
 import IsarFlutterLibsPlugin from 'isar_flutter_libs';
 import FlutterSecureStorageOhosPlugin from 'flutter_secure_storage_ohos';
 import SharedPreferencesPlugin from 'shared_preferences_ohos';
-import Sqlite3FlutterLibsPlugin from 'sqlite3_flutter_libs';
 import ConnectivityPlugin from 'connectivity_plus';
 import BDPlugin from 'background_downloader';
 
@@ -25,7 +24,6 @@ export class BackgroundGeneratedPluginRegistrant {
       flutterEngine.getPlugins()?.add(new IsarFlutterLibsPlugin());
       flutterEngine.getPlugins()?.add(new FlutterSecureStorageOhosPlugin());
       flutterEngine.getPlugins()?.add(new SharedPreferencesPlugin());
-      flutterEngine.getPlugins()?.add(new Sqlite3FlutterLibsPlugin());
       flutterEngine.getPlugins()?.add(new ConnectivityPlugin());
       flutterEngine.getPlugins()?.add(new BDPlugin());
     } catch (e) {
