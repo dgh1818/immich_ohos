@@ -239,18 +239,25 @@ export class LibraryService extends BaseService {
       return JobStatus.Skipped;
     }
 
+    // Resume from previous state if the job was interrupted
     const state: ExternalLibraryChecksumBackfillState = {
-      startedAt: new Date().toISOString(),
-      scanned: 0,
-      updated: 0,
-      duplicates: 0,
-      failed: 0,
+      startedAt: currentState?.startedAt ?? new Date().toISOString(),
+      scanned: currentState?.scanned ?? 0,
+      updated: currentState?.updated ?? 0,
+      duplicates: currentState?.duplicates ?? 0,
+      failed: currentState?.failed ?? 0,
     };
 
-    await this.systemMetadataRepository.set(SystemMetadataKey.ExternalLibraryChecksumBackfill, state);
-    this.logger.log('Starting external library checksum backfill');
+    let afterId = currentState?.afterId;
+    const isResuming = state.scanned > 0;
 
-    let afterId: string | undefined;
+    await this.systemMetadataRepository.set(SystemMetadataKey.ExternalLibraryChecksumBackfill, state);
+    this.logger.log(
+      isResuming
+        ? `Resuming external library checksum backfill from ${state.scanned} scanned`
+        : 'Starting external library checksum backfill',
+    );
+
     while (true) {
       const assets = await this.assetRepository.getExternalLibraryChecksumBackfillPage({
         afterId,
@@ -294,12 +301,17 @@ export class LibraryService extends BaseService {
         }
       }
 
+      // Save progress after each batch so a crash doesn't lose all work
+      state.afterId = afterId;
+      await this.systemMetadataRepository.set(SystemMetadataKey.ExternalLibraryChecksumBackfill, state);
+
       this.logger.log(
         `External library checksum backfill progress: ${state.scanned} scanned, ${state.updated} updated, ${state.duplicates} duplicates, ${state.failed} failed`,
       );
     }
 
     state.completedAt = new Date().toISOString();
+    delete state.afterId;
     await this.systemMetadataRepository.set(SystemMetadataKey.ExternalLibraryChecksumBackfill, state);
     this.logger.log(
       `Finished external library checksum backfill: ${state.scanned} scanned, ${state.updated} updated, ${state.duplicates} duplicates, ${state.failed} failed`,
