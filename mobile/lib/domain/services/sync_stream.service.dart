@@ -41,16 +41,24 @@ class SyncStreamService {
   final Completer<void>? _cancellation;
 
   SyncStreamService({
-    required this._syncApiRepository,
-    required this._syncStreamRepository,
-    required this._localAssetRepository,
-    required this._trashedLocalAssetRepository,
-    required this._assetMediaRepository,
-    required this._permissionRepository,
-    required this._syncMigrationRepository,
-    required this._api,
-    this._cancellation,
-  });
+    required SyncApiRepository syncApiRepository,
+    required SyncStreamRepository syncStreamRepository,
+    required DriftLocalAssetRepository localAssetRepository,
+    required DriftTrashedLocalAssetRepository trashedLocalAssetRepository,
+    required AssetMediaRepository assetMediaRepository,
+    required IPermissionRepository permissionRepository,
+    required SyncMigrationRepository syncMigrationRepository,
+    required ApiService api,
+    Completer<void>? cancellation,
+  }) : _syncApiRepository = syncApiRepository,
+       _syncStreamRepository = syncStreamRepository,
+       _localAssetRepository = localAssetRepository,
+       _trashedLocalAssetRepository = trashedLocalAssetRepository,
+       _assetMediaRepository = assetMediaRepository,
+       _permissionRepository = permissionRepository,
+       _syncMigrationRepository = syncMigrationRepository,
+       _api = api,
+       _cancellation = cancellation;
 
   bool get isCancelled => _cancellation?.isCompleted ?? false;
 

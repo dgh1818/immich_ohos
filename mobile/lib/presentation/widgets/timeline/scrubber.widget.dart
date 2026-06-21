@@ -146,7 +146,9 @@ class ScrubberState extends ConsumerState<Scrubber> with TickerProviderStateMixi
   bool _hasScrollController = false;
 
   double get _currentOffset {
-    if (!_hasScrollController || _scrollController.hasClients != true) return 0.0;
+    if (!_hasScrollController || _scrollController.hasClients != true) {
+      return 0.0;
+    }
 
     final maxScrollExtent = _scrollController.position.maxScrollExtent;
     if (!maxScrollExtent.isFinite || maxScrollExtent <= 0 || _scrubberHeight <= 0) {
@@ -642,7 +644,9 @@ class _SlideFadeTransition extends StatelessWidget {
   final Animation<double> _animation;
   final Widget _child;
 
-  const _SlideFadeTransition({required this._animation, required this._child});
+  const _SlideFadeTransition({required Animation<double> animation, required Widget child})
+    : _animation = animation,
+      _child = child;
 
   @override
   Widget build(BuildContext context) {

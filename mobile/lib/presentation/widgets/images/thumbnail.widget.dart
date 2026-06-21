@@ -300,12 +300,16 @@ class _ThumbnailRenderBox extends RenderBox {
   bool isRepaintBoundary = true;
 
   _ThumbnailRenderBox({
-    required this._image,
-    required this._previousImage,
-    required this._fadeValue,
-    required this._fit,
-    required this._placeholderGradient,
-  });
+    required ui.Image? image,
+    required ui.Image? previousImage,
+    required double fadeValue,
+    required BoxFit fit,
+    required Gradient placeholderGradient,
+  }) : _image = image,
+       _previousImage = previousImage,
+       _fadeValue = fadeValue,
+       _fit = fit,
+       _placeholderGradient = placeholderGradient;
 
   @override
   void paint(PaintingContext context, Offset offset) {
