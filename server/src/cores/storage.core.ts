@@ -28,6 +28,7 @@ export interface MoveRequest {
   pathType: PathType;
   oldPath: string | null;
   newPath: string;
+  timeoutMs?: number;
   assetInfo?: {
     sizeInBytes: number;
     checksum: Buffer;
@@ -192,87 +193,123 @@ export class StorageCore {
   }
 
   async moveFile(request: MoveRequest) {
-    const { entityId, pathType, oldPath, newPath, assetInfo } = request;
+    const { entityId, pathType, oldPath, newPath, assetInfo, timeoutMs } = request;
     if (!oldPath || oldPath === newPath) {
-      return;
+      return true;
     }
+
+    const abortController = timeoutMs ? new AbortController() : undefined;
+    const timeout = abortController
+      ? setTimeout(() => {
+          const error = new Error(`Move timed out after ${timeoutMs}ms`);
+          error.name = 'TimeoutError';
+          abortController.abort(error);
+        }, timeoutMs)
+      : undefined;
 
     this.ensureFolders(newPath);
 
-    let move = await this.moveRepository.getByEntity(entityId, pathType);
-    if (move) {
-      this.logger.log(`Attempting to finish incomplete move: ${move.oldPath} => ${move.newPath}`);
-      const oldPathExists = await this.storageRepository.checkFileExists(move.oldPath);
-      const newPathExists = await this.storageRepository.checkFileExists(move.newPath);
-      const newPathCheck = newPathExists ? move.newPath : null;
-      const actualPath = oldPathExists ? move.oldPath : newPathCheck;
-      if (!actualPath) {
-        this.logger.warn('Unable to complete move. File does not exist at either location.');
-        return;
-      }
+    try {
+      let move = await this.moveRepository.getByEntity(entityId, pathType);
+      if (move) {
+        this.logger.log(`Attempting to finish incomplete move: ${move.oldPath} => ${move.newPath}`);
+        const oldPathExists = await this.storageRepository.checkFileExists(move.oldPath);
+        const newPathExists = await this.storageRepository.checkFileExists(move.newPath);
+        const newPathCheck = newPathExists ? move.newPath : null;
+        const actualPath = oldPathExists ? move.oldPath : newPathCheck;
+        if (!actualPath) {
+          this.logger.warn('Unable to complete move. File does not exist at either location.');
+          return false;
+        }
 
-      const fileAtNewLocation = actualPath === move.newPath;
-      this.logger.log(`Found file at ${fileAtNewLocation ? 'new' : 'old'} location`);
+        const fileAtNewLocation = actualPath === move.newPath;
+        this.logger.log(`Found file at ${fileAtNewLocation ? 'new' : 'old'} location`);
 
-      if (
-        fileAtNewLocation &&
-        !(await this.verifyNewPathContentsMatchesExpected(move.oldPath, move.newPath, assetInfo))
-      ) {
-        this.logger.fatal(
-          `Skipping move as file verification failed, old file is missing and new file is different to what was expected`,
-        );
-        return;
-      }
-
-      move = await this.moveRepository.update(move.id, { id: move.id, oldPath: actualPath, newPath });
-    } else {
-      move = await this.moveRepository.create({ entityId, pathType, oldPath, newPath });
-    }
-
-    if (pathType === AssetPathType.Original && !assetInfo) {
-      this.logger.warn(`Unable to complete move. Missing asset info for ${entityId}`);
-      return;
-    }
-
-    if (move.oldPath !== newPath) {
-      try {
-        this.logger.debug(`Attempting to rename file: ${move.oldPath} => ${newPath}`);
-        await this.storageRepository.rename(move.oldPath, newPath);
-      } catch (error: any) {
-        if (error.code !== 'EXDEV') {
-          this.logger.warn(
-            `Unable to complete move. Error renaming file with code ${error.code} and message: ${error.message}`,
+        if (
+          fileAtNewLocation &&
+          !(await this.verifyNewPathContentsMatchesExpected(
+            move.oldPath,
+            move.newPath,
+            assetInfo,
+            abortController?.signal,
+          ))
+        ) {
+          this.logger.fatal(
+            `Skipping move as file verification failed, old file is missing and new file is different to what was expected`,
           );
-          return;
-        }
-        this.logger.debug(`Unable to rename file. Falling back to copy, verify and delete`);
-        await this.storageRepository.copyFile(move.oldPath, newPath);
-
-        if (!(await this.verifyNewPathContentsMatchesExpected(move.oldPath, newPath, assetInfo))) {
-          this.logger.warn(`Skipping move due to file size mismatch`);
-          await this.storageRepository.unlink(newPath);
-          return;
+          return false;
         }
 
-        const { atime, mtime } = await this.storageRepository.stat(move.oldPath);
-        await this.storageRepository.utimes(newPath, atime, mtime);
+        move = await this.moveRepository.update(move.id, { id: move.id, oldPath: actualPath, newPath });
+      } else {
+        move = await this.moveRepository.create({ entityId, pathType, oldPath, newPath });
+      }
 
+      if (pathType === AssetPathType.Original && !assetInfo) {
+        this.logger.warn(`Unable to complete move. Missing asset info for ${entityId}`);
+        return false;
+      }
+
+      if (move.oldPath !== newPath) {
         try {
-          await this.storageRepository.unlink(move.oldPath);
+          this.logger.debug(`Attempting to rename file: ${move.oldPath} => ${newPath}`);
+          await this.storageRepository.rename(move.oldPath, newPath);
         } catch (error: any) {
-          this.logger.warn(`Unable to delete old file, it will now no longer be tracked by Immich: ${error.message}`);
+          if (error.code !== 'EXDEV') {
+            this.logger.warn(
+              `Unable to complete move. Error renaming file with code ${error.code} and message: ${error.message}`,
+            );
+            return false;
+          }
+          this.logger.debug(`Unable to rename file. Falling back to copy, verify and delete`);
+          try {
+            await this.storageRepository.copyFile(move.oldPath, newPath, abortController?.signal);
+
+            if (
+              !(await this.verifyNewPathContentsMatchesExpected(
+                move.oldPath,
+                newPath,
+                assetInfo,
+                abortController?.signal,
+              ))
+            ) {
+              this.logger.warn(`Skipping move due to file size mismatch`);
+              await this.storageRepository.unlink(newPath);
+              return false;
+            }
+          } catch (error) {
+            await this.storageRepository.unlink(newPath).catch((unlinkError: Error) => {
+              this.logger.warn(`Unable to delete incomplete copied file ${newPath}: ${unlinkError.message}`);
+            });
+            throw error;
+          }
+
+          const { atime, mtime } = await this.storageRepository.stat(move.oldPath);
+          await this.storageRepository.utimes(newPath, atime, mtime);
+
+          try {
+            await this.storageRepository.unlink(move.oldPath);
+          } catch (error: any) {
+            this.logger.warn(`Unable to delete old file, it will now no longer be tracked by Immich: ${error.message}`);
+          }
         }
       }
-    }
 
-    await this.savePath(pathType, entityId, newPath);
-    await this.moveRepository.delete(move.id);
+      await this.savePath(pathType, entityId, newPath);
+      await this.moveRepository.delete(move.id);
+      return true;
+    } finally {
+      if (timeout) {
+        clearTimeout(timeout);
+      }
+    }
   }
 
   private async verifyNewPathContentsMatchesExpected(
     oldPath: string,
     newPath: string,
     assetInfo?: { sizeInBytes: number; checksum: Buffer },
+    signal?: AbortSignal,
   ) {
     const oldStat = await this.storageRepository.stat(oldPath);
     const newStat = await this.storageRepository.stat(newPath);
@@ -291,7 +328,7 @@ export class StorageCore {
     const config = await getConfig(repos, { withCache: true });
     if (assetInfo && config.storageTemplate.hashVerificationEnabled) {
       const { checksum } = assetInfo;
-      const newChecksum = await this.cryptoRepository.hashFile(newPath);
+      const newChecksum = await this.cryptoRepository.hashFile(newPath, signal);
       if (!newChecksum.equals(checksum)) {
         this.logger.warn(
           `Unable to complete move. File checksum mismatch: ${newChecksum.toString('base64')} !== ${checksum.toString(

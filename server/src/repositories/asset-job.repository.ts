@@ -22,6 +22,11 @@ import {
 } from 'src/utils/database';
 import { mimeTypes } from 'src/utils/mime-types';
 
+interface StorageTemplateJobPageOptions {
+  afterId?: string;
+  limit: number;
+}
+
 @Injectable()
 export class AssetJobRepository {
   constructor(@InjectKysely() private db: Kysely<DB>) {}
@@ -404,6 +409,16 @@ export class AssetJobRepository {
   @GenerateSql({ params: [], stream: true })
   streamForStorageTemplateJob() {
     return this.storageTemplateAssetQuery().where('asset.visibility', '!=', AssetVisibility.Hidden).stream();
+  }
+
+  @GenerateSql({ params: [{ afterId: DummyValue.UUID, limit: 100 }] })
+  getStorageTemplateJobPage({ afterId, limit }: StorageTemplateJobPageOptions) {
+    return this.storageTemplateAssetQuery()
+      .where('asset.visibility', '!=', AssetVisibility.Hidden)
+      .$if(!!afterId, (qb) => qb.where('asset.id', '>', afterId!))
+      .orderBy('asset.id')
+      .limit(limit)
+      .execute();
   }
 
   @GenerateSql({ params: [DummyValue.DATE], stream: true })

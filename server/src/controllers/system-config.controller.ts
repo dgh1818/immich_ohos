@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Put } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Post, Put } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { Endpoint, HistoryBuilder } from 'src/decorators';
 import { SystemConfigDto, SystemConfigTemplateStorageOptionDto } from 'src/dtos/system-config.dto';
@@ -6,6 +6,7 @@ import { ApiTag, Permission } from 'src/enum';
 import { Authenticated } from 'src/middleware/auth.guard';
 import { StorageTemplateService } from 'src/services/storage-template.service';
 import { SystemConfigService } from 'src/services/system-config.service';
+import { StorageTemplateMigrationState } from 'src/types';
 
 @ApiTags(ApiTag.SystemConfig)
 @Controller('system-config')
@@ -57,5 +58,38 @@ export class SystemConfigController {
   })
   getStorageTemplateOptions(): SystemConfigTemplateStorageOptionDto {
     return this.storageTemplateService.getStorageTemplateOptions();
+  }
+
+  @Get('storage-template-migration')
+  @Authenticated({ permission: Permission.SystemConfigRead, admin: true })
+  @Endpoint({
+    summary: 'Get storage template migration state',
+    description: 'Retrieve the current storage template migration progress and failures.',
+    history: new HistoryBuilder().added('v3.0.0'),
+  })
+  getStorageTemplateMigrationState(): Promise<StorageTemplateMigrationState> {
+    return this.storageTemplateService.getStorageTemplateMigrationState();
+  }
+
+  @Post('storage-template-migration/retry-failed')
+  @Authenticated({ permission: Permission.SystemConfigUpdate, admin: true })
+  @Endpoint({
+    summary: 'Retry failed storage template migration items',
+    description: 'Queue a single-asset storage template migration for every recorded failed item.',
+    history: new HistoryBuilder().added('v3.0.0'),
+  })
+  retryStorageTemplateMigrationFailures(): Promise<StorageTemplateMigrationState> {
+    return this.storageTemplateService.retryStorageTemplateMigrationFailures();
+  }
+
+  @Delete('storage-template-migration/failures')
+  @Authenticated({ permission: Permission.SystemConfigUpdate, admin: true })
+  @Endpoint({
+    summary: 'Clear storage template migration failures',
+    description: 'Clear the recorded storage template migration failure list.',
+    history: new HistoryBuilder().added('v3.0.0'),
+  })
+  clearStorageTemplateMigrationFailures(): Promise<StorageTemplateMigrationState> {
+    return this.storageTemplateService.clearStorageTemplateMigrationFailures();
   }
 }

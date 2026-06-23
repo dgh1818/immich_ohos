@@ -15,6 +15,7 @@ import {
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { PassThrough, Readable, Writable } from 'node:stream';
+import { pipeline } from 'node:stream/promises';
 import { createGunzip, createGzip } from 'node:zlib';
 import { CrawlOptionsDto, WalkOptionsDto } from 'src/dtos/library.dto';
 import { LoggingRepository } from 'src/repositories/logging.repository';
@@ -63,7 +64,11 @@ export class StorageRepository {
     return fs.readdir(folder, { withFileTypes: true });
   }
 
-  copyFile(source: string, target: string) {
+  copyFile(source: string, target: string, signal?: AbortSignal) {
+    if (signal) {
+      return pipeline(createReadStream(source), createWriteStream(target), { signal });
+    }
+
     return fs.copyFile(source, target);
   }
 

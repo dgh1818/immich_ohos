@@ -563,7 +563,35 @@ export type ExternalLibraryChecksumBackfillState = {
   /** last processed asset id for resuming after crash */
   afterId?: string;
 };
-export type StorageTemplateMigrationState = { queuedAt: string };
+export type StorageTemplateMigrationState = {
+  queuedAt: string;
+  startedAt?: string;
+  completedAt?: string;
+  scanned?: number;
+  failed?: number;
+  current?: StorageTemplateMigrationCurrent;
+  failures?: StorageTemplateMigrationFailure[];
+  /** last processed asset id for resuming after crash */
+  afterId?: string;
+};
+export type StorageTemplateMigrationCurrent = {
+  assetId: string;
+  originalPath: string;
+  targetPath?: string;
+  stage: string;
+  startedAt: string;
+};
+export type StorageTemplateMigrationFailure = {
+  assetId: string;
+  retryAssetId?: string;
+  originalPath: string;
+  targetPath?: string;
+  stage: string;
+  reason: string;
+  failedAt: string;
+  attempts: number;
+  timedOut?: boolean;
+};
 export type MaintenanceModeState =
   | { isMaintenanceMode: true; secret: string; action?: SetMaintenanceModeDto }
   | { isMaintenanceMode: false };

@@ -10,12 +10,19 @@
   import { featureFlagsManager } from '$lib/managers/feature-flags-manager.svelte';
   import { systemConfigManager } from '$lib/managers/system-config-manager.svelte';
   import { Route } from '$lib/route';
+  import {
+    clearStorageTemplateMigrationFailures,
+    getStorageTemplateMigrationState,
+    retryStorageTemplateMigrationFailures,
+    type StorageTemplateMigrationState,
+  } from '$lib/services/storage-template-migration.service';
   import { handleSystemConfigSave } from '$lib/services/system-config.service';
+  import { handleError } from '$lib/utils/handle-error';
   import { getStorageTemplateOptions, type SystemConfigTemplateStorageOptionDto } from '@immich/sdk';
-  import { Heading, Link, LoadingSpinner, Text } from '@immich/ui';
+  import { Button, Heading, Link, LoadingSpinner, Text, toastManager } from '@immich/ui';
   import handlebar from 'handlebars';
   import * as luxon from 'luxon';
-  import { onDestroy } from 'svelte';
+  import { onDestroy, onMount } from 'svelte';
   import { t } from 'svelte-i18n';
   import { createBubbler, preventDefault } from 'svelte/legacy';
   import { fade } from 'svelte/transition';
@@ -35,6 +42,8 @@
   const bubble = createBubbler();
   let templateOptions: SystemConfigTemplateStorageOptionDto | undefined = $state();
   let selectedPreset = $state('');
+  let migrationState: StorageTemplateMigrationState | undefined = $state();
+  let migrationStateLoading = $state(false);
 
   const getTemplateOptions = async () => {
     templateOptions = await getStorageTemplateOptions();
@@ -91,6 +100,40 @@
   const handlePresetSelection = () => {
     configToEdit.storageTemplate.template = selectedPreset;
   };
+
+  const refreshMigrationState = async () => {
+    if (minified) {
+      return;
+    }
+
+    migrationStateLoading = true;
+    try {
+      migrationState = await getStorageTemplateMigrationState();
+    } catch (error) {
+      handleError(error, 'Unable to load storage template migration state', { notify: false });
+    } finally {
+      migrationStateLoading = false;
+    }
+  };
+
+  const retryFailures = async () => {
+    try {
+      migrationState = await retryStorageTemplateMigrationFailures();
+      toastManager.primary('Queued failed storage template migration items');
+    } catch (error) {
+      handleError(error, 'Unable to retry failed storage template migration items');
+    }
+  };
+
+  const clearFailures = async () => {
+    try {
+      migrationState = await clearStorageTemplateMigrationFailures();
+      toastManager.primary('Cleared storage template migration failures');
+    } catch (error) {
+      handleError(error, 'Unable to clear storage template migration failures');
+    }
+  };
+
   let parsedTemplate = $derived(() => {
     try {
       return renderTemplate(configToEdit.storageTemplate.template);
@@ -103,6 +146,10 @@
     if (saveOnClose) {
       await handleSystemConfigSave({ storageTemplate: configToEdit.storageTemplate });
     }
+  });
+
+  onMount(() => {
+    void refreshMigrationState();
   });
 </script>
 
@@ -262,6 +309,84 @@
                       {/snippet}
                     </FormatMessage>
                   </p>
+                </section>
+                <section class="mt-4 flex flex-col gap-3 rounded-lg bg-gray-100 p-4 dark:bg-gray-800">
+                  <div class="flex flex-wrap items-center justify-between gap-2">
+                    <Heading size="tiny" color="primary">Storage template migration status</Heading>
+                    <div class="flex gap-2">
+                      <Button
+                        size="tiny"
+                        color="secondary"
+                        disabled={migrationStateLoading}
+                        onclick={refreshMigrationState}>Refresh</Button
+                      >
+                      <Button
+                        size="tiny"
+                        disabled={migrationStateLoading || !migrationState?.failures?.length}
+                        onclick={retryFailures}>Retry failed</Button
+                      >
+                      <Button
+                        size="tiny"
+                        color="danger"
+                        disabled={migrationStateLoading || !migrationState?.failures?.length}
+                        onclick={clearFailures}>Clear failed</Button
+                      >
+                    </div>
+                  </div>
+
+                  {#if migrationState}
+                    <div class="grid gap-1 text-xs">
+                      <span>Scanned: {migrationState.scanned ?? 0}</span>
+                      <span>Failed: {migrationState.failed ?? migrationState.failures?.length ?? 0}</span>
+                      {#if migrationState.completedAt}
+                        <span>Completed: {migrationState.completedAt}</span>
+                      {:else if migrationState.startedAt}
+                        <span>Started: {migrationState.startedAt}</span>
+                      {/if}
+                    </div>
+
+                    {#if migrationState.current}
+                      <div class="rounded bg-white p-3 text-xs dark:bg-gray-900">
+                        <div class="font-semibold text-primary">Current item</div>
+                        <div>Stage: {migrationState.current.stage}</div>
+                        <div>Asset: {migrationState.current.assetId}</div>
+                        <div class="break-all">Old: {migrationState.current.originalPath}</div>
+                        {#if migrationState.current.targetPath}
+                          <div class="break-all">New: {migrationState.current.targetPath}</div>
+                        {/if}
+                      </div>
+                    {/if}
+
+                    {#if migrationState.failures?.length}
+                      <div class="max-h-80 overflow-auto rounded bg-white p-3 text-xs dark:bg-gray-900">
+                        <div class="mb-2 font-semibold text-red-600 dark:text-red-400">Failed items</div>
+                        <div class="flex flex-col gap-3">
+                          {#each migrationState.failures as failure (`${failure.assetId}-${failure.stage}-${failure.originalPath}`)}
+                            <div class="border-b border-gray-200 pb-2 last:border-b-0 dark:border-gray-700">
+                              <div class="font-semibold">
+                                {failure.stage} - {failure.assetId}
+                                {#if failure.timedOut}
+                                  <span class="text-red-600 dark:text-red-400">(timeout)</span>
+                                {/if}
+                              </div>
+                              <div>Attempts: {failure.attempts}</div>
+                              {#if failure.retryAssetId && failure.retryAssetId !== failure.assetId}
+                                <div>Retry asset: {failure.retryAssetId}</div>
+                              {/if}
+                              <div>Failed: {failure.failedAt}</div>
+                              <div class="break-all">Reason: {failure.reason}</div>
+                              <div class="break-all">Old: {failure.originalPath}</div>
+                              {#if failure.targetPath}
+                                <div class="break-all">New: {failure.targetPath}</div>
+                              {/if}
+                            </div>
+                          {/each}
+                        </div>
+                      </div>
+                    {/if}
+                  {:else if migrationStateLoading}
+                    <LoadingSpinner />
+                  {/if}
                 </section>
               </div>
             {/if}

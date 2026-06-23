@@ -45,13 +45,28 @@ export class CryptoRepository {
     return createHash('sha1').update(value).digest();
   }
 
-  hashFile(filepath: string | Buffer): Promise<Buffer> {
+  hashFile(filepath: string | Buffer, signal?: AbortSignal): Promise<Buffer> {
     return new Promise<Buffer>((resolve, reject) => {
       const hash = createHash('sha1');
       const stream = createReadStream(filepath);
-      stream.on('error', (error) => reject(error));
+      const cleanup = () => signal?.removeEventListener('abort', onAbort);
+      const onAbort = () => stream.destroy(signal?.reason instanceof Error ? signal.reason : new Error('Aborted'));
+
+      if (signal?.aborted) {
+        reject(signal.reason instanceof Error ? signal.reason : new Error('Aborted'));
+        return;
+      }
+
+      signal?.addEventListener('abort', onAbort, { once: true });
+      stream.on('error', (error) => {
+        cleanup();
+        reject(error);
+      });
       stream.on('data', (chunk) => hash.update(chunk));
-      stream.on('end', () => resolve(hash.digest()));
+      stream.on('end', () => {
+        cleanup();
+        resolve(hash.digest());
+      });
     });
   }
 
