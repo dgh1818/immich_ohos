@@ -14,4 +14,36 @@
 */
 
 // Script for compiling build behavior. It is built in the build plug-in and cannot be modified currently.
-export { hapTasks } from '@ohos/hvigor-ohos-plugin';
+import { hapTasks } from '@ohos/hvigor-ohos-plugin';
+import type { HvigorNode, HvigorPlugin } from '@ohos/hvigor';
+import { execFileSync } from 'child_process';
+import * as path from 'path';
+
+const stageOhosHttpPluginLibs: HvigorPlugin = {
+    pluginId: 'stage-ohos-http-plugin-libs',
+    apply(node: HvigorNode): void {
+        node.registerTask({
+            name: 'stageOhosHttpPluginLibs',
+            postDependencies: ['assembleHap'],
+            run(taskContext): void {
+                const scriptPath = path.resolve(
+                    taskContext.modulePath,
+                    '..',
+                    '..',
+                    'scripts',
+                    'stage_ohos_http_plugin_libs.ps1',
+                );
+                execFileSync(
+                    'powershell',
+                    ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', scriptPath, '-BuildNative', '-FfiOnly'],
+                    { stdio: 'inherit' },
+                );
+            },
+        });
+    },
+};
+
+export default {
+    system: hapTasks,
+    plugins: [stageOhosHttpPluginLibs],
+};
