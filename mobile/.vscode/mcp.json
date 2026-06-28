@@ -1,13 +1,16 @@
 {
-  "servers": {
-    "codegenieMcp": {
-      "type": "stdio",
-      "command": "npx",
-      "args": ["-y", "@deveco-codegenie/mcp"],
-      "env": {
-        "DEVECO_PATH": "C:\\Program Files\\Huawei\\DevEco Studio",
-        "PROJECT_PATH": "F:\\immich_ohos\\mobile\\ohos"
-      }
-    }
-  }
+	"servers": {
+		"deveco-mcp": {
+			"type": "stdio",
+			"command": "cmd",
+			"args": [
+				"/C",
+				"D:\\arkts_mcp_server\\deveco-mcp-server.exe"
+			],
+			"env": {
+				"PROJECT_PATH": "F:\\immich_ohos\\mobile\\ohos"
+			}
+		}
+	},
+	"inputs": []
 }
