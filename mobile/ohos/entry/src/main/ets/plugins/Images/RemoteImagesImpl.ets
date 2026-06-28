@@ -109,7 +109,7 @@ export class RemoteImagesImpl extends RemoteImageApiOhos {
     }
 
     if (responseCode < 200 || responseCode > 299) {
-      throw new Error(`HTTP ${responseCode}`);
+      throw new Error(RemoteImagesImpl.formatHttpError(responseCode, resultBuffer));
     }
     if (state.cancelled) {
       return new Map<string, Object>();
@@ -189,7 +189,7 @@ export class RemoteImagesImpl extends RemoteImageApiOhos {
 
     if (responseCode < 200 || responseCode > 299) {
       this.cleanupBuffer(state);
-      throw new Error(`HTTP ${responseCode}`);
+      throw new Error(RemoteImagesImpl.formatHttpError(responseCode));
     }
 
     try {
@@ -252,5 +252,62 @@ export class RemoteImagesImpl extends RemoteImageApiOhos {
   private usesMtlsFetcher(): boolean {
     const ctx = this.ctx;
     return ctx !== undefined && URLSessionManager.hasCertificate(ctx);
+  }
+
+  private static formatHttpError(statusCode: number, body?: ArrayBuffer): string {
+    return `HTTP ${statusCode} ${RemoteImagesImpl.httpReason(statusCode)}${RemoteImagesImpl.httpBodyPreview(body)}`;
+  }
+
+  private static httpReason(statusCode: number): string {
+    switch (statusCode) {
+      case 400:
+        return 'Bad Request';
+      case 401:
+        return 'Unauthorized';
+      case 403:
+        return 'Forbidden';
+      case 404:
+        return 'Not Found: image media is missing, not generated yet, or inaccessible';
+      case 408:
+        return 'Request Timeout';
+      case 429:
+        return 'Too Many Requests';
+      case 500:
+        return 'Internal Server Error';
+      case 502:
+        return 'Bad Gateway';
+      case 503:
+        return 'Service Unavailable';
+      case 504:
+        return 'Gateway Timeout';
+      default:
+        return 'Error';
+    }
+  }
+
+  private static httpBodyPreview(body?: ArrayBuffer): string {
+    if (!body || body.byteLength <= 0) {
+      return '';
+    }
+
+    const bytes = new Uint8Array(body);
+    const maxLength = Math.min(bytes.length, 512);
+    let preview = '';
+    for (let i = 0; i < maxLength; i++) {
+      const byte = bytes[i];
+      if (byte === 9 || byte === 10 || byte === 13) {
+        preview += ' ';
+      } else if (byte >= 32 && byte <= 126) {
+        preview += String.fromCharCode(byte);
+      } else {
+        preview += '.';
+      }
+    }
+
+    const trimmed = preview.trim();
+    if (trimmed.length === 0) {
+      return '';
+    }
+    return `, body=${trimmed}${bytes.length > maxLength ? '...' : ''}`;
   }
 }
