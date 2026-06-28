@@ -6,18 +6,16 @@ export class MediaObserverScheduler extends WorkSchedulerExtensionAbility {
   private ctx: common.ApplicationContext = this.context.getApplicationContext();
 
   public static enqueueBackgroundWorker() {
-    const constraints: workScheduler.WorkInfo = BackgroundWorkerApiImpl.BACKGROUND_WORKER_INFO;
-    BackgroundWorkerApiImpl.BACKGROUND_WORKER_INFO = constraints;
-    workScheduler.startWork(constraints);
-    console.info("MediaObserverScheduler", "Enqueued background worker");
+    BackgroundWorkerApiImpl.enqueueBackgroundWorker();
   }
 
-  async onWorkStart(workInfo: workScheduler.WorkInfo) {
+  onWorkStart(workInfo: workScheduler.WorkInfo): void {
     try {
       MediaObserverScheduler.enqueueBackgroundWorker();
     } catch (e) {
       console.error("MediaObserverScheduler.enqueueBackgroundWorker error", e);
     }
+    workScheduler.stopWork(workInfo, false);
     BackgroundWorkerApiImpl.enqueueMediaObserver(this.ctx);
   }
 }

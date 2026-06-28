@@ -26,8 +26,6 @@ import { BackgroundWorkerApiImpl } from '../WorkSchedulerExtension/BackgroundWor
 import { BackgroundWorkerFgHostApi } from '../WorkSchedulerExtension/BackgroundWorker.g';
 import { ConnectivityApi } from '../plugins/connectivity/Connectivity.g';
 import { ConnectivityApiImpl } from '../plugins/connectivity/ConnectivityApiImpl';
-import { MediaObserverScheduler } from '../WorkSchedulerExtension/MediaObserverScheduler';
-import { workScheduler } from '@kit.BackgroundTasksKit';
 import BackgroundEngineLock from '../plugins/Background/BackgroundEngineLock';
 import { BackgroundWorkerLockApi } from '../plugins/Background/BackgroundWorkerLock.g';
 import ImmichPlugin from '../plugins/core/ImmichPlugin';
@@ -92,15 +90,7 @@ export default class EntryAbility extends FlutterAbility {
     NetworkApi.setup(messenger, networkApiImpl);
     PermissionApi.setup(messenger, permissionApiImpl);
     ViewIntentHostApi.setup(messenger, viewIntentApiImpl);
-
-    const constraints: workScheduler.WorkInfo = BackgroundWorkerApiImpl.BACKGROUND_WORKER_INFO;
-    try {
-      workScheduler.startWork(constraints);
-    } catch (e) {
-
-    }
-
-    console.info("MediaObserverScheduler", "Enqueued background worker");
+    this.addPlugin(backgroundEngineLock);
   }
 
   private handleWidgetRouter(want: Want): void {

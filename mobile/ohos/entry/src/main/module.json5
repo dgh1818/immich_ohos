@@ -110,6 +110,11 @@
         "srcEntry": "./ets/WorkSchedulerExtension/BackgroundWorker.ets",
         "type": "workScheduler"
       },
+      {
+        "name": "PeriodicWorker",
+        "srcEntry": "./ets/WorkSchedulerExtension/PeriodicWorker.ets",
+        "type": "workScheduler"
+      },
     ],
     requestPermissions: [
       {

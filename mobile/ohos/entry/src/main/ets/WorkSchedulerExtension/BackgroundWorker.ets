@@ -53,8 +53,8 @@ class BackgroundWorkerReply implements Reply<void> {
     this.success = success;
   }
 
-  reply(_reply: void): void {
-    BackgroundWorker.backgroundWorkerBgHostApiImpl?.complete(this.success);
+  reply(reply: void): void {
+    BackgroundWorker.backgroundWorkerBgHostApiImpl?.complete(reply == undefined && this.success);
   }
 }
 
@@ -76,6 +76,7 @@ class BackgroundWorker extends WorkSchedulerExtensionAbility {
   /// Flag to track whether the background task has completed to prevent duplicate completions
   public static isComplete = false
   private TAG = "BackgroundWorker";
+  public static readonly NOTIFICATION_ID = 100;
   public static workerInfo?: workScheduler.WorkInfo;
 
   public static backgroundWorkerBgHostApiImpl?:BackgroundWorkerBgHostApiImpl;
@@ -112,6 +113,10 @@ class BackgroundWorker extends WorkSchedulerExtensionAbility {
     ConnectivityApi.setup(messenger, connectivityApiImpl);
     BackgroundWorkerLockApi.setup(messenger, BackgroundWorker.backgroundEngineLock);
     NetworkApi.setup(messenger, networkApiImpl);
+    const backgroundEngineLock = BackgroundWorker.backgroundEngineLock;
+    if (backgroundEngineLock != undefined) {
+      flutterEngine.getPlugins()?.add(backgroundEngineLock);
+    }
   }
   public static cancelPlugins() {
     try {
@@ -123,7 +128,7 @@ class BackgroundWorker extends WorkSchedulerExtensionAbility {
     BackgroundWorker.backgroundEngineLock = undefined;
   }
 
-  onWorkStart(workInfo: workScheduler.WorkInfo) {
+  onWorkStart(workInfo: workScheduler.WorkInfo): void {
     // Reset state for each run
     BackgroundWorker.isComplete = false;
     BackgroundWorker.completionHandler = new Deferred<boolean>();
@@ -164,7 +169,6 @@ class BackgroundWorker extends WorkSchedulerExtensionAbility {
       "backgroundSyncNativeEntrypoint"
     );
     BackgroundWorker.engine.dartExecutor.executeDartEntrypoint(entrypoint);
-    return BackgroundWorker.completionHandler;
   }
 
   onWorkStop(workInfo: workScheduler.WorkInfo) {
@@ -208,7 +212,7 @@ class BackgroundWorkerBgHostApiImpl extends BackgroundWorkerBgHostApi {
 
   showNotification(title: string, content: string): void {
     const request: notificationManager.NotificationRequest = {
-      id: 100,
+      id: BackgroundWorker.NOTIFICATION_ID,
       content: {
         notificationContentType: notificationManager.ContentType.NOTIFICATION_CONTENT_BASIC_TEXT,
         normal: {
@@ -254,7 +258,6 @@ class BackgroundWorkerBgHostApiImpl extends BackgroundWorkerBgHostApi {
    */
   private handleHostResult(result: boolean) {
     if (result) {
-      workScheduler.stopWork(BackgroundWorker.workerInfo);
       console.log("Background Worker finished");
       this.complete(true);
       return;
@@ -273,12 +276,35 @@ class BackgroundWorkerBgHostApiImpl extends BackgroundWorkerBgHostApi {
    * - Parameter success: Indicates whether the background task completed successfully
   */
   public complete(success: boolean) {
+    if (BackgroundWorker.isComplete) {
+      return;
+    }
+
     console.info(this.TAG, "About to complete BackupWorker with result:" +success)
     BackgroundWorker.isComplete = true;
+    const workerInfo = BackgroundWorker.workerInfo;
+    if (workerInfo != undefined) {
+      try {
+        workScheduler.stopWork(workerInfo, false);
+      } catch (_) {
+        // ignore stop errors
+      }
+      BackgroundWorker.workerInfo = undefined;
+    }
     BackgroundWorker.cancelPlugins();
     BackgroundWorker.engine?.destroy();
     BackgroundWorker.engine = undefined;
     BackgroundWorker.flutterApi = undefined;
+    try {
+      notificationManager.cancel(BackgroundWorker.NOTIFICATION_ID);
+    } catch (_) {
+      // ignore notification cleanup errors
+    }
+    try {
+      FlutterEngineCache.getInstance().remove(BackgroundWorkerApiImpl.ENGINE_CACHE_KEY);
+    } catch (_) {
+      // ignore cache cleanup errors
+    }
 
     BackgroundWorker.completionHandler.resolve(success);
   }
