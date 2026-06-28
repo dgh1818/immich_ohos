@@ -48,22 +48,18 @@ class Translations extends _BaseTranslations {
   String get active => _t('active');
   String active_count({required int count}) => _t('active_count', {'count': count});
   String get activity => _t('activity');
-  String activity_changed({required bool enabled}) => _t('activity_changed', {'enabled': enabled});
   String get add => _t('add');
   String get add_a_description => _t('add_a_description');
   String get add_a_location => _t('add_a_location');
   String get add_a_name => _t('add_a_name');
   String get add_a_title => _t('add_a_title');
   String get add_action => _t('add_action');
-  String get add_action_description => _t('add_action_description');
   String get add_assets => _t('add_assets');
   String get add_birthday => _t('add_birthday');
   String get add_endpoint => _t('add_endpoint');
   String get add_exclusion_pattern => _t('add_exclusion_pattern');
   String get add_location => _t('add_location');
-  String get add_more_users => _t('add_more_users');
   String get add_partner => _t('add_partner');
-  String get add_path => _t('add_path');
   String get add_photos => _t('add_photos');
   String get add_step => _t('add_step');
   String get add_tag => _t('add_tag');
@@ -74,11 +70,9 @@ class Translations extends _BaseTranslations {
   String add_to_album_bottom_sheet_already_exists({required Object album}) =>
       _t('add_to_album_bottom_sheet_already_exists', {'album': album});
   String get add_to_album_bottom_sheet_some_local_assets => _t('add_to_album_bottom_sheet_some_local_assets');
-  String add_to_album_toggle({required Object album}) => _t('add_to_album_toggle', {'album': album});
   String get add_to_albums => _t('add_to_albums');
   String add_to_albums_count({required int count}) => _t('add_to_albums_count', {'count': count});
   String get add_to_bottom_bar => _t('add_to_bottom_bar');
-  String get add_to_shared_album => _t('add_to_shared_album');
   String get add_upload_to_stack => _t('add_upload_to_stack');
   String get add_url => _t('add_url');
   String get added_to_archive => _t('added_to_archive');
@@ -93,10 +87,6 @@ class Translations extends _BaseTranslations {
   String get advanced_settings_clear_image_cache_error => _t('advanced_settings_clear_image_cache_error');
   String advanced_settings_clear_image_cache_success({required int size}) =>
       _t('advanced_settings_clear_image_cache_success', {'size': size});
-  String get advanced_settings_enable_alternate_media_filter_subtitle =>
-      _t('advanced_settings_enable_alternate_media_filter_subtitle');
-  String get advanced_settings_enable_alternate_media_filter_title =>
-      _t('advanced_settings_enable_alternate_media_filter_title');
   String advanced_settings_log_level_title({required Object level}) =>
       _t('advanced_settings_log_level_title', {'level': level});
   String get advanced_settings_prefer_remote_subtitle => _t('advanced_settings_prefer_remote_subtitle');
@@ -105,8 +95,6 @@ class Translations extends _BaseTranslations {
   String get advanced_settings_proxy_headers_title => _t('advanced_settings_proxy_headers_title');
   String get advanced_settings_readonly_mode_subtitle => _t('advanced_settings_readonly_mode_subtitle');
   String get advanced_settings_readonly_mode_title => _t('advanced_settings_readonly_mode_title');
-  String get advanced_settings_self_signed_ssl_subtitle => _t('advanced_settings_self_signed_ssl_subtitle');
-  String get advanced_settings_self_signed_ssl_title => _t('advanced_settings_self_signed_ssl_title');
   String get advanced_settings_sync_remote_deletions_subtitle => _t('advanced_settings_sync_remote_deletions_subtitle');
   String get advanced_settings_sync_remote_deletions_title => _t('advanced_settings_sync_remote_deletions_title');
   String get advanced_settings_tile_subtitle => _t('advanced_settings_tile_subtitle');
@@ -122,31 +110,18 @@ class Translations extends _BaseTranslations {
   String album_delete_confirmation({required Object album}) => _t('album_delete_confirmation', {'album': album});
   String get album_delete_confirmation_description => _t('album_delete_confirmation_description');
   String get album_deleted => _t('album_deleted');
-  String get album_info_card_backup_album_excluded => _t('album_info_card_backup_album_excluded');
-  String get album_info_card_backup_album_included => _t('album_info_card_backup_album_included');
   String get album_info_updated => _t('album_info_updated');
-  String get album_leave => _t('album_leave');
-  String album_leave_confirmation({required Object album}) => _t('album_leave_confirmation', {'album': album});
   String get album_name => _t('album_name');
   String get album_options => _t('album_options');
   String get album_remove_user => _t('album_remove_user');
   String album_remove_user_confirmation({required Object user}) => _t('album_remove_user_confirmation', {'user': user});
   String get album_search_not_found => _t('album_search_not_found');
-  String get album_selected => _t('album_selected');
   String get album_share_no_users => _t('album_share_no_users');
   String get album_summary => _t('album_summary');
   String get album_updated => _t('album_updated');
   String get album_updated_setting_description => _t('album_updated_setting_description');
   String get album_upload_assets => _t('album_upload_assets');
-  String album_user_left({required Object album}) => _t('album_user_left', {'album': album});
-  String album_user_removed({required Object user}) => _t('album_user_removed', {'user': user});
-  String get album_viewer_appbar_delete_confirm => _t('album_viewer_appbar_delete_confirm');
   String get album_viewer_appbar_share_err_delete => _t('album_viewer_appbar_share_err_delete');
-  String get album_viewer_appbar_share_err_leave => _t('album_viewer_appbar_share_err_leave');
-  String get album_viewer_appbar_share_err_remove => _t('album_viewer_appbar_share_err_remove');
-  String get album_viewer_appbar_share_err_title => _t('album_viewer_appbar_share_err_title');
-  String get album_viewer_appbar_share_leave => _t('album_viewer_appbar_share_leave');
-  String get album_viewer_appbar_share_to => _t('album_viewer_appbar_share_to');
   String get album_viewer_page_share_add_users => _t('album_viewer_page_share_add_users');
   String get album_with_link_access => _t('album_with_link_access');
   String get albums => _t('albums');
@@ -155,14 +130,12 @@ class Translations extends _BaseTranslations {
   String get albums_default_sort_order_description => _t('albums_default_sort_order_description');
   String get albums_feature_description => _t('albums_feature_description');
   String albums_on_device_count({required int count}) => _t('albums_on_device_count', {'count': count});
-  String albums_selected({required int count}) => _t('albums_selected', {'count': count});
   String get all => _t('all');
   String get all_albums => _t('all_albums');
   String get all_people => _t('all_people');
   String get all_photos => _t('all_photos');
   String get all_videos => _t('all_videos');
   String get allow_dark_mode => _t('allow_dark_mode');
-  String get allow_edits => _t('allow_edits');
   String get allow_public_user_to_download => _t('allow_public_user_to_download');
   String get allow_public_user_to_upload => _t('allow_public_user_to_upload');
   String get allowed => _t('allowed');
@@ -170,14 +143,12 @@ class Translations extends _BaseTranslations {
   String get always_keep => _t('always_keep');
   String get always_keep_photos_hint => _t('always_keep_photos_hint');
   String get always_keep_videos_hint => _t('always_keep_videos_hint');
-  String get anti_clockwise => _t('anti_clockwise');
   String get api_key => _t('api_key');
   String get api_key_description => _t('api_key_description');
   String get api_key_empty => _t('api_key_empty');
   String get api_keys => _t('api_keys');
   String get app_architecture_variant => _t('app_architecture_variant');
   String get app_bar_signout_dialog_content => _t('app_bar_signout_dialog_content');
-  String get app_bar_signout_dialog_ok => _t('app_bar_signout_dialog_ok');
   String get app_bar_signout_dialog_title => _t('app_bar_signout_dialog_title');
   String get app_download_links => _t('app_download_links');
   String get app_settings => _t('app_settings');
@@ -188,30 +159,20 @@ class Translations extends _BaseTranslations {
   String get archive => _t('archive');
   String archive_action_prompt({required int count}) => _t('archive_action_prompt', {'count': count});
   String get archive_or_unarchive_photo => _t('archive_or_unarchive_photo');
-  String get archive_page_no_archived_assets => _t('archive_page_no_archived_assets');
-  String archive_page_title({required int count}) => _t('archive_page_title', {'count': count});
   String get archive_size => _t('archive_size');
   String get archive_size_description => _t('archive_size_description');
   String get archived => _t('archived');
   String archived_count({required int count}) => _t('archived_count', {'count': count});
   String get are_these_the_same_person => _t('are_these_the_same_person');
   String get are_you_sure_to_do_this => _t('are_you_sure_to_do_this');
-  String get array_field_not_fully_supported => _t('array_field_not_fully_supported');
-  String get asset_action_delete_err_read_only => _t('asset_action_delete_err_read_only');
-  String get asset_action_share_err_offline => _t('asset_action_share_err_offline');
   String get asset_added_to_album => _t('asset_added_to_album');
   String get asset_adding_to_album => _t('asset_adding_to_album');
   String get asset_created => _t('asset_created');
   String asset_day_count({required int count, required Object date}) =>
       _t('asset_day_count', {'count': count, 'date': date});
   String get asset_description_updated => _t('asset_description_updated');
-  String asset_filename_is_offline({required Object filename}) =>
-      _t('asset_filename_is_offline', {'filename': filename});
-  String get asset_has_unassigned_faces => _t('asset_has_unassigned_faces');
   String get asset_hashing => _t('asset_hashing');
   String get asset_list_group_by_sub_title => _t('asset_list_group_by_sub_title');
-  String get asset_list_layout_settings_dynamic_layout_title => _t('asset_list_layout_settings_dynamic_layout_title');
-  String get asset_list_layout_settings_group_automatically => _t('asset_list_layout_settings_group_automatically');
   String get asset_list_layout_settings_group_by => _t('asset_list_layout_settings_group_by');
   String get asset_list_layout_settings_group_by_month_day => _t('asset_list_layout_settings_group_by_month_day');
   String get asset_list_layout_sub_title => _t('asset_list_layout_sub_title');
@@ -222,17 +183,14 @@ class Translations extends _BaseTranslations {
   String get asset_not_found_on_icloud => _t('asset_not_found_on_icloud');
   String get asset_offline => _t('asset_offline');
   String get asset_offline_description => _t('asset_offline_description');
-  String get asset_restored_successfully => _t('asset_restored_successfully');
   String get asset_skipped => _t('asset_skipped');
   String get asset_skipped_in_trash => _t('asset_skipped_in_trash');
-  String get asset_trashed => _t('asset_trashed');
   String get asset_troubleshoot => _t('asset_troubleshoot');
   String get asset_uploaded => _t('asset_uploaded');
   String get asset_uploading => _t('asset_uploading');
   String get asset_viewer_settings_subtitle => _t('asset_viewer_settings_subtitle');
   String get asset_viewer_settings_title => _t('asset_viewer_settings_title');
   String get assets => _t('assets');
-  String assets_added_count({required int count}) => _t('assets_added_count', {'count': count});
   String assets_added_to_album_count({required int count}) => _t('assets_added_to_album_count', {'count': count});
   String assets_added_to_albums_count({required int assetTotal, required int albumTotal}) =>
       _t('assets_added_to_albums_count', {'assetTotal': assetTotal, 'albumTotal': albumTotal});
@@ -241,23 +199,14 @@ class Translations extends _BaseTranslations {
   String assets_cannot_be_added_to_albums({required int count}) =>
       _t('assets_cannot_be_added_to_albums', {'count': count});
   String assets_count({required int count}) => _t('assets_count', {'count': count});
-  String assets_deleted_permanently({required int count}) => _t('assets_deleted_permanently', {'count': count});
-  String assets_deleted_permanently_from_server({required int count}) =>
-      _t('assets_deleted_permanently_from_server', {'count': count});
-  String assets_downloaded_failed({required int count}) => _t('assets_downloaded_failed', {'count': count});
-  String assets_downloaded_successfully({required int count}) => _t('assets_downloaded_successfully', {'count': count});
   String assets_moved_to_trash_count({required int count}) => _t('assets_moved_to_trash_count', {'count': count});
   String assets_permanently_deleted_count({required int count}) =>
       _t('assets_permanently_deleted_count', {'count': count});
   String assets_removed_count({required int count}) => _t('assets_removed_count', {'count': count});
-  String assets_removed_permanently_from_device({required int count}) =>
-      _t('assets_removed_permanently_from_device', {'count': count});
   String get assets_restore_confirmation => _t('assets_restore_confirmation');
   String assets_restored_count({required int count}) => _t('assets_restored_count', {'count': count});
-  String assets_restored_successfully({required int count}) => _t('assets_restored_successfully', {'count': count});
   String assets_trashed({required int count}) => _t('assets_trashed', {'count': count});
   String assets_trashed_count({required int count}) => _t('assets_trashed_count', {'count': count});
-  String assets_trashed_from_server({required int count}) => _t('assets_trashed_from_server', {'count': count});
   String assets_were_part_of_album_count({required int count}) =>
       _t('assets_were_part_of_album_count', {'count': count});
   String assets_were_part_of_albums_count({required int count}) =>
@@ -268,39 +217,20 @@ class Translations extends _BaseTranslations {
   String get autoplay_slideshow => _t('autoplay_slideshow');
   String get back => _t('back');
   String get back_close_deselect => _t('back_close_deselect');
-  String get background_backup_running_error => _t('background_backup_running_error');
   String get background_location_permission => _t('background_location_permission');
   String get background_location_permission_content => _t('background_location_permission_content');
   String get background_options => _t('background_options');
   String get backup => _t('backup');
-  String backup_album_selection_page_albums_device({required int count}) =>
-      _t('backup_album_selection_page_albums_device', {'count': count});
   String get backup_album_selection_page_albums_tap => _t('backup_album_selection_page_albums_tap');
   String get backup_album_selection_page_assets_scatter => _t('backup_album_selection_page_assets_scatter');
   String get backup_album_selection_page_select_albums => _t('backup_album_selection_page_select_albums');
   String get backup_album_selection_page_selection_info => _t('backup_album_selection_page_selection_info');
-  String get backup_album_selection_page_total_assets => _t('backup_album_selection_page_total_assets');
   String get backup_albums_sync => _t('backup_albums_sync');
-  String get backup_all => _t('backup_all');
-  String get backup_background_service_backup_failed_message => _t('backup_background_service_backup_failed_message');
   String get backup_background_service_complete_notification => _t('backup_background_service_complete_notification');
-  String get backup_background_service_connection_failed_message =>
-      _t('backup_background_service_connection_failed_message');
-  String backup_background_service_current_upload_notification({required Object filename}) =>
-      _t('backup_background_service_current_upload_notification', {'filename': filename});
   String get backup_background_service_default_notification => _t('backup_background_service_default_notification');
-  String get backup_background_service_error_title => _t('backup_background_service_error_title');
   String get backup_background_service_in_progress_notification =>
       _t('backup_background_service_in_progress_notification');
-  String backup_background_service_upload_failure_notification({required Object filename}) =>
-      _t('backup_background_service_upload_failure_notification', {'filename': filename});
   String get backup_controller_page_albums => _t('backup_controller_page_albums');
-  String get backup_controller_page_background_app_refresh_disabled_content =>
-      _t('backup_controller_page_background_app_refresh_disabled_content');
-  String get backup_controller_page_background_app_refresh_disabled_title =>
-      _t('backup_controller_page_background_app_refresh_disabled_title');
-  String get backup_controller_page_background_app_refresh_enable_button_text =>
-      _t('backup_controller_page_background_app_refresh_enable_button_text');
   String get backup_controller_page_background_battery_info_link =>
       _t('backup_controller_page_background_battery_info_link');
   String get backup_controller_page_background_battery_info_message =>
@@ -309,61 +239,30 @@ class Translations extends _BaseTranslations {
       _t('backup_controller_page_background_battery_info_ok');
   String get backup_controller_page_background_battery_info_title =>
       _t('backup_controller_page_background_battery_info_title');
-  String get backup_controller_page_background_charging => _t('backup_controller_page_background_charging');
-  String get backup_controller_page_background_configure_error =>
-      _t('backup_controller_page_background_configure_error');
   String backup_controller_page_background_delay({required Object duration}) =>
       _t('backup_controller_page_background_delay', {'duration': duration});
-  String get backup_controller_page_background_description => _t('backup_controller_page_background_description');
-  String get backup_controller_page_background_is_off => _t('backup_controller_page_background_is_off');
-  String get backup_controller_page_background_is_on => _t('backup_controller_page_background_is_on');
-  String get backup_controller_page_background_turn_off => _t('backup_controller_page_background_turn_off');
-  String get backup_controller_page_background_turn_on => _t('backup_controller_page_background_turn_on');
-  String get backup_controller_page_background_wifi => _t('backup_controller_page_background_wifi');
   String get backup_controller_page_backup => _t('backup_controller_page_backup');
   String get backup_controller_page_backup_selected => _t('backup_controller_page_backup_selected');
   String get backup_controller_page_backup_sub => _t('backup_controller_page_backup_sub');
-  String backup_controller_page_created({required Object date}) => _t('backup_controller_page_created', {'date': date});
-  String get backup_controller_page_desc_backup => _t('backup_controller_page_desc_backup');
   String get backup_controller_page_excluded => _t('backup_controller_page_excluded');
-  String backup_controller_page_failed({required int count}) => _t('backup_controller_page_failed', {'count': count});
-  String backup_controller_page_filename({required Object filename, required int size}) =>
-      _t('backup_controller_page_filename', {'filename': filename, 'size': size});
-  String backup_controller_page_id({required int id}) => _t('backup_controller_page_id', {'id': id});
-  String get backup_controller_page_info => _t('backup_controller_page_info');
   String get backup_controller_page_none_selected => _t('backup_controller_page_none_selected');
   String get backup_controller_page_remainder => _t('backup_controller_page_remainder');
   String get backup_controller_page_remainder_sub => _t('backup_controller_page_remainder_sub');
   String get backup_controller_page_server_storage => _t('backup_controller_page_server_storage');
-  String get backup_controller_page_start_backup => _t('backup_controller_page_start_backup');
-  String get backup_controller_page_status_off => _t('backup_controller_page_status_off');
-  String get backup_controller_page_status_on => _t('backup_controller_page_status_on');
   String backup_controller_page_storage_format({required Object used, required int total}) =>
       _t('backup_controller_page_storage_format', {'used': used, 'total': total});
   String get backup_controller_page_to_backup => _t('backup_controller_page_to_backup');
   String get backup_controller_page_total_sub => _t('backup_controller_page_total_sub');
-  String get backup_controller_page_turn_off => _t('backup_controller_page_turn_off');
-  String get backup_controller_page_turn_on => _t('backup_controller_page_turn_on');
-  String get backup_controller_page_uploading_file_info => _t('backup_controller_page_uploading_file_info');
-  String get backup_err_only_album => _t('backup_err_only_album');
   String get backup_error_sync_failed => _t('backup_error_sync_failed');
   String get backup_info_card_assets => _t('backup_info_card_assets');
-  String get backup_manual_cancelled => _t('backup_manual_cancelled');
-  String get backup_manual_in_progress => _t('backup_manual_in_progress');
-  String get backup_manual_success => _t('backup_manual_success');
-  String get backup_manual_title => _t('backup_manual_title');
   String get backup_options => _t('backup_options');
-  String get backup_options_page_title => _t('backup_options_page_title');
-  String get backup_setting_subtitle => _t('backup_setting_subtitle');
   String get backup_settings_subtitle => _t('backup_settings_subtitle');
-  String get backup_upload_details_page_more_details => _t('backup_upload_details_page_more_details');
   String get backward => _t('backward');
   String get battery_optimization_backup_reliability => _t('battery_optimization_backup_reliability');
   String get biometric_auth_enabled => _t('biometric_auth_enabled');
   String get biometric_locked_out => _t('biometric_locked_out');
   String get biometric_no_options => _t('biometric_no_options');
   String get biometric_not_available => _t('biometric_not_available');
-  String get birthdate_saved => _t('birthdate_saved');
   String get birthdate_set_description => _t('birthdate_set_description');
   String get blurred_background => _t('blurred_background');
   String get browse_templates => _t('browse_templates');
@@ -377,21 +276,6 @@ class Translations extends _BaseTranslations {
   String bulk_trash_duplicates_confirmation({required int count}) =>
       _t('bulk_trash_duplicates_confirmation', {'count': count});
   String get buy => _t('buy');
-  String get cache_settings_clear_cache_button => _t('cache_settings_clear_cache_button');
-  String get cache_settings_clear_cache_button_title => _t('cache_settings_clear_cache_button_title');
-  String get cache_settings_duplicated_assets_clear_button => _t('cache_settings_duplicated_assets_clear_button');
-  String get cache_settings_duplicated_assets_subtitle => _t('cache_settings_duplicated_assets_subtitle');
-  String cache_settings_duplicated_assets_title({required int count}) =>
-      _t('cache_settings_duplicated_assets_title', {'count': count});
-  String get cache_settings_statistics_album => _t('cache_settings_statistics_album');
-  String get cache_settings_statistics_full => _t('cache_settings_statistics_full');
-  String get cache_settings_statistics_shared => _t('cache_settings_statistics_shared');
-  String get cache_settings_statistics_thumbnail => _t('cache_settings_statistics_thumbnail');
-  String get cache_settings_statistics_title => _t('cache_settings_statistics_title');
-  String get cache_settings_subtitle => _t('cache_settings_subtitle');
-  String get cache_settings_tile_subtitle => _t('cache_settings_tile_subtitle');
-  String get cache_settings_tile_title => _t('cache_settings_tile_title');
-  String get cache_settings_title => _t('cache_settings_title');
   String get camera => _t('camera');
   String get camera_brand => _t('camera_brand');
   String get camera_model => _t('camera_model');
@@ -408,7 +292,6 @@ class Translations extends _BaseTranslations {
   String get change_date => _t('change_date');
   String get change_description => _t('change_description');
   String get change_display_order => _t('change_display_order');
-  String get change_expiration_time => _t('change_expiration_time');
   String get change_location => _t('change_location');
   String get change_name => _t('change_name');
   String get change_name_successfully => _t('change_name_successfully');
@@ -423,15 +306,10 @@ class Translations extends _BaseTranslations {
   String get change_password_form_password_mismatch => _t('change_password_form_password_mismatch');
   String get change_password_form_reenter_new_password => _t('change_password_form_reenter_new_password');
   String get change_pin_code => _t('change_pin_code');
-  String get change_trigger => _t('change_trigger');
-  String get change_trigger_prompt => _t('change_trigger_prompt');
   String get change_your_password => _t('change_your_password');
   String get changed_visibility_successfully => _t('changed_visibility_successfully');
   String get charging => _t('charging');
   String get charging_requirement_mobile_backup => _t('charging_requirement_mobile_backup');
-  String get check_corrupt_asset_backup => _t('check_corrupt_asset_backup');
-  String get check_corrupt_asset_backup_button => _t('check_corrupt_asset_backup_button');
-  String get check_corrupt_asset_backup_description => _t('check_corrupt_asset_backup_description');
   String get check_logs => _t('check_logs');
   String get checksum => _t('checksum');
   String get choose => _t('choose');
@@ -459,8 +337,6 @@ class Translations extends _BaseTranslations {
   String get clear_file_cache => _t('clear_file_cache');
   String get clear_message => _t('clear_message');
   String get clear_value => _t('clear_value');
-  String get client_cert_dialog_msg_confirm => _t('client_cert_dialog_msg_confirm');
-  String get client_cert_enter_password => _t('client_cert_enter_password');
   String get client_cert_import => _t('client_cert_import');
   String get client_cert_import_success_msg => _t('client_cert_import_success_msg');
   String get client_cert_invalid_msg => _t('client_cert_invalid_msg');
@@ -469,12 +345,10 @@ class Translations extends _BaseTranslations {
   String get client_cert_remove_msg => _t('client_cert_remove_msg');
   String get client_cert_subtitle => _t('client_cert_subtitle');
   String get client_cert_title => _t('client_cert_title');
-  String get clockwise => _t('clockwise');
   String get close => _t('close');
   String get collapse => _t('collapse');
   String get collapse_all => _t('collapse_all');
   String get color => _t('color');
-  String get color_theme => _t('color_theme');
   String get command => _t('command');
   String get command_palette_prompt => _t('command_palette_prompt');
   String get command_palette_to_close => _t('command_palette_to_close');
@@ -503,18 +377,13 @@ class Translations extends _BaseTranslations {
   String get context => _t('context');
   String get continue$ => _t('continue');
   String get control_bottom_app_bar_add_tags => _t('control_bottom_app_bar_add_tags');
-  String get control_bottom_app_bar_create_new_album => _t('control_bottom_app_bar_create_new_album');
-  String get control_bottom_app_bar_delete_from_immich => _t('control_bottom_app_bar_delete_from_immich');
   String get control_bottom_app_bar_delete_from_local => _t('control_bottom_app_bar_delete_from_local');
   String get control_bottom_app_bar_edit_location => _t('control_bottom_app_bar_edit_location');
   String get control_bottom_app_bar_edit_time => _t('control_bottom_app_bar_edit_time');
-  String get control_bottom_app_bar_share_link => _t('control_bottom_app_bar_share_link');
-  String get control_bottom_app_bar_share_to => _t('control_bottom_app_bar_share_to');
   String get control_bottom_app_bar_trash_from_immich => _t('control_bottom_app_bar_trash_from_immich');
   String get copied_image_to_clipboard => _t('copied_image_to_clipboard');
   String get copied_to_clipboard => _t('copied_to_clipboard');
   String get copy_error => _t('copy_error');
-  String get copy_file_path => _t('copy_file_path');
   String get copy_image => _t('copy_image');
   String get copy_json => _t('copy_json');
   String get copy_link => _t('copy_link');
@@ -534,7 +403,6 @@ class Translations extends _BaseTranslations {
   String get create_link_to_share => _t('create_link_to_share');
   String get create_link_to_share_description => _t('create_link_to_share_description');
   String get create_new => _t('create_new');
-  String get create_new_face => _t('create_new_face');
   String get create_new_person => _t('create_new_person');
   String get create_new_person_hint => _t('create_new_person_hint');
   String get create_new_user => _t('create_new_user');
@@ -551,11 +419,9 @@ class Translations extends _BaseTranslations {
   String get created_at => _t('created_at');
   String get creating_linked_albums => _t('creating_linked_albums');
   String get crop => _t('crop');
-  String get crop_aspect_ratio_fixed => _t('crop_aspect_ratio_fixed');
   String get crop_aspect_ratio_free => _t('crop_aspect_ratio_free');
   String get crop_aspect_ratio_original => _t('crop_aspect_ratio_original');
   String get crop_aspect_ratio_square => _t('crop_aspect_ratio_square');
-  String get curated_object_page_title => _t('curated_object_page_title');
   String get current_device => _t('current_device');
   String get current_pin_code => _t('current_pin_code');
   String get current_server_address => _t('current_server_address');
@@ -579,8 +445,6 @@ class Translations extends _BaseTranslations {
   String get day => _t('day');
   String get days => _t('days');
   String get deduplicate_all => _t('deduplicate_all');
-  String get default_locale => _t('default_locale');
-  String get default_locale_description => _t('default_locale_description');
   String get default_quality_subtitle => _t('default_quality_subtitle');
   String get default_share_quality => _t('default_share_quality');
   String get delete => _t('delete');
@@ -591,8 +455,6 @@ class Translations extends _BaseTranslations {
   String get delete_dialog_alert => _t('delete_dialog_alert');
   String get delete_dialog_alert_local => _t('delete_dialog_alert_local');
   String get delete_dialog_alert_local_non_backed_up => _t('delete_dialog_alert_local_non_backed_up');
-  String get delete_dialog_alert_remote => _t('delete_dialog_alert_remote');
-  String get delete_dialog_ok_force => _t('delete_dialog_ok_force');
   String get delete_dialog_title => _t('delete_dialog_title');
   String get delete_duplicates_confirmation => _t('delete_duplicates_confirmation');
   String get delete_face => _t('delete_face');
@@ -613,21 +475,16 @@ class Translations extends _BaseTranslations {
       _t('delete_tag_confirmation_prompt', {'tagName': tagName});
   String get delete_user => _t('delete_user');
   String get deleted_shared_link => _t('deleted_shared_link');
-  String get deletes_missing_assets => _t('deletes_missing_assets');
   String get description => _t('description');
-  String get description_input_hint_text => _t('description_input_hint_text');
-  String get description_input_submit_error => _t('description_input_submit_error');
   String get deselect_all => _t('deselect_all');
   String get details => _t('details');
   String get direction => _t('direction');
   String get disable => _t('disable');
   String get disabled => _t('disabled');
-  String get disallow_edits => _t('disallow_edits');
   String get discord => _t('discord');
   String get discover => _t('discover');
   String get discovered_devices => _t('discovered_devices');
   String get dismiss_all_errors => _t('dismiss_all_errors');
-  String get dismiss_error => _t('dismiss_error');
   String get display_options => _t('display_options');
   String get display_order => _t('display_order');
   String get display_original_photos => _t('display_original_photos');
@@ -636,11 +493,9 @@ class Translations extends _BaseTranslations {
   String get documentation => _t('documentation');
   String get done => _t('done');
   String get download => _t('download');
-  String download_action_prompt({required int count}) => _t('download_action_prompt', {'count': count});
   String get download_canceled => _t('download_canceled');
   String get download_complete => _t('download_complete');
   String get download_enqueue => _t('download_enqueue');
-  String get download_error => _t('download_error');
   String get download_failed => _t('download_failed');
   String get download_finished => _t('download_finished');
   String get download_include_embedded_motion_videos => _t('download_include_embedded_motion_videos');
@@ -651,9 +506,6 @@ class Translations extends _BaseTranslations {
   String get download_paused => _t('download_paused');
   String get download_settings => _t('download_settings');
   String get download_settings_description => _t('download_settings_description');
-  String get download_started => _t('download_started');
-  String get download_sucess => _t('download_sucess');
-  String get download_sucess_android => _t('download_sucess_android');
   String get download_waiting_to_retry => _t('download_waiting_to_retry');
   String get downloading => _t('downloading');
   String downloading_asset_filename({required Object filename}) =>
@@ -676,10 +528,7 @@ class Translations extends _BaseTranslations {
   String edit_date_and_time_action_prompt({required int count}) =>
       _t('edit_date_and_time_action_prompt', {'count': count});
   String get edit_date_and_time_by_offset => _t('edit_date_and_time_by_offset');
-  String edit_date_and_time_by_offset_interval({required Object from, required Object to}) =>
-      _t('edit_date_and_time_by_offset_interval', {'from': from, 'to': to});
   String get edit_description => _t('edit_description');
-  String get edit_description_prompt => _t('edit_description_prompt');
   String get edit_exclusion_pattern => _t('edit_exclusion_pattern');
   String get edit_faces => _t('edit_faces');
   String get edit_key => _t('edit_key');
@@ -694,9 +543,6 @@ class Translations extends _BaseTranslations {
   String get edit_user => _t('edit_user');
   String get edit_workflow => _t('edit_workflow');
   String get editor => _t('editor');
-  String get editor_close_without_save_prompt => _t('editor_close_without_save_prompt');
-  String get editor_close_without_save_title => _t('editor_close_without_save_title');
-  String get editor_confirm_reset_all_changes => _t('editor_confirm_reset_all_changes');
   String get editor_discard_edits_confirm => _t('editor_discard_edits_confirm');
   String get editor_discard_edits_prompt => _t('editor_discard_edits_prompt');
   String get editor_discard_edits_title => _t('editor_discard_edits_title');
@@ -725,9 +571,7 @@ class Translations extends _BaseTranslations {
   String get enter_your_pin_code => _t('enter_your_pin_code');
   String get enter_your_pin_code_subtitle => _t('enter_your_pin_code_subtitle');
   String get error => _t('error');
-  String get error_change_sort_album => _t('error_change_sort_album');
   String get error_delete_face => _t('error_delete_face');
-  String get error_getting_places => _t('error_getting_places');
   String get error_loading_albums => _t('error_loading_albums');
   String get error_loading_image => _t('error_loading_image');
   String error_loading_partners({required Object error}) => _t('error_loading_partners', {'error': error});
@@ -742,18 +586,10 @@ class Translations extends _BaseTranslations {
   String get exif => _t('exif');
   String get exif_bottom_sheet_description => _t('exif_bottom_sheet_description');
   String get exif_bottom_sheet_description_error => _t('exif_bottom_sheet_description_error');
-  String get exif_bottom_sheet_details => _t('exif_bottom_sheet_details');
-  String get exif_bottom_sheet_location => _t('exif_bottom_sheet_location');
   String get exif_bottom_sheet_no_description => _t('exif_bottom_sheet_no_description');
-  String get exif_bottom_sheet_people => _t('exif_bottom_sheet_people');
-  String get exif_bottom_sheet_person_add_person => _t('exif_bottom_sheet_person_add_person');
   String get exit_slideshow => _t('exit_slideshow');
   String get expand => _t('expand');
   String get expand_all => _t('expand_all');
-  String get experimental_settings_new_asset_list_subtitle => _t('experimental_settings_new_asset_list_subtitle');
-  String get experimental_settings_new_asset_list_title => _t('experimental_settings_new_asset_list_title');
-  String get experimental_settings_subtitle => _t('experimental_settings_subtitle');
-  String get experimental_settings_title => _t('experimental_settings_title');
   String get expire_after => _t('expire_after');
   String get expired => _t('expired');
   String expires_date({required Object date}) => _t('expires_date', {'date': date});
@@ -781,10 +617,8 @@ class Translations extends _BaseTranslations {
   String favorite_action_prompt({required int count}) => _t('favorite_action_prompt', {'count': count});
   String get favorite_or_unfavorite_photo => _t('favorite_or_unfavorite_photo');
   String get favorites => _t('favorites');
-  String get favorites_page_no_favorites => _t('favorites_page_no_favorites');
   String get feature_photo_updated => _t('feature_photo_updated');
   String get features => _t('features');
-  String get features_in_development => _t('features_in_development');
   String get features_setting_description => _t('features_setting_description');
   String get file_name_or_extension => _t('file_name_or_extension');
   String get file_name_text => _t('file_name_text');
@@ -792,12 +626,10 @@ class Translations extends _BaseTranslations {
   String get filename => _t('filename');
   String get filetype => _t('filetype');
   String get filter => _t('filter');
-  String get filter_description => _t('filter_description');
   String get filter_people => _t('filter_people');
   String get filter_places => _t('filter_places');
   String get filter_tags => _t('filter_tags');
   String get filters => _t('filters');
-  String get find_them_fast => _t('find_them_fast');
   String get first => _t('first');
   String get fix_incorrect_match => _t('fix_incorrect_match');
   String get focal_length => _t('focal_length');
@@ -832,7 +664,6 @@ class Translations extends _BaseTranslations {
   String get group_owner => _t('group_owner');
   String get group_places_by => _t('group_places_by');
   String get group_year => _t('group_year');
-  String get haptic_feedback_switch => _t('haptic_feedback_switch');
   String get haptic_feedback_title => _t('haptic_feedback_title');
   String get has_quota => _t('has_quota');
   String get hash_asset => _t('hash_asset');
@@ -853,31 +684,12 @@ class Translations extends _BaseTranslations {
   String get hide_schema => _t('hide_schema');
   String get hide_text_recognition => _t('hide_text_recognition');
   String get hide_unnamed_people => _t('hide_unnamed_people');
-  String home_page_add_to_album_conflicts({required Object added, required Object album, required Object failed}) =>
-      _t('home_page_add_to_album_conflicts', {'added': added, 'album': album, 'failed': failed});
-  String get home_page_add_to_album_err_local => _t('home_page_add_to_album_err_local');
-  String home_page_add_to_album_success({required Object added, required Object album}) =>
-      _t('home_page_add_to_album_success', {'added': added, 'album': album});
-  String get home_page_album_err_partner => _t('home_page_album_err_partner');
-  String get home_page_archive_err_local => _t('home_page_archive_err_local');
-  String get home_page_archive_err_partner => _t('home_page_archive_err_partner');
   String get home_page_building_timeline => _t('home_page_building_timeline');
-  String get home_page_delete_err_partner => _t('home_page_delete_err_partner');
-  String get home_page_delete_remote_err_local => _t('home_page_delete_remote_err_local');
-  String get home_page_favorite_err_local => _t('home_page_favorite_err_local');
-  String get home_page_favorite_err_partner => _t('home_page_favorite_err_partner');
-  String get home_page_first_time_notice => _t('home_page_first_time_notice');
-  String get home_page_locked_error_local => _t('home_page_locked_error_local');
-  String get home_page_locked_error_partner => _t('home_page_locked_error_partner');
-  String get home_page_share_err_local => _t('home_page_share_err_local');
-  String get home_page_upload_err_limit => _t('home_page_upload_err_limit');
   String get host => _t('host');
   String get hour => _t('hour');
   String get hours => _t('hours');
   String get id => _t('id');
   String get idle => _t('idle');
-  String get ignore_icloud_photos => _t('ignore_icloud_photos');
-  String get ignore_icloud_photos_description => _t('ignore_icloud_photos_description');
   String get image => _t('image');
   String image_alt_text_date({required bool isVideo, required Object date}) =>
       _t('image_alt_text_date', {'isVideo': isVideo, 'date': date});
@@ -983,12 +795,6 @@ class Translations extends _BaseTranslations {
     'person2': person2,
     'date': date,
   });
-  String get image_saved_successfully => _t('image_saved_successfully');
-  String get image_viewer_page_state_provider_download_started =>
-      _t('image_viewer_page_state_provider_download_started');
-  String get image_viewer_page_state_provider_download_success =>
-      _t('image_viewer_page_state_provider_download_success');
-  String get image_viewer_page_state_provider_share_error => _t('image_viewer_page_state_provider_share_error');
   String get immich_logo => _t('immich_logo');
   String get immich_web_interface => _t('immich_web_interface');
   String get import_from_json => _t('import_from_json');
@@ -1009,21 +815,9 @@ class Translations extends _BaseTranslations {
   String get invalid_date_format => _t('invalid_date_format');
   String get invite_people => _t('invite_people');
   String get invite_to_album => _t('invite_to_album');
-  String ios_debug_info_fetch_ran_at({required Object dateTime}) =>
-      _t('ios_debug_info_fetch_ran_at', {'dateTime': dateTime});
-  String ios_debug_info_last_sync_at({required Object dateTime}) =>
-      _t('ios_debug_info_last_sync_at', {'dateTime': dateTime});
-  String get ios_debug_info_no_processes_queued => _t('ios_debug_info_no_processes_queued');
-  String get ios_debug_info_no_sync_yet => _t('ios_debug_info_no_sync_yet');
-  String ios_debug_info_processes_queued({required int count}) =>
-      _t('ios_debug_info_processes_queued', {'count': count});
-  String ios_debug_info_processing_ran_at({required Object dateTime}) =>
-      _t('ios_debug_info_processing_ran_at', {'dateTime': dateTime});
   String get iso => _t('iso');
   String items_count({required int count}) => _t('items_count', {'count': count});
   String get jobs => _t('jobs');
-  String get json_editor => _t('json_editor');
-  String get json_error => _t('json_error');
   String get keep => _t('keep');
   String get keep_albums => _t('keep_albums');
   String keep_albums_count({required int count}) => _t('keep_albums_count', {'count': count});
@@ -1056,9 +850,6 @@ class Translations extends _BaseTranslations {
   String get library$ => _t('library');
   String get library_add_folder => _t('library_add_folder');
   String get library_edit_folder => _t('library_edit_folder');
-  String get library_options => _t('library_options');
-  String get library_page_device_albums => _t('library_page_device_albums');
-  String get library_page_new_album => _t('library_page_new_album');
   String get library_page_sort_asset_count => _t('library_page_sort_asset_count');
   String get library_page_sort_created => _t('library_page_sort_created');
   String get library_page_sort_last_modified => _t('library_page_sort_last_modified');
@@ -1104,11 +895,9 @@ class Translations extends _BaseTranslations {
   String get login => _t('login');
   String get login_disabled => _t('login_disabled');
   String get login_form_api_exception => _t('login_form_api_exception');
-  String get login_form_back_button_text => _t('login_form_back_button_text');
   String get login_form_email_hint => _t('login_form_email_hint');
   String get login_form_endpoint_hint => _t('login_form_endpoint_hint');
   String get login_form_endpoint_url => _t('login_form_endpoint_url');
-  String get login_form_err_http => _t('login_form_err_http');
   String get login_form_err_invalid_email => _t('login_form_err_invalid_email');
   String get login_form_err_invalid_url => _t('login_form_err_invalid_url');
   String get login_form_err_leading_whitespace => _t('login_form_err_leading_whitespace');
@@ -1118,7 +907,6 @@ class Translations extends _BaseTranslations {
   String get login_form_failed_login => _t('login_form_failed_login');
   String get login_form_handshake_exception => _t('login_form_handshake_exception');
   String get login_form_password_hint => _t('login_form_password_hint');
-  String get login_form_save_login => _t('login_form_save_login');
   String get login_form_server_empty => _t('login_form_server_empty');
   String get login_form_server_error => _t('login_form_server_error');
   String get login_has_been_disabled => _t('login_has_been_disabled');
@@ -1136,7 +924,6 @@ class Translations extends _BaseTranslations {
   String get maintenance_action_restore => _t('maintenance_action_restore');
   String get maintenance_description => _t('maintenance_description');
   String get maintenance_end => _t('maintenance_end');
-  String get maintenance_end_error => _t('maintenance_end_error');
   String maintenance_logged_in_as({required Object user}) => _t('maintenance_logged_in_as', {'user': user});
   String get maintenance_restore_from_backup => _t('maintenance_restore_from_backup');
   String get maintenance_restore_library => _t('maintenance_restore_library');
@@ -1166,7 +953,6 @@ class Translations extends _BaseTranslations {
   String get manage_media_access_settings => _t('manage_media_access_settings');
   String get manage_media_access_subtitle => _t('manage_media_access_subtitle');
   String get manage_media_access_title => _t('manage_media_access_title');
-  String get manage_shared_links => _t('manage_shared_links');
   String get manage_sharing_with_partners => _t('manage_sharing_with_partners');
   String get manage_the_app_settings => _t('manage_the_app_settings');
   String get manage_your_account => _t('manage_your_account');
@@ -1174,14 +960,12 @@ class Translations extends _BaseTranslations {
   String get manage_your_devices => _t('manage_your_devices');
   String get manage_your_oauth_connection => _t('manage_your_oauth_connection');
   String get map => _t('map');
-  String map_assets_in_bounds({required int count}) => _t('map_assets_in_bounds', {'count': count});
   String get map_cannot_get_user_location => _t('map_cannot_get_user_location');
-  String get map_location_dialog_yes => _t('map_location_dialog_yes');
   String get map_location_picker_page_use_location => _t('map_location_picker_page_use_location');
   String get map_location_service_disabled_content => _t('map_location_service_disabled_content');
   String get map_location_service_disabled_title => _t('map_location_service_disabled_title');
-  String map_marker_for_images({required Object city, required Object country}) =>
-      _t('map_marker_for_images', {'city': city, 'country': country});
+  String map_marker_for_image({required Object city, required Object country}) =>
+      _t('map_marker_for_image', {'city': city, 'country': country});
   String get map_marker_with_image => _t('map_marker_with_image');
   String get map_no_location_permission_content => _t('map_no_location_permission_content');
   String get map_no_location_permission_title => _t('map_no_location_permission_title');
@@ -1193,14 +977,11 @@ class Translations extends _BaseTranslations {
   String get map_settings_date_range_option_year => _t('map_settings_date_range_option_year');
   String map_settings_date_range_option_years({required Object years}) =>
       _t('map_settings_date_range_option_years', {'years': years});
-  String get map_settings_dialog_title => _t('map_settings_dialog_title');
   String get map_settings_include_show_archived => _t('map_settings_include_show_archived');
   String get map_settings_include_show_partners => _t('map_settings_include_show_partners');
   String get map_settings_only_show_favorites => _t('map_settings_only_show_favorites');
   String get map_settings_theme_settings => _t('map_settings_theme_settings');
-  String get map_zoom_to_see_photos => _t('map_zoom_to_see_photos');
   String get mark_all_as_read => _t('mark_all_as_read');
-  String get mark_as_read => _t('mark_as_read');
   String get marked_all_as_read => _t('marked_all_as_read');
   String get matches => _t('matches');
   String get matching_assets => _t('matching_assets');
@@ -1226,8 +1007,6 @@ class Translations extends _BaseTranslations {
   String get minimize => _t('minimize');
   String get minute => _t('minute');
   String get minutes => _t('minutes');
-  String get mirror_horizontal => _t('mirror_horizontal');
-  String get mirror_vertical => _t('mirror_vertical');
   String get missing => _t('missing');
   String get mobile_app => _t('mobile_app');
   String get mobile_app_download_onboarding_note => _t('mobile_app_download_onboarding_note');
@@ -1237,7 +1016,6 @@ class Translations extends _BaseTranslations {
   String get more => _t('more');
   String get motion => _t('motion');
   String get move => _t('move');
-  String get move_down => _t('move_down');
   String get move_off_locked_folder => _t('move_off_locked_folder');
   String get move_to => _t('move_to');
   String get move_to_device_trash => _t('move_to_device_trash');
@@ -1245,12 +1023,7 @@ class Translations extends _BaseTranslations {
       _t('move_to_lock_folder_action_prompt', {'count': count});
   String get move_to_locked_folder => _t('move_to_locked_folder');
   String get move_to_locked_folder_confirmation => _t('move_to_locked_folder_confirmation');
-  String get move_up => _t('move_up');
-  String moved_to_archive({required int count}) => _t('moved_to_archive', {'count': count});
-  String moved_to_library({required int count}) => _t('moved_to_library', {'count': count});
   String get moved_to_trash => _t('moved_to_trash');
-  String get multiselect_grid_edit_date_time_err_read_only => _t('multiselect_grid_edit_date_time_err_read_only');
-  String get multiselect_grid_edit_gps_err_read_only => _t('multiselect_grid_edit_gps_err_read_only');
   String get mute_memories => _t('mute_memories');
   String get my_albums => _t('my_albums');
   String get my_immich_description => _t('my_immich_description');
@@ -1269,12 +1042,10 @@ class Translations extends _BaseTranslations {
   String get never => _t('never');
   String get new_album => _t('new_album');
   String get new_api_key => _t('new_api_key');
-  String get new_date_range => _t('new_date_range');
   String get new_password => _t('new_password');
   String get new_person => _t('new_person');
   String get new_pin_code => _t('new_pin_code');
   String get new_pin_code_subtitle => _t('new_pin_code_subtitle');
-  String get new_timeline => _t('new_timeline');
   String get new_update => _t('new_update');
   String get new_user_created => _t('new_user_created');
   String get new_version_available => _t('new_version_available');
@@ -1292,7 +1063,6 @@ class Translations extends _BaseTranslations {
   String get no_cast_devices_found => _t('no_cast_devices_found');
   String get no_checksum_local => _t('no_checksum_local');
   String get no_checksum_remote => _t('no_checksum_remote');
-  String get no_configuration_needed => _t('no_configuration_needed');
   String get no_devices => _t('no_devices');
   String get no_duplicates_found => _t('no_duplicates_found');
   String get no_exif_info_available => _t('no_exif_info_available');
@@ -1300,7 +1070,6 @@ class Translations extends _BaseTranslations {
   String get no_favorites_message => _t('no_favorites_message');
   String get no_libraries_message => _t('no_libraries_message');
   String get no_local_assets_found => _t('no_local_assets_found');
-  String get no_location_set => _t('no_location_set');
   String get no_locked_photos_message => _t('no_locked_photos_message');
   String get no_name => _t('no_name');
   String get no_notifications => _t('no_notifications');
@@ -1311,7 +1080,6 @@ class Translations extends _BaseTranslations {
   String get no_results_description => _t('no_results_description');
   String get no_shared_albums_message => _t('no_shared_albums_message');
   String get no_steps => _t('no_steps');
-  String get no_uploads_in_progress => _t('no_uploads_in_progress');
   String get none => _t('none');
   String get not_allowed => _t('not_allowed');
   String get not_available => _t('not_available');
@@ -1320,6 +1088,9 @@ class Translations extends _BaseTranslations {
   String get notes => _t('notes');
   String get nothing_here_yet => _t('nothing_here_yet');
   String get notification_backup_reliability => _t('notification_backup_reliability');
+  String get notification_enabled_list_tile_content => _t('notification_enabled_list_tile_content');
+  String get notification_enabled_list_tile_open_button => _t('notification_enabled_list_tile_open_button');
+  String get notification_enabled_list_tile_title => _t('notification_enabled_list_tile_title');
   String get notification_permission_dialog_content => _t('notification_permission_dialog_content');
   String get notification_permission_list_tile_content => _t('notification_permission_list_tile_content');
   String get notification_permission_list_tile_enable_button => _t('notification_permission_list_tile_enable_button');
@@ -1361,7 +1132,6 @@ class Translations extends _BaseTranslations {
   String get original => _t('original');
   String get other => _t('other');
   String get other_devices => _t('other_devices');
-  String get other_entities => _t('other_entities');
   String get other_variables => _t('other_variables');
   String get owned => _t('owned');
   String get owner => _t('owner');
@@ -1371,12 +1141,9 @@ class Translations extends _BaseTranslations {
   String get partner_can_access_assets => _t('partner_can_access_assets');
   String get partner_can_access_location => _t('partner_can_access_location');
   String partner_list_user_photos({required Object user}) => _t('partner_list_user_photos', {'user': user});
-  String get partner_list_view_all => _t('partner_list_view_all');
   String get partner_page_empty_message => _t('partner_page_empty_message');
   String get partner_page_no_more_users => _t('partner_page_no_more_users');
-  String get partner_page_partner_add_failed => _t('partner_page_partner_add_failed');
   String get partner_page_select_partner => _t('partner_page_select_partner');
-  String get partner_page_shared_to_title => _t('partner_page_shared_to_title');
   String partner_page_stop_sharing_content({required Object partner}) =>
       _t('partner_page_stop_sharing_content', {'partner': partner});
   String get partner_sharing => _t('partner_sharing');
@@ -1395,8 +1162,6 @@ class Translations extends _BaseTranslations {
   String get people => _t('people');
   String people_edits_count({required int count}) => _t('people_edits_count', {'count': count});
   String get people_feature_description => _t('people_feature_description');
-  String people_selected({required int count}) => _t('people_selected', {'count': count});
-  String get people_sidebar_description => _t('people_sidebar_description');
   String get permanent_deletion_warning => _t('permanent_deletion_warning');
   String get permanent_deletion_warning_setting_description => _t('permanent_deletion_warning_setting_description');
   String get permanently_delete => _t('permanently_delete');
@@ -1409,14 +1174,6 @@ class Translations extends _BaseTranslations {
       _t('permanently_deleted_assets_count', {'count': count});
   String get permission => _t('permission');
   String get permission_empty => _t('permission_empty');
-  String get permission_onboarding_back => _t('permission_onboarding_back');
-  String get permission_onboarding_continue_anyway => _t('permission_onboarding_continue_anyway');
-  String get permission_onboarding_get_started => _t('permission_onboarding_get_started');
-  String get permission_onboarding_go_to_settings => _t('permission_onboarding_go_to_settings');
-  String get permission_onboarding_permission_denied => _t('permission_onboarding_permission_denied');
-  String get permission_onboarding_permission_granted => _t('permission_onboarding_permission_granted');
-  String get permission_onboarding_permission_limited => _t('permission_onboarding_permission_limited');
-  String get permission_onboarding_request => _t('permission_onboarding_request');
   String get person => _t('person');
   String person_age_months({required int months}) => _t('person_age_months', {'months': months});
   String person_age_year_months({required int months}) => _t('person_age_year_months', {'months': months});
@@ -1425,13 +1182,10 @@ class Translations extends _BaseTranslations {
   String person_hidden({required bool hidden, required Object name}) =>
       _t('person_hidden', {'hidden': hidden, 'name': name});
   String get person_recognized => _t('person_recognized');
-  String get person_selected => _t('person_selected');
   String get photo_shared_all_users => _t('photo_shared_all_users');
   String get photos => _t('photos');
   String get photos_and_videos => _t('photos_and_videos');
-  String photos_count({required int count}) => _t('photos_count', {'count': count});
   String get photos_from_previous_years => _t('photos_from_previous_years');
-  String get photos_only => _t('photos_only');
   String get pick_a_location => _t('pick_a_location');
   String get pick_custom_range => _t('pick_custom_range');
   String get pick_date_range => _t('pick_date_range');
@@ -1468,7 +1222,6 @@ class Translations extends _BaseTranslations {
   String get privacy => _t('privacy');
   String get profile => _t('profile');
   String get profile_drawer_app_logs => _t('profile_drawer_app_logs');
-  String get profile_drawer_client_server_up_to_date => _t('profile_drawer_client_server_up_to_date');
   String get profile_drawer_github => _t('profile_drawer_github');
   String get profile_drawer_readonly_mode => _t('profile_drawer_readonly_mode');
   String profile_image_of_user({required Object user}) => _t('profile_image_of_user', {'user': user});
@@ -1492,7 +1245,6 @@ class Translations extends _BaseTranslations {
   String get purchase_individual_description_2 => _t('purchase_individual_description_2');
   String get purchase_individual_title => _t('purchase_individual_title');
   String get purchase_input_suggestion => _t('purchase_input_suggestion');
-  String get purchase_license_subtitle => _t('purchase_license_subtitle');
   String get purchase_lifetime_description => _t('purchase_lifetime_description');
   String get purchase_option_title => _t('purchase_option_title');
   String get purchase_panel_info_1 => _t('purchase_panel_info_1');
@@ -1527,19 +1279,16 @@ class Translations extends _BaseTranslations {
       _t('reassigned_assets_to_new_person', {'count': count});
   String get reassing_hint => _t('reassing_hint');
   String get recent => _t('recent');
-  String get recent_albums => _t('recent_albums');
   String get recent_searches => _t('recent_searches');
   String get recently_added => _t('recently_added');
   String get recently_added_page_title => _t('recently_added_page_title');
   String get recently_taken => _t('recently_taken');
-  String get recently_taken_page_title => _t('recently_taken_page_title');
   String get refresh => _t('refresh');
   String get refresh_encoded_videos => _t('refresh_encoded_videos');
   String get refresh_faces => _t('refresh_faces');
   String get refresh_metadata => _t('refresh_metadata');
   String get refresh_thumbnails => _t('refresh_thumbnails');
   String get refreshed => _t('refreshed');
-  String get refreshes_every_file => _t('refreshes_every_file');
   String get refreshing_encoded_video => _t('refreshing_encoded_video');
   String get refreshing_faces => _t('refreshing_faces');
   String get refreshing_metadata => _t('refreshing_metadata');
@@ -1554,7 +1303,6 @@ class Translations extends _BaseTranslations {
       _t('remove_assets_shared_link_confirmation', {'count': count});
   String get remove_assets_title => _t('remove_assets_title');
   String get remove_custom_date_range => _t('remove_custom_date_range');
-  String get remove_deleted_assets => _t('remove_deleted_assets');
   String get remove_filter => _t('remove_filter');
   String get remove_from_album => _t('remove_from_album');
   String remove_from_album_action_prompt({required int count}) =>
@@ -1568,29 +1316,22 @@ class Translations extends _BaseTranslations {
   String get remove_memory => _t('remove_memory');
   String get remove_photo_from_memory => _t('remove_photo_from_memory');
   String get remove_tag => _t('remove_tag');
-  String get remove_url => _t('remove_url');
   String get remove_user => _t('remove_user');
   String removed_api_key({required Object name}) => _t('removed_api_key', {'name': name});
   String get removed_from_archive => _t('removed_from_archive');
   String get removed_from_favorites => _t('removed_from_favorites');
   String removed_from_favorites_count({required int count}) => _t('removed_from_favorites_count', {'count': count});
   String get removed_memory => _t('removed_memory');
-  String get removed_photo_from_memory => _t('removed_photo_from_memory');
   String removed_tagged_assets({required int count}) => _t('removed_tagged_assets', {'count': count});
   String get rename => _t('rename');
-  String get repair => _t('repair');
-  String get repair_no_results_message => _t('repair_no_results_message');
-  String get replace_with_upload => _t('replace_with_upload');
   String get repository => _t('repository');
   String get require_password => _t('require_password');
-  String get require_user_to_change_password_on_first_login => _t('require_user_to_change_password_on_first_login');
   String get rescan => _t('rescan');
   String get reset => _t('reset');
   String get reset_password => _t('reset_password');
   String get reset_people_visibility => _t('reset_people_visibility');
   String get reset_pin_code => _t('reset_pin_code');
   String get reset_pin_code_description => _t('reset_pin_code_description');
-  String get reset_pin_code_success => _t('reset_pin_code_success');
   String get reset_pin_code_with_password => _t('reset_pin_code_with_password');
   String get reset_sqlite => _t('reset_sqlite');
   String get reset_sqlite_clear_app_data => _t('reset_sqlite_clear_app_data');
@@ -1604,12 +1345,10 @@ class Translations extends _BaseTranslations {
   String get resolved_all_duplicates => _t('resolved_all_duplicates');
   String get restore => _t('restore');
   String get restore_all => _t('restore_all');
-  String restore_trash_action_prompt({required int count}) => _t('restore_trash_action_prompt', {'count': count});
   String get restore_user => _t('restore_user');
   String get restored_asset => _t('restored_asset');
   String get resume => _t('resume');
   String resume_paused_jobs({required int count}) => _t('resume_paused_jobs', {'count': count});
-  String get retry_upload => _t('retry_upload');
   String get review_duplicates => _t('review_duplicates');
   String get review_large_files => _t('review_large_files');
   String get role => _t('role');
@@ -1617,7 +1356,6 @@ class Translations extends _BaseTranslations {
   String get role_viewer => _t('role_viewer');
   String get running => _t('running');
   String get save => _t('save');
-  String get save_to_gallery => _t('save_to_gallery');
   String get saved => _t('saved');
   String get saved_api_key => _t('saved_api_key');
   String get saved_profile => _t('saved_profile');
@@ -1628,7 +1366,6 @@ class Translations extends _BaseTranslations {
   String get scan => _t('scan');
   String get scan_all_libraries => _t('scan_all_libraries');
   String get scan_library => _t('scan_library');
-  String get scan_settings => _t('scan_settings');
   String get scanning => _t('scanning');
   String get scanning_for_album => _t('scanning_for_album');
   String get screencast_mode_description => _t('screencast_mode_description');
@@ -1662,7 +1399,6 @@ class Translations extends _BaseTranslations {
   String get search_filter_location_title => _t('search_filter_location_title');
   String get search_filter_media_type => _t('search_filter_media_type');
   String get search_filter_media_type_title => _t('search_filter_media_type_title');
-  String get search_filter_ocr => _t('search_filter_ocr');
   String get search_filter_people_title => _t('search_filter_people_title');
   String get search_filter_star_rating => _t('search_filter_star_rating');
   String get search_filter_tags_title => _t('search_filter_tags_title');
@@ -1673,25 +1409,13 @@ class Translations extends _BaseTranslations {
   String search_no_people_named({required Object name}) => _t('search_no_people_named', {'name': name});
   String get search_no_result => _t('search_no_result');
   String get search_options => _t('search_options');
-  String get search_page_categories => _t('search_page_categories');
-  String get search_page_motion_photos => _t('search_page_motion_photos');
-  String get search_page_no_objects => _t('search_page_no_objects');
-  String get search_page_no_places => _t('search_page_no_places');
-  String get search_page_screenshots => _t('search_page_screenshots');
   String get search_page_search_photos_videos => _t('search_page_search_photos_videos');
-  String get search_page_selfies => _t('search_page_selfies');
-  String get search_page_things => _t('search_page_things');
   String get search_page_view_all_button => _t('search_page_view_all_button');
-  String get search_page_your_activity => _t('search_page_your_activity');
-  String get search_page_your_map => _t('search_page_your_map');
   String get search_people => _t('search_people');
   String get search_places => _t('search_places');
   String get search_rating => _t('search_rating');
-  String get search_result_page_new_search_hint => _t('search_result_page_new_search_hint');
   String get search_settings => _t('search_settings');
   String get search_state => _t('search_state');
-  String get search_suggestion_list_smart_search_hint_1 => _t('search_suggestion_list_smart_search_hint_1');
-  String get search_suggestion_list_smart_search_hint_2 => _t('search_suggestion_list_smart_search_hint_2');
   String get search_tags => _t('search_tags');
   String get search_timezone => _t('search_timezone');
   String get search_type => _t('search_type');
@@ -1705,7 +1429,6 @@ class Translations extends _BaseTranslations {
   String get select_albums => _t('select_albums');
   String get select_all => _t('select_all');
   String get select_all_duplicates => _t('select_all_duplicates');
-  String select_all_in({required Object group}) => _t('select_all_in', {'group': group});
   String get select_avatar_color => _t('select_avatar_color');
   String select_count({required int count}) => _t('select_count', {'count': count});
   String get select_cutoff_date => _t('select_cutoff_date');
@@ -1713,7 +1436,6 @@ class Translations extends _BaseTranslations {
   String get select_featured_photo => _t('select_featured_photo');
   String get select_from_computer => _t('select_from_computer');
   String get select_keep_all => _t('select_keep_all');
-  String get select_library_owner => _t('select_library_owner');
   String get select_new_face => _t('select_new_face');
   String get select_people => _t('select_people');
   String get select_person => _t('select_person');
@@ -1721,7 +1443,6 @@ class Translations extends _BaseTranslations {
   String get select_photos => _t('select_photos');
   String get select_quality => _t('select_quality');
   String get select_trash_all => _t('select_trash_all');
-  String get select_user_for_sharing_page_err_album => _t('select_user_for_sharing_page_err_album');
   String get selected => _t('selected');
   String selected_count({required int count}) => _t('selected_count', {'count': count});
   String get selected_gps_coordinates => _t('selected_gps_coordinates');
@@ -1754,37 +1475,22 @@ class Translations extends _BaseTranslations {
   String get setting_image_viewer_original_title => _t('setting_image_viewer_original_title');
   String get setting_image_viewer_preview_subtitle => _t('setting_image_viewer_preview_subtitle');
   String get setting_image_viewer_preview_title => _t('setting_image_viewer_preview_title');
-  String get setting_image_viewer_title => _t('setting_image_viewer_title');
   String get setting_languages_apply => _t('setting_languages_apply');
   String get setting_languages_subtitle => _t('setting_languages_subtitle');
-  String setting_notifications_notify_failures_grace_period({required Object duration}) =>
-      _t('setting_notifications_notify_failures_grace_period', {'duration': duration});
-  String setting_notifications_notify_hours({required int count}) =>
-      _t('setting_notifications_notify_hours', {'count': count});
-  String get setting_notifications_notify_immediately => _t('setting_notifications_notify_immediately');
   String setting_notifications_notify_minutes({required int count}) =>
       _t('setting_notifications_notify_minutes', {'count': count});
-  String get setting_notifications_notify_never => _t('setting_notifications_notify_never');
   String setting_notifications_notify_seconds({required int count}) =>
       _t('setting_notifications_notify_seconds', {'count': count});
-  String get setting_notifications_single_progress_subtitle => _t('setting_notifications_single_progress_subtitle');
-  String get setting_notifications_single_progress_title => _t('setting_notifications_single_progress_title');
   String get setting_notifications_subtitle => _t('setting_notifications_subtitle');
-  String get setting_notifications_total_progress_subtitle => _t('setting_notifications_total_progress_subtitle');
-  String get setting_notifications_total_progress_title => _t('setting_notifications_total_progress_title');
   String get setting_video_viewer_auto_play_subtitle => _t('setting_video_viewer_auto_play_subtitle');
   String get setting_video_viewer_auto_play_title => _t('setting_video_viewer_auto_play_title');
   String get setting_video_viewer_looping_title => _t('setting_video_viewer_looping_title');
   String get setting_video_viewer_original_video_subtitle => _t('setting_video_viewer_original_video_subtitle');
   String get setting_video_viewer_original_video_title => _t('setting_video_viewer_original_video_title');
   String get settings => _t('settings');
-  String get settings_require_restart => _t('settings_require_restart');
   String get settings_saved => _t('settings_saved');
   String get setup_pin_code => _t('setup_pin_code');
   String get share => _t('share');
-  String share_action_prompt({required int count}) => _t('share_action_prompt', {'count': count});
-  String get share_add_photos => _t('share_add_photos');
-  String share_assets_selected({required int count}) => _t('share_assets_selected', {'count': count});
   String get share_dialog_preparing => _t('share_dialog_preparing');
   String get share_link => _t('share_link');
   String get share_original => _t('share_original');
@@ -1794,8 +1500,6 @@ class Translations extends _BaseTranslations {
   String get shared_album_activity_remove_content => _t('shared_album_activity_remove_content');
   String get shared_album_activity_remove_title => _t('shared_album_activity_remove_title');
   String get shared_album_section_people_action_error => _t('shared_album_section_people_action_error');
-  String get shared_album_section_people_action_leave => _t('shared_album_section_people_action_leave');
-  String get shared_album_section_people_action_remove_user => _t('shared_album_section_people_action_remove_user');
   String get shared_album_section_people_title => _t('shared_album_section_people_title');
   String get shared_by => _t('shared_by');
   String shared_by_user({required Object user}) => _t('shared_by_user', {'user': user});
@@ -1805,8 +1509,6 @@ class Translations extends _BaseTranslations {
       _t('shared_intent_upload_button_progress_text', {'current': current, 'total': total});
   String get shared_link_app_bar_title => _t('shared_link_app_bar_title');
   String get shared_link_clipboard_copied_massage => _t('shared_link_clipboard_copied_massage');
-  String shared_link_clipboard_text({required Object link, required Object password}) =>
-      _t('shared_link_clipboard_text', {'link': link, 'password': password});
   String get shared_link_create_error => _t('shared_link_create_error');
   String get shared_link_custom_url_description => _t('shared_link_custom_url_description');
   String get shared_link_edit_description_hint => _t('shared_link_edit_description_hint');
@@ -1848,12 +1550,6 @@ class Translations extends _BaseTranslations {
   String shared_with_partner({required Object partner}) => _t('shared_with_partner', {'partner': partner});
   String get sharing => _t('sharing');
   String get sharing_enter_password => _t('sharing_enter_password');
-  String get sharing_page_album => _t('sharing_page_album');
-  String get sharing_page_description => _t('sharing_page_description');
-  String get sharing_page_empty_list => _t('sharing_page_empty_list');
-  String get sharing_sidebar_description => _t('sharing_sidebar_description');
-  String get sharing_silver_appbar_create_shared_album => _t('sharing_silver_appbar_create_shared_album');
-  String get sharing_silver_appbar_share_partner => _t('sharing_silver_appbar_share_partner');
   String get shift_to_permanent_delete => _t('shift_to_permanent_delete');
   String get show_album_options => _t('show_album_options');
   String get show_albums => _t('show_albums');
@@ -1903,7 +1599,6 @@ class Translations extends _BaseTranslations {
   String get sort_created => _t('sort_created');
   String get sort_items => _t('sort_items');
   String get sort_modified => _t('sort_modified');
-  String get sort_newest => _t('sort_newest');
   String get sort_oldest => _t('sort_oldest');
   String get sort_people_by_similarity => _t('sort_people_by_similarity');
   String get sort_recent => _t('sort_recent');
@@ -1912,7 +1607,6 @@ class Translations extends _BaseTranslations {
   String get stack => _t('stack');
   String stack_action_prompt({required int count}) => _t('stack_action_prompt', {'count': count});
   String get stack_duplicates => _t('stack_duplicates');
-  String get stack_select_one_photo => _t('stack_select_one_photo');
   String get stack_selected_photos => _t('stack_selected_photos');
   String stacked_assets_count({required int count}) => _t('stacked_assets_count', {'count': count});
   String get stacktrace => _t('stacktrace');
@@ -1925,7 +1619,6 @@ class Translations extends _BaseTranslations {
   String get step_delete_confirm => _t('step_delete_confirm');
   String get step_details => _t('step_details');
   String get steps => _t('steps');
-  String steps_count({required int count}) => _t('steps_count', {'count': count});
   String get stop_casting => _t('stop_casting');
   String get stop_motion_photo => _t('stop_motion_photo');
   String get stop_photo_sharing => _t('stop_photo_sharing');
@@ -1948,7 +1641,6 @@ class Translations extends _BaseTranslations {
   String get swap_merge_direction => _t('swap_merge_direction');
   String get sync$ => _t('sync');
   String get sync_albums => _t('sync_albums');
-  String get sync_albums_manual_subtitle => _t('sync_albums_manual_subtitle');
   String get sync_local => _t('sync_local');
   String get sync_remote => _t('sync_remote');
   String get sync_status => _t('sync_status');
@@ -1962,7 +1654,6 @@ class Translations extends _BaseTranslations {
   String tag_created({required Object tag}) => _t('tag_created', {'tag': tag});
   String get tag_face => _t('tag_face');
   String get tag_feature_description => _t('tag_feature_description');
-  String get tag_not_found_question => _t('tag_not_found_question');
   String get tag_people => _t('tag_people');
   String tag_updated({required Object tag}) => _t('tag_updated', {'tag': tag});
   String tagged_assets({required int count}) => _t('tagged_assets', {'count': count});
@@ -1978,15 +1669,10 @@ class Translations extends _BaseTranslations {
       _t('theme_setting_asset_list_tiles_per_row_title', {'count': count});
   String get theme_setting_colorful_interface_subtitle => _t('theme_setting_colorful_interface_subtitle');
   String get theme_setting_colorful_interface_title => _t('theme_setting_colorful_interface_title');
-  String get theme_setting_image_viewer_quality_subtitle => _t('theme_setting_image_viewer_quality_subtitle');
-  String get theme_setting_image_viewer_quality_title => _t('theme_setting_image_viewer_quality_title');
   String get theme_setting_primary_color_subtitle => _t('theme_setting_primary_color_subtitle');
   String get theme_setting_primary_color_title => _t('theme_setting_primary_color_title');
   String get theme_setting_system_primary_color_title => _t('theme_setting_system_primary_color_title');
   String get theme_setting_system_theme_switch => _t('theme_setting_system_theme_switch');
-  String get theme_setting_theme_subtitle => _t('theme_setting_theme_subtitle');
-  String get theme_setting_three_stage_loading_subtitle => _t('theme_setting_three_stage_loading_subtitle');
-  String get theme_setting_three_stage_loading_title => _t('theme_setting_three_stage_loading_title');
   String get then => _t('then');
   String get they_will_be_merged_together => _t('they_will_be_merged_together');
   String get third_party_resources => _t('third_party_resources');
@@ -2012,15 +1698,9 @@ class Translations extends _BaseTranslations {
   String get trash_all => _t('trash_all');
   String trash_count({required int count}) => _t('trash_count', {'count': count});
   String get trash_delete_asset => _t('trash_delete_asset');
-  String get trash_emptied => _t('trash_emptied');
   String get trash_no_results_message => _t('trash_no_results_message');
   String get trash_page_delete_all => _t('trash_page_delete_all');
-  String get trash_page_empty_trash_dialog_content => _t('trash_page_empty_trash_dialog_content');
   String trash_page_info({required Object days}) => _t('trash_page_info', {'days': days});
-  String get trash_page_no_assets => _t('trash_page_no_assets');
-  String get trash_page_restore_all => _t('trash_page_restore_all');
-  String get trash_page_select_assets_btn => _t('trash_page_select_assets_btn');
-  String trash_page_title({required int count}) => _t('trash_page_title', {'count': count});
   String trashed_items_will_be_permanently_deleted_after({required int days}) =>
       _t('trashed_items_will_be_permanently_deleted_after', {'days': days});
   String get trigger => _t('trigger');
@@ -2028,10 +1708,8 @@ class Translations extends _BaseTranslations {
   String get trigger_asset_metadata_extraction_description => _t('trigger_asset_metadata_extraction_description');
   String get trigger_asset_uploaded => _t('trigger_asset_uploaded');
   String get trigger_asset_uploaded_description => _t('trigger_asset_uploaded_description');
-  String get trigger_description => _t('trigger_description');
   String get trigger_person_recognized => _t('trigger_person_recognized');
   String get trigger_person_recognized_description => _t('trigger_person_recognized_description');
-  String get trigger_type => _t('trigger_type');
   String get troubleshoot => _t('troubleshoot');
   String get type => _t('type');
   String get unable_to_change_pin_code => _t('unable_to_change_pin_code');
@@ -2059,7 +1737,6 @@ class Translations extends _BaseTranslations {
   String get unsaved_change => _t('unsaved_change');
   String get unselect_all => _t('unselect_all');
   String get unselect_all_duplicates => _t('unselect_all_duplicates');
-  String unselect_all_in({required Object group}) => _t('unselect_all_in', {'group': group});
   String get unstack => _t('unstack');
   String unstack_action_prompt({required int count}) => _t('unstack_action_prompt', {'count': count});
   String unstacked_assets_count({required int count}) => _t('unstacked_assets_count', {'count': count});
@@ -2076,8 +1753,6 @@ class Translations extends _BaseTranslations {
   String upload_day_count({required int count, required Object date}) =>
       _t('upload_day_count', {'count': count, 'date': date});
   String get upload_details => _t('upload_details');
-  String get upload_dialog_info => _t('upload_dialog_info');
-  String get upload_dialog_title => _t('upload_dialog_title');
   String upload_error_with_count({required int count}) => _t('upload_error_with_count', {'count': count});
   String upload_errors({required int count}) => _t('upload_errors', {'count': count});
   String get upload_finished => _t('upload_finished');
@@ -2110,8 +1785,6 @@ class Translations extends _BaseTranslations {
   String get user_privacy => _t('user_privacy');
   String get user_purchase_settings => _t('user_purchase_settings');
   String get user_purchase_settings_description => _t('user_purchase_settings_description');
-  String user_role_set({required Object user, required Object role}) =>
-      _t('user_role_set', {'user': user, 'role': role});
   String get user_usage_detail => _t('user_usage_detail');
   String get user_usage_stats => _t('user_usage_stats');
   String get user_usage_stats_description => _t('user_usage_stats_description');
@@ -2121,7 +1794,6 @@ class Translations extends _BaseTranslations {
   String get utilities => _t('utilities');
   String get validate => _t('validate');
   String get validate_endpoint_error => _t('validate_endpoint_error');
-  String get validation_error => _t('validation_error');
   String get variables => _t('variables');
   String get version => _t('version');
   String get version_announcement_closing => _t('version_announcement_closing');
@@ -2135,7 +1807,6 @@ class Translations extends _BaseTranslations {
   String get video_quality => _t('video_quality');
   String get videos => _t('videos');
   String videos_count({required int count}) => _t('videos_count', {'count': count});
-  String get videos_only => _t('videos_only');
   String get view => _t('view');
   String get view_album => _t('view_album');
   String get view_all => _t('view_all');
@@ -2144,21 +1815,16 @@ class Translations extends _BaseTranslations {
   String get view_details => _t('view_details');
   String get view_in_timeline => _t('view_in_timeline');
   String get view_link => _t('view_link');
-  String get view_links => _t('view_links');
   String get view_name => _t('view_name');
   String get view_next_asset => _t('view_next_asset');
   String get view_previous_asset => _t('view_previous_asset');
   String get view_qr_code => _t('view_qr_code');
   String get view_similar_photos => _t('view_similar_photos');
   String get view_stack => _t('view_stack');
-  String get view_user => _t('view_user');
   String get viewer_remove_from_stack => _t('viewer_remove_from_stack');
-  String get viewer_stack_use_as_main_asset => _t('viewer_stack_use_as_main_asset');
-  String get viewer_unstack => _t('viewer_unstack');
   String get visibility => _t('visibility');
   String visibility_changed({required int count}) => _t('visibility_changed', {'count': count});
   String get visual => _t('visual');
-  String get visual_builder => _t('visual_builder');
   String get waiting => _t('waiting');
   String waiting_count({required int count}) => _t('waiting_count', {'count': count});
   String get warning => _t('warning');
@@ -2180,7 +1846,6 @@ class Translations extends _BaseTranslations {
   String get workflow_summary => _t('workflow_summary');
   String get workflow_templates => _t('workflow_templates');
   String get workflow_update_success => _t('workflow_update_success');
-  String get workflow_updated => _t('workflow_updated');
   String get workflows => _t('workflows');
   String get workflows_help_text => _t('workflows_help_text');
   String get wrong_pin_code => _t('wrong_pin_code');
@@ -2192,7 +1857,6 @@ class Translations extends _BaseTranslations {
   String get your_wifi_name => _t('your_wifi_name');
   String get zero_to_clear_rating => _t('zero_to_clear_rating');
   String get zoom_image => _t('zoom_image');
-  String get zoom_to_bounds => _t('zoom_to_bounds');
 }
 
 class _AdminTranslations extends _BaseTranslations {
@@ -2363,20 +2027,28 @@ class _AdminTranslations extends _BaseTranslations {
   String get machine_learning_smart_search_enabled_description =>
       _t('admin.machine_learning_smart_search_enabled_description');
   String get machine_learning_url_description => _t('admin.machine_learning_url_description');
+  String get maintenance_backup_management => _t('admin.maintenance_backup_management');
   String get maintenance_delete_backup => _t('admin.maintenance_delete_backup');
   String get maintenance_delete_backup_description => _t('admin.maintenance_delete_backup_description');
   String get maintenance_delete_error => _t('admin.maintenance_delete_error');
+  String get maintenance_integrity_check => _t('admin.maintenance_integrity_check');
   String get maintenance_integrity_check_all => _t('admin.maintenance_integrity_check_all');
   String get maintenance_integrity_checksum_mismatch => _t('admin.maintenance_integrity_checksum_mismatch');
+  String get maintenance_integrity_checksum_mismatch_description =>
+      _t('admin.maintenance_integrity_checksum_mismatch_description');
   String get maintenance_integrity_checksum_mismatch_job => _t('admin.maintenance_integrity_checksum_mismatch_job');
   String get maintenance_integrity_checksum_mismatch_refresh_job =>
       _t('admin.maintenance_integrity_checksum_mismatch_refresh_job');
   String get maintenance_integrity_missing_file => _t('admin.maintenance_integrity_missing_file');
+  String get maintenance_integrity_missing_file_description =>
+      _t('admin.maintenance_integrity_missing_file_description');
   String get maintenance_integrity_missing_file_job => _t('admin.maintenance_integrity_missing_file_job');
   String get maintenance_integrity_missing_file_refresh_job =>
       _t('admin.maintenance_integrity_missing_file_refresh_job');
   String get maintenance_integrity_report => _t('admin.maintenance_integrity_report');
   String get maintenance_integrity_untracked_file => _t('admin.maintenance_integrity_untracked_file');
+  String get maintenance_integrity_untracked_file_description =>
+      _t('admin.maintenance_integrity_untracked_file_description');
   String get maintenance_integrity_untracked_file_job => _t('admin.maintenance_integrity_untracked_file_job');
   String get maintenance_integrity_untracked_file_refresh_job =>
       _t('admin.maintenance_integrity_untracked_file_refresh_job');

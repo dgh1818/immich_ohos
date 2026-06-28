@@ -31,6 +31,7 @@ import 'package:immich_mobile/providers/infrastructure/current_album.provider.da
 import 'package:immich_mobile/providers/infrastructure/setting.provider.dart' as store_settings;
 import 'package:immich_mobile/providers/infrastructure/timeline.provider.dart';
 import 'package:immich_mobile/utils/viewer_hdr.dart';
+import 'package:immich_mobile/utils/system_ui.utils.dart';
 import 'package:immich_mobile/widgets/photo_view/photo_view.dart';
 
 @RoutePage()
@@ -179,7 +180,7 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
     _motionVideoNotifier.playing = false;
     ViewerHdr.resetModes();
 
-    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    unawaited(restoreEdgeToEdge());
 
     super.dispose();
   }
@@ -326,15 +327,13 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
   }
 
   void _setSystemUIMode(bool controls, bool details) {
-    final mode = !controls || (CurrentPlatform.isIOS && details)
-        ? SystemUiMode.immersiveSticky
-        : SystemUiMode.edgeToEdge;
-    unawaited(SystemChrome.setEnabledSystemUIMode(mode));
+    final immersive = !controls || (CurrentPlatform.isIOS && details);
+    unawaited(immersive ? SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky) : restoreEdgeToEdge());
   }
 
   void _onRoutePop() {
     ViewerHdr.resetModes();
-    unawaited(SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge));
+    unawaited(restoreEdgeToEdge());
   }
 
   void _removeImageListener() {
