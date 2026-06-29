@@ -10,13 +10,20 @@ class FakeImmichServer {
   final (int, int, int) version;
 
   final Completer<SyncStream> _streamOpened = Completer<SyncStream>();
+  final Completer<void> _assetUploadReceived = Completer<void>();
 
   int ackRequests = 0;
+  int assetUploadRequests = 0;
+  String? lastAssetUploadBody;
+  String? lastAssetUploadContentType;
 
   String get endpoint => 'http://${_server.address.host}:${_server.port}/api';
 
   /// Resolves when the sync isolate opens `POST /sync/stream`.
   Future<SyncStream> get streamOpened => _streamOpened.future;
+
+  /// Resolves when the fake server receives `POST /assets`.
+  Future<void> get assetUploadReceived => _assetUploadReceived.future;
 
   static Future<FakeImmichServer> start({(int, int, int) version = (3, 0, 0)}) async {
     final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
@@ -50,6 +57,9 @@ class FakeImmichServer {
     if (method == 'POST' && path == '/api/sync/stream') {
       return _openSyncStream(request);
     }
+    if (method == 'POST' && path == '/api/assets') {
+      return _handleAssetUpload(request);
+    }
     return _respondEmpty(request, status: HttpStatus.notFound);
   }
 
@@ -58,7 +68,8 @@ class FakeImmichServer {
     request.response
       ..statusCode = HttpStatus.ok
       ..headers.contentType = ContentType('application', 'jsonlines+json')
-      ..contentLength = -1 // chunked: stays open to stream incrementally
+      ..contentLength =
+          -1 // chunked: stays open to stream incrementally
       ..bufferOutput = false;
     // Flush headers so the client's send() resolves and enters its read loop.
     await request.response.flush();
@@ -73,6 +84,27 @@ class FakeImmichServer {
       ..statusCode = HttpStatus.ok
       ..headers.contentType = ContentType.json
       ..write(jsonEncode(body));
+    await request.response.close();
+  }
+
+  Future<void> _handleAssetUpload(HttpRequest request) async {
+    assetUploadRequests++;
+    lastAssetUploadContentType = request.headers.contentType?.toString();
+
+    final bytes = <int>[];
+    await for (final chunk in request) {
+      bytes.addAll(chunk);
+    }
+    lastAssetUploadBody = utf8.decode(bytes, allowMalformed: true);
+
+    if (!_assetUploadReceived.isCompleted) {
+      _assetUploadReceived.complete();
+    }
+
+    request.response
+      ..statusCode = HttpStatus.created
+      ..headers.contentType = ContentType.json
+      ..write(jsonEncode({'id': 'fake-upload-$assetUploadRequests'}));
     await request.response.close();
   }
 

@@ -317,6 +317,8 @@ dev_dependencies:
   flutter_native_splash: ^2.4.7
   flutter_test:
     sdk: flutter
+  integration_test:
+    sdk: flutter
   mocktail: ^1.0.5
   # Type safe platform code
   pigeon: ^26.3.4
