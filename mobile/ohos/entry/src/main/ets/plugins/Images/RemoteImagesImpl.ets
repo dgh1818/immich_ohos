@@ -5,6 +5,8 @@ import { common } from '@kit.AbilityKit';
 import nativeBuffer, { INITIAL_BUFFER_SIZE, NativeByteBuffer } from '../../utils/native_buffer';
 import { URLSessionManager } from '../core/URLSessionManager';
 
+const MAX_REMOTE_IMAGE_REQUESTS = 6;
+
 interface RemoteRequestState {
   request: http.HttpRequest;
   cancelled: boolean;
@@ -13,6 +15,8 @@ interface RemoteRequestState {
 
 export class RemoteImagesImpl extends RemoteImageApiOhos {
   private requestMap = new Map<number, RemoteRequestState>();
+  private activeRequests = 0;
+  private pendingRequests: Array<() => void> = [];
   private ctx?: common.Context;
 
   private static toNativeBuffer(buffer: ArrayBuffer, label: string): number {
@@ -63,7 +67,11 @@ export class RemoteImagesImpl extends RemoteImageApiOhos {
     };
     URLSessionManager.applyToOptions(this.ctx, options, url);
 
+    let slotAcquired = false;
     try {
+      await this.acquireRequestSlot();
+      slotAcquired = true;
+
       if (state.cancelled) {
         return result.success(new Map<string, Object>());
       }
@@ -87,6 +95,9 @@ export class RemoteImagesImpl extends RemoteImageApiOhos {
       }
       return result.error(e as BusinessError);
     } finally {
+      if (slotAcquired) {
+        this.releaseRequestSlot();
+      }
       request.destroy();
       this.requestMap.delete(requestId);
     }
@@ -247,6 +258,26 @@ export class RemoteImagesImpl extends RemoteImageApiOhos {
     try {
       buffer.free();
     } catch (_) {}
+  }
+
+  private acquireRequestSlot(): Promise<void> {
+    if (this.activeRequests < MAX_REMOTE_IMAGE_REQUESTS) {
+      this.activeRequests += 1;
+      return Promise.resolve();
+    }
+
+    return new Promise<void>((resolve) => {
+      this.pendingRequests.push(resolve);
+    });
+  }
+
+  private releaseRequestSlot(): void {
+    const resolve = this.pendingRequests.shift();
+    if (resolve) {
+      resolve();
+      return;
+    }
+    this.activeRequests = Math.max(0, this.activeRequests - 1);
   }
 
   private usesMtlsFetcher(): boolean {
