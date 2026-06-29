@@ -14,26 +14,28 @@ class DownloadActionButton extends ConsumerWidget {
   final bool menuItem;
   const DownloadActionButton({super.key, required this.source, this.iconOnly = false, this.menuItem = false});
 
-  void _onTap(BuildContext context, WidgetRef ref, BackgroundSyncManager backgroundSyncManager) async {
-    if (!context.mounted) {
-      return;
-    }
-
+  void _onTap(
+    ActionNotifier actionNotifier,
+    MultiSelectNotifier multiSelectNotifier,
+    BackgroundSyncManager backgroundSyncManager,
+  ) async {
     try {
-      await ref.read(actionProvider.notifier).downloadAll(source);
+      await actionNotifier.downloadAll(source);
 
       Future.delayed(const Duration(seconds: 1), () async {
         await backgroundSyncManager.syncLocal();
         await backgroundSyncManager.hashAssets();
       });
     } finally {
-      ref.read(multiSelectProvider.notifier).reset();
+      multiSelectNotifier.reset();
     }
   }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final backgroundManager = ref.watch(backgroundSyncProvider);
+    final actionNotifier = ref.read(actionProvider.notifier);
+    final multiSelectNotifier = ref.read(multiSelectProvider.notifier);
 
     return BaseActionButton(
       iconData: Icons.download,
@@ -41,7 +43,7 @@ class DownloadActionButton extends ConsumerWidget {
       label: "download".t(context: context),
       iconOnly: iconOnly,
       menuItem: menuItem,
-      onPressed: () => _onTap(context, ref, backgroundManager),
+      onPressed: () => _onTap(actionNotifier, multiSelectNotifier, backgroundManager),
     );
   }
 }
