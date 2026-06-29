@@ -37,6 +37,7 @@ import { PermissionApi } from '../plugins/permission/PermissionApi.g';
 import { PermissionApiImpl } from '../plugins/permission/PermissionApiImpl';
 import { ViewIntentHostApi } from '../plugins/viewintent/ViewIntent.g';
 import { ViewIntentApiImpl } from '../plugins/viewintent/ViewIntentApiImpl';
+import OhosVideoTranscoderPlugin from '../plugins/VideoTranscoder/OhosVideoTranscoderPlugin';
 
 export default class EntryAbility extends FlutterAbility {
   private pendingDeepLink: string | null = null;
@@ -68,6 +69,7 @@ export default class EntryAbility extends FlutterAbility {
   public registerPlugins(ctx: Context, flutterEngine: FlutterEngine){
     this.addPlugin(new BackgroundServicePlugin()); // 加载插件
     this.addPlugin(new HomeWidgetPlugin());
+    this.addPlugin(new OhosVideoTranscoderPlugin());
     
     //this.addPlugin(new HttpSSLOptionsPlugin());
 

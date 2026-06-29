@@ -39,7 +39,6 @@
     "@ohos/flutter_module": "file:./entry",
     "@ohos/flutter_ohos": "file:./har/flutter.har",
     "wakelock_plus": "file:./har/wakelock_plus.har",
-    "video_compress": "file:./har/video_compress.har",
     "receive_sharing_intent": "file:./har/receive_sharing_intent.har",
     "native_video_player": "file:./har/native_video_player.har",
     "ohos_http": "file:./har/ohos_http.har",

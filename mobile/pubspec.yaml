@@ -2,7 +2,7 @@ name: immich_mobile
 description: Immich - selfhosted backup media file on mobile phone
 
 publish_to: 'none'
-version: 3.0.0-rc.3+300000008
+version: 3.0.0+300000008
 
 environment:
   sdk: '>=3.11.0 <4.0.0'
@@ -101,7 +101,6 @@ dependencies:
   ohos_http:
     path: ../../package_flutter/ohos_http/
 
-  video_compress: ^3.1.0
   # DB
   #drift_sqflite: ^2.0.1   #sqflite
   image_gallery_saver: ^2.0.3
@@ -123,10 +122,6 @@ dependency_overrides:
       url: 'https://github.com/dgh1818/local_auth_ohos.git'
       path: './local_auth'
       ref: master
-  video_compress:
-    git:
-      url: 'https://gitcode.com/openharmony-sig/fluttertpc_video_compress.git'
-      path: ./
   pinput:
     git:
       url: 'https://github.com/dgh1818/Flutter_Pinput_ohos'

@@ -2,7 +2,6 @@ import { FlutterEngine, Log } from '@ohos/flutter_ohos';
 import IntegrationTestPlugin from 'integration_test';
 import WakelockPlugin from 'wakelock_plus';
 import PackageInfoPlugin from 'package_info_plus';
-import VideoCompressPlugin from 'video_compress';
 import UrlLauncherPlugin from 'url_launcher_ohos';
 import SharePlusOhosPlugin from 'share_plus';
 import PathProviderPlugin from 'path_provider_ohos';
@@ -42,7 +41,6 @@ export class GeneratedPluginRegistrant {
       flutterEngine.getPlugins()?.add(new IntegrationTestPlugin());
       flutterEngine.getPlugins()?.add(new WakelockPlugin());
       flutterEngine.getPlugins()?.add(new PackageInfoPlugin());
-      flutterEngine.getPlugins()?.add(new VideoCompressPlugin());
       flutterEngine.getPlugins()?.add(new UrlLauncherPlugin());
       flutterEngine.getPlugins()?.add(new SharePlusOhosPlugin());
       flutterEngine.getPlugins()?.add(new PathProviderPlugin());

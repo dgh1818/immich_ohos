@@ -17,7 +17,6 @@ import 'package:logging/logging.dart';
 
 import 'package:path/path.dart' as p;
 import 'package:immich_mobile/domain/services/asset.service.dart';
-import 'package:video_compress/video_compress.dart';
 
 final downloadServiceProvider = Provider(
   (ref) => DownloadService(
@@ -41,6 +40,8 @@ final Map<String, _LiveParts> _livePartsById = {}; // key=liveId(照片 remoteId
 final Set<String> _savingLiveIds = {}; // 防止重复保存
 
 class DownloadService {
+  static const _ohosVideoTranscoderChannel = MethodChannel('immich/ohos_video_transcoder');
+
   final DownloadRepository _downloadRepository;
   final FileMediaRepository _fileMediaRepository;
   final AssetService _assetService;
@@ -285,50 +286,68 @@ class DownloadService {
     final title = _titleWithoutExtension(imageFilePath);
     String actualVideoPath = videoFilePath;
     File? convertedVideoFile;
+    bool canSaveLivePhoto = true;
 
     bool saved = false;
 
-    if (videoFilePath.toLowerCase().endsWith('.mov')) {
+    if (Platform.isOhos && videoFilePath.toLowerCase().endsWith('.mov')) {
+      final outputPath = p.setExtension(videoFilePath, '.mp4');
       try {
-        final info = await VideoCompress.compressVideo(
-          videoFilePath,
-          quality: VideoQuality.HighestQuality,
-          includeAudio: true,
-          deleteOrigin: false,
-        );
-        if (info != null && info.path != null && info.path!.isNotEmpty) {
-          actualVideoPath = info.path!;
+        final path = await _ohosVideoTranscoderChannel.invokeMethod<String>('transcodeMovToMp4', {
+          'inputPath': videoFilePath,
+          'outputPath': outputPath,
+        });
+        if (path != null && path.isNotEmpty) {
+          actualVideoPath = path;
           convertedVideoFile = File(actualVideoPath);
-          _log.fine("Converted live photo video to MP4: $actualVideoPath");
+          _log.fine("Converted live photo video with OHOS AVTranscoder: $actualVideoPath");
         } else {
-          _log.warning("MOV to MP4 conversion returned null for live photo video $videoFilePath");
+          canSaveLivePhoto = false;
+          _log.severe(
+            "OHOS AVTranscoder returned empty path: "
+            "${await _fileDebugInfo('input', videoFilePath)}, "
+            "${await _fileDebugInfo('output', outputPath)}",
+          );
         }
       } catch (e, s) {
-        _log.warning("Failed to convert live photo video $videoFilePath to MP4", e, s);
+        canSaveLivePhoto = false;
+        _log.severe(
+          "OHOS AVTranscoder failed: "
+          "${await _fileDebugInfo('input', videoFilePath)}, "
+          "${await _fileDebugInfo('output', outputPath)}",
+          e,
+          s,
+        );
+        final outputFile = File(outputPath);
+        if (await outputFile.exists()) {
+          await outputFile.delete();
+        }
       }
     }
 
-    await Future.delayed(const Duration(seconds: 1));
-    try {
-      final result = await _fileMediaRepository.saveLivePhoto(
-        image: File(imageFilePath),
-        video: File(actualVideoPath),
-        title: title,
-      );
+    if (canSaveLivePhoto) {
+      await Future.delayed(const Duration(seconds: 1));
+      try {
+        final result = await _fileMediaRepository.saveLivePhoto(
+          image: File(imageFilePath),
+          video: File(actualVideoPath),
+          title: title,
+        );
 
-      saved = result != null;
-    } on PlatformException catch (error, stack) {
-      // Handle saving MotionPhotos on iOS
-      if (error.code.startsWith('PHPhotosErrorDomain')) {
-        final result = await _fileMediaRepository.saveImageWithFile(imageFilePath, title: task.filename);
-        return result != null;
+        saved = result != null;
+      } on PlatformException catch (error, stack) {
+        // Handle saving MotionPhotos on iOS
+        if (error.code.startsWith('PHPhotosErrorDomain')) {
+          final result = await _fileMediaRepository.saveImageWithFile(imageFilePath, title: task.filename);
+          return result != null;
+        }
+        _log.severe("Error saving live photo", error, stack);
+      } catch (error, stack) {
+        _log.severe("Error saving live photo", error, stack);
       }
-      _log.severe("Error saving live photo", error, stack);
-    } catch (error, stack) {
-      _log.severe("Error saving live photo", error, stack);
     }
 
-    if (!saved) {
+    if (!saved && canSaveLivePhoto) {
       await Future.delayed(const Duration(seconds: 1));
       try {
         final result = await _fileMediaRepository.saveLivePhoto(
@@ -372,6 +391,19 @@ class DownloadService {
     }
 
     return saved;
+  }
+
+  Future<String> _fileDebugInfo(String label, String path) async {
+    final file = File(path);
+    try {
+      final exists = await file.exists();
+      if (!exists) {
+        return "$label(path=$path, exists=false)";
+      }
+      return "$label(path=$path, exists=true, bytes=${await file.length()})";
+    } catch (e) {
+      return "$label(path=$path, statError=$e)";
+    }
   }
 
   String _titleWithoutExtension(String name) => p.basenameWithoutExtension(name);

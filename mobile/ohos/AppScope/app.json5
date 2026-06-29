@@ -3,7 +3,7 @@
     "bundleName": "com.dgh18.immich",
     "vendor": "dgh18",
     "versionCode": 300000008,
-    "versionName": "3.0.0-rc.3",
+    "versionName": "3.0.0",
     "icon": "$media:app_layered_image",
     "label": "$string:app_name"
   }
