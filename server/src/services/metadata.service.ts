@@ -22,6 +22,7 @@ import {
   JobStatus,
   QueueName,
   SourceType,
+  SystemMetadataKey,
 } from 'src/enum';
 import { ArgOf } from 'src/repositories/event.repository';
 import { ReverseGeocodeResult } from 'src/repositories/map.repository';
@@ -30,7 +31,7 @@ import { AssetExifTable } from 'src/schema/tables/asset-exif.table';
 import { AssetFaceTable } from 'src/schema/tables/asset-face.table';
 import { PersonTable } from 'src/schema/tables/person.table';
 import { BaseService } from 'src/services/base.service';
-import { JobItem, JobOf } from 'src/types';
+import { JobItem, JobOf, OhosLivePhotoRescanFailure, OhosLivePhotoRescanState } from 'src/types';
 import { getAssetFiles } from 'src/utils/asset.util';
 import { isAssetChecksumConstraint } from 'src/utils/database';
 import { mergeTimeZone } from 'src/utils/date';
@@ -41,6 +42,7 @@ import { Tasks } from 'src/utils/tasks';
 
 const POSTGRES_INT_MAX = 2_147_483_647;
 const POSTGRES_INT_MIN = -2_147_483_648;
+const OHOS_LIVE_PHOTO_RESCAN_SAVE_INTERVAL = 25;
 
 /** look for a date from these tags (in order) */
 const EXIF_DATE_TAGS: Array<keyof ImmichTags> = [
@@ -136,6 +138,18 @@ type Dates = {
   localDateTime: Date;
 };
 
+type OhosLivePhotoLinkResult = 'matched' | 'alreadyMatched' | 'missing';
+
+type OhosLivePhotoRescanAsset = {
+  id: string;
+  type: AssetType;
+  originalPath: string;
+  originalFileName: string;
+  ownerId: string;
+  livePhotoVideoId: string | null;
+  libraryId: string | null;
+};
+
 @Injectable()
 export class MetadataService extends BaseService {
   @OnEvent({ name: 'AppBootstrap', workers: [ImmichWorker.Microservices] })
@@ -214,16 +228,15 @@ export class MetadataService extends BaseService {
     ].includes(orientation);
   }
 
-  private async linkOhosLivePhotos(
-    asset: {
-      id: string;
-      type: AssetType;
-      originalPath: string;
-      originalFileName: string;
-      ownerId: string;
-      libraryId: string | null;
-    },
-  ): Promise<void> {
+  private async linkOhosLivePhotos(asset: {
+    id: string;
+    type: AssetType;
+    originalPath: string;
+    originalFileName: string;
+    ownerId: string;
+    livePhotoVideoId?: string | null;
+    libraryId: string | null;
+  }): Promise<OhosLivePhotoLinkResult> {
     const otherType = asset.type === AssetType.Video ? AssetType.Image : AssetType.Video;
     const match = await this.assetRepository.findOhosLivePhotoMatch({
       path:
@@ -241,10 +254,11 @@ export class MetadataService extends BaseService {
     });
 
     if (!match) {
-      return;
+      return 'missing';
     }
 
     const [photoAsset, motionAsset] = asset.type === AssetType.Image ? [asset, match] : [match, asset];
+    const alreadyMatched = photoAsset.livePhotoVideoId === motionAsset.id;
     await Promise.all([
       this.assetRepository.update({ id: photoAsset.id, livePhotoVideoId: motionAsset.id }),
       this.assetRepository.update({ id: motionAsset.id, visibility: AssetVisibility.Hidden }),
@@ -252,6 +266,7 @@ export class MetadataService extends BaseService {
     ]);
 
     await this.eventRepository.emit('AssetHide', { assetId: motionAsset.id, userId: motionAsset.ownerId });
+    return alreadyMatched ? 'alreadyMatched' : 'matched';
   }
 
   @OnJob({ name: JobName.AssetExtractMetadataQueueAll, queue: QueueName.MetadataExtraction })
@@ -270,6 +285,173 @@ export class MetadataService extends BaseService {
 
     await this.jobRepository.queueAll(queue);
     return JobStatus.Success;
+  }
+
+  @OnJob({ name: JobName.AssetOhosLivePhotoRescan, queue: QueueName.MetadataExtraction })
+  async handleOhosLivePhotoRescan(job?: JobOf<JobName.AssetOhosLivePhotoRescan>): Promise<JobStatus> {
+    return job?.retryFailed ? this.retryFailedOhosLivePhotoRescan() : this.rescanOhosLivePhotos();
+  }
+
+  private async rescanOhosLivePhotos(): Promise<JobStatus> {
+    const state = await this.getOhosLivePhotoRescanState('all');
+    state.status = 'running';
+    state.mode = 'all';
+    state.startedAt ||= new Date().toISOString();
+    state.completedAt = undefined;
+    await this.saveOhosLivePhotoRescanState(state);
+
+    try {
+      for await (const asset of this.assetJobRepository.streamForOhosLivePhotoRescan({ afterId: state.afterId })) {
+        await this.processOhosLivePhotoRescanAsset(asset, state);
+        state.scanned++;
+        state.afterId = asset.id;
+
+        if (state.scanned % OHOS_LIVE_PHOTO_RESCAN_SAVE_INTERVAL === 0 || state.failures.at(-1)?.assetId === asset.id) {
+          await this.saveOhosLivePhotoRescanState(state);
+        }
+      }
+
+      state.status = 'completed';
+      state.completedAt = new Date().toISOString();
+      state.current = undefined;
+      await this.saveOhosLivePhotoRescanState(state);
+      return JobStatus.Success;
+    } catch (error: Error | any) {
+      state.status = 'failed';
+      state.completedAt = new Date().toISOString();
+      state.current = undefined;
+      await this.saveOhosLivePhotoRescanState(state);
+      this.logger.error(`OHOS Live Photo rescan failed: ${error}`, error?.stack);
+      return JobStatus.Failed;
+    }
+  }
+
+  private async retryFailedOhosLivePhotoRescan(): Promise<JobStatus> {
+    const state = await this.getOhosLivePhotoRescanState('failed');
+    const failures = [...state.failures];
+    state.status = 'running';
+    state.mode = 'failed';
+    state.startedAt ||= new Date().toISOString();
+    state.completedAt = undefined;
+    state.total = failures.length;
+    await this.saveOhosLivePhotoRescanState(state);
+
+    try {
+      for (const failure of failures) {
+        const asset = await this.assetJobRepository.getForOhosLivePhotoRescan(failure.assetId);
+        if (asset) {
+          await this.processOhosLivePhotoRescanAsset(asset, state);
+        } else {
+          state.skipped++;
+          this.removeOhosLivePhotoRescanFailure(state, failure.assetId);
+        }
+
+        state.scanned++;
+        if (
+          state.scanned % OHOS_LIVE_PHOTO_RESCAN_SAVE_INTERVAL === 0 ||
+          state.failures.some(({ assetId }) => assetId === failure.assetId)
+        ) {
+          await this.saveOhosLivePhotoRescanState(state);
+        }
+      }
+
+      state.status = 'completed';
+      state.completedAt = new Date().toISOString();
+      state.current = undefined;
+      await this.saveOhosLivePhotoRescanState(state);
+      return JobStatus.Success;
+    } catch (error: Error | any) {
+      state.status = 'failed';
+      state.completedAt = new Date().toISOString();
+      state.current = undefined;
+      await this.saveOhosLivePhotoRescanState(state);
+      this.logger.error(`OHOS Live Photo failed retry failed: ${error}`, error?.stack);
+      return JobStatus.Failed;
+    }
+  }
+
+  private async processOhosLivePhotoRescanAsset(
+    asset: OhosLivePhotoRescanAsset,
+    state: OhosLivePhotoRescanState,
+  ): Promise<void> {
+    state.current = {
+      assetId: asset.id,
+      type: asset.type,
+      originalPath: asset.originalPath,
+      stage: 'detecting',
+      startedAt: new Date().toISOString(),
+    };
+
+    try {
+      const { hasOhosLivePhoto } = await this.checkOhosLivePhoto(asset.originalPath, asset.type);
+      if (hasOhosLivePhoto !== 2) {
+        state.skipped++;
+        this.removeOhosLivePhotoRescanFailure(state, asset.id);
+        return;
+      }
+
+      state.detected++;
+      state.current.stage = 'matching';
+      const result = await this.linkOhosLivePhotos(asset);
+      state[result]++;
+      this.removeOhosLivePhotoRescanFailure(state, asset.id);
+    } catch (error: Error | any) {
+      this.recordOhosLivePhotoRescanFailure(state, asset, state.current.stage, error);
+    }
+  }
+
+  private async getOhosLivePhotoRescanState(mode: OhosLivePhotoRescanState['mode']) {
+    const value = await this.systemMetadataRepository.get(SystemMetadataKey.OhosLivePhotoRescan);
+    return {
+      status: 'completed',
+      mode,
+      scanned: 0,
+      detected: 0,
+      matched: 0,
+      alreadyMatched: 0,
+      missing: 0,
+      skipped: 0,
+      failed: 0,
+      failures: [],
+      ...value,
+    } satisfies OhosLivePhotoRescanState;
+  }
+
+  private async saveOhosLivePhotoRescanState(state: OhosLivePhotoRescanState) {
+    state.failed = state.failures.length;
+    await this.systemMetadataRepository.set(SystemMetadataKey.OhosLivePhotoRescan, state);
+  }
+
+  private removeOhosLivePhotoRescanFailure(state: OhosLivePhotoRescanState, assetId: string) {
+    state.failures = state.failures.filter((failure) => failure.assetId !== assetId);
+    state.failed = state.failures.length;
+  }
+
+  private recordOhosLivePhotoRescanFailure(
+    state: OhosLivePhotoRescanState,
+    asset: OhosLivePhotoRescanAsset,
+    stage: string,
+    error: Error | any,
+  ) {
+    const existing = state.failures.find((failure) => failure.assetId === asset.id);
+    const failure: OhosLivePhotoRescanFailure = {
+      assetId: asset.id,
+      type: asset.type,
+      originalPath: asset.originalPath,
+      originalFileName: asset.originalFileName,
+      stage,
+      reason: error instanceof Error ? error.message : String(error),
+      failedAt: new Date().toISOString(),
+      attempts: (existing?.attempts ?? 0) + 1,
+    };
+
+    if (existing) {
+      Object.assign(existing, failure);
+    } else {
+      state.failures.push(failure);
+    }
+
+    state.failed = state.failures.length;
   }
 
   @OnJob({ name: JobName.AssetExtractMetadata, queue: QueueName.MetadataExtraction })
@@ -734,7 +916,10 @@ export class MetadataService extends BaseService {
     const directory = Array.isArray(tags.ContainerDirectory)
       ? (tags.ContainerDirectory as ContainerDirectoryItem[])
       : null;
-    const { hasOhosLivePhoto, ohosFileSize, ohosVideoOffset } = await this.checkOhosLivePhoto(asset.originalPath, asset.type);
+    const { hasOhosLivePhoto, ohosFileSize, ohosVideoOffset } = await this.checkOhosLivePhoto(
+      asset.originalPath,
+      asset.type,
+    );
 
     let length = 0;
     let padding = 0;

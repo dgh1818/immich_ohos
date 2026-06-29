@@ -27,6 +27,10 @@ interface StorageTemplateJobPageOptions {
   limit: number;
 }
 
+interface OhosLivePhotoRescanOptions {
+  afterId?: string;
+}
+
 @Injectable()
 export class AssetJobRepository {
   constructor(@InjectKysely() private db: Kysely<DB>) {}
@@ -371,6 +375,43 @@ export class AssetJobRepository {
       )
       .where('asset.deletedAt', 'is', null)
       .stream();
+  }
+
+  countForOhosLivePhotoRescan() {
+    return this.db
+      .selectFrom('asset')
+      .select((eb) => eb.fn.countAll<number>().as('count'))
+      .where('asset.deletedAt', 'is', null)
+      .where('asset.type', 'in', [AssetType.Image, AssetType.Video])
+      .executeTakeFirstOrThrow()
+      .then(({ count }) => Number(count));
+  }
+
+  getForOhosLivePhotoRescan(id: string) {
+    return this.ohosLivePhotoRescanQuery().where('asset.id', '=', asUuid(id)).executeTakeFirst();
+  }
+
+  streamForOhosLivePhotoRescan(options: OhosLivePhotoRescanOptions = {}) {
+    return this.ohosLivePhotoRescanQuery()
+      .$if(!!options.afterId, (qb) => qb.where('asset.id', '>', asUuid(options.afterId!)))
+      .orderBy('asset.id')
+      .stream();
+  }
+
+  private ohosLivePhotoRescanQuery() {
+    return this.db
+      .selectFrom('asset')
+      .select([
+        'asset.id',
+        'asset.ownerId',
+        'asset.type',
+        'asset.originalPath',
+        'asset.originalFileName',
+        'asset.livePhotoVideoId',
+        'asset.libraryId',
+      ])
+      .where('asset.deletedAt', 'is', null)
+      .where('asset.type', 'in', [AssetType.Image, AssetType.Video]);
   }
 
   private storageTemplateAssetQuery() {

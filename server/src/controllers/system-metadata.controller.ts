@@ -9,6 +9,7 @@ import {
 import { ApiTag, Permission } from 'src/enum';
 import { Authenticated } from 'src/middleware/auth.guard';
 import { SystemMetadataService } from 'src/services/system-metadata.service';
+import { OhosLivePhotoRescanState } from 'src/types';
 
 @ApiTags(ApiTag.SystemMetadata)
 @Controller('system-metadata')
@@ -58,5 +59,38 @@ export class SystemMetadataController {
   })
   getVersionCheckState(): Promise<VersionCheckStateResponseDto> {
     return this.service.getVersionCheckState();
+  }
+
+  @Get('ohos-live-photo-rescan')
+  @Authenticated({ permission: Permission.SystemMetadataRead, admin: true })
+  @Endpoint({
+    summary: 'Retrieve OHOS Live Photo rescan state',
+    description: 'Retrieve the current state of the OHOS Live Photo rescan.',
+    history: new HistoryBuilder().added('v1').internal('v1'),
+  })
+  getOhosLivePhotoRescanState(): Promise<OhosLivePhotoRescanState> {
+    return this.service.getOhosLivePhotoRescanState();
+  }
+
+  @Post('ohos-live-photo-rescan')
+  @Authenticated({ permission: Permission.JobCreate, admin: true })
+  @Endpoint({
+    summary: 'Queue OHOS Live Photo rescan',
+    description: 'Queue a rescan for OHOS Live Photo companion files.',
+    history: new HistoryBuilder().added('v1').internal('v1'),
+  })
+  queueOhosLivePhotoRescan(): Promise<OhosLivePhotoRescanState> {
+    return this.service.queueOhosLivePhotoRescan();
+  }
+
+  @Post('ohos-live-photo-rescan/retry-failed')
+  @Authenticated({ permission: Permission.JobCreate, admin: true })
+  @Endpoint({
+    summary: 'Retry failed OHOS Live Photo rescan items',
+    description: 'Queue a retry for failed OHOS Live Photo companion file matches.',
+    history: new HistoryBuilder().added('v1').internal('v1'),
+  })
+  retryFailedOhosLivePhotoRescan(): Promise<OhosLivePhotoRescanState> {
+    return this.service.queueOhosLivePhotoRescan(true);
   }
 }

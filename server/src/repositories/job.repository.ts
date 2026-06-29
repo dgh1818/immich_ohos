@@ -266,6 +266,9 @@ export class JobRepository {
       case JobName.StorageTemplateMigration: {
         return { jobId: JobName.StorageTemplateMigration };
       }
+      case JobName.AssetOhosLivePhotoRescan: {
+        return { jobId: JobName.AssetOhosLivePhotoRescan };
+      }
       case JobName.PersonGenerateThumbnail: {
         return { priority: 1 };
       }

@@ -747,7 +747,7 @@ export class AssetRepository {
     const { ownerId, otherAssetId, path, name, type } = options;
     return this.db
       .selectFrom('asset')
-      .select(['asset.id', 'asset.ownerId'])
+      .select(['asset.id', 'asset.ownerId', 'asset.livePhotoVideoId'])
       .where('id', '!=', asUuid(otherAssetId))
       .where('ownerId', '=', asUuid(ownerId))
       .where('type', '=', type)

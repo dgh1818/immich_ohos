@@ -346,6 +346,7 @@ export enum SystemMetadataKey {
   VersionCheckState = 'version-check-state',
   License = 'license',
   IntegrityChecksumCheckpoint = 'integrity-checksum-checkpoint',
+  OhosLivePhotoRescan = 'ohos-live-photo-rescan',
 }
 
 export enum UserMetadataKey {
@@ -826,6 +827,7 @@ export enum JobName {
   AssetEmptyTrash = 'AssetEmptyTrash',
   AssetExtractMetadataQueueAll = 'AssetExtractMetadataQueueAll',
   AssetExtractMetadata = 'AssetExtractMetadata',
+  AssetOhosLivePhotoRescan = 'AssetOhosLivePhotoRescan',
   AssetFileMigration = 'AssetFileMigration',
   AssetGenerateThumbnailsQueueAll = 'AssetGenerateThumbnailsQueueAll',
   AssetGenerateThumbnails = 'AssetGenerateThumbnails',

@@ -390,6 +390,7 @@ export type JobItem =
   // Metadata Extraction
   | { name: JobName.AssetExtractMetadataQueueAll; data: IBaseJob }
   | { name: JobName.AssetExtractMetadata; data: IEntityJob }
+  | { name: JobName.AssetOhosLivePhotoRescan; data?: IOhosLivePhotoRescanJob }
 
   // Notifications
   | { name: JobName.NotificationsCleanup; data?: IBaseJob }
@@ -592,6 +593,44 @@ export type StorageTemplateMigrationFailure = {
   attempts: number;
   timedOut?: boolean;
 };
+export interface IOhosLivePhotoRescanJob {
+  retryFailed?: boolean;
+}
+export type OhosLivePhotoRescanState = {
+  status: 'queued' | 'running' | 'completed' | 'failed';
+  mode: 'all' | 'failed';
+  queuedAt?: string;
+  startedAt?: string;
+  completedAt?: string;
+  total?: number;
+  scanned: number;
+  detected: number;
+  matched: number;
+  alreadyMatched: number;
+  missing: number;
+  skipped: number;
+  failed: number;
+  afterId?: string;
+  current?: OhosLivePhotoRescanCurrent;
+  failures: OhosLivePhotoRescanFailure[];
+};
+export type OhosLivePhotoRescanCurrent = {
+  assetId: string;
+  type: AssetType;
+  originalPath: string;
+  stage: string;
+  startedAt: string;
+};
+export type OhosLivePhotoRescanFailure = {
+  assetId: string;
+  type?: AssetType;
+  originalPath: string;
+  originalFileName?: string;
+  stage: string;
+  reason: string;
+  failedAt: string;
+  attempts: number;
+};
 export type MaintenanceModeState =
   | { isMaintenanceMode: true; secret: string; action?: SetMaintenanceModeDto }
   | { isMaintenanceMode: false };
@@ -615,6 +654,7 @@ export interface SystemMetadata extends Record<SystemMetadataKey, Record<string,
   [SystemMetadataKey.VersionCheckState]: VersionCheckMetadata;
   [SystemMetadataKey.MemoriesState]: MemoriesState;
   [SystemMetadataKey.IntegrityChecksumCheckpoint]: { date?: string };
+  [SystemMetadataKey.OhosLivePhotoRescan]: OhosLivePhotoRescanState;
 }
 
 export type UserPreferences = {

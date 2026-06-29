@@ -1,5 +1,6 @@
 <script lang="ts">
   import QueueCard from './QueueCard.svelte';
+  import OhosLivePhotoRescanPanel from './OhosLivePhotoRescanPanel.svelte';
   import QueueStorageMigrationDescription from './QueueStorageMigrationDescription.svelte';
   import { featureFlagsManager } from '$lib/managers/feature-flags-manager.svelte';
   import { queueManager } from '$lib/managers/queue-manager.svelte';
@@ -125,6 +126,8 @@
 </script>
 
 <div class="mt-10 flex flex-col gap-7">
+  <OhosLivePhotoRescanPanel />
+
   {#each queueList as [queueName, props] (queueName)}
     {@const queue = queues.find(({ name }) => name === queueName)}
     {#if queue}
