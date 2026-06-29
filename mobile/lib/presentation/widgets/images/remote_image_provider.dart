@@ -93,11 +93,25 @@ class RemoteFullImageProvider extends CancellableImageProvider<RemoteFullImagePr
       );
     }
 
+    ImageInfo? initialImage;
+    final loadOriginal = key.assetType == AssetType.image && SettingsRepository.instance.appConfig.image.loadOriginal;
+    if (loadOriginal) {
+      final originalProvider = RemoteImageProvider(url: getOriginalUrlForRemoteId(key.assetId, edited: key.edited));
+      final originalStatus = PaintingBinding.instance.imageCache.statusForKey(originalProvider);
+      if (!originalStatus.pending && (originalStatus.keepAlive || originalStatus.live)) {
+        initialImage = getInitialImage(originalProvider);
+      }
+    }
+    if (initialImage != null) {
+      isFinished = true;
+    }
+    initialImage ??= getInitialImage(
+      RemoteImageProvider.thumbnail(assetId: key.assetId, thumbhash: key.thumbhash, edited: key.edited),
+    );
+
     return OneFramePlaceholderImageStreamCompleter(
-      _codec(key, decode),
-      initialImage: getInitialImage(
-        RemoteImageProvider.thumbnail(assetId: key.assetId, thumbhash: key.thumbhash, edited: key.edited),
-      ),
+      initialImage != null && isFinished ? const Stream<ImageInfo>.empty() : _codec(key, decode),
+      initialImage: initialImage,
       informationCollector: () => <DiagnosticsNode>[
         DiagnosticsProperty<ImageProvider>('Image provider', this),
         DiagnosticsProperty<String>('Asset Id', key.assetId),

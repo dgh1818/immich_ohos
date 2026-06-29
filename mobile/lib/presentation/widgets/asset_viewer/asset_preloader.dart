@@ -3,7 +3,10 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:immich_mobile/domain/models/asset/base_asset.model.dart';
 import 'package:immich_mobile/domain/services/timeline.service.dart';
+import 'package:immich_mobile/infrastructure/repositories/settings.repository.dart';
 import 'package:immich_mobile/presentation/widgets/images/image_provider.dart';
+import 'package:immich_mobile/presentation/widgets/images/remote_image_provider.dart';
+import 'package:immich_mobile/utils/image_url_builder.dart';
 
 class AssetPreloader {
   static final _dummyListener = ImageStreamListener((image, _) => image.dispose());
@@ -50,7 +53,14 @@ class AssetPreloader {
   }
 
   ImageStream _resolveImage(BaseAsset asset, Size size) {
-    return getFullImageProvider(asset, size: size).resolve(ImageConfiguration.empty)..addListener(_dummyListener);
+    final provider =
+        asset is RemoteAsset &&
+            asset.isImage &&
+            !asset.isAnimatedImage &&
+            SettingsRepository.instance.appConfig.image.loadOriginal
+        ? RemoteImageProvider(url: getOriginalUrlForRemoteId(asset.id))
+        : getFullImageProvider(asset, size: size);
+    return provider.resolve(ImageConfiguration.empty)..addListener(_dummyListener);
   }
 
   void dispose() {
