@@ -3,8 +3,6 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 import 'package:immich_mobile/constants/constants.dart';
-import 'package:immich_mobile/domain/models/store.model.dart';
-import 'package:immich_mobile/entities/store.entity.dart';
 import 'package:immich_mobile/domain/models/sync_event.model.dart';
 import 'package:immich_mobile/infrastructure/repositories/network.repository.dart';
 import 'package:immich_mobile/services/api.service.dart';
@@ -37,11 +35,7 @@ class SyncApiRepository {
     final client = httpClient ?? NetworkRepository.client;
     final endpoint = "${_api.apiClient.basePath}/sync/stream";
 
-    final headers = NetworkRepository.applyTransportHeaders(<String, String>{
-      ...ApiService.getAuthenticatedRequestHeaders(endpoint),
-      'Content-Type': 'application/json',
-      'Accept': 'application/jsonlines+json',
-    });
+    final headers = {'Content-Type': 'application/json', 'Accept': 'application/jsonlines+json'};
 
     final request = http.AbortableRequest('POST', Uri.parse(endpoint), abortTrigger: abortSignal);
     request.headers.addAll(headers);
@@ -127,29 +121,10 @@ class SyncApiRepository {
         await onData(_parseLines(lines), abort, reset);
       }
     } catch (error, stack) {
-      final allowSelfSignedSsl = Store.get(StoreKey.selfSignedCert, false);
-      _logger.severe(
-        "Sync stream failed for ${_redactEndpoint(endpoint)} "
-        "(storeAllowSelfSignedSsl=$allowSelfSignedSsl, "
-        "networkAllowSelfSignedSsl=${NetworkRepository.allowSelfSignedSsl}, "
-        "client=${client.runtimeType})",
-        error,
-        stack,
-      );
       return Future.error(error, stack);
     }
     stopwatch.stop();
     _logger.info("Remote Sync completed in ${stopwatch.elapsed.inMilliseconds}ms");
-  }
-
-  String _redactEndpoint(String endpoint) {
-    try {
-      final uri = Uri.parse(endpoint);
-      final port = uri.hasPort ? ':${uri.port}' : '';
-      return '${uri.scheme}://${uri.host}$port${uri.path}';
-    } catch (_) {
-      return '<invalid endpoint>';
-    }
   }
 
   List<SyncEvent> _parseLines(List<String> lines) {
