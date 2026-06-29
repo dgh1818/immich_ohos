@@ -23,19 +23,21 @@ class DownloadStatusFloatingButton extends ConsumerWidget {
             count: itemCount,
             textColor: context.colorScheme.onPrimary,
             backgroundColor: context.colorScheme.primary,
-            child: FloatingActionButton(
-              shape: RoundedRectangleBorder(
-                borderRadius: const BorderRadius.all(Radius.circular(20)),
-                side: BorderSide(color: context.colorScheme.outlineVariant, width: 1),
-              ),
-              backgroundColor: context.isDarkTheme
-                  ? context.colorScheme.surfaceContainer
-                  : context.colorScheme.surfaceBright,
-              elevation: 2,
-              onPressed: () {
-                context.pushRoute(const DownloadInfoRoute());
-              },
-              child: Stack(
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 64),
+              child: FloatingActionButton(
+                shape: RoundedRectangleBorder(
+                  borderRadius: const BorderRadius.all(Radius.circular(20)),
+                  side: BorderSide(color: context.colorScheme.outlineVariant, width: 1),
+                ),
+                backgroundColor: context.isDarkTheme
+                    ? context.colorScheme.surfaceContainer
+                    : context.colorScheme.surfaceBright,
+                elevation: 2,
+                onPressed: () {
+                  context.pushRoute(const DownloadInfoRoute());
+                },
+                child: Stack(
                 alignment: AlignmentDirectional.center,
                 children: [
                   isDownloading
@@ -57,6 +59,7 @@ class DownloadStatusFloatingButton extends ConsumerWidget {
                     ),
                 ],
               ),
+            ),
             ),
           )
         : const SizedBox.shrink();

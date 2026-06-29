@@ -533,7 +533,8 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
           child: const DownloadStatusFloatingButton(),
         ),
       ),
-      bottomNavigationBar: const ViewerBottomAppBar(),
+      // 不用 bottomNavigationBar 槽位，改用 Stack 内 Positioned 放置，
+      // 避免 Scaffold 为 bottomNavigationBar 预留空间导致 FAB 被顶到上面。
       body: Listener(
         onPointerUp: (_) => _stopMotionPlayback(),
         onPointerCancel: (_) => _stopMotionPlayback(),
@@ -564,6 +565,12 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
                   height: context.padding.top,
                 ),
               ),
+            const Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: ViewerBottomAppBar(),
+            ),
           ],
         ),
       ),
