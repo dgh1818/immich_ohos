@@ -2,13 +2,11 @@ name: immich_mobile
 description: Immich - selfhosted backup media file on mobile phone
 
 publish_to: 'none'
-version: 3.0.0+300000007
+version: 3.0.0-rc.3+300000008
 
 environment:
   sdk: '>=3.11.0 <4.0.0'
   flutter: '>=3.41.0 <3.42.0'
-
-isar_version: &isar_version 3.1.0+1
 
 dependencies:
   async: ^2.13.1
@@ -44,7 +42,6 @@ dependencies:
   immich_ui:
     path: './packages/ui'
   intl: ^0.20.2
-  isar_community_flutter_libs: 3.3.0-dev.3
   local_auth: ^2.3.0
   logging: ^1.3.0
   maplibre_gl: ^0.22.0
@@ -105,8 +102,6 @@ dependencies:
     path: ../../package_flutter/ohos_http/
 
   video_compress: ^3.1.0
-  isar: ^3.1.0+1 #ok
-  isar_flutter_libs: ^3.1.0+1 #ok
   # DB
   #drift_sqflite: ^2.0.1   #sqflite
   image_gallery_saver: ^2.0.3
@@ -259,17 +254,6 @@ dependency_overrides:
     #https://github.com/dgh1818/image_picker_ohos
 
     #ref: br_image_picker-v1.1.2_ohos
-  isar:
-    git:
-      url: https://gitee.com/du_guang/isar.git
-      path: 'packages/isar'
-      ref: dev3.1.0+1
-  isar_flutter_libs:
-    git:
-      url: https://gitee.com/du_guang/isar.git
-      path: 'packages/isar_flutter_libs'
-      ref: dev3.1.0+1
-
   easy_localization:
     git:
       url: git@gitcode.com:dgh18/easy_localization_ohos.git

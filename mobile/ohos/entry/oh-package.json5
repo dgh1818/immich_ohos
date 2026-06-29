@@ -23,7 +23,6 @@
     "flutter_udid": "file:../har/flutter_udid.har",
     "flutter_geolocator_ohos": "file:../har/flutter_geolocator_ohos.har",
     "image_picker_ohos": "file:../har/image_picker_ohos.har",
-    "isar_flutter_libs": "file:../har/isar_flutter_libs.har",
     "shared_preferences_ohos": "file:../har/shared_preferences_ohos.har",
     "network_info_plus_ohos": "file:../har/network_info_plus_ohos.har",
     "image_gallery_saver": "file:../har/image_gallery_saver.har",

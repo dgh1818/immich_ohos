@@ -3,7 +3,6 @@ import PathProviderPlugin from 'path_provider_ohos';
 import PhotoManagerPlugin from 'photo_manager';
 import OhosHttpPlugin from 'ohos_http';
 import NetworkInfoPlusOhosPlugin from 'network_info_plus_ohos';
-import IsarFlutterLibsPlugin from 'isar_flutter_libs';
 import FlutterSecureStorageOhosPlugin from 'flutter_secure_storage_ohos';
 import SharedPreferencesPlugin from 'shared_preferences_ohos';
 import ConnectivityPlugin from 'connectivity_plus';
@@ -21,7 +20,6 @@ export class BackgroundGeneratedPluginRegistrant {
       flutterEngine.getPlugins()?.add(new PhotoManagerPlugin());
       flutterEngine.getPlugins()?.add(new OhosHttpPlugin());
       flutterEngine.getPlugins()?.add(new NetworkInfoPlusOhosPlugin());
-      flutterEngine.getPlugins()?.add(new IsarFlutterLibsPlugin());
       flutterEngine.getPlugins()?.add(new FlutterSecureStorageOhosPlugin());
       flutterEngine.getPlugins()?.add(new SharedPreferencesPlugin());
       flutterEngine.getPlugins()?.add(new ConnectivityPlugin());

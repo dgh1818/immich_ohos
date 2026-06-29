@@ -987,40 +987,6 @@ packages:
       url: "https://pub.flutter-io.cn"
     source: hosted
     version: "1.0.5"
-  isar:
-    dependency: "direct main"
-    description:
-      path: "packages/isar"
-      ref: "dev3.1.0+1"
-      resolved-ref: "0d708dee36fdf862a66d97778bc79816de25b160"
-      url: "https://gitee.com/du_guang/isar.git"
-    source: git
-    version: "3.1.0+1"
-  isar_community:
-    dependency: transitive
-    description:
-      name: isar_community
-      sha256: "28f59e54636c45ba0bb1b3b7f2656f1c50325f740cea6efcd101900be3fba546"
-      url: "https://pub.flutter-io.cn"
-    source: hosted
-    version: "3.3.0-dev.3"
-  isar_community_flutter_libs:
-    dependency: "direct main"
-    description:
-      name: isar_community_flutter_libs
-      sha256: c2934fe755bb3181cb67602fd5df0d080b3d3eb52799f98623aa4fc5acbea010
-      url: "https://pub.flutter-io.cn"
-    source: hosted
-    version: "3.3.0-dev.3"
-  isar_flutter_libs:
-    dependency: "direct main"
-    description:
-      path: "packages/isar_flutter_libs"
-      ref: "dev3.1.0+1"
-      resolved-ref: "0d708dee36fdf862a66d97778bc79816de25b160"
-      url: "https://gitee.com/du_guang/isar.git"
-    source: git
-    version: "3.1.0+1"
   jni:
     dependency: "direct overridden"
     description:

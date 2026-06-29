@@ -14,7 +14,6 @@ import NetworkInfoPlusOhosPlugin from 'network_info_plus_ohos';
 import NativeVideoPlayerPlugin from 'native_video_player';
 import MapLibreMapsPlugin from 'maplibre_gl';
 import LocalAuthPlugin from 'local_auth_ohos';
-import IsarFlutterLibsPlugin from 'isar_flutter_libs';
 import ImagePickerPlugin from 'image_picker_ohos';
 import ImageGallerySaverPlugin from 'image_gallery_saver';
 import HuaweiCastPlugin from 'huawei_cast';
@@ -55,7 +54,6 @@ export class GeneratedPluginRegistrant {
       flutterEngine.getPlugins()?.add(new NativeVideoPlayerPlugin());
       flutterEngine.getPlugins()?.add(new MapLibreMapsPlugin());
       flutterEngine.getPlugins()?.add(new LocalAuthPlugin());
-      flutterEngine.getPlugins()?.add(new IsarFlutterLibsPlugin());
       flutterEngine.getPlugins()?.add(new ImagePickerPlugin());
       flutterEngine.getPlugins()?.add(new ImageGallerySaverPlugin());
       flutterEngine.getPlugins()?.add(new HuaweiCastPlugin());
