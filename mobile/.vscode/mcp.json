@@ -4,11 +4,16 @@
 			"type": "stdio",
 			"command": "cmd",
 			"args": [
+				"/D",
 				"/C",
-				"D:\\arkts_mcp_server\\deveco-mcp-server.exe"
+				"C:\\Users\\dugua\\AppData\\Roaming\\npm\\devecocli.cmd",
+				"serve",
+				"mcp"
 			],
 			"env": {
-				"PROJECT_PATH": "F:\\immich_ohos\\mobile\\ohos"
+				"PROJECT_PATH": "F:\\immich_ohos\\mobile\\ohos",
+				"DEVECO_PATH": "C:\\Program Files\\Huawei\\DevEco Studio",
+				"NODE_MAX_OLD_SPACE_SIZE": "8192"
 			}
 		}
 	},
