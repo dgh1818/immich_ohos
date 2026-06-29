@@ -1316,10 +1316,31 @@ export class MetadataService extends BaseService {
       }
     }
 
+    //-------------------XtStyle (re-encoded)-------------------
+    if (!hasOhosLivePhoto && assetType === AssetType.Image) {
+      const tailLen3 = 100;
+      const startPos3 = Math.max(0, ohosFileSize - tailLen3);
+
+      const buffer3 = Buffer.alloc(tailLen3);
+      const fd3 = await fs.open(filePath, 'r');
+      try {
+        const { bytesRead } = await fd3.read(buffer3, 0, tailLen3, startPos3);
+        const hay = buffer3.slice(0, bytesRead);
+        const needle = Buffer.from('XtStyle', 'utf8');
+        const foundIndex = hay.indexOf(needle);
+        if (foundIndex !== -1) {
+          hasOhosLivePhoto = 2;
+          return { hasOhosLivePhoto, ohosFileSize, ohosVideoOffset };
+        }
+      } finally {
+        await fd3.close();
+      }
+    }
+
     //-------------------HM0S NEXT 5.1-------------------------
 
     if (assetType === AssetType.Video) {
-      const tailLen = 400;
+      const tailLen = 4096;
       const startPos4 = Math.max(0, ohosFileSize - tailLen);
 
       const buffer4 = Buffer.alloc(tailLen);

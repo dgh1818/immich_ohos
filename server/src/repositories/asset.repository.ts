@@ -748,7 +748,6 @@ export class AssetRepository {
     return this.db
       .selectFrom('asset')
       .select(['asset.id', 'asset.ownerId'])
-      .innerJoin('asset_exif', 'asset.id', 'asset_exif.assetId')
       .where('id', '!=', asUuid(otherAssetId))
       .where('ownerId', '=', asUuid(ownerId))
       .where('type', '=', type)
