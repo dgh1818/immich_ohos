@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:immich_mobile/extensions/build_context_extensions.dart';
@@ -27,8 +29,16 @@ class BaseActionButton extends ConsumerWidget {
 
   /// When true, renders as a MenuItemButton for use in MenuAnchor menus
   final bool menuItem;
-  final void Function()? onPressed;
+  final FutureOr<void> Function()? onPressed;
   final void Function()? onLongPressed;
+
+  Future<void> _onMenuItemPressed(MenuController? controller) async {
+    try {
+      await onPressed?.call();
+    } finally {
+      controller?.close();
+    }
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -49,14 +59,16 @@ class BaseActionButton extends ConsumerWidget {
 
     if (menuItem) {
       final iconColor = this.iconColor;
+      final controller = MenuController.maybeOf(context);
 
       return MenuItemButton(
+        closeOnActivate: controller == null,
         style: MenuItemButton.styleFrom(
           alignment: Alignment.centerLeft,
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         ),
         leadingIcon: Icon(iconData, color: iconColor, size: 20),
-        onPressed: onPressed,
+        onPressed: onPressed == null ? null : () => _onMenuItemPressed(controller),
         child: Text(label, style: TextStyle(fontSize: 15, color: iconColor)),
       );
     }

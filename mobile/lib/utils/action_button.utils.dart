@@ -182,7 +182,7 @@ enum ActionButtonType {
             context.isOwner,
       ActionButtonType.cast =>
         (context.isCasting || context.asset.hasRemote) && //
-            (context.asset.isVideo || context.asset.isImage),
+            context.asset.isVideo,
       ActionButtonType.slideshow => true,
     };
   }
