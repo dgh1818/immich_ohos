@@ -27,14 +27,18 @@ import {
   JobName,
   JobStatus,
   QueueName,
+  SystemMetadataKey,
 } from 'src/enum';
 import { ArgOf } from 'src/repositories/event.repository';
 import { AssetSyncResult } from 'src/repositories/library.repository';
 import { AssetTable } from 'src/schema/tables/asset.table';
 import { BaseService } from 'src/services/base.service';
-import { JobOf } from 'src/types';
+import { ExternalLibraryChecksumBackfillState, JobOf } from 'src/types';
+import { isAssetChecksumConstraint } from 'src/utils/database';
 import { mimeTypes } from 'src/utils/mime-types';
 import { handlePromiseError } from 'src/utils/misc';
+
+const EXTERNAL_LIBRARY_IMAGE_HASH_BATCH_SIZE = 100;
 
 @Injectable()
 export class LibraryService extends BaseService {
@@ -60,6 +64,8 @@ export class LibraryService extends BaseService {
         onTick: () => handlePromiseError(this.jobRepository.queue({ name: JobName.LibraryScanQueueAll }), this.logger),
         start: scan.enabled,
       });
+
+      await this.queueExternalLibraryChecksumBackfill();
     }
 
     if (this.watchLibraries) {
@@ -230,7 +236,139 @@ export class LibraryService extends BaseService {
 
   @OnJob({ name: JobName.LibraryBackfillChecksums, queue: QueueName.Library })
   async handleBackfillChecksums(): Promise<JobStatus> {
-    return JobStatus.Skipped;
+    const currentState = await this.systemMetadataRepository.get(SystemMetadataKey.ExternalLibraryChecksumBackfill);
+    if (currentState?.completedAt) {
+      return JobStatus.Skipped;
+    }
+
+    const state: ExternalLibraryChecksumBackfillState = {
+      startedAt: currentState?.startedAt ?? new Date().toISOString(),
+      scanned: currentState?.scanned ?? 0,
+      updated: currentState?.updated ?? 0,
+      duplicates: currentState?.duplicates ?? 0,
+      failed: currentState?.failed ?? 0,
+      afterId: currentState?.afterId,
+    };
+
+    const assets = await this.assetRepository.getExternalLibraryChecksumBackfillPage({
+      afterId: state.afterId,
+      limit: EXTERNAL_LIBRARY_IMAGE_HASH_BATCH_SIZE,
+    });
+
+    if (assets.length === 0) {
+      state.completedAt = new Date().toISOString();
+      delete state.afterId;
+      await this.systemMetadataRepository.set(SystemMetadataKey.ExternalLibraryChecksumBackfill, state);
+      this.logger.log(
+        `Finished external library checksum backfill: ${state.scanned} scanned, ${state.updated} updated, ${state.duplicates} duplicates, ${state.failed} failed`,
+      );
+      return JobStatus.Success;
+    }
+
+    for (const asset of this.getExternalLibraryHashBatch(assets)) {
+      state.scanned++;
+      state.afterId = asset.id;
+
+      let checksum: Buffer;
+      try {
+        checksum = await this.cryptoRepository.hashFile(asset.originalPath);
+      } catch (error: Error | any) {
+        state.failed++;
+        this.logger.warn(`Unable to hash external asset ${asset.id}: ${asset.originalPath}: ${error}`);
+        continue;
+      }
+
+      try {
+        await this.assetRepository.updateChecksum(asset.id, checksum, ChecksumAlgorithm.sha1File);
+        state.updated++;
+      } catch (error: Error | any) {
+        if (isAssetChecksumConstraint(error)) {
+          state.duplicates++;
+          this.logger.warn(
+            `Skipping external asset ${asset.id}: ${asset.originalPath}: checksum ${checksum.toString(
+              'base64',
+            )} already exists in this library`,
+          );
+          continue;
+        }
+
+        state.failed++;
+        this.logger.warn(`Unable to update checksum for external asset ${asset.id}: ${asset.originalPath}: ${error}`);
+      }
+    }
+
+    await this.systemMetadataRepository.set(SystemMetadataKey.ExternalLibraryChecksumBackfill, state);
+    this.logger.log(
+      `External library checksum backfill progress: ${state.scanned} scanned, ${state.updated} updated, ${state.duplicates} duplicates, ${state.failed} failed`,
+    );
+    await this.jobRepository.queue({ name: JobName.LibraryBackfillChecksums });
+
+    return JobStatus.Success;
+  }
+
+  private async queueExternalLibraryChecksumBackfill(): Promise<void> {
+    const state = await this.systemMetadataRepository.get(SystemMetadataKey.ExternalLibraryChecksumBackfill);
+    if (state?.completedAt) {
+      return;
+    }
+
+    await this.jobRepository.queue({ name: JobName.LibraryBackfillChecksums });
+  }
+
+  private getExternalLibraryHashBatch<T extends { originalPath: string }>(assets: T[]): T[] {
+    const batch: T[] = [];
+
+    for (const asset of assets) {
+      if (mimeTypes.isVideo(asset.originalPath)) {
+        if (batch.length === 0) {
+          batch.push(asset);
+        }
+        break;
+      }
+
+      batch.push(asset);
+    }
+
+    return batch;
+  }
+
+  private async queueExternalLibraryImportBatches(libraryId: string, paths: string[], baseProgressCounter: number) {
+    let queuedCount = 0;
+    let imagePaths: string[] = [];
+
+    const queueBatch = async (paths: string[]) => {
+      queuedCount += paths.length;
+      await this.jobRepository.queue({
+        name: JobName.LibrarySyncFiles,
+        data: {
+          libraryId,
+          paths,
+          progressCounter: baseProgressCounter + queuedCount,
+        },
+      });
+    };
+
+    const flushImages = async () => {
+      if (imagePaths.length > 0) {
+        await queueBatch(imagePaths);
+        imagePaths = [];
+      }
+    };
+
+    for (const path of paths) {
+      if (mimeTypes.isVideo(path)) {
+        await flushImages();
+        await queueBatch([path]);
+        continue;
+      }
+
+      imagePaths.push(path);
+      if (imagePaths.length >= EXTERNAL_LIBRARY_IMAGE_HASH_BATCH_SIZE) {
+        await flushImages();
+      }
+    }
+
+    await flushImages();
   }
 
   async create(dto: CreateLibraryDto): Promise<LibraryResponseDto> {
@@ -276,8 +414,14 @@ export class LibraryService extends BaseService {
 
     for (const path of job.paths) {
       try {
+        const isVideo = mimeTypes.isVideo(path);
+        if (isVideo) {
+          await importAssets();
+        }
+
         assetImports.push(await this.processEntity(path, library.ownerId, job.libraryId));
-        if (assetImports.length >= 10) {
+
+        if (isVideo || assetImports.length >= EXTERNAL_LIBRARY_IMAGE_HASH_BATCH_SIZE) {
           await importAssets();
         }
       } catch (error: any) {
@@ -421,8 +565,8 @@ export class LibraryService extends BaseService {
     return {
       ownerId,
       libraryId,
-      checksum: this.cryptoRepository.hashSha1(`path:${assetPath}`),
-      checksumAlgorithm: ChecksumAlgorithm.sha1Path,
+      checksum: await this.cryptoRepository.hashFile(assetPath),
+      checksumAlgorithm: ChecksumAlgorithm.sha1File,
       originalPath: assetPath,
 
       fileCreatedAt: stat.mtime,
@@ -676,16 +820,8 @@ export class LibraryService extends BaseService {
       const paths = await this.assetRepository.filterNewExternalAssetPaths(library.id, pathBatch);
 
       if (paths.length > 0) {
+        await this.queueExternalLibraryImportBatches(library.id, paths, importCount);
         importCount += paths.length;
-
-        await this.jobRepository.queue({
-          name: JobName.LibrarySyncFiles,
-          data: {
-            libraryId: library.id,
-            paths,
-            progressCounter: crawlCount,
-          },
-        });
       }
 
       this.logger.log(

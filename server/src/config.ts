@@ -272,7 +272,7 @@ export const defaults = Object.freeze<SystemConfig>({
     [QueueName.FaceDetection]: { concurrency: 2 },
     [QueueName.Search]: { concurrency: 5 },
     [QueueName.Sidecar]: { concurrency: 5 },
-    [QueueName.Library]: { concurrency: 5 },
+    [QueueName.Library]: { concurrency: 1 },
     [QueueName.Migration]: { concurrency: 5 },
     [QueueName.ThumbnailGeneration]: { concurrency: 3 },
     [QueueName.VideoConversion]: { concurrency: 1 },

@@ -193,10 +193,93 @@ describe(LibraryService.name, () => {
   });
 
   describe('handleBackfillChecksums', () => {
-    it('should skip checksum backfill for external libraries', async () => {
+    it('should skip after the backfill has completed', async () => {
       await expect(sut.handleBackfillChecksums()).resolves.toBe(JobStatus.Skipped);
 
       expect(mocks.asset.getExternalLibraryChecksumBackfillPage).not.toHaveBeenCalled();
+    });
+
+    it('should recalculate one batch of sha1 checksums for external library assets', async () => {
+      const checksum = Buffer.from('file checksum');
+      const asset = AssetFactory.create({
+        checksum: Buffer.from('path checksum'),
+        checksumAlgorithm: ChecksumAlgorithm.sha1Path,
+        isExternal: true,
+        libraryId: newUuid(),
+        originalPath: '/data/user1/photo.jpg',
+      });
+
+      mocks.systemMetadata.get.mockResolvedValue(null);
+      mocks.crypto.hashFile.mockResolvedValue(checksum);
+      mocks.asset.getExternalLibraryChecksumBackfillPage.mockResolvedValueOnce([asset]);
+
+      await expect(sut.handleBackfillChecksums()).resolves.toBe(JobStatus.Success);
+
+      expect(mocks.crypto.hashFile).toHaveBeenCalledWith(asset.originalPath);
+      expect(mocks.asset.updateChecksum).toHaveBeenCalledWith(asset.id, checksum, ChecksumAlgorithm.sha1File);
+      expect(mocks.systemMetadata.set).toHaveBeenLastCalledWith(
+        SystemMetadataKey.ExternalLibraryChecksumBackfill,
+        expect.objectContaining({
+          scanned: 1,
+          updated: 1,
+          duplicates: 0,
+          failed: 0,
+          afterId: asset.id,
+        }),
+      );
+      expect(mocks.job.queue).toHaveBeenCalledWith({ name: JobName.LibraryBackfillChecksums });
+    });
+
+    it('should process one video asset per checksum backfill batch', async () => {
+      const video = AssetFactory.create({
+        checksumAlgorithm: ChecksumAlgorithm.sha1Path,
+        isExternal: true,
+        libraryId: newUuid(),
+        originalPath: '/data/user1/video.mp4',
+      });
+      const image = AssetFactory.create({
+        checksumAlgorithm: ChecksumAlgorithm.sha1Path,
+        isExternal: true,
+        libraryId: newUuid(),
+        originalPath: '/data/user1/photo.jpg',
+      });
+
+      mocks.systemMetadata.get.mockResolvedValue(null);
+      mocks.crypto.hashFile.mockResolvedValue(Buffer.from('file checksum'));
+      mocks.asset.getExternalLibraryChecksumBackfillPage.mockResolvedValueOnce([video, image]);
+
+      await expect(sut.handleBackfillChecksums()).resolves.toBe(JobStatus.Success);
+
+      expect(mocks.crypto.hashFile).toHaveBeenCalledTimes(1);
+      expect(mocks.crypto.hashFile).toHaveBeenCalledWith(video.originalPath);
+    });
+
+    it('should skip duplicate external library checksums', async () => {
+      const checksum = Buffer.from('file checksum');
+      const asset = AssetFactory.create({
+        checksum: Buffer.from('path checksum'),
+        checksumAlgorithm: ChecksumAlgorithm.sha1Path,
+        isExternal: true,
+        libraryId: newUuid(),
+        originalPath: '/data/user1/photo.jpg',
+      });
+
+      mocks.systemMetadata.get.mockResolvedValue(null);
+      mocks.crypto.hashFile.mockResolvedValue(checksum);
+      mocks.asset.getExternalLibraryChecksumBackfillPage.mockResolvedValueOnce([asset]);
+      mocks.asset.updateChecksum.mockRejectedValue({ constraint_name: 'asset_ownerId_libraryId_checksum_idx' });
+
+      await expect(sut.handleBackfillChecksums()).resolves.toBe(JobStatus.Success);
+
+      expect(mocks.systemMetadata.set).toHaveBeenLastCalledWith(
+        SystemMetadataKey.ExternalLibraryChecksumBackfill,
+        expect.objectContaining({
+          scanned: 1,
+          updated: 0,
+          duplicates: 1,
+          failed: 0,
+        }),
+      );
     });
   });
 
@@ -218,6 +301,49 @@ describe(LibraryService.name, () => {
           libraryId: library.id,
           paths: ['/data/user1/photo.jpg'],
           progressCounter: 1,
+        },
+      });
+    });
+
+    it('should queue videos separately from image batches', async () => {
+      const library = factory.library({ importPaths: ['/foo'] });
+      const imagePaths = Array.from({ length: 101 }, (_, index) => `/data/user1/photo-${index}.jpg`);
+      const videoPath = '/data/user1/video.mp4';
+      const paths = [...imagePaths.slice(0, 100), videoPath, imagePaths[100]];
+
+      mocks.library.get.mockResolvedValue(library);
+      mocks.storage.walk.mockImplementation(async function* generator() {
+        yield paths;
+      });
+      mocks.storage.stat.mockResolvedValue({ isDirectory: () => true } as Stats);
+      mocks.storage.checkFileExists.mockResolvedValue(true);
+      mocks.asset.filterNewExternalAssetPaths.mockResolvedValue(paths);
+
+      await sut.handleQueueSyncFiles({ id: library.id });
+
+      expect(mocks.job.queue).toHaveBeenCalledTimes(3);
+      expect(mocks.job.queue).toHaveBeenNthCalledWith(1, {
+        name: JobName.LibrarySyncFiles,
+        data: {
+          libraryId: library.id,
+          paths: imagePaths.slice(0, 100),
+          progressCounter: 100,
+        },
+      });
+      expect(mocks.job.queue).toHaveBeenNthCalledWith(2, {
+        name: JobName.LibrarySyncFiles,
+        data: {
+          libraryId: library.id,
+          paths: [videoPath],
+          progressCounter: 101,
+        },
+      });
+      expect(mocks.job.queue).toHaveBeenNthCalledWith(3, {
+        name: JobName.LibrarySyncFiles,
+        data: {
+          libraryId: library.id,
+          paths: [imagePaths[100]],
+          progressCounter: 102,
         },
       });
     });
@@ -604,7 +730,7 @@ describe(LibraryService.name, () => {
       };
 
       mocks.asset.createAll.mockResolvedValue([asset.id]);
-      mocks.crypto.hashSha1.mockReturnValue(checksum);
+      mocks.crypto.hashFile.mockResolvedValue(checksum);
       mocks.library.get.mockResolvedValue(library);
 
       await expect(sut.handleSyncFiles(mockLibraryJob)).resolves.toBe(JobStatus.Success);
@@ -614,14 +740,14 @@ describe(LibraryService.name, () => {
           ownerId: library.ownerId,
           libraryId: library.id,
           checksum,
-          checksumAlgorithm: ChecksumAlgorithm.sha1Path,
+          checksumAlgorithm: ChecksumAlgorithm.sha1File,
           originalPath: normalizedPath,
           type: AssetType.Image,
           originalFileName: 'photo.jpg',
           isExternal: true,
         }),
       ]);
-      expect(mocks.crypto.hashSha1).toHaveBeenCalledWith(`path:${normalizedPath}`);
+      expect(mocks.crypto.hashFile).toHaveBeenCalledWith(normalizedPath);
 
       expect(mocks.job.queueAll).toHaveBeenCalledWith([
         {
@@ -631,6 +757,33 @@ describe(LibraryService.name, () => {
             source: 'upload',
           },
         },
+      ]);
+    });
+
+    it('should import videos immediately', async () => {
+      const library = factory.library();
+      const image = AssetFactory.create({ type: AssetType.Image });
+      const video = AssetFactory.create({ type: AssetType.Video });
+      const imagePath = '/data/user1/photo.jpg';
+      const videoPath = '/data/user1/video.mp4';
+
+      const mockLibraryJob: ILibraryFileJob = {
+        libraryId: library.id,
+        paths: [imagePath, videoPath],
+      };
+
+      mocks.asset.createAll.mockResolvedValueOnce([image.id]).mockResolvedValueOnce([video.id]);
+      mocks.crypto.hashFile.mockResolvedValue(Buffer.from('file checksum'));
+      mocks.library.get.mockResolvedValue(library);
+
+      await expect(sut.handleSyncFiles(mockLibraryJob)).resolves.toBe(JobStatus.Success);
+
+      expect(mocks.asset.createAll).toHaveBeenCalledTimes(2);
+      expect(mocks.asset.createAll).toHaveBeenNthCalledWith(1, [
+        expect.objectContaining({ originalPath: normalize(imagePath), type: AssetType.Image }),
+      ]);
+      expect(mocks.asset.createAll).toHaveBeenNthCalledWith(2, [
+        expect.objectContaining({ originalPath: normalize(videoPath), type: AssetType.Video }),
       ]);
     });
 
