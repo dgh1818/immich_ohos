@@ -358,16 +358,30 @@ export class LibraryService extends BaseService {
       return JobStatus.Failed;
     }
 
+    const assetIds: string[] = [];
     const assetImports: Insertable<AssetTable>[] = [];
+    const importAssets = async () => {
+      if (assetImports.length === 0) {
+        return;
+      }
+
+      const ids = await this.assetRepository.createAll(assetImports.splice(0));
+      assetIds.push(...ids);
+      await this.queuePostSyncJobs(ids);
+    };
+
     for (const path of job.paths) {
       try {
         assetImports.push(await this.processEntity(path, library.ownerId, job.libraryId));
+        if (assetImports.length >= 100) {
+          await importAssets();
+        }
       } catch (error: any) {
         this.logger.error(`Error processing ${path} for library ${job.libraryId}: ${error}`);
       }
     }
 
-    const assetIds = await this.assetRepository.createAll(assetImports);
+    await importAssets();
 
     const progressMessage =
       job.progressCounter && job.totalAssets
@@ -375,8 +389,6 @@ export class LibraryService extends BaseService {
         : `(${job.progressCounter} done so far)`;
 
     this.logger.log(`Imported ${assetIds.length} ${progressMessage} file(s) into library ${job.libraryId}`);
-
-    await this.queuePostSyncJobs(assetIds);
 
     return JobStatus.Success;
   }
