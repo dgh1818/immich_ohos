@@ -12,7 +12,7 @@ class BackupConfig {
     this.useCellularForPhotos = false,
     this.requireCharging = false,
     this.triggerDelay = 30,
-    this.syncAlbums = false,
+    this.syncAlbums = true,
   });
 
   BackupConfig copyWith({

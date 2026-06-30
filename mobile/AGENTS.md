@@ -60,6 +60,13 @@
 - Do not introduce unnecessary abstractions, wrappers, or local deviations from upstream behavior.
 - Do not rewrite upstream logic unless required for the task.
 
+## Local mobile defaults
+
+- Keep backup album synchronization enabled by default.
+  - `BackupConfig.syncAlbums` must default to `true`.
+  - `AppSettingsEnum.syncAlbums` must default to `true`.
+  - Do not revert these defaults when merging upstream.
+
 ## Debugging and bug visibility
 
 - Do not add fallback logic unless explicitly required.
