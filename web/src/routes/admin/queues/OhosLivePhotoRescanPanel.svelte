@@ -49,6 +49,11 @@
     rescanState?.total ? Math.min(100, Math.round((rescanState.scanned / rescanState.total) * 100)) : 0,
   );
   const failures = $derived(rescanState?.failures ?? []);
+  const stageLabel = (stage: string) =>
+    ({
+      detecting: '检测',
+      matching: '匹配',
+    })[stage] ?? stage;
 
   const request = async (path: string, init?: RequestInit): Promise<OhosLivePhotoRescanState> => {
     const response = await fetch(`${getBaseUrl()}${path}`, init);
@@ -72,7 +77,7 @@
       rescanState = await request('/system-metadata/ohos-live-photo-rescan');
       schedulePoll();
     } catch (error) {
-      handleError(error, 'Failed to load OHOS Live Photo rescan state');
+      handleError(error, '加载 OHOS 动态照片重新匹配状态失败');
     } finally {
       loading = false;
     }
@@ -87,13 +92,10 @@
           : '/system-metadata/ohos-live-photo-rescan',
         { method: 'POST' },
       );
-      toastManager.primary(retryFailed ? 'Queued failed OHOS Live Photo retries' : 'Queued OHOS Live Photo rescan');
+      toastManager.primary(retryFailed ? '已加入缺失项重试队列' : '已加入全部重新匹配队列');
       schedulePoll();
     } catch (error) {
-      handleError(
-        error,
-        retryFailed ? 'Failed to retry OHOS Live Photo failures' : 'Failed to queue OHOS Live Photo rescan',
-      );
+      handleError(error, retryFailed ? '加入缺失项重试队列失败' : '加入全部重新匹配队列失败');
     } finally {
       submitting = false;
     }
@@ -108,20 +110,20 @@
 <div class="sm:rounded-9 flex flex-col overflow-hidden rounded-2xl bg-gray-100 sm:flex-row dark:bg-immich-dark-gray">
   <div class="flex w-full flex-col">
     {#if isActive}
-      <QueueCardBadge color="success">Active</QueueCardBadge>
+      <QueueCardBadge color="success">运行中</QueueCardBadge>
     {:else if rescanState?.status === 'failed'}
-      <QueueCardBadge color="warning">Failed</QueueCardBadge>
+      <QueueCardBadge color="warning">失败</QueueCardBadge>
     {/if}
 
     <div class="flex flex-col gap-2 p-5 sm:p-7 md:p-9">
       <div class="flex items-center gap-2 text-xl font-semibold text-primary">
         <Icon icon={mdiImageRefreshOutline} size="1.25em" class="hidden shrink-0 sm:block" />
-        <span>OHOS Live Photo rescan</span>
+        <span>OHOS 动态照片重新匹配</span>
       </div>
 
       <div class="text-sm whitespace-pre-line dark:text-white">
-        Rematch OHOS Live Photo image/video companion files. AI enhanced XtStyle files are checked as candidates; when
-        no companion video exists, they are not counted as missing pairs.
+        重新匹配 OHOS 动态照片的照片/视频文件。AI 云增强照片的 XtStyle
+        标记只作为疑似项检查；如果没有对应视频，不计入缺失配对。
       </div>
 
       {#if rescanState}
@@ -133,9 +135,9 @@
           <div
             class="flex w-full place-items-center justify-between rounded-t-lg bg-immich-primary px-6 py-2 text-white sm:rounded-s-lg sm:rounded-e-none sm:py-4 dark:bg-immich-dark-primary dark:text-immich-dark-gray"
           >
-            <p>Scanned</p>
+            <p>已扫描</p>
             <p class="text-2xl">
-              {rescanState.scanned}{rescanState.total ? ` / ${rescanState.total}` : ''}
+              {rescanState.scanned}
             </p>
           </div>
 
@@ -143,49 +145,53 @@
             class="flex w-full flex-row-reverse place-items-center justify-between rounded-b-lg bg-gray-200 px-6 py-2 text-immich-dark-bg sm:rounded-s-none sm:rounded-e-lg sm:py-4 dark:bg-gray-700 dark:text-immich-gray"
           >
             <p class="text-2xl">
-              {rescanState.detected}
+              {rescanState.total ?? '-'}
             </p>
-            <p>Candidates</p>
+            <p>总数</p>
           </div>
         </div>
 
-        <div class="mt-2 grid grid-cols-2 gap-3 text-sm md:grid-cols-4">
+        <div class="mt-2 grid grid-cols-2 gap-3 text-sm md:grid-cols-3">
           <div>
-            <p class="text-gray-500 dark:text-gray-400">Matched</p>
+            <p class="text-gray-500 dark:text-gray-400">检测到标记文件</p>
+            <p class="font-medium text-gray-900 dark:text-gray-100">{rescanState.detected}</p>
+          </div>
+          <div>
+            <p class="text-gray-500 dark:text-gray-400">匹配成功</p>
             <p class="font-medium text-gray-900 dark:text-gray-100">
-              {rescanState.matched} new, {rescanState.alreadyMatched} existing
+              {rescanState.matched} 新增，{rescanState.alreadyMatched} 已存在
             </p>
           </div>
           <div>
-            <p class="text-gray-500 dark:text-gray-400">Missing pair</p>
+            <p class="text-gray-500 dark:text-gray-400">缺失配对</p>
             <p class="font-medium text-gray-900 dark:text-gray-100">{rescanState.missing}</p>
           </div>
           <div>
-            <p class="text-gray-500 dark:text-gray-400">Skipped</p>
+            <p class="text-gray-500 dark:text-gray-400">已跳过</p>
             <p class="font-medium text-gray-900 dark:text-gray-100">{rescanState.skipped}</p>
           </div>
           <div>
-            <p class="text-gray-500 dark:text-gray-400">Failures</p>
+            <p class="text-gray-500 dark:text-gray-400">失败</p>
             <p class="font-medium text-gray-900 dark:text-gray-100">{failures.length}</p>
           </div>
         </div>
 
         {#if rescanState.current}
           <div class="mt-2 rounded-lg bg-gray-200 p-3 text-xs text-gray-700 dark:bg-gray-700 dark:text-gray-200">
-            <p class="font-medium">{rescanState.current.stage}: {rescanState.current.assetId}</p>
+            <p class="font-medium">{stageLabel(rescanState.current.stage)}: {rescanState.current.assetId}</p>
             <p class="mt-1 break-all">{rescanState.current.originalPath}</p>
           </div>
         {/if}
 
         {#if failures.length > 0}
           <div class="mt-2 rounded-lg bg-gray-200 p-3 text-xs text-gray-700 dark:bg-gray-700 dark:text-gray-200">
-            <p class="mb-2 font-medium">Recent failures</p>
+            <p class="mb-2 font-medium">最近失败项</p>
             <div class="flex flex-col gap-2">
               {#each failures.slice(0, 5) as failure (failure.assetId)}
                 <div>
                   <p class="break-all">{failure.originalPath}</p>
                   <p class="text-gray-500 dark:text-gray-400">
-                    {failure.stage}: {failure.reason} (attempts: {failure.attempts})
+                    {stageLabel(failure.stage)}: {failure.reason}（尝试次数：{failure.attempts}）
                   </p>
                 </div>
               {/each}
@@ -193,7 +199,7 @@
           </div>
         {/if}
       {:else if loading}
-        <p class="text-sm text-gray-600 dark:text-gray-300">Loading...</p>
+        <p class="text-sm text-gray-600 dark:text-gray-300">加载中...</p>
       {/if}
     </div>
   </div>
@@ -202,23 +208,21 @@
     {#if isActive}
       <QueueCardButton disabled={true} color="light-gray">
         <Icon icon={mdiImageRefreshOutline} size="36" />
-        <span>Running</span>
+        <span>运行中</span>
       </QueueCardButton>
     {:else}
-      <QueueCardButton
-        color={failures.length > 0 ? 'dark-gray' : 'light-gray'}
-        disabled={submitting}
-        onClick={() => queueRescan(false)}
-      >
-        <Icon icon={mdiImageRefreshOutline} size={failures.length > 0 ? '24' : '48'} />
-        <span>Rescan</span>
+      <QueueCardButton color="dark-gray" disabled={submitting} onClick={() => queueRescan(false)}>
+        <Icon icon={mdiImageRefreshOutline} size="24" />
+        <span>全部</span>
       </QueueCardButton>
-      {#if failures.length > 0}
-        <QueueCardButton color="light-gray" disabled={submitting} onClick={() => queueRescan(true)}>
-          <Icon icon={mdiReplay} size="24" />
-          <span>Retry</span>
-        </QueueCardButton>
-      {/if}
+      <QueueCardButton
+        color="light-gray"
+        disabled={submitting || failures.length === 0}
+        onClick={() => queueRescan(true)}
+      >
+        <Icon icon={mdiReplay} size="24" />
+        <span>缺失</span>
+      </QueueCardButton>
     {/if}
   </div>
 </div>
