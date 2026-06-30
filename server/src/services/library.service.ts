@@ -359,13 +359,13 @@ export class LibraryService extends BaseService {
     }
 
     const assetImports: Insertable<AssetTable>[] = [];
-    await Promise.all(
-      job.paths.map((path) =>
-        this.processEntity(path, library.ownerId, job.libraryId)
-          .then((asset) => assetImports.push(asset))
-          .catch((error: any) => this.logger.error(`Error processing ${path} for library ${job.libraryId}: ${error}`)),
-      ),
-    );
+    for (const path of job.paths) {
+      try {
+        assetImports.push(await this.processEntity(path, library.ownerId, job.libraryId));
+      } catch (error: any) {
+        this.logger.error(`Error processing ${path} for library ${job.libraryId}: ${error}`);
+      }
+    }
 
     const assetIds = await this.assetRepository.createAll(assetImports);
 

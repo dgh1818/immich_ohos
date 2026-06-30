@@ -201,6 +201,10 @@ export class JobRepository {
     const promises = [];
     const itemsByQueue = {} as Record<string, (JobItem & { data: any; options: JobsOptions | undefined })[]>;
     for (const item of items) {
+      if (item.name === JobName.FileDelete && item.data.files.length === 0) {
+        continue;
+      }
+
       const queueName = this.getQueueName(item.name);
       const job = {
         name: item.name,
