@@ -139,6 +139,12 @@ type Dates = {
 };
 
 type OhosLivePhotoLinkResult = 'matched' | 'alreadyMatched' | 'missing';
+type OhosLivePhotoCheckResult = {
+  hasOhosLivePhoto: number;
+  ohosFileSize: number;
+  ohosVideoOffset: number;
+  source?: 'embedded' | 'metadata' | 'xtStyle' | 'videoCoverTime';
+};
 
 type OhosLivePhotoRescanAsset = {
   id: string;
@@ -383,7 +389,7 @@ export class MetadataService extends BaseService {
     };
 
     try {
-      const { hasOhosLivePhoto } = await this.checkOhosLivePhoto(asset.originalPath, asset.type);
+      const { hasOhosLivePhoto, source } = await this.checkOhosLivePhoto(asset.originalPath, asset.type);
       if (hasOhosLivePhoto !== 2) {
         state.skipped++;
         this.removeOhosLivePhotoRescanFailure(state, asset.id);
@@ -393,7 +399,11 @@ export class MetadataService extends BaseService {
       state.detected++;
       state.current.stage = 'matching';
       const result = await this.linkOhosLivePhotos(asset);
-      state[result]++;
+      if (result === 'missing' && source === 'xtStyle') {
+        state.skipped++;
+      } else {
+        state[result]++;
+      }
       this.removeOhosLivePhotoRescanFailure(state, asset.id);
     } catch (error: Error | any) {
       this.recordOhosLivePhotoRescanFailure(state, asset, state.current.stage, error);
@@ -1415,10 +1425,7 @@ export class MetadataService extends BaseService {
     return video;
   }
 
-  private async checkOhosLivePhoto(
-    filePath: string,
-    assetType: AssetType,
-  ): Promise<{ hasOhosLivePhoto: number; ohosFileSize: number; ohosVideoOffset: number }> {
+  private async checkOhosLivePhoto(filePath: string, assetType: AssetType): Promise<OhosLivePhotoCheckResult> {
     const stats = await fs.stat(filePath);
     const ohosFileSize = stats.size;
     let ohosLiveMetaDataOFFSET = 20;
@@ -1465,7 +1472,7 @@ export class MetadataService extends BaseService {
           hasOhosLivePhoto = 0;
           return { hasOhosLivePhoto, ohosFileSize, ohosVideoOffset };
         } else {
-          return { hasOhosLivePhoto, ohosFileSize, ohosVideoOffset };
+          return { hasOhosLivePhoto, ohosFileSize, ohosVideoOffset, source: 'embedded' };
         }
       }
     }
@@ -1494,14 +1501,14 @@ export class MetadataService extends BaseService {
         hasOhosLivePhoto = isMatch ? 2 : 0;
         if (isMatch) {
           hasOhosLivePhoto = 2;
-          return { hasOhosLivePhoto, ohosFileSize, ohosVideoOffset };
+          return { hasOhosLivePhoto, ohosFileSize, ohosVideoOffset, source: 'metadata' };
         }
       } finally {
         await fd_2.close();
       }
     }
 
-    //-------------------XtStyle (re-encoded)-------------------
+    //-------------------XtStyle (aiEnhanced)-------------------
     if (!hasOhosLivePhoto && assetType === AssetType.Image) {
       const tailLen3 = 100;
       const startPos3 = Math.max(0, ohosFileSize - tailLen3);
@@ -1515,7 +1522,7 @@ export class MetadataService extends BaseService {
         const foundIndex = hay.indexOf(needle);
         if (foundIndex !== -1) {
           hasOhosLivePhoto = 2;
-          return { hasOhosLivePhoto, ohosFileSize, ohosVideoOffset };
+          return { hasOhosLivePhoto, ohosFileSize, ohosVideoOffset, source: 'xtStyle' };
         }
       } finally {
         await fd3.close();
@@ -1537,7 +1544,12 @@ export class MetadataService extends BaseService {
         const foundIndex = hay.indexOf(needle);
         const isMatch = foundIndex !== -1;
         hasOhosLivePhoto = isMatch ? 2 : 0;
-        return { hasOhosLivePhoto, ohosFileSize, ohosVideoOffset };
+        return {
+          hasOhosLivePhoto,
+          ohosFileSize,
+          ohosVideoOffset,
+          source: isMatch ? 'videoCoverTime' : undefined,
+        };
       } finally {
         await fd4.close();
       }
