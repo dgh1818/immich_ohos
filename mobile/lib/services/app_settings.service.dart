@@ -44,7 +44,6 @@ enum AppSettingsEnum<T> {
   mapIncludeArchived<bool>(StoreKey.mapIncludeArchived, null, false),
   mapwithPartners<bool>(StoreKey.mapwithPartners, null, false),
   mapRelativeDate<int>(StoreKey.mapRelativeDate, null, 0),
-  allowSelfSignedSSLCert<bool>(StoreKey.selfSignedCert, null, false),
   ignoreIcloudAssets<bool>(StoreKey.ignoreIcloudAssets, null, true),
   selectedAlbumSortReverse<bool>(StoreKey.selectedAlbumSortReverse, null, true),
   enableHapticFeedback<bool>(StoreKey.enableHapticFeedback, null, true),

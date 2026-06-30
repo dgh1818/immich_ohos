@@ -41,7 +41,7 @@ enum StoreKey<T> {
   // map related settings
   mapShowFavoriteOnly<bool>._(118),
   mapRelativeDate<int>._(119),
-  selfSignedCert<bool>._(120),
+  // 120 was used by the removed OHOS self-signed certificate bypass setting.
   mapIncludeArchived<bool>._(121),
   ignoreIcloudAssets<bool>._(122),
   selectedAlbumSortReverse<bool>._(123),

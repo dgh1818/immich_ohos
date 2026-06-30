@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:io';
 
 import 'package:device_info_plus/device_info_plus.dart';
@@ -6,12 +5,8 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart' hide Store;
 import 'package:hooks_riverpod/hooks_riverpod.dart';
-import 'package:immich_mobile/domain/models/store.model.dart';
 import 'package:immich_mobile/domain/services/log.service.dart';
-import 'package:immich_mobile/entities/store.entity.dart';
 import 'package:immich_mobile/extensions/build_context_extensions.dart';
-import 'package:immich_mobile/infrastructure/repositories/network.repository.dart';
-import 'package:immich_mobile/providers/api.provider.dart';
 import 'package:immich_mobile/providers/infrastructure/settings.provider.dart';
 import 'package:immich_mobile/providers/infrastructure/platform.provider.dart';
 import 'package:immich_mobile/providers/infrastructure/readonly_mode.provider.dart';
@@ -42,7 +37,6 @@ class AdvancedSettings extends HookConsumerWidget {
       preferRemote.value,
       (_, __) => ref.read(settingsProvider).write(.imagePreferRemote, preferRemote.value),
     );
-    final allowSelfSigned = useAppSettingsState(AppSettingsEnum.allowSelfSignedSSLCert);
     final readonlyModeEnabled = useAppSettingsState(AppSettingsEnum.readonlyModeEnabled);
 
     final logLevel = Level.LEVELS[levelId.value].name;
@@ -118,19 +112,6 @@ class AdvancedSettings extends HookConsumerWidget {
         valueNotifier: preferRemote,
         title: "advanced_settings_prefer_remote_title".tr(),
         subtitle: "advanced_settings_prefer_remote_subtitle".tr(),
-      ),
-      SettingsSwitchListTile(
-        valueNotifier: allowSelfSigned,
-        title: "advanced_settings_self_signed_ssl_title".tr(),
-        subtitle: "advanced_settings_self_signed_ssl_subtitle".tr(),
-        onChanged: (value) {
-          unawaited(
-            Store.put(
-              StoreKey.selfSignedCert,
-              value,
-            ).then((_) => NetworkRepository.init()).then((_) => ref.read(apiServiceProvider).updateHeaders()),
-          );
-        },
       ),
       const CustomProxyHeaderSettings(),
       const SslClientCertSettings(),
