@@ -193,69 +193,10 @@ describe(LibraryService.name, () => {
   });
 
   describe('handleBackfillChecksums', () => {
-    it('should skip after the backfill has completed', async () => {
+    it('should skip checksum backfill for external libraries', async () => {
       await expect(sut.handleBackfillChecksums()).resolves.toBe(JobStatus.Skipped);
 
       expect(mocks.asset.getExternalLibraryChecksumBackfillPage).not.toHaveBeenCalled();
-    });
-
-    it('should recalculate sha1 checksums for external library assets', async () => {
-      const checksum = Buffer.from('file checksum');
-      const asset = AssetFactory.create({
-        checksum: Buffer.from('path checksum'),
-        checksumAlgorithm: ChecksumAlgorithm.sha1Path,
-        isExternal: true,
-        libraryId: newUuid(),
-        originalPath: '/data/user1/photo.jpg',
-      });
-
-      mocks.systemMetadata.get.mockResolvedValue(null);
-      mocks.crypto.hashFile.mockResolvedValue(checksum);
-      mocks.asset.getExternalLibraryChecksumBackfillPage.mockResolvedValueOnce([asset]).mockResolvedValueOnce([]);
-
-      await expect(sut.handleBackfillChecksums()).resolves.toBe(JobStatus.Success);
-
-      expect(mocks.crypto.hashFile).toHaveBeenCalledWith(asset.originalPath);
-      expect(mocks.asset.updateChecksum).toHaveBeenCalledWith(asset.id, checksum, ChecksumAlgorithm.sha1File);
-      expect(mocks.systemMetadata.set).toHaveBeenLastCalledWith(
-        SystemMetadataKey.ExternalLibraryChecksumBackfill,
-        expect.objectContaining({
-          scanned: 1,
-          updated: 1,
-          duplicates: 0,
-          failed: 0,
-          completedAt: expect.any(String),
-        }),
-      );
-    });
-
-    it('should skip duplicate external library checksums', async () => {
-      const checksum = Buffer.from('file checksum');
-      const asset = AssetFactory.create({
-        checksum: Buffer.from('path checksum'),
-        checksumAlgorithm: ChecksumAlgorithm.sha1Path,
-        isExternal: true,
-        libraryId: newUuid(),
-        originalPath: '/data/user1/photo.jpg',
-      });
-
-      mocks.systemMetadata.get.mockResolvedValue(null);
-      mocks.crypto.hashFile.mockResolvedValue(checksum);
-      mocks.asset.getExternalLibraryChecksumBackfillPage.mockResolvedValueOnce([asset]).mockResolvedValueOnce([]);
-      mocks.asset.updateChecksum.mockRejectedValue({ constraint_name: 'asset_ownerId_libraryId_checksum_idx' });
-
-      await expect(sut.handleBackfillChecksums()).resolves.toBe(JobStatus.Success);
-
-      expect(mocks.systemMetadata.set).toHaveBeenLastCalledWith(
-        SystemMetadataKey.ExternalLibraryChecksumBackfill,
-        expect.objectContaining({
-          scanned: 1,
-          updated: 0,
-          duplicates: 1,
-          failed: 0,
-          completedAt: expect.any(String),
-        }),
-      );
     });
   });
 
@@ -663,7 +604,7 @@ describe(LibraryService.name, () => {
       };
 
       mocks.asset.createAll.mockResolvedValue([asset.id]);
-      mocks.crypto.hashFile.mockResolvedValue(checksum);
+      mocks.crypto.hashSha1.mockReturnValue(checksum);
       mocks.library.get.mockResolvedValue(library);
 
       await expect(sut.handleSyncFiles(mockLibraryJob)).resolves.toBe(JobStatus.Success);
@@ -673,14 +614,14 @@ describe(LibraryService.name, () => {
           ownerId: library.ownerId,
           libraryId: library.id,
           checksum,
-          checksumAlgorithm: ChecksumAlgorithm.sha1File,
+          checksumAlgorithm: ChecksumAlgorithm.sha1Path,
           originalPath: normalizedPath,
           type: AssetType.Image,
           originalFileName: 'photo.jpg',
           isExternal: true,
         }),
       ]);
-      expect(mocks.crypto.hashFile).toHaveBeenCalledWith(normalizedPath);
+      expect(mocks.crypto.hashSha1).toHaveBeenCalledWith(`path:${normalizedPath}`);
 
       expect(mocks.job.queueAll).toHaveBeenCalledWith([
         {
