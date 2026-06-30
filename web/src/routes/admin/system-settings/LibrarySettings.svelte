@@ -87,6 +87,20 @@
           </div>
         </SettingAccordion>
 
+        <SettingAccordion
+          key="library-content-hash"
+          title={$t('admin.library_content_hash')}
+          subtitle={$t('admin.library_content_hash_description')}
+        >
+          <div class="ms-4 mt-4 flex flex-col gap-4">
+            <SettingSwitch
+              title={$t('admin.library_content_hash_enable_description')}
+              {disabled}
+              bind:checked={configToEdit.library.useContentHash}
+            />
+          </div>
+        </SettingAccordion>
+
         <SettingButtonsRow bind:configToEdit keys={['library']} {disabled} />
       </div>
     </form>

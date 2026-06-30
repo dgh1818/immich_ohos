@@ -152,7 +152,11 @@ const SystemConfigLibraryWatchSchema = z
   .meta({ id: 'SystemConfigLibraryWatchDto' });
 
 const SystemConfigLibrarySchema = z
-  .object({ scan: SystemConfigLibraryScanSchema, watch: SystemConfigLibraryWatchSchema })
+  .object({
+    scan: SystemConfigLibraryScanSchema,
+    watch: SystemConfigLibraryWatchSchema,
+    useContentHash: configBool.describe('Use content hash for external library deduplication').default(false),
+  })
   .meta({ id: 'SystemConfigLibraryDto' });
 
 const SystemConfigLoggingSchema = z

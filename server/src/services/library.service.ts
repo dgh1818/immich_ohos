@@ -33,7 +33,7 @@ import { ArgOf } from 'src/repositories/event.repository';
 import { AssetSyncResult } from 'src/repositories/library.repository';
 import { AssetTable } from 'src/schema/tables/asset.table';
 import { BaseService } from 'src/services/base.service';
-import { ExternalLibraryChecksumBackfillState, JobOf } from 'src/types';
+import { ExternalLibraryChecksumBackfillState, ExternalLibraryPathChecksumBackfillState, JobOf } from 'src/types';
 import { isAssetChecksumConstraint } from 'src/utils/database';
 import { mimeTypes } from 'src/utils/mime-types';
 import { handlePromiseError } from 'src/utils/misc';
@@ -49,7 +49,7 @@ export class LibraryService extends BaseService {
   @OnEvent({ name: 'ConfigInit', workers: [ImmichWorker.Microservices] })
   async onConfigInit({
     newConfig: {
-      library: { watch, scan },
+      library: { watch, scan, useContentHash },
     },
   }: ArgOf<'ConfigInit'>) {
     // This ensures that library watching only occurs in one microservice
@@ -65,7 +65,17 @@ export class LibraryService extends BaseService {
         start: scan.enabled,
       });
 
-      await this.queueExternalLibraryChecksumBackfill();
+      if (useContentHash) {
+        await this.queueExternalLibraryChecksumBackfill();
+      } else {
+        // Resume any incomplete path checksum backfill (content to path conversion)
+        const pathState = await this.systemMetadataRepository.get(
+          SystemMetadataKey.ExternalLibraryPathChecksumBackfill,
+        );
+        if (pathState && !pathState.completedAt) {
+          await this.jobRepository.queue({ name: JobName.LibraryBackfillPathChecksums });
+        }
+      }
     }
 
     if (this.watchLibraries) {
@@ -74,7 +84,7 @@ export class LibraryService extends BaseService {
   }
 
   @OnEvent({ name: 'ConfigUpdate', server: true })
-  async onConfigUpdate({ newConfig: { library } }: ArgOf<'ConfigUpdate'>) {
+  async onConfigUpdate({ newConfig: { library }, oldConfig }: ArgOf<'ConfigUpdate'>) {
     if (!this.lock) {
       return;
     }
@@ -89,6 +99,32 @@ export class LibraryService extends BaseService {
       // Watch configuration changed, update accordingly
       this.watchLibraries = library.watch.enabled;
       await (this.watchLibraries ? this.watchAll() : this.unwatchAll());
+    }
+
+    // Detect useContentHash toggle change and trigger backfill
+    if (library.useContentHash !== oldConfig.library.useContentHash) {
+      if (library.useContentHash) {
+        // Toggled ON: path to content hash backfill
+        this.logger.log('External library content hash enabled, starting checksum backfill');
+        await this.systemMetadataRepository.set(SystemMetadataKey.ExternalLibraryChecksumBackfill, {
+          startedAt: new Date().toISOString(),
+          scanned: 0,
+          updated: 0,
+          duplicates: 0,
+          failed: 0,
+        });
+        await this.jobRepository.queue({ name: JobName.LibraryBackfillChecksums });
+      } else {
+        // Toggled OFF: content to path hash backfill
+        this.logger.log('External library content hash disabled, starting path checksum backfill');
+        await this.systemMetadataRepository.set(SystemMetadataKey.ExternalLibraryPathChecksumBackfill, {
+          startedAt: new Date().toISOString(),
+          scanned: 0,
+          updated: 0,
+          failed: 0,
+        });
+        await this.jobRepository.queue({ name: JobName.LibraryBackfillPathChecksums });
+      }
     }
   }
 
@@ -236,6 +272,11 @@ export class LibraryService extends BaseService {
 
   @OnJob({ name: JobName.LibraryBackfillChecksums, queue: QueueName.Library })
   async handleBackfillChecksums(): Promise<JobStatus> {
+    const config = await this.getConfig({ withCache: true });
+    if (!config.library.useContentHash) {
+      return JobStatus.Skipped;
+    }
+
     const currentState = await this.systemMetadataRepository.get(SystemMetadataKey.ExternalLibraryChecksumBackfill);
     if (currentState?.completedAt) {
       return JobStatus.Skipped;
@@ -302,6 +343,75 @@ export class LibraryService extends BaseService {
       `External library checksum backfill progress: ${state.scanned} scanned, ${state.updated} updated, ${state.duplicates} duplicates, ${state.failed} failed`,
     );
     await this.jobRepository.queue({ name: JobName.LibraryBackfillChecksums });
+
+    return JobStatus.Success;
+  }
+
+  @OnJob({ name: JobName.LibraryBackfillPathChecksums, queue: QueueName.Library })
+  async handleBackfillPathChecksums(): Promise<JobStatus> {
+    const config = await this.getConfig({ withCache: true });
+    if (config.library.useContentHash) {
+      return JobStatus.Skipped;
+    }
+
+    const currentState = await this.systemMetadataRepository.get(
+      SystemMetadataKey.ExternalLibraryPathChecksumBackfill,
+    );
+    if (currentState?.completedAt) {
+      return JobStatus.Skipped;
+    }
+
+    const state: ExternalLibraryPathChecksumBackfillState = {
+      startedAt: currentState?.startedAt ?? new Date().toISOString(),
+      scanned: currentState?.scanned ?? 0,
+      updated: currentState?.updated ?? 0,
+      failed: currentState?.failed ?? 0,
+      afterId: currentState?.afterId,
+    };
+
+    const assets = await this.assetRepository.getExternalLibraryPathChecksumBackfillPage({
+      afterId: state.afterId,
+      limit: JOBS_LIBRARY_PAGINATION_SIZE,
+    });
+
+    if (assets.length === 0) {
+      state.completedAt = new Date().toISOString();
+      delete state.afterId;
+      await this.systemMetadataRepository.set(
+        SystemMetadataKey.ExternalLibraryPathChecksumBackfill,
+        state,
+      );
+      this.logger.log(
+        `Finished external library path checksum backfill: ${state.scanned} scanned, ${state.updated} updated, ${state.failed} failed`,
+      );
+      return JobStatus.Success;
+    }
+
+    const ids = assets.map((a) => a.id);
+    const lastId = assets.at(-1)!.id;
+
+    try {
+      await this.assetRepository.updateAllExternalToPathHash(ids);
+      state.updated += ids.length;
+      state.afterId = lastId;
+      state.scanned += ids.length;
+    } catch (error: Error | any) {
+      // Advance past the failed batch so we don't loop forever,
+      // but record the failure
+      this.logger.error(`Failed to update path checksums for batch ending at ${lastId}: ${error}`);
+      state.failed += ids.length;
+      state.afterId = lastId;
+      state.scanned += ids.length;
+    }
+
+    await this.systemMetadataRepository.set(
+      SystemMetadataKey.ExternalLibraryPathChecksumBackfill,
+      state,
+    );
+    this.logger.log(
+      `External library path checksum backfill progress: ${state.scanned} scanned, ${state.updated} updated, ${state.failed} failed`,
+    );
+    await this.jobRepository.queue({ name: JobName.LibraryBackfillPathChecksums });
 
     return JobStatus.Success;
   }
@@ -400,6 +510,9 @@ export class LibraryService extends BaseService {
       return JobStatus.Failed;
     }
 
+    const systemConfig = await this.getConfig({ withCache: true });
+    const useContentHash = systemConfig.library.useContentHash;
+
     const assetIds: string[] = [];
     const assetImports: Insertable<AssetTable>[] = [];
     const importAssets = async () => {
@@ -407,7 +520,66 @@ export class LibraryService extends BaseService {
         return;
       }
 
-      const ids = await this.assetRepository.createAll(assetImports.splice(0));
+      const imports = assetImports.splice(0);
+      const fallbackToPathChecksum = (asset: Insertable<AssetTable>) => {
+        asset.checksum = this.cryptoRepository.hashSha1(`path:${asset.originalPath!}`);
+        asset.checksumAlgorithm = ChecksumAlgorithm.sha1Path;
+      };
+
+      if (useContentHash) {
+        // When content hash is enabled, detect duplicate checksums within
+        // this library and fall back to path-based hash for duplicates.
+        // The first copy retains the content hash for mobile deduplication.
+        const checksums = imports.map((a) => a.checksum!);
+        const existingChecksums = await this.assetRepository.getExistingChecksums(
+          job.libraryId,
+          checksums,
+        );
+
+        let fallbackCount = 0;
+        const batchChecksums = new Set<string>();
+        for (const asset of imports) {
+          const b64 = asset.checksum!.toString('base64');
+          if (existingChecksums.has(b64) || batchChecksums.has(b64)) {
+            fallbackToPathChecksum(asset);
+            fallbackCount++;
+          } else {
+            batchChecksums.add(b64);
+          }
+        }
+
+        if (fallbackCount > 0) {
+          this.logger.debug(
+            `${fallbackCount} asset(s) in library ${job.libraryId} had duplicate content checksums, using path-based hash`,
+          );
+        }
+      }
+
+      let ids = await this.assetRepository.createAll(imports);
+      if (useContentHash && ids.length < imports.length) {
+        const importsByPath = new Map(imports.map((asset) => [asset.originalPath!, asset]));
+        const missingPaths = await this.assetRepository.filterNewExternalAssetPaths(
+          job.libraryId,
+          imports.map((asset) => asset.originalPath!),
+        );
+        const retryImports = missingPaths.flatMap((originalPath) => {
+          const asset = importsByPath.get(originalPath);
+          return asset ? [{ ...asset }] : [];
+        });
+
+        for (const asset of retryImports) {
+          fallbackToPathChecksum(asset);
+        }
+
+        if (retryImports.length > 0) {
+          const retryIds = await this.assetRepository.createAll(retryImports);
+          ids = [...ids, ...retryIds];
+          this.logger.debug(
+            `${retryImports.length} asset(s) in library ${job.libraryId} conflicted during insert, retried with path-based hash`,
+          );
+        }
+      }
+
       assetIds.push(...ids);
       await this.queuePostSyncJobs(ids);
     };
@@ -419,7 +591,7 @@ export class LibraryService extends BaseService {
           await importAssets();
         }
 
-        assetImports.push(await this.processEntity(path, library.ownerId, job.libraryId));
+        assetImports.push(await this.processEntity(path, library.ownerId, job.libraryId, useContentHash));
 
         if (isVideo || assetImports.length >= EXTERNAL_LIBRARY_IMAGE_HASH_BATCH_SIZE) {
           await importAssets();
@@ -558,15 +730,17 @@ export class LibraryService extends BaseService {
     return JobStatus.Success;
   }
 
-  private async processEntity(filePath: string, ownerId: string, libraryId: string) {
+  private async processEntity(filePath: string, ownerId: string, libraryId: string, useContentHash: boolean) {
     const assetPath = path.normalize(filePath);
     const stat = await this.storageRepository.stat(assetPath);
 
     return {
       ownerId,
       libraryId,
-      checksum: await this.cryptoRepository.hashFile(assetPath),
-      checksumAlgorithm: ChecksumAlgorithm.sha1File,
+      checksum: useContentHash
+        ? await this.cryptoRepository.hashFile(assetPath)
+        : this.cryptoRepository.hashSha1(`path:${assetPath}`),
+      checksumAlgorithm: useContentHash ? ChecksumAlgorithm.sha1File : ChecksumAlgorithm.sha1Path,
       originalPath: assetPath,
 
       fileCreatedAt: stat.mtime,

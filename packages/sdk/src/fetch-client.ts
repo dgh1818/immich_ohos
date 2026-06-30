@@ -2412,6 +2412,8 @@ export type SystemConfigLibraryWatchDto = {
 };
 export type SystemConfigLibraryDto = {
     scan: SystemConfigLibraryScanDto;
+    /** Use content hash for external library deduplication */
+    useContentHash: boolean;
     watch: SystemConfigLibraryWatchDto;
 };
 export type SystemConfigLoggingDto = {

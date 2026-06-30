@@ -338,6 +338,7 @@ export enum SystemMetadataKey {
   FacialRecognitionState = 'facial-recognition-state',
   MemoriesState = 'memories-state',
   ExternalLibraryChecksumBackfill = 'external-library-checksum-backfill-v3',
+  ExternalLibraryPathChecksumBackfill = 'external-library-path-checksum-backfill',
   StorageTemplateMigration = 'storage-template-migration',
   AdminOnboarding = 'admin-onboarding',
   MaintenanceMode = 'maintenance-mode',
@@ -851,6 +852,7 @@ export enum JobName {
   LibrarySyncFiles = 'LibrarySyncFiles',
   LibraryScanQueueAll = 'LibraryScanQueueAll',
   LibraryBackfillChecksums = 'LibraryBackfillChecksums',
+  LibraryBackfillPathChecksums = 'LibraryBackfillPathChecksums',
 
   HlsSessionCleanup = 'HlsSessionCleanup',
 

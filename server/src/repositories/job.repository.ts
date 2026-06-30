@@ -288,6 +288,9 @@ export class JobRepository {
       case JobName.LibraryBackfillChecksums: {
         return { jobId: JobName.LibraryBackfillChecksums };
       }
+      case JobName.LibraryBackfillPathChecksums: {
+        return { jobId: JobName.LibraryBackfillPathChecksums };
+      }
       default: {
         return null;
       }

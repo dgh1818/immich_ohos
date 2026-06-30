@@ -222,6 +222,7 @@ const updatedConfig = Object.freeze<SystemConfig>({
     watch: {
       enabled: false,
     },
+    useContentHash: false,
   },
   user: {
     deleteDelay: 15,

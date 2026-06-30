@@ -445,6 +445,7 @@ export type JobItem =
   | { name: JobName.LibraryScanQueueAll; data?: IBaseJob }
   | { name: JobName.LibraryDeleteCheck; data: IBaseJob }
   | { name: JobName.LibraryBackfillChecksums; data?: IBaseJob }
+  | { name: JobName.LibraryBackfillPathChecksums; data?: IBaseJob }
 
   // Notification
   | { name: JobName.SendMail; data: IEmailJob }
@@ -564,6 +565,15 @@ export type ExternalLibraryChecksumBackfillState = {
   /** last processed asset id for resuming after crash */
   afterId?: string;
 };
+export type ExternalLibraryPathChecksumBackfillState = {
+  startedAt: string;
+  completedAt?: string;
+  scanned: number;
+  updated: number;
+  failed: number;
+  /** last processed asset id for resuming after crash */
+  afterId?: string;
+};
 export type StorageTemplateMigrationState = {
   queuedAt: string;
   startedAt?: string;
@@ -647,6 +657,7 @@ export interface SystemMetadata extends Record<SystemMetadataKey, Record<string,
   [SystemMetadataKey.MaintenanceMode]: MaintenanceModeState;
   [SystemMetadataKey.MediaLocation]: MediaLocation;
   [SystemMetadataKey.ExternalLibraryChecksumBackfill]: ExternalLibraryChecksumBackfillState;
+  [SystemMetadataKey.ExternalLibraryPathChecksumBackfill]: ExternalLibraryPathChecksumBackfillState;
   [SystemMetadataKey.StorageTemplateMigration]: StorageTemplateMigrationState;
   [SystemMetadataKey.ReverseGeocodingState]: { lastUpdate?: string; lastImportFileName?: string };
   [SystemMetadataKey.SystemConfig]: DeepPartial<SystemConfig>;

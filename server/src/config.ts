@@ -180,6 +180,7 @@ export type SystemConfig = {
     watch: {
       enabled: boolean;
     };
+    useContentHash: boolean;
   };
   notifications: {
     smtp: {
@@ -410,6 +411,7 @@ export const defaults = Object.freeze<SystemConfig>({
     watch: {
       enabled: false,
     },
+    useContentHash: false,
   },
   server: {
     externalDomain: '',

@@ -25978,12 +25978,18 @@
           "scan": {
             "$ref": "#/components/schemas/SystemConfigLibraryScanDto"
           },
+          "useContentHash": {
+            "default": false,
+            "description": "Use content hash for external library deduplication",
+            "type": "boolean"
+          },
           "watch": {
             "$ref": "#/components/schemas/SystemConfigLibraryWatchDto"
           }
         },
         "required": [
           "scan",
+          "useContentHash",
           "watch"
         ],
         "type": "object"

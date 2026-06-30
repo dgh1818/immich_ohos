@@ -55,6 +55,7 @@ export const systemConfigStub = {
       watch: {
         enabled: true,
       },
+      useContentHash: false,
     },
   },
   libraryWatchDisabled: {
@@ -65,6 +66,18 @@ export const systemConfigStub = {
       watch: {
         enabled: false,
       },
+      useContentHash: false,
+    },
+  },
+  libraryContentHashEnabled: {
+    library: {
+      scan: {
+        enabled: false,
+      },
+      watch: {
+        enabled: false,
+      },
+      useContentHash: true,
     },
   },
   libraryScan: {
@@ -76,6 +89,7 @@ export const systemConfigStub = {
       watch: {
         enabled: false,
       },
+      useContentHash: false,
     },
   },
   libraryScanAndWatch: {
@@ -87,6 +101,7 @@ export const systemConfigStub = {
       watch: {
         enabled: true,
       },
+      useContentHash: false,
     },
   },
   backupEnabled: {

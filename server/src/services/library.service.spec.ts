@@ -124,7 +124,7 @@ describe(LibraryService.name, () => {
       mocks.systemMetadata.get.mockResolvedValue(null);
       mocks.cron.create.mockResolvedValue();
 
-      await sut.onConfigInit({ newConfig: systemConfigStub.libraryWatchDisabled as SystemConfig });
+      await sut.onConfigInit({ newConfig: systemConfigStub.libraryContentHashEnabled as SystemConfig });
 
       expect(mocks.job.queue).toHaveBeenCalledWith({ name: JobName.LibraryBackfillChecksums });
     });
@@ -194,6 +194,25 @@ describe(LibraryService.name, () => {
 
   describe('handleBackfillChecksums', () => {
     it('should skip after the backfill has completed', async () => {
+      mocks.systemMetadata.get.mockImplementation((key) => {
+        if (key === SystemMetadataKey.SystemConfig) {
+          return Promise.resolve({ library: { useContentHash: true } });
+        }
+
+        if (key === SystemMetadataKey.ExternalLibraryChecksumBackfill) {
+          return Promise.resolve({
+            startedAt: '2026-01-01T00:00:00.000Z',
+            completedAt: '2026-01-01T00:00:00.000Z',
+            scanned: 0,
+            updated: 0,
+            duplicates: 0,
+            failed: 0,
+          });
+        }
+
+        return Promise.resolve(null);
+      });
+
       await expect(sut.handleBackfillChecksums()).resolves.toBe(JobStatus.Skipped);
 
       expect(mocks.asset.getExternalLibraryChecksumBackfillPage).not.toHaveBeenCalled();
@@ -209,7 +228,9 @@ describe(LibraryService.name, () => {
         originalPath: '/data/user1/photo.jpg',
       });
 
-      mocks.systemMetadata.get.mockResolvedValue(null);
+      mocks.systemMetadata.get.mockImplementation((key) =>
+        Promise.resolve(key === SystemMetadataKey.SystemConfig ? { library: { useContentHash: true } } : null),
+      );
       mocks.crypto.hashFile.mockResolvedValue(checksum);
       mocks.asset.getExternalLibraryChecksumBackfillPage.mockResolvedValueOnce([asset]);
 
@@ -244,7 +265,9 @@ describe(LibraryService.name, () => {
         originalPath: '/data/user1/photo.jpg',
       });
 
-      mocks.systemMetadata.get.mockResolvedValue(null);
+      mocks.systemMetadata.get.mockImplementation((key) =>
+        Promise.resolve(key === SystemMetadataKey.SystemConfig ? { library: { useContentHash: true } } : null),
+      );
       mocks.crypto.hashFile.mockResolvedValue(Buffer.from('file checksum'));
       mocks.asset.getExternalLibraryChecksumBackfillPage.mockResolvedValueOnce([video, image]);
 
@@ -264,7 +287,9 @@ describe(LibraryService.name, () => {
         originalPath: '/data/user1/photo.jpg',
       });
 
-      mocks.systemMetadata.get.mockResolvedValue(null);
+      mocks.systemMetadata.get.mockImplementation((key) =>
+        Promise.resolve(key === SystemMetadataKey.SystemConfig ? { library: { useContentHash: true } } : null),
+      );
       mocks.crypto.hashFile.mockResolvedValue(checksum);
       mocks.asset.getExternalLibraryChecksumBackfillPage.mockResolvedValueOnce([asset]);
       mocks.asset.updateChecksum.mockRejectedValue({ constraint_name: 'asset_ownerId_libraryId_checksum_idx' });
@@ -313,6 +338,7 @@ describe(LibraryService.name, () => {
 
       mocks.library.get.mockResolvedValue(library);
       mocks.storage.walk.mockImplementation(async function* generator() {
+        await Promise.resolve();
         yield paths;
       });
       mocks.storage.stat.mockResolvedValue({ isDirectory: () => true } as Stats);
@@ -722,7 +748,7 @@ describe(LibraryService.name, () => {
       const asset = AssetFactory.create();
       const importedPath = '/data/user1/photo.jpg';
       const normalizedPath = normalize(importedPath);
-      const checksum = Buffer.from('file checksum');
+      const checksum = Buffer.from(`path:${normalizedPath} (hashed)`);
 
       const mockLibraryJob: ILibraryFileJob = {
         libraryId: library.id,
@@ -730,7 +756,6 @@ describe(LibraryService.name, () => {
       };
 
       mocks.asset.createAll.mockResolvedValue([asset.id]);
-      mocks.crypto.hashFile.mockResolvedValue(checksum);
       mocks.library.get.mockResolvedValue(library);
 
       await expect(sut.handleSyncFiles(mockLibraryJob)).resolves.toBe(JobStatus.Success);
@@ -740,15 +765,95 @@ describe(LibraryService.name, () => {
           ownerId: library.ownerId,
           libraryId: library.id,
           checksum,
-          checksumAlgorithm: ChecksumAlgorithm.sha1File,
+          checksumAlgorithm: ChecksumAlgorithm.sha1Path,
           originalPath: normalizedPath,
           type: AssetType.Image,
           originalFileName: 'photo.jpg',
           isExternal: true,
         }),
       ]);
-      expect(mocks.crypto.hashFile).toHaveBeenCalledWith(normalizedPath);
+      expect(mocks.crypto.hashSha1).toHaveBeenCalledWith(`path:${normalizedPath}`);
+      expect(mocks.crypto.hashFile).not.toHaveBeenCalled();
 
+      expect(mocks.job.queueAll).toHaveBeenCalledWith([
+        {
+          name: JobName.SidecarCheck,
+          data: {
+            id: asset.id,
+            source: 'upload',
+          },
+        },
+      ]);
+    });
+
+    it('should import with content hash when enabled', async () => {
+      const library = factory.library();
+      const asset = AssetFactory.create();
+      const importedPath = '/data/user1/photo.jpg';
+      const normalizedPath = normalize(importedPath);
+      const checksum = Buffer.from('file checksum');
+
+      const mockLibraryJob: ILibraryFileJob = {
+        libraryId: library.id,
+        paths: [importedPath],
+      };
+
+      mocks.systemMetadata.get.mockImplementation((key) =>
+        Promise.resolve(key === SystemMetadataKey.SystemConfig ? { library: { useContentHash: true } } : null),
+      );
+      mocks.asset.createAll.mockResolvedValue([asset.id]);
+      mocks.crypto.hashFile.mockResolvedValue(checksum);
+      mocks.library.get.mockResolvedValue(library);
+
+      await expect(sut.handleSyncFiles(mockLibraryJob)).resolves.toBe(JobStatus.Success);
+
+      expect(mocks.asset.createAll).toHaveBeenCalledWith([
+        expect.objectContaining({
+          checksum,
+          checksumAlgorithm: ChecksumAlgorithm.sha1File,
+          originalPath: normalizedPath,
+        }),
+      ]);
+      expect(mocks.asset.getExistingChecksums).toHaveBeenCalledWith(library.id, [checksum]);
+    });
+
+    it('should retry concurrent content hash insert conflicts with path hash', async () => {
+      const library = factory.library();
+      const asset = AssetFactory.create();
+      const importedPath = '/data/user1/photo.jpg';
+      const normalizedPath = normalize(importedPath);
+      const checksum = Buffer.from('file checksum');
+      const pathChecksum = Buffer.from(`path:${normalizedPath} (hashed)`);
+
+      const mockLibraryJob: ILibraryFileJob = {
+        libraryId: library.id,
+        paths: [importedPath],
+      };
+
+      mocks.systemMetadata.get.mockImplementation((key) =>
+        Promise.resolve(key === SystemMetadataKey.SystemConfig ? { library: { useContentHash: true } } : null),
+      );
+      mocks.asset.createAll.mockResolvedValueOnce([]).mockResolvedValueOnce([asset.id]);
+      mocks.asset.filterNewExternalAssetPaths.mockResolvedValueOnce([normalizedPath]);
+      mocks.crypto.hashFile.mockResolvedValue(checksum);
+      mocks.library.get.mockResolvedValue(library);
+
+      await expect(sut.handleSyncFiles(mockLibraryJob)).resolves.toBe(JobStatus.Success);
+
+      expect(mocks.asset.createAll).toHaveBeenNthCalledWith(1, [
+        expect.objectContaining({
+          checksum,
+          checksumAlgorithm: ChecksumAlgorithm.sha1File,
+          originalPath: normalizedPath,
+        }),
+      ]);
+      expect(mocks.asset.createAll).toHaveBeenNthCalledWith(2, [
+        expect.objectContaining({
+          checksum: pathChecksum,
+          checksumAlgorithm: ChecksumAlgorithm.sha1Path,
+          originalPath: normalizedPath,
+        }),
+      ]);
       expect(mocks.job.queueAll).toHaveBeenCalledWith([
         {
           name: JobName.SidecarCheck,

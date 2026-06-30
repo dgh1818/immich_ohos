@@ -475,6 +475,23 @@ export class AssetRepository {
     return ids.map(({ id }) => id);
   }
 
+  /** Returns base64 checksums that already exist in the given external library */
+  async getExistingChecksums(libraryId: string, checksums: Buffer[]): Promise<Set<string>> {
+    if (checksums.length === 0) {
+      return new Set();
+    }
+
+    const result = await this.db
+      .selectFrom('asset')
+      .select('checksum')
+      .where('libraryId', '=', asUuid(libraryId))
+      .where('isExternal', '=', true)
+      .where('checksum', 'in', checksums)
+      .execute();
+
+    return new Set(result.map((r) => r.checksum.toString('base64')));
+  }
+
   @GenerateSql({ params: [DummyValue.UUID, { year: 2000, day: 1, month: 1 }] })
   getByDayOfYear(ownerIds: string[], { year, day, month }: YearMonthDay) {
     return this.db
@@ -670,6 +687,36 @@ export class AssetRepository {
       .$if(!!afterId, (qb) => qb.where('id', '>', afterId!))
       .orderBy('id')
       .limit(limit)
+      .execute();
+  }
+
+  /** Returns external library assets with content hash that need path hash conversion */
+  getExternalLibraryPathChecksumBackfillPage({ afterId, limit }: ExternalLibraryChecksumBackfillOptions) {
+    return this.db
+      .selectFrom('asset')
+      .select(['id', 'ownerId', 'libraryId', 'originalPath', 'checksum'])
+      .where('isExternal', '=', true)
+      .where('libraryId', 'is not', null)
+      .where('checksumAlgorithm', '=', ChecksumAlgorithm.sha1File)
+      .$if(!!afterId, (qb) => qb.where('id', '>', afterId!))
+      .orderBy('id')
+      .limit(limit)
+      .execute();
+  }
+
+  /** Bulk update external library assets to use path-based checksum */
+  async updateAllExternalToPathHash(ids: string[]): Promise<void> {
+    if (ids.length === 0) {
+      return;
+    }
+
+    await this.db
+      .updateTable('asset')
+      .set(() => ({
+        checksum: sql<Buffer>`digest('path:' || "originalPath", 'sha1')`,
+        checksumAlgorithm: ChecksumAlgorithm.sha1Path,
+      }))
+      .where('id', 'in', ids)
       .execute();
   }
 
