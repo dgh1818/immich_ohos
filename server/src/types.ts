@@ -597,7 +597,7 @@ export interface IOhosLivePhotoRescanJob {
   retryFailed?: boolean;
 }
 export type OhosLivePhotoRescanState = {
-  status: 'queued' | 'running' | 'completed' | 'failed';
+  status: 'queued' | 'running' | 'paused' | 'canceled' | 'completed' | 'failed';
   mode: 'all' | 'failed';
   queuedAt?: string;
   startedAt?: string;

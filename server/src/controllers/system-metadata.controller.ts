@@ -93,4 +93,37 @@ export class SystemMetadataController {
   retryFailedOhosLivePhotoRescan(): Promise<OhosLivePhotoRescanState> {
     return this.service.queueOhosLivePhotoRescan(true);
   }
+
+  @Post('ohos-live-photo-rescan/resume')
+  @Authenticated({ permission: Permission.JobCreate, admin: true })
+  @Endpoint({
+    summary: 'Resume OHOS Live Photo rescan',
+    description: 'Resume a paused OHOS Live Photo rescan.',
+    history: new HistoryBuilder().added('v1').internal('v1'),
+  })
+  resumeOhosLivePhotoRescan(): Promise<OhosLivePhotoRescanState> {
+    return this.service.resumeOhosLivePhotoRescan();
+  }
+
+  @Post('ohos-live-photo-rescan/pause')
+  @Authenticated({ permission: Permission.JobCreate, admin: true })
+  @Endpoint({
+    summary: 'Pause OHOS Live Photo rescan',
+    description: 'Pause the running OHOS Live Photo rescan.',
+    history: new HistoryBuilder().added('v1').internal('v1'),
+  })
+  pauseOhosLivePhotoRescan(): Promise<OhosLivePhotoRescanState> {
+    return this.service.pauseOhosLivePhotoRescan();
+  }
+
+  @Post('ohos-live-photo-rescan/cancel')
+  @Authenticated({ permission: Permission.JobCreate, admin: true })
+  @Endpoint({
+    summary: 'Cancel OHOS Live Photo rescan',
+    description: 'Cancel the running OHOS Live Photo rescan.',
+    history: new HistoryBuilder().added('v1').internal('v1'),
+  })
+  cancelOhosLivePhotoRescan(): Promise<OhosLivePhotoRescanState> {
+    return this.service.cancelOhosLivePhotoRescan();
+  }
 }

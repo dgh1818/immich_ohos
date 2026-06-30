@@ -2,13 +2,13 @@
   import { handleError } from '$lib/utils/handle-error';
   import { getBaseUrl } from '@immich/sdk';
   import { Icon, toastManager } from '@immich/ui';
-  import { mdiImageRefreshOutline, mdiReplay } from '@mdi/js';
+  import { mdiImageRefreshOutline, mdiPause, mdiPlay, mdiReplay, mdiStop } from '@mdi/js';
   import { onMount } from 'svelte';
   import QueueCardBadge from './QueueCardBadge.svelte';
   import QueueCardButton from './QueueCardButton.svelte';
 
   type OhosLivePhotoRescanState = {
-    status: 'queued' | 'running' | 'completed' | 'failed';
+    status: 'queued' | 'running' | 'paused' | 'canceled' | 'completed' | 'failed';
     mode: 'all' | 'failed';
     queuedAt?: string;
     startedAt?: string;
@@ -45,6 +45,7 @@
   let pollTimer: ReturnType<typeof setTimeout> | undefined;
 
   const isActive = $derived(rescanState?.status === 'queued' || rescanState?.status === 'running');
+  const isPaused = $derived(rescanState?.status === 'paused');
   const progress = $derived(
     rescanState?.total ? Math.min(100, Math.round((rescanState.scanned / rescanState.total) * 100)) : 0,
   );
@@ -101,6 +102,32 @@
     }
   };
 
+  const updateRescan = async (action: 'resume' | 'pause' | 'cancel') => {
+    submitting = true;
+    try {
+      rescanState = await request(`/system-metadata/ohos-live-photo-rescan/${action}`, { method: 'POST' });
+      toastManager.primary(
+        {
+          resume: '已继续 OHOS 动态照片重新匹配',
+          pause: '已暂停 OHOS 动态照片重新匹配',
+          cancel: '已终止 OHOS 动态照片重新匹配',
+        }[action],
+      );
+      schedulePoll();
+    } catch (error) {
+      handleError(
+        error,
+        {
+          resume: '继续 OHOS 动态照片重新匹配失败',
+          pause: '暂停 OHOS 动态照片重新匹配失败',
+          cancel: '终止 OHOS 动态照片重新匹配失败',
+        }[action],
+      );
+    } finally {
+      submitting = false;
+    }
+  };
+
   onMount(() => {
     void loadState();
     return () => clearTimeout(pollTimer);
@@ -111,6 +138,10 @@
   <div class="flex w-full flex-col">
     {#if isActive}
       <QueueCardBadge color="success">运行中</QueueCardBadge>
+    {:else if isPaused}
+      <QueueCardBadge color="warning">已暂停</QueueCardBadge>
+    {:else if rescanState?.status === 'canceled'}
+      <QueueCardBadge color="warning">已终止</QueueCardBadge>
     {:else if rescanState?.status === 'failed'}
       <QueueCardBadge color="warning">失败</QueueCardBadge>
     {/if}
@@ -206,9 +237,22 @@
 
   <div class="flex w-full flex-row overflow-hidden sm:w-32 sm:flex-col">
     {#if isActive}
-      <QueueCardButton disabled={true} color="light-gray">
-        <Icon icon={mdiImageRefreshOutline} size="36" />
-        <span>运行中</span>
+      <QueueCardButton disabled={submitting} color="dark-gray" onClick={() => updateRescan('pause')}>
+        <Icon icon={mdiPause} size="24" />
+        <span>暂停</span>
+      </QueueCardButton>
+      <QueueCardButton disabled={submitting} color="light-gray" onClick={() => updateRescan('cancel')}>
+        <Icon icon={mdiStop} size="24" />
+        <span>终止</span>
+      </QueueCardButton>
+    {:else if isPaused}
+      <QueueCardButton disabled={submitting} color="dark-gray" onClick={() => updateRescan('resume')}>
+        <Icon icon={mdiPlay} size="24" />
+        <span>继续</span>
+      </QueueCardButton>
+      <QueueCardButton disabled={submitting} color="light-gray" onClick={() => updateRescan('cancel')}>
+        <Icon icon={mdiStop} size="24" />
+        <span>终止</span>
       </QueueCardButton>
     {:else}
       <QueueCardButton color="dark-gray" disabled={submitting} onClick={() => queueRescan(false)}>

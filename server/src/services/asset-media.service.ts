@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
-import { dirname, extname, join } from 'node:path';
+import { basename, dirname, extname, join } from 'node:path';
 import sanitize from 'sanitize-filename';
 import { StorageCore } from 'src/cores/storage.core';
 import { Asset, AuthSharedLink } from 'src/database';
@@ -169,6 +169,10 @@ export class AssetMediaService extends BaseService {
         originalFileName: dto.filename || file.originalName,
       });
 
+      if (dto.livePhotoVideoId) {
+        await this.moveLivePhotoMotionAsset(asset, dto.livePhotoVideoId);
+      }
+
       if (dto.metadata?.length) {
         await this.assetRepository.upsertMetadata(asset.id, dto.metadata);
       }
@@ -222,6 +226,22 @@ export class AssetMediaService extends BaseService {
       this.logger.error(`Error uploading file ${error}`, error?.stack);
       throw error;
     }
+  }
+
+  private async moveLivePhotoMotionAsset(asset: Asset, livePhotoVideoId: string) {
+    const motionAsset = await this.assetRepository.getById(livePhotoVideoId);
+    if (!motionAsset) {
+      return;
+    }
+
+    const folder = dirname(asset.originalPath);
+    if (dirname(motionAsset.originalPath) === folder) {
+      return;
+    }
+
+    const targetPath = join(folder, basename(motionAsset.originalPath));
+    await this.storageRepository.rename(motionAsset.originalPath, targetPath);
+    await this.assetRepository.update({ id: motionAsset.id, originalPath: targetPath });
   }
 
   async downloadOriginal(auth: AuthDto, id: string, dto: AssetDownloadOriginalDto): Promise<ImmichFileResponse> {

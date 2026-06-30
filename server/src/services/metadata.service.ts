@@ -244,15 +244,11 @@ export class MetadataService extends BaseService {
     libraryId: string | null;
   }): Promise<OhosLivePhotoLinkResult> {
     const otherType = asset.type === AssetType.Video ? AssetType.Image : AssetType.Video;
+    const { dir } = parse(asset.originalPath);
+    const baseName = parse(asset.originalFileName).name;
     const match = await this.assetRepository.findOhosLivePhotoMatch({
-      path:
-        otherType === AssetType.Video
-          ? `${parse(asset.originalPath).dir}/${parse(asset.originalFileName).name}.mp4`
-          : `${parse(asset.originalPath).dir}/${parse(asset.originalFileName).name}.jpg`,
-      name:
-        otherType === AssetType.Video
-          ? `${parse(asset.originalFileName).name}.mp4`
-          : `${parse(asset.originalFileName).name}.jpg`,
+      path: dir,
+      name: `${baseName}.${otherType === AssetType.Video ? 'mp4' : 'jpg'}`,
       ownerId: asset.ownerId,
       libraryId: asset.libraryId,
       otherAssetId: asset.id,
@@ -300,6 +296,10 @@ export class MetadataService extends BaseService {
 
   private async rescanOhosLivePhotos(): Promise<JobStatus> {
     const state = await this.getOhosLivePhotoRescanState('all');
+    if (state.status === 'paused' || state.status === 'canceled') {
+      return JobStatus.Success;
+    }
+
     state.status = 'running';
     state.mode = 'all';
     state.startedAt ||= new Date().toISOString();
@@ -311,6 +311,10 @@ export class MetadataService extends BaseService {
         await this.processOhosLivePhotoRescanAsset(asset, state);
         state.scanned++;
         state.afterId = asset.id;
+
+        if (await this.stopOhosLivePhotoRescanIfRequested(state)) {
+          return JobStatus.Success;
+        }
 
         if (state.scanned % OHOS_LIVE_PHOTO_RESCAN_SAVE_INTERVAL === 0 || state.failures.at(-1)?.assetId === asset.id) {
           await this.saveOhosLivePhotoRescanState(state);
@@ -334,6 +338,10 @@ export class MetadataService extends BaseService {
 
   private async retryFailedOhosLivePhotoRescan(): Promise<JobStatus> {
     const state = await this.getOhosLivePhotoRescanState('failed');
+    if (state.status === 'paused' || state.status === 'canceled') {
+      return JobStatus.Success;
+    }
+
     const failures = [...state.failures];
     state.status = 'running';
     state.mode = 'failed';
@@ -353,6 +361,10 @@ export class MetadataService extends BaseService {
         }
 
         state.scanned++;
+        if (await this.stopOhosLivePhotoRescanIfRequested(state)) {
+          return JobStatus.Success;
+        }
+
         if (
           state.scanned % OHOS_LIVE_PHOTO_RESCAN_SAVE_INTERVAL === 0 ||
           state.failures.some(({ assetId }) => assetId === failure.assetId)
@@ -408,6 +420,19 @@ export class MetadataService extends BaseService {
     } catch (error: Error | any) {
       this.recordOhosLivePhotoRescanFailure(state, asset, state.current.stage, error);
     }
+  }
+
+  private async stopOhosLivePhotoRescanIfRequested(state: OhosLivePhotoRescanState): Promise<boolean> {
+    const current = await this.systemMetadataRepository.get(SystemMetadataKey.OhosLivePhotoRescan);
+    if (current?.status !== 'paused' && current?.status !== 'canceled') {
+      return false;
+    }
+
+    state.status = current.status;
+    state.current = undefined;
+    state.completedAt = current.status === 'canceled' ? (current.completedAt ?? new Date().toISOString()) : undefined;
+    await this.saveOhosLivePhotoRescanState(state);
+    return true;
   }
 
   private async getOhosLivePhotoRescanState(mode: OhosLivePhotoRescanState['mode']) {

@@ -78,4 +78,43 @@ export class SystemMetadataService extends BaseService {
     await this.jobRepository.queue({ name: JobName.AssetOhosLivePhotoRescan, data: { retryFailed } });
     return state;
   }
+
+  async resumeOhosLivePhotoRescan(): Promise<OhosLivePhotoRescanState> {
+    const state = await this.getOhosLivePhotoRescanState();
+    if (state.status !== 'paused') {
+      return state;
+    }
+
+    state.status = 'queued';
+    state.queuedAt = new Date().toISOString();
+    state.completedAt = undefined;
+    state.current = undefined;
+    await this.systemMetadataRepository.set(SystemMetadataKey.OhosLivePhotoRescan, state);
+    await this.jobRepository.queue({
+      name: JobName.AssetOhosLivePhotoRescan,
+      data: { retryFailed: state.mode === 'failed' },
+    });
+    return state;
+  }
+
+  async pauseOhosLivePhotoRescan(): Promise<OhosLivePhotoRescanState> {
+    const state = await this.getOhosLivePhotoRescanState();
+    if (state.status === 'queued' || state.status === 'running') {
+      state.status = 'paused';
+      state.current = undefined;
+      await this.systemMetadataRepository.set(SystemMetadataKey.OhosLivePhotoRescan, state);
+    }
+    return state;
+  }
+
+  async cancelOhosLivePhotoRescan(): Promise<OhosLivePhotoRescanState> {
+    const state = await this.getOhosLivePhotoRescanState();
+    if (state.status === 'queued' || state.status === 'running' || state.status === 'paused') {
+      state.status = 'canceled';
+      state.completedAt = new Date().toISOString();
+      state.current = undefined;
+      await this.systemMetadataRepository.set(SystemMetadataKey.OhosLivePhotoRescan, state);
+    }
+    return state;
+  }
 }

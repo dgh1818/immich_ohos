@@ -4,6 +4,7 @@ import {
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
+import { join } from 'node:path';
 import { AssetFile } from 'src/database';
 import { AssetMediaStatus, AssetRejectReason, AssetUploadAction } from 'src/dtos/asset-media-response.dto';
 import { AssetMediaCreateDto, AssetMediaSize, UploadFieldName } from 'src/dtos/asset-media.dto';
@@ -399,11 +400,18 @@ describe(AssetMediaService.name, () => {
     });
 
     it('should handle a live photo', async () => {
-      const motionAsset = AssetFactory.from({ type: AssetType.Video, visibility: AssetVisibility.Hidden })
+      const motionAsset = AssetFactory.from({
+        type: AssetType.Video,
+        visibility: AssetVisibility.Hidden,
+        originalPath: 'fake_path/motion/asset_1.mp4',
+      })
         .owner(authStub.user1.user)
         .build();
-      const asset = AssetFactory.create({ livePhotoVideoId: motionAsset.id });
-      mocks.asset.getById.mockResolvedValueOnce(getForAsset(motionAsset));
+      const asset = AssetFactory.create({
+        livePhotoVideoId: motionAsset.id,
+        originalPath: fileStub.livePhotoStill.originalPath,
+      });
+      mocks.asset.getById.mockResolvedValue(getForAsset(motionAsset));
       mocks.asset.create.mockResolvedValueOnce(asset);
 
       await expect(
@@ -414,13 +422,19 @@ describe(AssetMediaService.name, () => {
       });
 
       expect(mocks.asset.getById).toHaveBeenCalledWith(motionAsset.id);
-      expect(mocks.asset.update).not.toHaveBeenCalled();
+      expect(mocks.storage.rename).toHaveBeenCalledWith(motionAsset.originalPath, join('fake_path', 'asset_1.mp4'));
+      expect(mocks.asset.update).toHaveBeenCalledWith({
+        id: motionAsset.id,
+        originalPath: join('fake_path', 'asset_1.mp4'),
+      });
     });
 
     it('should hide the linked motion asset', async () => {
-      const motionAsset = AssetFactory.from({ type: AssetType.Video }).owner(authStub.user1.user).build();
-      const asset = AssetFactory.create();
-      mocks.asset.getById.mockResolvedValueOnce(getForAsset(motionAsset));
+      const motionAsset = AssetFactory.from({ type: AssetType.Video, originalPath: 'fake_path/motion/asset_1.mp4' })
+        .owner(authStub.user1.user)
+        .build();
+      const asset = AssetFactory.create({ originalPath: fileStub.livePhotoStill.originalPath });
+      mocks.asset.getById.mockResolvedValue(getForAsset(motionAsset));
       mocks.asset.create.mockResolvedValueOnce(asset);
 
       await expect(
@@ -434,6 +448,10 @@ describe(AssetMediaService.name, () => {
       expect(mocks.asset.update).toHaveBeenCalledWith({
         id: motionAsset.id,
         visibility: AssetVisibility.Hidden,
+      });
+      expect(mocks.asset.update).toHaveBeenCalledWith({
+        id: motionAsset.id,
+        originalPath: join('fake_path', 'asset_1.mp4'),
       });
     });
 

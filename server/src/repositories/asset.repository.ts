@@ -8,6 +8,7 @@ import {
   SelectQueryBuilder,
   ShallowDehydrateObject,
   sql,
+  SqlBool,
   Updateable,
   UpdateResult,
 } from 'kysely';
@@ -751,7 +752,7 @@ export class AssetRepository {
       .where('id', '!=', asUuid(otherAssetId))
       .where('ownerId', '=', asUuid(ownerId))
       .where('type', '=', type)
-      .where('asset.originalPath', '=', path)
+      .where(sql<SqlBool>`regexp_replace("asset"."originalPath", '/[^/]*$', '') = ${path}`)
       .where('asset.originalFileName', '=', name)
       .limit(1)
       .executeTakeFirst();
