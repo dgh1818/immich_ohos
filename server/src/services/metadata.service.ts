@@ -415,6 +415,13 @@ export class MetadataService extends BaseService {
         state.skipped++;
       } else {
         state[result]++;
+        if (result === 'missing') {
+          const { dir } = parse(asset.originalPath);
+          const expectedName = `${parse(asset.originalFileName).name}.${asset.type === AssetType.Image ? 'mp4' : 'jpg'}`;
+          this.logger.warn(
+            `OHOS Live Photo missing pair: assetId=${asset.id}, type=${asset.type}, source=${source ?? 'unknown'}, originalFileName=${asset.originalFileName}, originalPath=${asset.originalPath}, expectedPath=${join(dir, expectedName)}, ownerId=${asset.ownerId}, libraryId=${asset.libraryId ?? 'null'}`,
+          );
+        }
       }
       this.removeOhosLivePhotoRescanFailure(state, asset.id);
     } catch (error: Error | any) {
