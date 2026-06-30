@@ -373,7 +373,7 @@ export class LibraryService extends BaseService {
     for (const path of job.paths) {
       try {
         assetImports.push(await this.processEntity(path, library.ownerId, job.libraryId));
-        if (assetImports.length >= 100) {
+        if (assetImports.length >= 10) {
           await importAssets();
         }
       } catch (error: any) {
