@@ -442,7 +442,12 @@ export class LibraryService extends BaseService {
     return batch;
   }
 
-  private async queueExternalLibraryImportBatches(libraryId: string, paths: string[], baseProgressCounter: number) {
+  private async queueExternalLibraryImportBatches(
+    libraryId: string,
+    paths: string[],
+    baseProgressCounter: number,
+    useContentHash: boolean,
+  ) {
     let queuedCount = 0;
     let imagePaths: string[] = [];
 
@@ -457,6 +462,11 @@ export class LibraryService extends BaseService {
         },
       });
     };
+
+    if (!useContentHash) {
+      await queueBatch(paths);
+      return;
+    }
 
     const flushImages = async () => {
       if (imagePaths.length > 0) {
@@ -587,13 +597,13 @@ export class LibraryService extends BaseService {
     for (const path of job.paths) {
       try {
         const isVideo = mimeTypes.isVideo(path);
-        if (isVideo) {
+        if (useContentHash && isVideo) {
           await importAssets();
         }
 
         assetImports.push(await this.processEntity(path, library.ownerId, job.libraryId, useContentHash));
 
-        if (isVideo || assetImports.length >= EXTERNAL_LIBRARY_IMAGE_HASH_BATCH_SIZE) {
+        if (useContentHash && (isVideo || assetImports.length >= EXTERNAL_LIBRARY_IMAGE_HASH_BATCH_SIZE)) {
           await importAssets();
         }
       } catch (error: any) {
@@ -986,6 +996,9 @@ export class LibraryService extends BaseService {
 
     let importCount = 0;
     let crawlCount = 0;
+    const {
+      library: { useContentHash },
+    } = await this.getConfig({ withCache: true });
 
     this.logger.log(`Starting disk crawl of ${validImportPaths.length} import path(s) for library ${library.id}...`);
 
@@ -994,7 +1007,7 @@ export class LibraryService extends BaseService {
       const paths = await this.assetRepository.filterNewExternalAssetPaths(library.id, pathBatch);
 
       if (paths.length > 0) {
-        await this.queueExternalLibraryImportBatches(library.id, paths, importCount);
+        await this.queueExternalLibraryImportBatches(library.id, paths, importCount, useContentHash);
         importCount += paths.length;
       }
 

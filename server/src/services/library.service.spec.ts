@@ -330,12 +330,15 @@ describe(LibraryService.name, () => {
       });
     });
 
-    it('should queue videos separately from image batches', async () => {
+    it('should queue videos separately from image batches when content hash is enabled', async () => {
       const library = factory.library({ importPaths: ['/foo'] });
       const imagePaths = Array.from({ length: 101 }, (_, index) => `/data/user1/photo-${index}.jpg`);
       const videoPath = '/data/user1/video.mp4';
       const paths = [...imagePaths.slice(0, 100), videoPath, imagePaths[100]];
 
+      mocks.systemMetadata.get.mockImplementation((key) =>
+        Promise.resolve(key === SystemMetadataKey.SystemConfig ? { library: { useContentHash: true } } : null),
+      );
       mocks.library.get.mockResolvedValue(library);
       mocks.storage.walk.mockImplementation(async function* generator() {
         await Promise.resolve();
@@ -865,7 +868,7 @@ describe(LibraryService.name, () => {
       ]);
     });
 
-    it('should import videos immediately', async () => {
+    it('should import videos immediately when content hash is enabled', async () => {
       const library = factory.library();
       const image = AssetFactory.create({ type: AssetType.Image });
       const video = AssetFactory.create({ type: AssetType.Video });
@@ -877,6 +880,9 @@ describe(LibraryService.name, () => {
         paths: [imagePath, videoPath],
       };
 
+      mocks.systemMetadata.get.mockImplementation((key) =>
+        Promise.resolve(key === SystemMetadataKey.SystemConfig ? { library: { useContentHash: true } } : null),
+      );
       mocks.asset.createAll.mockResolvedValueOnce([image.id]).mockResolvedValueOnce([video.id]);
       mocks.crypto.hashFile.mockResolvedValue(Buffer.from('file checksum'));
       mocks.library.get.mockResolvedValue(library);

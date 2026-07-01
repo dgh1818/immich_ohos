@@ -29,6 +29,15 @@ describe(QueueService.name, () => {
       expect(mocks.job.setConcurrency).toHaveBeenNthCalledWith(8, QueueName.BackgroundTask, 5);
       expect(mocks.job.setConcurrency).toHaveBeenNthCalledWith(9, QueueName.StorageTemplateMigration, 1);
     });
+
+    it('should use one library worker when content hash is enabled', () => {
+      const config = structuredClone(defaults);
+      config.library.useContentHash = true;
+
+      sut.onConfigUpdate({ newConfig: config, oldConfig: {} as SystemConfig });
+
+      expect(mocks.job.setConcurrency).toHaveBeenCalledWith(QueueName.Library, 1);
+    });
   });
 
   describe('handleNightlyJobs', () => {

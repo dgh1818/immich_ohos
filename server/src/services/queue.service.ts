@@ -97,6 +97,9 @@ export class QueueService extends BaseService {
       if (this.isConcurrentQueue(queueName)) {
         concurrency = config.job[queueName].concurrency;
       }
+      if (queueName === QueueName.Library && config.library.useContentHash) {
+        concurrency = 1;
+      }
       this.logger.debug(`Setting ${queueName} concurrency to ${concurrency}`);
       this.jobRepository.setConcurrency(queueName, concurrency);
     }
