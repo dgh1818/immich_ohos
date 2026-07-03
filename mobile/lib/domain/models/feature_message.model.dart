@@ -12,7 +12,7 @@ class FeatureHighlight {
     this.image,
     required this.titleKey,
     required this.bodyKey,
-    this.platform = const [.iOS, .android],
+    this.platform = const [.iOS, .android, .ohos],
   });
 
   bool get isVisibleOnCurrentPlatform => platform.contains(defaultTargetPlatform);

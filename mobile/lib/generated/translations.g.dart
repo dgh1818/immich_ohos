@@ -308,6 +308,7 @@ class Translations extends _BaseTranslations {
   String get change_pin_code => _t('change_pin_code');
   String get change_your_password => _t('change_your_password');
   String get changed_visibility_successfully => _t('changed_visibility_successfully');
+  String get changelog_text => _t('changelog_text');
   String get charging => _t('charging');
   String get charging_requirement_mobile_backup => _t('charging_requirement_mobile_backup');
   String get check_logs => _t('check_logs');
@@ -1042,6 +1043,7 @@ class Translations extends _BaseTranslations {
   String get never => _t('never');
   String get new_album => _t('new_album');
   String get new_api_key => _t('new_api_key');
+  String get new_feature => _t('new_feature');
   String get new_password => _t('new_password');
   String get new_person => _t('new_person');
   String get new_pin_code => _t('new_pin_code');
@@ -1102,6 +1104,8 @@ class Translations extends _BaseTranslations {
   String get obtainium_configurator => _t('obtainium_configurator');
   String get obtainium_configurator_instructions => _t('obtainium_configurator_instructions');
   String get ocr => _t('ocr');
+  String get ocr_body => _t('ocr_body');
+  String get ocr_title => _t('ocr_title');
   String get official_immich_resources => _t('official_immich_resources');
   String get offline => _t('offline');
   String get offset => _t('offset');
@@ -1120,6 +1124,8 @@ class Translations extends _BaseTranslations {
   String get open => _t('open');
   String get open_calendar => _t('open_calendar');
   String get open_in_browser => _t('open_in_browser');
+  String get open_in_immich_body => _t('open_in_immich_body');
+  String get open_in_immich_title => _t('open_in_immich_title');
   String get open_in_map_view => _t('open_in_map_view');
   String get open_in_openstreetmap => _t('open_in_openstreetmap');
   String get open_the_search_filters => _t('open_the_search_filters');
@@ -1281,7 +1287,10 @@ class Translations extends _BaseTranslations {
   String get recent => _t('recent');
   String get recent_searches => _t('recent_searches');
   String get recently_added => _t('recently_added');
+  String get recently_added_body => _t('recently_added_body');
+  String get recently_added_description => _t('recently_added_description');
   String get recently_added_page_title => _t('recently_added_page_title');
+  String get recently_added_title => _t('recently_added_title');
   String get recently_taken => _t('recently_taken');
   String get refresh => _t('refresh');
   String get refresh_encoded_videos => _t('refresh_encoded_videos');
@@ -1495,6 +1504,8 @@ class Translations extends _BaseTranslations {
   String get share_link => _t('share_link');
   String get share_original => _t('share_original');
   String get share_preview => _t('share_preview');
+  String get share_quality_body => _t('share_quality_body');
+  String get share_quality_title => _t('share_quality_title');
   String get shared => _t('shared');
   String get shared_album_activities_input_disable => _t('shared_album_activities_input_disable');
   String get shared_album_activity_remove_content => _t('shared_album_activity_remove_content');
@@ -1583,16 +1594,19 @@ class Translations extends _BaseTranslations {
   String get sign_out => _t('sign_out');
   String get sign_up => _t('sign_up');
   String get size => _t('size');
+  String get skip => _t('skip');
   String get skip_to_content => _t('skip_to_content');
   String get skip_to_folders => _t('skip_to_folders');
   String get skip_to_tags => _t('skip_to_tags');
   String get slideshow => _t('slideshow');
+  String get slideshow_body => _t('slideshow_body');
   String get slideshow_metadata_overlay_mode => _t('slideshow_metadata_overlay_mode');
   String get slideshow_metadata_overlay_mode_description_only => _t('slideshow_metadata_overlay_mode_description_only');
   String get slideshow_metadata_overlay_mode_full => _t('slideshow_metadata_overlay_mode_full');
   String get slideshow_repeat => _t('slideshow_repeat');
   String get slideshow_repeat_description => _t('slideshow_repeat_description');
   String get slideshow_settings => _t('slideshow_settings');
+  String get slideshow_title => _t('slideshow_title');
   String get smart_album => _t('smart_album');
   String get some_assets_already_have_a_location_warning => _t('some_assets_already_have_a_location_warning');
   String get sort_albums_by => _t('sort_albums_by');
@@ -1763,6 +1777,8 @@ class Translations extends _BaseTranslations {
   String get upload_status_errors => _t('upload_status_errors');
   String get upload_status_uploaded => _t('upload_status_uploaded');
   String get upload_success => _t('upload_success');
+  String get upload_to_album_body => _t('upload_to_album_body');
+  String get upload_to_album_title => _t('upload_to_album_title');
   String upload_to_immich({required int count}) => _t('upload_to_immich', {'count': count});
   String get uploading => _t('uploading');
   String get uploading_media => _t('uploading_media');
@@ -1831,6 +1847,9 @@ class Translations extends _BaseTranslations {
   String get week => _t('week');
   String get welcome => _t('welcome');
   String get welcome_to_immich => _t('welcome_to_immich');
+  String get whats_new => _t('whats_new');
+  String get whats_new_settings_subtitle => _t('whats_new_settings_subtitle');
+  String whats_new_version({required Object version}) => _t('whats_new_version', {'version': version});
   String get when$ => _t('when');
   String get width => _t('width');
   String get wifi_name => _t('wifi_name');
@@ -1936,6 +1955,27 @@ class _AdminTranslations extends _BaseTranslations {
   String get image_thumbnail_quality_description => _t('admin.image_thumbnail_quality_description');
   String get image_thumbnail_title => _t('admin.image_thumbnail_title');
   String get import_config_from_json_description => _t('admin.import_config_from_json_description');
+  String get integrity_checks_checksum_files => _t('admin.integrity_checks_checksum_files');
+  String get integrity_checks_checksum_files_description => _t('admin.integrity_checks_checksum_files_description');
+  String get integrity_checks_checksum_files_enable_description =>
+      _t('admin.integrity_checks_checksum_files_enable_description');
+  String get integrity_checks_checksum_files_percentage_limit =>
+      _t('admin.integrity_checks_checksum_files_percentage_limit');
+  String get integrity_checks_checksum_files_percentage_limit_description =>
+      _t('admin.integrity_checks_checksum_files_percentage_limit_description');
+  String get integrity_checks_checksum_files_time_limit => _t('admin.integrity_checks_checksum_files_time_limit');
+  String get integrity_checks_checksum_files_time_limit_description =>
+      _t('admin.integrity_checks_checksum_files_time_limit_description');
+  String get integrity_checks_missing_files => _t('admin.integrity_checks_missing_files');
+  String get integrity_checks_missing_files_description => _t('admin.integrity_checks_missing_files_description');
+  String get integrity_checks_missing_files_enable_description =>
+      _t('admin.integrity_checks_missing_files_enable_description');
+  String get integrity_checks_settings => _t('admin.integrity_checks_settings');
+  String get integrity_checks_settings_description => _t('admin.integrity_checks_settings_description');
+  String get integrity_checks_untracked_files => _t('admin.integrity_checks_untracked_files');
+  String get integrity_checks_untracked_files_description => _t('admin.integrity_checks_untracked_files_description');
+  String get integrity_checks_untracked_files_enable_description =>
+      _t('admin.integrity_checks_untracked_files_enable_description');
   String job_concurrency({required Object job}) => _t('admin.job_concurrency', {'job': job});
   String get job_created => _t('admin.job_created');
   String get job_not_concurrency_safe => _t('admin.job_not_concurrency_safe');
@@ -1944,6 +1984,9 @@ class _AdminTranslations extends _BaseTranslations {
   String jobs_delayed({required int jobCount}) => _t('admin.jobs_delayed', {'jobCount': jobCount});
   String jobs_failed({required int jobCount}) => _t('admin.jobs_failed', {'jobCount': jobCount});
   String get jobs_over_time => _t('admin.jobs_over_time');
+  String get library_content_hash => _t('admin.library_content_hash');
+  String get library_content_hash_description => _t('admin.library_content_hash_description');
+  String get library_content_hash_enable_description => _t('admin.library_content_hash_enable_description');
   String library_created({required Object library$}) => _t('admin.library_created', {'library': library$});
   String get library_deleted => _t('admin.library_deleted');
   String get library_details => _t('admin.library_details');

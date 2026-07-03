@@ -13,13 +13,55 @@ class WhatsNewPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final highlights = visibleFeatureMessageHighlights;
+    final scheme = context.colorScheme;
+
     return Scaffold(
       appBar: AppBar(centerTitle: false, title: Text(context.t.whats_new)),
-      body: ListView.separated(
+      body: ListView.builder(
         padding: const EdgeInsets.only(top: 16, bottom: 64),
-        itemCount: highlights.length,
-        separatorBuilder: (_, __) => const SizedBox(height: 24),
-        itemBuilder: (_, index) => _HighlightCard(highlight: highlights[index]),
+        itemCount: highlights.length + 1, // +1 for changelog
+        itemBuilder: (_, index) {
+          if (index < highlights.length) {
+            return _HighlightCard(highlight: highlights[index]);
+          }
+          // Changelog section
+          return Padding(
+            padding: const EdgeInsets.only(top: 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Divider(indent: 16, endIndent: 16),
+                const SizedBox(height: 16),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Text(
+                    '更新日志',
+                    style: context.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: scheme.surfaceContainerHighest,
+                      borderRadius: const BorderRadius.all(Radius.circular(12)),
+                    ),
+                    child: Text(
+                      context.t.changelog_text,
+                      style: context.textTheme.bodySmall?.copyWith(
+                        color: context.colorScheme.onSurfaceVariant,
+                        height: 1.6,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }
