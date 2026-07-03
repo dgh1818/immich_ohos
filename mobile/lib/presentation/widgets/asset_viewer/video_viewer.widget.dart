@@ -328,7 +328,7 @@ class _NativeVideoViewerState extends ConsumerState<NativeVideoViewer> with Widg
         IgnorePointer(
           child: Stack(
             children: [
-              Center(child: widget.image),
+              if (!_isVideoReady || widget.asset.isMotionPhoto || isCasting) Center(child: widget.image),
               if (!isCasting) ...[
                 Visibility.maintain(
                   visible: _isVideoReady,

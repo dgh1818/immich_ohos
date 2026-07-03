@@ -16206,7 +16206,7 @@
   "info": {
     "title": "Immich",
     "description": "Immich API",
-    "version": "3.0.0-rc.3",
+    "version": "3.0.1",
     "contact": {}
   },
   "tags": [
@@ -21991,6 +21991,27 @@
         ],
         "type": "string"
       },
+      "RecentlyAddedResponse": {
+        "properties": {
+          "sidebarWeb": {
+            "description": "Whether the recently added page appears in the web sidebar",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "sidebarWeb"
+        ],
+        "type": "object"
+      },
+      "RecentlyAddedUpdate": {
+        "properties": {
+          "sidebarWeb": {
+            "description": "Whether the recently added page appears in the web sidebar",
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
       "ReleaseChannel": {
         "description": "Release channel",
         "enum": [
@@ -27531,6 +27552,9 @@
           "ratings": {
             "$ref": "#/components/schemas/RatingsResponse"
           },
+          "recentlyAdded": {
+            "$ref": "#/components/schemas/RecentlyAddedResponse"
+          },
           "sharedLinks": {
             "$ref": "#/components/schemas/SharedLinksResponse"
           },
@@ -27548,6 +27572,7 @@
           "people",
           "purchase",
           "ratings",
+          "recentlyAdded",
           "sharedLinks",
           "tags"
         ],
@@ -27584,6 +27609,9 @@
           },
           "ratings": {
             "$ref": "#/components/schemas/RatingsUpdate"
+          },
+          "recentlyAdded": {
+            "$ref": "#/components/schemas/RecentlyAddedUpdate"
           },
           "sharedLinks": {
             "$ref": "#/components/schemas/SharedLinksUpdate"
