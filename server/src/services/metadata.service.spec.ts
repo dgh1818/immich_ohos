@@ -747,6 +747,27 @@ describe(MetadataService.name, () => {
       );
     });
 
+    it('should omit the keyframe row when packet ticks exceed int32', async () => {
+      const asset = AssetFactory.create({ type: AssetType.Video });
+      mocks.assetJob.getForMetadataExtraction.mockResolvedValue(getForMetadataExtraction(asset));
+      mocks.media.probe.mockResolvedValue(videoInfoStub.videoStreamHDR10);
+      mocks.media.probePackets.mockResolvedValue({
+        totalDuration: 2_147_483_648,
+        packetCount: 10,
+        outputFrames: 10,
+        keyframePts: [0],
+        keyframeAccDuration: [2_147_483_648],
+        keyframeOwnDuration: [1],
+      });
+      mockReadTags({});
+
+      await sut.handleMetadataExtraction({ id: asset.id });
+
+      expect(mocks.asset.upsertExif).toHaveBeenCalledWith(
+        expect.not.objectContaining({ keyframes: expect.anything() }),
+      );
+    });
+
     it('should prefer ffprobe frameRate over exiftool VideoFrameRate', async () => {
       const asset = AssetFactory.create({ type: AssetType.Video });
       mocks.assetJob.getForMetadataExtraction.mockResolvedValue(getForMetadataExtraction(asset));

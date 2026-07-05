@@ -612,8 +612,18 @@ export class MetadataService extends BaseService {
           }
         : undefined;
 
+    const isInt32 = (value: number) => value >= -2_147_483_648 && value <= 2_147_483_647;
+    const keyframesFitInt32 =
+      packets &&
+      isInt32(packets.totalDuration) &&
+      isInt32(packets.packetCount) &&
+      isInt32(packets.outputFrames) &&
+      packets.keyframePts.every(isInt32) &&
+      packets.keyframeAccDuration.every(isInt32) &&
+      packets.keyframeOwnDuration.every(isInt32);
+
     const keyframeData =
-      packets && packets.keyframePts.length > 0
+      packets && packets.keyframePts.length > 0 && keyframesFitInt32
         ? {
             assetId: asset.id,
             totalDuration: packets.totalDuration,
@@ -1470,13 +1480,23 @@ export class MetadataService extends BaseService {
   }
 
   private async checkOhosLivePhoto(filePath: string, assetType: AssetType): Promise<OhosLivePhotoCheckResult> {
-    const stats = await fs.stat(filePath);
+    let hasOhosLivePhoto = 0;
+    let ohosVideoOffset = -1;
+    if (assetType !== AssetType.Image) {
+      return { hasOhosLivePhoto, ohosFileSize: 0, ohosVideoOffset };
+    }
+
+    let stats: Stats;
+    try {
+      stats = await fs.stat(filePath);
+    } catch {
+      return { hasOhosLivePhoto, ohosFileSize: 0, ohosVideoOffset };
+    }
+
     const ohosFileSize = stats.size;
     let ohosLiveMetaDataOFFSET = 20;
     let ohosVideoEndOffset = 40;
-    let hasOhosLivePhoto = 0;
     let metadataBuffer = Buffer.alloc(ohosLiveMetaDataOFFSET);
-    let ohosVideoOffset = -1;
     const minSize = ohosVideoEndOffset + 1;
     if (ohosFileSize < minSize) {
       return { hasOhosLivePhoto, ohosFileSize, ohosVideoOffset };
