@@ -1482,10 +1482,6 @@ export class MetadataService extends BaseService {
   private async checkOhosLivePhoto(filePath: string, assetType: AssetType): Promise<OhosLivePhotoCheckResult> {
     let hasOhosLivePhoto = 0;
     let ohosVideoOffset = -1;
-    if (assetType !== AssetType.Image) {
-      return { hasOhosLivePhoto, ohosFileSize: 0, ohosVideoOffset };
-    }
-
     let stats: Stats;
     try {
       stats = await fs.stat(filePath);
