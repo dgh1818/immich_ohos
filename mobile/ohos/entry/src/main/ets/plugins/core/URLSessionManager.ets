@@ -54,6 +54,7 @@ export class URLSessionManager {
   private static readonly ACCESS_TOKEN_COOKIE = 'immich_access_token';
   private static readonly IS_AUTHENTICATED_COOKIE = 'immich_is_authenticated';
   private static readonly AUTH_TYPE_COOKIE = 'immich_auth_type';
+  private static readonly CA_BUNDLE_FILE_NAME = 'ca_bundle.pem';
   private static readonly COOKIE_EXPIRY_DAYS = 400;
   private static readonly USER_AGENT = URLSessionManager.buildUserAgent();
   private static readonly AUTH_COOKIE_NAMES = new Set<string>([
@@ -99,6 +100,11 @@ export class URLSessionManager {
 
     if (Object.keys(effectiveHeaders).length > 0) {
       options.header = effectiveHeaders;
+    }
+
+    const caPath = URLSessionManager.caBundlePath(context);
+    if (URLSessionManager.safeAccess(caPath)) {
+      options.caPath = caPath;
     }
 
     const cert = URLSessionManager.load(context);
@@ -275,6 +281,14 @@ export class URLSessionManager {
         // ignore delete errors
       }
     }
+    const caPath = URLSessionManager.caBundlePath(context);
+    if (URLSessionManager.safeAccess(caPath)) {
+      try {
+        fs.unlinkSync(caPath);
+      } catch (_) {
+        // ignore delete errors
+      }
+    }
     pref.deleteSync(URLSessionManager.KEY_CERT_PATH);
     pref.deleteSync(URLSessionManager.KEY_KEY_PATH);
     pref.deleteSync(URLSessionManager.KEY_CERT_TYPE);
@@ -313,6 +327,10 @@ export class URLSessionManager {
       fs.closeSync(file);
     }
     return certPath;
+  }
+
+  private static caBundlePath(context: common.Context): string {
+    return `${context.filesDir}/ssl_client_cert/${URLSessionManager.CA_BUNDLE_FILE_NAME}`;
   }
 
   private static loadRequestState(context: common.Context): StoredRequestState {

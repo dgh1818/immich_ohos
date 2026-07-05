@@ -1,16 +1,20 @@
 import { common } from '@kit.AbilityKit';
 import { BusinessError } from '@kit.BasicServicesKit';
 import { fileUri, picker } from '@kit.CoreFileKit';
+import fs from '@ohos.file.fs';
 import ohosHttpFfi from 'libohos_http_ffi.so';
 import { ClientCertData, ClientCertPrompt, FlutterError, NetworkApi, Result } from './Network.g';
 import { URLSessionManager } from './URLSessionManager';
 
 const CERT_SUFFIX_FILTERS: Array<string> = ['.p12', '.pfx'];
+const CERTIFICATE_NO_CA_BUNDLE_STATUS = 6;
 
 interface OhosHttpFfiSessionModule {
   setRequestState(headersJson: string, serverUrlsJson: string, token: string): number;
   setClientCertificate(certPath: string, keyPath: string, certType: string, keyPassword: string): number;
   clearClientCertificate(): number;
+  setCaBundlePath(caBundlePath: string): number;
+  extractCaBundleFromPkcs12(pkcs12Path: string, password: string, outputPath: string): number;
 }
 
 const ohosHttpFfiSessionModule = ohosHttpFfi as OhosHttpFfiSessionModule;
@@ -24,9 +28,11 @@ export class NetworkApiImpl extends NetworkApi {
     this.ctx = context;
     this.uiCtx = this.isUiContext(context) ? (context as common.UIAbilityContext) : undefined;
     this.syncStoredCertificateToCurl();
+    this.syncCaBundlePathToCurl();
   }
 
   override addCertificate(clientData: ClientCertData, result: Result<void>): void {
+    let didSaveCertificate = false;
     try {
       if (!this.ctx) {
         throw new Error('Context unavailable');
@@ -38,9 +44,21 @@ export class NetworkApiImpl extends NetworkApi {
       const password = clientData.getPassword() ?? '';
       const bytes = new Uint8Array(data);
       const cert = URLSessionManager.saveFromBytes(this.ctx, bytes, password, 'p12');
+      didSaveCertificate = true;
+      this.deleteCaBundleFile();
       this.applyCurlClientCertificate(cert.certPath, cert.keyPath, cert.certType as string, cert.keyPassword ?? '');
+      this.syncCaBundlePathToCurl(true);
       result.success();
     } catch (e) {
+      if (didSaveCertificate && this.ctx) {
+        try {
+          URLSessionManager.clear(this.ctx);
+          this.clearCurlClientCertificate();
+          this.syncCaBundlePathToCurl();
+        } catch (_) {
+          // Preserve the original import error for Dart logging.
+        }
+      }
       result.error(e as Error);
     }
   }
@@ -85,7 +103,9 @@ export class NetworkApiImpl extends NetworkApi {
         throw new Error('Context unavailable');
       }
       URLSessionManager.clear(this.ctx);
+      this.deleteCaBundleFile();
       this.clearCurlClientCertificate();
+      this.syncCaBundlePathToCurl();
       result.success();
     } catch (e) {
       result.error(e as Error);
@@ -161,6 +181,114 @@ export class NetworkApiImpl extends NetworkApi {
     const status = ohosHttpFfiSessionModule.clearClientCertificate();
     if (status !== 0) {
       throw new Error(`Failed to clear curl client certificate: ${status}`);
+    }
+  }
+
+  private syncCaBundlePathToCurl(validatePkcs12: boolean = false): void {
+    const caBundlePath = this.resolveCaBundlePath(validatePkcs12);
+    const status = ohosHttpFfiSessionModule.setCaBundlePath(caBundlePath);
+    if (status !== 0) {
+      throw new Error(`Failed to set curl CA bundle path: ${status}`);
+    }
+  }
+
+  /**
+   * Resolves the CA bundle path to use for curl server certificate
+   * verification.  The bundle must be placed in the same sandbox directory
+   * that URLSessionManager uses for client certificates.
+   */
+  private resolveCaBundlePath(validatePkcs12: boolean): string {
+    if (!this.ctx) {
+      return '';
+    }
+
+    // Same directory as client cert imports (URLSessionManager.writeCertFile).
+    const caBundlePath = this.caBundlePath();
+    if (this.safeAccess(caBundlePath)) {
+      return caBundlePath;
+    }
+
+    // When a client certificate PKCS12 has been imported, try to use its
+    // embedded CA chain as a trust anchor for server verification.  Many
+    // mTLS deployments bundle the issuing CA in the same PKCS12.
+    const cert = URLSessionManager.load(this.ctx);
+    if (cert && cert.certPath && this.safeAccess(cert.certPath)) {
+      try {
+        return this.extractCaBundleFromClientCert(cert.certPath, cert.keyPassword ?? '');
+      } catch (e) {
+        if (validatePkcs12) {
+          throw e as Error;
+        }
+      }
+    }
+
+    return '';
+  }
+
+  /**
+   * If the client certificate PKCS12 contains CA certificates, this
+   * helper extracts them into a PEM bundle that curl can consume.
+   */
+  private extractCaBundleFromClientCert(pkcs12Path: string, password: string): string {
+    if (!this.ctx) {
+      throw new Error('Context unavailable');
+    }
+
+    const targetDir = `${this.ctx.filesDir}/ssl_client_cert`;
+    if (!this.safeAccess(targetDir)) {
+      try {
+        fs.mkdirSync(targetDir, true);
+      } catch (e) {
+        throw new Error(`Failed to create certificate directory: ${(e as Error).message}`);
+      }
+    }
+    const outputPath = this.caBundlePath();
+
+    const status = ohosHttpFfiSessionModule.extractCaBundleFromPkcs12(pkcs12Path, password, outputPath);
+    if (status === CERTIFICATE_NO_CA_BUNDLE_STATUS) {
+      this.deletePath(outputPath);
+      return '';
+    }
+    if (status !== 0) {
+      this.deletePath(outputPath);
+      throw new Error(`Failed to extract curl CA bundle from PKCS12: ${status}`);
+    }
+
+    if (!this.safeAccess(outputPath)) {
+      throw new Error(`Extracted curl CA bundle is missing: ${outputPath}`);
+    }
+    return outputPath;
+  }
+
+  private caBundlePath(): string {
+    if (!this.ctx) {
+      return '';
+    }
+    return `${this.ctx.filesDir}/ssl_client_cert/ca_bundle.pem`;
+  }
+
+  private deleteCaBundleFile(): void {
+    const caBundlePath = this.caBundlePath();
+    if (caBundlePath.length > 0) {
+      this.deletePath(caBundlePath);
+    }
+  }
+
+  private deletePath(filePath: string): void {
+    if (this.safeAccess(filePath)) {
+      try {
+        fs.unlinkSync(filePath);
+      } catch (e) {
+        throw new Error(`Failed to delete certificate file ${filePath}: ${(e as Error).message}`);
+      }
+    }
+  }
+
+  private safeAccess(filePath: string): boolean {
+    try {
+      return fs.accessSync(filePath);
+    } catch (_) {
+      return false;
     }
   }
 
