@@ -182,7 +182,6 @@ interface NetworkApi {
   fun addCertificate(clientData: ClientCertData, callback: (Result<Unit>) -> Unit)
   fun selectCertificate(promptText: ClientCertPrompt, callback: (Result<ClientCertData>) -> Unit)
   fun removeCertificate(callback: (Result<Unit>) -> Unit)
-  fun setCaBundle(pemData: ByteArray, callback: (Result<Unit>) -> Unit)
   fun hasCertificate(): Boolean
   fun getClientPointer(): Long
   fun setRequestHeaders(headers: Map<String, String>, serverUrls: List<String>, token: String?)
@@ -241,25 +240,6 @@ interface NetworkApi {
         if (api != null) {
           channel.setMessageHandler { _, reply ->
             api.removeCertificate{ result: Result<Unit> ->
-              val error = result.exceptionOrNull()
-              if (error != null) {
-                reply.reply(NetworkPigeonUtils.wrapError(error))
-              } else {
-                reply.reply(NetworkPigeonUtils.wrapResult(null))
-              }
-            }
-          }
-        } else {
-          channel.setMessageHandler(null)
-        }
-      }
-      run {
-        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.immich_mobile.NetworkApi.setCaBundle$separatedMessageChannelSuffix", codec)
-        if (api != null) {
-          channel.setMessageHandler { message, reply ->
-            val args = message as List<Any?>
-            val pemDataArg = args[0] as ByteArray
-            api.setCaBundle(pemDataArg) { result: Result<Unit> ->
               val error = result.exceptionOrNull()
               if (error != null) {
                 reply.reply(NetworkPigeonUtils.wrapError(error))

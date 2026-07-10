@@ -73,12 +73,6 @@ private class NetworkApiImpl(private val context: Context) : NetworkApi {
     callback(Result.success(Unit))
   }
 
-  override fun setCaBundle(pemData: ByteArray, callback: (Result<Unit>) -> Unit) {
-    // On Android the system trust store is sufficient for server certificate
-    // verification.  Custom CA bundles are only needed on OHOS.
-    callback(Result.success(Unit))
-  }
-
   override fun hasCertificate(): Boolean {
     return HttpClientManager.isMtls
   }

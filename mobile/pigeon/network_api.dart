@@ -40,9 +40,6 @@ abstract class NetworkApi {
   @async
   void removeCertificate();
 
-  @async
-  void setCaBundle(Uint8List pemData);
-
   bool hasCertificate();
 
   int getClientPointer();

@@ -173,44 +173,6 @@ export class NetworkApiImpl extends NetworkApi {
     }
   }
 
-  override setCaBundle(pemData: Uint8Array, result: Result<void>): void {
-    try {
-      if (!this.ctx) {
-        throw new Error('Context unavailable');
-      }
-      if (!pemData || pemData.length === 0) {
-        throw new Error('PEM data is empty');
-      }
-
-      const targetDir = `${this.appFilesDir}/ssl_client_cert`;
-      if (!this.safeAccess(targetDir)) {
-        fs.mkdirSync(targetDir, true);
-      }
-
-      const outputPath = this.caBundlePath();
-      const file = fs.openSync(outputPath, fs.OpenMode.CREATE | fs.OpenMode.READ_WRITE);
-      try {
-        fs.truncateSync(file.fd, 0);
-        const buffer = pemData.buffer.slice(pemData.byteOffset, pemData.byteOffset + pemData.byteLength);
-        fs.writeSync(file.fd, buffer);
-        fs.truncateSync(file.fd, pemData.byteLength);
-      } finally {
-        try {
-          fs.closeSync(file);
-        } catch (_) {}
-      }
-
-      this.syncCaBundlePathToCurl();
-      result.success();
-    } catch (e) {
-      const error = e as BusinessError;
-      const code = error.code !== undefined ? `${error.code}` : 'CA_BUNDLE_WRITE_FAILED';
-      const name = error.name ?? 'ca_bundle_write_failed';
-      const message = error.message ?? `${e}`;
-      result.error(new FlutterError(code, name, message, error.stack));
-    }
-  }
-
   override hasCertificate(): boolean {
     if (!this.ctx) {
       return false;

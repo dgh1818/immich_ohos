@@ -202,8 +202,6 @@ export abstract class NetworkApi {
 
   abstract removeCertificate(result: Result<void>): void;
 
-  abstract setCaBundle(pemData: Uint8Array , result: Result<void>): void;
-
   abstract hasCertificate(): boolean;
 
   abstract getClientPointer(): number;
@@ -295,34 +293,6 @@ export abstract class NetworkApi {
               let resultCallback: Result<void> = new ResultImp();
 
               api!.removeCertificate(resultCallback);
-            } });
-      } else {
-        channel.setMessageHandler(null);
-      }
-    }
-    {
-      let channel: BasicMessageChannel<Object> =
-          new BasicMessageChannel(
-              binaryMessenger, "dev.flutter.pigeon.immich_mobile.NetworkApi.setCaBundle", NetworkApi.getCodec());
-      if (api != null) {
-        channel.setMessageHandler({
-            onMessage(message: Object ,reply: Reply<Object> ) {
-              let args: Array<Object> = message as Array<Object>;
-              class ResultImp implements Result<void>{
-                    success(result: void): void {
-                      let res: Array<Object> = [];
-                      res.push(null);
-                      reply.reply(res);
-                    }
-
-                    error(error: Error): void {
-                      let wrappedError: Array<Object> = wrapError(error);
-                      reply.reply(wrappedError);
-                    }
-              }
-              let resultCallback: Result<void> = new ResultImp();
-
-              api!.setCaBundle(args[0] as Uint8Array, resultCallback);
             } });
       } else {
         channel.setMessageHandler(null);
