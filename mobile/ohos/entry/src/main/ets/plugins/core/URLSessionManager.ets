@@ -311,7 +311,7 @@ export class URLSessionManager {
   }
 
   private static writeCertFile(context: common.Context, data: Uint8Array, extension: string): string {
-    const baseDir = `${context.filesDir}/ssl_client_cert`;
+    const baseDir = `${context.getApplicationContext().filesDir}/ssl_client_cert`;
     if (!URLSessionManager.safeAccess(baseDir)) {
       fs.mkdirSync(baseDir, true);
     }
@@ -330,7 +330,7 @@ export class URLSessionManager {
   }
 
   private static caBundlePath(context: common.Context): string {
-    return `${context.filesDir}/ssl_client_cert/${URLSessionManager.CA_BUNDLE_FILE_NAME}`;
+    return `${context.getApplicationContext().filesDir}/ssl_client_cert/${URLSessionManager.CA_BUNDLE_FILE_NAME}`;
   }
 
   private static loadRequestState(context: common.Context): StoredRequestState {

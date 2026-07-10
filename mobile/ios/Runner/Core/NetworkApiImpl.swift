@@ -29,6 +29,12 @@ class NetworkApiImpl: NetworkApi {
     importer.load()
   }
 
+  func setCaBundle(pemData: FlutterStandardTypedData, completion: @escaping (Result<Void, any Error>) -> Void) {
+    // On iOS the system trust store is sufficient for server certificate
+    // verification.  Custom CA bundles are only needed on OHOS.
+    completion(.success(()))
+  }
+
   func hasCertificate() throws -> Bool {
     let query: [String: Any] = [
       kSecClass as String: kSecClassIdentity,
