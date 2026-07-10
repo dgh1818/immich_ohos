@@ -3,8 +3,6 @@ import { BusinessError } from '@kit.BasicServicesKit';
 import { fileUri, picker } from '@kit.CoreFileKit';
 import { cert } from '@kit.DeviceCertificateKit';
 import fs from '@ohos.file.fs';
-import certificateManager from '@ohos.security.certManager';
-import certificateManagerDialog from '@ohos.security.certManagerDialog';
 import ohosHttpFfi from 'libohos_http_ffi.so';
 import util from '@ohos.util';
 import { ClientCertData, ClientCertPrompt, FlutterError, NetworkApi, Result } from './Network.g';
@@ -77,10 +75,6 @@ export class NetworkApiImpl extends NetworkApi {
 
       if (!hasClientCert && trustAnchors.length === 0) {
         throw new Error('PKCS12 does not contain a client certificate or a usable trust anchor.');
-      }
-
-      if (trustAnchors.length > 0) {
-        await this.installTrustAnchorsWithCertificateManager(trustAnchors);
       }
 
       if (hasClientCert) {
@@ -371,72 +365,6 @@ export class NetworkApiImpl extends NetworkApi {
       throw new Error(`Extracted curl CA bundle is missing: ${outputPath}`);
     }
     return outputPath;
-  }
-
-  private async installTrustAnchorsWithCertificateManager(trustAnchors: Array<cert.X509TrustAnchor>): Promise<void> {
-    if (!this.uiCtx) {
-      throw new Error('UI context is required to install CA certificates with Certificate Manager.');
-    }
-
-    let installedCount = 0;
-    for (const trustAnchor of trustAnchors) {
-      if (!trustAnchor.CACert) {
-        continue;
-      }
-
-      try {
-        const encoded = await trustAnchor.CACert.getEncoded();
-        const existingUri = await this.findInstalledUserTrustedCaUri(encoded.data);
-        if (existingUri.length > 0) {
-          installedCount += 1;
-          console.info(`[NetworkApiImpl] installTrustAnchorsWithCertificateManager: already installed uri=${existingUri}`);
-          continue;
-        }
-
-        const certUri = await certificateManagerDialog.openInstallCertificateDialog(
-          this.uiCtx,
-          certificateManagerDialog.CertificateType.CA_CERT,
-          certificateManagerDialog.CertificateScope.CURRENT_USER,
-          encoded.data
-        );
-        installedCount += 1;
-        console.info(`[NetworkApiImpl] installTrustAnchorsWithCertificateManager: installed uri=${certUri}`);
-      } catch (e) {
-        const error = e as BusinessError;
-        const code = error.code !== undefined ? `${error.code}` : 'CERTIFICATE_MANAGER_INSTALL_FAILED';
-        const message = error.message ?? `${e}`;
-        throw new Error(`Failed to install CA certificate with Certificate Manager (${code}): ${message}`);
-      }
-    }
-
-    if (installedCount === 0) {
-      throw new Error('PKCS12 trust anchors do not contain CA certificates.');
-    }
-  }
-
-  private async findInstalledUserTrustedCaUri(certData: Uint8Array): Promise<string> {
-    const result = await certificateManager.getAllUserTrustedCertificates(certificateManager.CertScope.CURRENT_USER);
-    const certList = result.certList ?? [];
-    for (const certSummary of certList) {
-      const detail = await certificateManager.getUserTrustedCertificate(certSummary.uri);
-      const certInfo = detail.certInfo;
-      if (certInfo && certInfo.state && this.bytesEqual(certInfo.cert, certData)) {
-        return certInfo.uri;
-      }
-    }
-    return '';
-  }
-
-  private bytesEqual(left: Uint8Array, right: Uint8Array): boolean {
-    if (left.byteLength !== right.byteLength) {
-      return false;
-    }
-    for (let index = 0; index < left.byteLength; index += 1) {
-      if (left[index] !== right[index]) {
-        return false;
-      }
-    }
-    return true;
   }
 
   private async writeCaBundleFromTrustAnchors(trustAnchors: Array<cert.X509TrustAnchor>): Promise<void> {
