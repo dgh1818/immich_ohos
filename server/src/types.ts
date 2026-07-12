@@ -150,6 +150,7 @@ export interface VideoInfo {
   format: VideoFormat;
   videoStreams: VideoStreamInfo[];
   audioStreams: AudioStreamInfo[];
+  formatTags?: Record<string, string | number>;
 }
 
 export interface TranscodeCommand {

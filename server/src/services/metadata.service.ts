@@ -860,10 +860,14 @@ export class MetadataService extends BaseService {
 
   private async getExifTags(asset: { originalPath: string; files: AssetFile[]; type: AssetType }) {
     const { sidecarFile } = getAssetFiles(asset.files);
-    const shouldProbe = asset.type === AssetType.Video || asset.originalPath.toLowerCase().endsWith('.gif');
+    const isVideo = asset.type === AssetType.Video;
+    const isGif = asset.originalPath.toLowerCase().endsWith('.gif');
+    const shouldProbe = isVideo || isGif;
 
     const [mediaTags, sidecarTags, videoResult] = await Promise.all([
-      this.metadataRepository.readTags(asset.originalPath),
+      // For videos, skip exiftool entirely — ffprobe provides all needed metadata
+      // in seconds, avoiding the 120s+ timeout with exiftool -ee on large files.
+      isVideo ? (Promise.resolve({}) as Promise<ImmichTags>) : this.metadataRepository.readTags(asset.originalPath),
       sidecarFile ? this.metadataRepository.readTags(sidecarFile.path) : null,
       shouldProbe ? this.getVideoTags(asset.originalPath) : null,
     ]);
@@ -1387,13 +1391,19 @@ export class MetadataService extends BaseService {
     return Number.isFinite(seconds) ? Math.round(Duration.fromObject({ seconds }).toMillis()) : null;
   }
 
+  /**
+   * Extract video metadata via ffprobe (fast, seconds) instead of exiftool with -ee
+   * (which can take 120s+ and timeout on large files like DJI drone footage).
+   *
+   * Parses QuickTime / ISO 6709 format tags into ImmichTags-compatible fields.
+   */
   private async getVideoTags(originalPath: string) {
-    const { videoStreams, audioStreams, format } = await this.mediaRepository.probe(originalPath);
+    const { videoStreams, audioStreams, format, formatTags } = await this.mediaRepository.probe(originalPath);
     const video = videoStreams[0];
     const audio = audioStreams[0];
     const packets = video?.timeBase ? await this.mediaRepository.probePackets(originalPath, video.index) : null;
 
-    const tags: Pick<ImmichTags, 'Duration' | 'Orientation' | 'ImageWidth' | 'ImageHeight'> = {};
+    const tags: Partial<ImmichTags> = {};
 
     if (video) {
       if (video.width) {
@@ -1425,6 +1435,73 @@ export class MetadataService extends BaseService {
 
     if (format.duration) {
       tags.Duration = format.duration;
+    }
+
+    // Parse container-format tags from ffprobe into ImmichTags.
+    // Covers QuickTime (DJI, iPhone, etc.) and Android metadata.
+    if (formatTags) {
+      // --- Date ---
+      // QuickTime creationdate or generic MP4 creation_time, both in UTC ISO 8601.
+      const creationDate = formatTags['com.apple.quicktime.creationdate'] ?? formatTags['creation_time'];
+      if (creationDate && typeof creationDate === 'string') {
+        const exifDate = ExifDateTime.fromEXIF(creationDate);
+        if (exifDate) {
+          (tags as Record<string, unknown>)['DateTimeOriginal'] = creationDate;
+        }
+      }
+
+      // --- GPS: ISO 6709 "+lat+lon+alt/" ---
+      const location = formatTags['com.apple.quicktime.location.ISO6709'];
+      if (location && typeof location === 'string') {
+        const m = location.match(/^([+-]\d{2,3}\.?\d*)([+-]\d{2,3}\.?\d*)/);
+        if (m) {
+          tags.GPSLatitude = Number.parseFloat(m[1]);
+          tags.GPSLongitude = Number.parseFloat(m[2]);
+        }
+      }
+
+      // --- Camera make / model ---
+      // QuickTime
+      const make = formatTags['com.apple.quicktime.make'];
+      if (make && typeof make === 'string') {
+        tags.Make = make;
+      }
+      const model = formatTags['com.apple.quicktime.model'];
+      if (model && typeof model === 'string') {
+        tags.Model = model;
+      }
+
+      // Android
+      if (!tags.Make) {
+        const androidMake = formatTags['com.android.manufacturer'];
+        if (androidMake && typeof androidMake === 'string') {
+          tags.Make = androidMake;
+        }
+      }
+      if (!tags.Model) {
+        const androidModel = formatTags['com.android.model'];
+        if (androidModel && typeof androidModel === 'string') {
+          tags.Model = androidModel;
+        }
+      }
+
+      // --- Description / comment ---
+      const comment = formatTags['com.apple.quicktime.comment'];
+      if (comment && typeof comment === 'string') {
+        tags.Description = comment;
+      }
+
+      // --- Keywords (semicolon-separated in QuickTime) ---
+      const keywords = formatTags['com.apple.quicktime.keywords'];
+      if (keywords && typeof keywords === 'string') {
+        tags.Keywords = keywords.split(';').map((k) => k.trim()).filter(Boolean);
+      }
+
+      // --- Software (firmware on DJI drones) ---
+      const software = formatTags['com.apple.quicktime.software'];
+      if (software && typeof software === 'string') {
+        (tags as Record<string, unknown>)['Software'] = software;
+      }
     }
 
     return { tags, audio, video, packets, format };

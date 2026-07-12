@@ -242,6 +242,7 @@ export class MediaRepository {
         duration: this.parseFloat(results.format.duration),
         bitrate: this.parseInt(results.format.bit_rate),
       },
+      formatTags: results.format.tags,
       videoStreams: results.streams
         .filter((stream) => stream.codec_type === 'video' && !stream.disposition?.attached_pic)
         .sort((a, b) => this.compareStreams(a, b))
