@@ -764,14 +764,13 @@ export class LibraryService extends BaseService {
   }
 
   async queuePostSyncJobs(assetIds: string[]) {
-    this.logger.debug(`Queuing sidecar discovery for ${assetIds.length} asset(s)`);
+    this.logger.debug(`Queuing post-sync jobs for ${assetIds.length} asset(s)`);
 
-    // We queue a sidecar discovery which, in turn, queues metadata extraction
     await this.jobRepository.queueAll(
-      assetIds.map((assetId) => ({
-        name: JobName.SidecarCheck,
-        data: { id: assetId, source: 'upload' },
-      })),
+      assetIds.flatMap((assetId) => [
+        { name: JobName.SidecarCheck, data: { id: assetId, source: 'upload' } as const },
+        { name: JobName.AssetExtractMetadata, data: { id: assetId, source: 'upload' } as const },
+      ]),
     );
   }
 
