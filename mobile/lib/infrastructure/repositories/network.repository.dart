@@ -1,14 +1,11 @@
-import 'dart:io' as io;
 import 'dart:ffi';
 import 'dart:io';
 import 'package:cupertino_http/cupertino_http.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:immich_mobile/providers/infrastructure/platform.provider.dart';
-import 'package:immich_mobile/utils/user_agent.dart';
 import 'package:ok_http/ok_http.dart';
 import 'package:ohos_http/ohos_http.dart';
-import 'package:web_socket/io_web_socket.dart' as io_ws;
 import 'package:web_socket/web_socket.dart';
 
 class NetworkRepository {
@@ -50,12 +47,7 @@ class NetworkRepository {
   // ignore: avoid-unused-parameters
   static Future<WebSocket> createWebSocket(Uri uri, {Map<String, String>? headers, Iterable<String>? protocols}) async {
     if (defaultTargetPlatform == TargetPlatform.ohos) {
-      final requestHeaders = Map<String, String>.from(headers ?? const <String, String>{});
-      if (!requestHeaders.containsKey('User-Agent') && !requestHeaders.containsKey('user-agent')) {
-        requestHeaders['User-Agent'] = await getUserAgentString();
-      }
-      final socket = await io.WebSocket.connect(uri.toString(), protocols: protocols, headers: requestHeaders);
-      return io_ws.IOWebSocket.fromWebSocket(socket);
+      return OhosWebSocket.connect(uri, headers: headers, protocols: protocols);
     }
 
     if (Platform.isIOS) {
