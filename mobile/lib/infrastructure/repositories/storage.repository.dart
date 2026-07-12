@@ -50,6 +50,7 @@ class StorageRepository {
     return file;
   }
 
+  // TODO(agg23): Unify these methods
   Future<File?> getMotionFileForAsset(LocalAsset asset) async {
     File? file;
     final log = Logger('StorageRepository');
