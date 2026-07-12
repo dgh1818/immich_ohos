@@ -53,28 +53,58 @@ export class NetworkApiImpl extends NetworkApi {
       const password = clientData.getPassword() ?? '';
       console.info(`[NetworkApiImpl] addCertificate: PKCS12 size=${data.length} hasPassword=${password.length > 0}`);
       const bytes = new Uint8Array(data);
-      const parsingConfig: cert.Pkcs12ParsingConfig = {
-        password: password,
-        needsPrivateKey: true,
-        privateKeyFormat: cert.EncodingBaseFormat.PEM,
-        needsCert: true,
-        needsOtherCerts: true,
-      };
-      const parsed = cert.parsePkcs12(bytes, parsingConfig);
-      const hasParsedCert = parsed.cert !== undefined;
-      const hasParsedKey = parsed.privateKey !== undefined;
-      console.info(`[NetworkApiImpl] addCertificate: parsed cert=${hasParsedCert} key=${hasParsedKey}`);
 
-      // Extract CA trust anchors regardless of whether a client certificate is
-      // present — a PKCS12 may contain only CA certificates for server
-      // verification (no mTLS).
-      const trustAnchors = await cert.createTrustAnchorsWithKeyStore(bytes, password);
-      console.info(`[NetworkApiImpl] addCertificate: trustAnchors count=${trustAnchors.length}`);
+      let trustAnchors: Array<cert.X509TrustAnchor> = [];
+      let trustAnchorError = '';
+      try {
+        // Extract CA trust anchors for server certificate verification. A
+        // PKCS12 may contain only CA certificates and no client private key.
+        trustAnchors = await cert.createTrustAnchorsWithKeyStore(bytes, password);
+        console.info(`[NetworkApiImpl] addCertificate: trustAnchors count=${trustAnchors.length}`);
+      } catch (trustError) {
+        trustAnchorError = this.describeError(trustError as Object);
+        console.info(`[NetworkApiImpl] addCertificate: no usable trust anchors: ${trustAnchorError}`);
+      }
 
-      const hasClientCert = parsed.cert !== undefined && parsed.privateKey !== undefined;
+      let caCertificates: Array<cert.X509Cert> = [];
+      let caCertificateError = '';
+      if (trustAnchors.length === 0) {
+        try {
+          caCertificates = this.parseCaCertificatesFromPkcs12(bytes, password);
+          console.info(`[NetworkApiImpl] addCertificate: CA certificate count=${caCertificates.length}`);
+        } catch (caError) {
+          caCertificateError = this.describeError(caError as Object);
+          console.info(`[NetworkApiImpl] addCertificate: no CA certificates: ${caCertificateError}`);
+        }
+      }
 
-      if (!hasClientCert && trustAnchors.length === 0) {
-        throw new Error('PKCS12 does not contain a client certificate or a usable trust anchor.');
+      let parsed: cert.Pkcs12Data | undefined = undefined;
+      let clientCertError = '';
+      try {
+        const parsingConfig: cert.Pkcs12ParsingConfig = {
+          password: password,
+          needsPrivateKey: true,
+          privateKeyFormat: cert.EncodingBaseFormat.PEM,
+          needsCert: true,
+          needsOtherCerts: true,
+        };
+        parsed = cert.parsePkcs12(bytes, parsingConfig);
+        const hasParsedCert = parsed.cert !== undefined;
+        const hasParsedKey = parsed.privateKey !== undefined;
+        console.info(`[NetworkApiImpl] addCertificate: parsed cert=${hasParsedCert} key=${hasParsedKey}`);
+      } catch (parseError) {
+        clientCertError = this.describeError(parseError as Object);
+        console.info(`[NetworkApiImpl] addCertificate: no client certificate: ${clientCertError}`);
+      }
+
+      const hasClientCert = parsed !== undefined && parsed.cert !== undefined && parsed.privateKey !== undefined;
+      const hasCaBundle = trustAnchors.length > 0 || caCertificates.length > 0;
+
+      if (!hasClientCert && !hasCaBundle) {
+        throw new Error(
+          'PKCS12 does not contain a client certificate or a usable trust anchor. ' +
+            `trustAnchorError=${trustAnchorError}; caCertificateError=${caCertificateError}; clientCertError=${clientCertError}`
+        );
       }
 
       if (hasClientCert) {
@@ -85,6 +115,8 @@ export class NetworkApiImpl extends NetworkApi {
         this.deleteCaBundleFile();
         if (trustAnchors.length > 0) {
           await this.writeCaBundleFromTrustAnchors(trustAnchors);
+        } else if (caCertificates.length > 0) {
+          await this.writeCaBundleFromCertificates(caCertificates);
         }
         this.applyCurlClientCertificate(
           storedCert.certPath,
@@ -96,7 +128,11 @@ export class NetworkApiImpl extends NetworkApi {
         // Server CA trust path: write the CA bundle only, no client cert.
         console.info('[NetworkApiImpl] addCertificate: CA-only path (no client cert)');
         this.deleteCaBundleFile();
-        await this.writeCaBundleFromTrustAnchors(trustAnchors);
+        if (trustAnchors.length > 0) {
+          await this.writeCaBundleFromTrustAnchors(trustAnchors);
+        } else {
+          await this.writeCaBundleFromCertificates(caCertificates);
+        }
         const caPath = this.caBundlePath();
         const exists = this.safeAccess(caPath);
         const fileSize = exists ? (() => { try { return fs.statSync(caPath).size; } catch (_) { return -1; } })() : -1;
@@ -122,6 +158,51 @@ export class NetworkApiImpl extends NetworkApi {
       const message = error.message ?? `${e}`;
       result.error(new FlutterError(code, name, message, error.stack));
     }
+  }
+
+  private describeError(error: Object): string {
+    const businessError = error as BusinessError;
+    const code = businessError.code !== undefined ? `${businessError.code}` : 'unknown';
+    const name = businessError.name ?? 'unknown';
+    const message = businessError.message ?? `${error}`;
+    return `${code}:${name}:${message}`;
+  }
+
+  private parseCaCertificatesFromPkcs12(bytes: Uint8Array, password: string): Array<cert.X509Cert> {
+    try {
+      const parsingConfig: cert.Pkcs12ParsingConfig = {
+        password: password,
+        needsPrivateKey: false,
+        needsCert: true,
+        needsOtherCerts: true,
+      };
+      const parsed = cert.parsePkcs12(bytes, parsingConfig);
+      const caCertificates: Array<cert.X509Cert> = [];
+      this.appendCaCertificate(caCertificates, parsed.cert);
+      const otherCerts = parsed.otherCerts ?? [];
+      for (const certificate of otherCerts) {
+        this.appendCaCertificate(caCertificates, certificate);
+      }
+      return caCertificates;
+    } catch (e) {
+      throw new Error(`Failed to parse PKCS12 CA certificates: ${this.describeError(e as Object)}`);
+    }
+  }
+
+  private appendCaCertificate(caCertificates: Array<cert.X509Cert>, certificate?: cert.X509Cert): void {
+    if (!certificate) {
+      return;
+    }
+    let basicConstraints = -1;
+    try {
+      basicConstraints = certificate.getBasicConstraints();
+    } catch (_) {
+      return;
+    }
+    if (basicConstraints < 0) {
+      return;
+    }
+    caCertificates.push(certificate);
   }
 
   override async selectCertificate(_promptText: ClientCertPrompt, result: Result<ClientCertData>): Promise<void> {
@@ -332,17 +413,30 @@ export class NetworkApiImpl extends NetworkApi {
   private async writeCaBundleFromTrustAnchors(trustAnchors: Array<cert.X509TrustAnchor>): Promise<void> {
     try {
       console.info(`[NetworkApiImpl] writeCaBundleFromTrustAnchors: ${trustAnchors.length} trust anchors`);
-      let pemBundle = '';
+      const caCertificates: Array<cert.X509Cert> = [];
       for (const trustAnchor of trustAnchors) {
         if (!trustAnchor.CACert) {
           continue;
         }
-        const encoded = await trustAnchor.CACert.getEncoded();
+        caCertificates.push(trustAnchor.CACert);
+      }
+      await this.writeCaBundleFromCertificates(caCertificates);
+    } catch (e) {
+      throw new Error(`Failed to write PKCS12 trust anchors: ${(e as Error).message}`);
+    }
+  }
+
+  private async writeCaBundleFromCertificates(caCertificates: Array<cert.X509Cert>): Promise<void> {
+    try {
+      console.info(`[NetworkApiImpl] writeCaBundleFromCertificates: ${caCertificates.length} certificates`);
+      let pemBundle = '';
+      for (const caCertificate of caCertificates) {
+        const encoded = await caCertificate.getEncoded();
         pemBundle += this.toPemCertificate(encoded.data);
       }
       console.info(`[NetworkApiImpl] writeCaBundleFromTrustAnchors: PEM bundle length=${pemBundle.length}`);
       if (pemBundle.length === 0) {
-        throw new Error('PKCS12 trust anchors do not contain CA certificates.');
+        throw new Error('PKCS12 does not contain CA certificates.');
       }
 
       if (!this.ctx) {
@@ -367,7 +461,7 @@ export class NetworkApiImpl extends NetworkApi {
         } catch (_) {}
       }
     } catch (e) {
-      throw new Error(`Failed to write PKCS12 trust anchors: ${(e as Error).message}`);
+      throw new Error(`Failed to write PKCS12 CA certificates: ${(e as Error).message}`);
     }
   }
 
