@@ -92,6 +92,8 @@
 - When running `flutter test` / Flutter tester with proxy environment variables set, ensure localhost bypasses the proxy:
   - PowerShell example: `$env:NO_PROXY='127.0.0.1,localhost,::1'; $env:no_proxy=$env:NO_PROXY; fvm flutter test ...`
   - Without this, the tester's local WebSocket connection to the Flutter tool can fail with `HttpException: Connection closed before full header was received`.
+- For HAP build validation, prefer release builds directly:
+  - `fvm flutter build hap --release`
 - Before finishing, clearly report:
   - which files were changed
   - whether any file under the forbidden path was touched
