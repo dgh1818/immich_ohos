@@ -107,14 +107,18 @@ export class LibraryService extends BaseService {
       if (library.useContentHash) {
         // Toggled ON: path to content hash backfill
         this.logger.log('External library content hash enabled, starting checksum backfill');
+        const startedAt = new Date().toISOString();
         await this.systemMetadataRepository.set(SystemMetadataKey.ExternalLibraryChecksumBackfill, {
-          startedAt: new Date().toISOString(),
+          startedAt,
           scanned: 0,
           updated: 0,
           duplicates: 0,
           failed: 0,
         });
-        await this.jobRepository.queue({ name: JobName.LibraryBackfillChecksums });
+        await this.jobRepository.queue({
+          name: JobName.LibraryBackfillChecksums,
+          data: { backfillId: startedAt },
+        });
       } else {
         // Toggled OFF: content to path hash backfill
         this.logger.log('External library content hash disabled, starting path checksum backfill');
@@ -272,7 +276,7 @@ export class LibraryService extends BaseService {
   }
 
   @OnJob({ name: JobName.LibraryBackfillChecksums, queue: QueueName.Library })
-  async handleBackfillChecksums(): Promise<JobStatus> {
+  async handleBackfillChecksums(job: JobOf<JobName.LibraryBackfillChecksums> = {}): Promise<JobStatus> {
     const config = await this.getConfig({ withCache: true });
     if (!config.library.useContentHash) {
       return JobStatus.Skipped;
@@ -280,6 +284,10 @@ export class LibraryService extends BaseService {
 
     const currentState = await this.systemMetadataRepository.get(SystemMetadataKey.ExternalLibraryChecksumBackfill);
     if (currentState?.completedAt) {
+      return JobStatus.Skipped;
+    }
+
+    if (job.backfillId && job.backfillId !== currentState?.startedAt) {
       return JobStatus.Skipped;
     }
 
@@ -292,6 +300,14 @@ export class LibraryService extends BaseService {
       afterId: currentState?.afterId,
       retry: currentState?.retry,
     };
+
+    if (job.asset) {
+      return this.handleBackfillChecksumAsset(job, state);
+    }
+
+    if (job.backfillId && job.afterId !== state.afterId) {
+      return JobStatus.Skipped;
+    }
 
     const assets = await this.assetRepository.getExternalLibraryChecksumBackfillPage({
       afterId: state.afterId,
@@ -309,10 +325,49 @@ export class LibraryService extends BaseService {
       return JobStatus.Success;
     }
 
-    for (const asset of this.getExternalLibraryHashBatch(assets)) {
-      let checksum: Buffer | undefined;
-      let failure: unknown;
-      let outcome: 'updated' | 'duplicate' | undefined;
+    await this.systemMetadataRepository.set(SystemMetadataKey.ExternalLibraryChecksumBackfill, state);
+    await this.jobRepository.queueAll(
+      assets.map((asset, index) => ({
+        name: JobName.LibraryBackfillChecksums,
+        data: {
+          backfillId: state.startedAt,
+          previousId: index === 0 ? state.afterId : assets[index - 1].id,
+          asset: { id: asset.id, ownerId: asset.ownerId, originalPath: asset.originalPath },
+          isLast: index === assets.length - 1,
+        },
+      })),
+    );
+    this.logger.log(`Queued ${assets.length} external library checksum backfill job(s)`);
+
+    return JobStatus.Success;
+  }
+
+  private async handleBackfillChecksumAsset(
+    job: NonNullable<JobOf<JobName.LibraryBackfillChecksums>>,
+    state: ExternalLibraryChecksumBackfillState,
+  ): Promise<JobStatus> {
+    const asset = job.asset!;
+
+    if (state.afterId === asset.id || (state.afterId && state.afterId > asset.id)) {
+      if (job.isLast) {
+        await this.queueExternalLibraryChecksumBackfill();
+      }
+      return JobStatus.Skipped;
+    }
+
+    if (state.afterId !== job.previousId) {
+      await this.jobRepository.queue({ name: JobName.LibraryBackfillChecksums, data: job });
+      return JobStatus.Success;
+    }
+
+    let checksum: Buffer | undefined;
+    let failure: unknown;
+    let outcome: 'updated' | 'duplicate' | undefined;
+    let attempts = state.retry?.id === asset.id ? state.retry.attempts : 0;
+
+    while (!outcome && attempts < EXTERNAL_LIBRARY_HASH_RETRY_ATTEMPTS) {
+      checksum = undefined;
+      failure = undefined;
 
       try {
         ({ checksum } = await this.hashExternalFile(asset.originalPath));
@@ -326,52 +381,52 @@ export class LibraryService extends BaseService {
       } catch (error: Error | any) {
         if (checksum && isAssetChecksumConstraint(error)) {
           outcome = 'duplicate';
-        } else {
-          failure = error;
-        }
-      }
-
-      if (failure) {
-        const attempts = state.retry?.id === asset.id ? state.retry.attempts + 1 : 1;
-        if (attempts < EXTERNAL_LIBRARY_HASH_RETRY_ATTEMPTS) {
-          state.retry = { id: asset.id, attempts };
-          this.logger.warn(
-            `Unable to update checksum for external asset ${asset.id}: ${asset.originalPath}; retry ${attempts}/${EXTERNAL_LIBRARY_HASH_RETRY_ATTEMPTS}: ${failure}`,
-          );
           break;
         }
 
-        state.scanned++;
-        state.failed++;
-        state.afterId = asset.id;
-        delete state.retry;
-        this.logger.warn(
-          `Unable to update checksum for external asset ${asset.id}: ${asset.originalPath}; skipping after ${attempts} attempts: ${failure}`,
-        );
-        continue;
+        failure = error;
+        attempts++;
+        if (attempts < EXTERNAL_LIBRARY_HASH_RETRY_ATTEMPTS) {
+          state.retry = { id: asset.id, attempts };
+          await this.systemMetadataRepository.set(SystemMetadataKey.ExternalLibraryChecksumBackfill, state);
+          this.logger.warn(
+            `Unable to update checksum for external asset ${asset.id}: ${asset.originalPath}; retry ${attempts}/${EXTERNAL_LIBRARY_HASH_RETRY_ATTEMPTS}: ${failure}`,
+          );
+        }
       }
+    }
 
-      state.scanned++;
-      state.afterId = asset.id;
-      delete state.retry;
+    state.scanned++;
+    state.afterId = asset.id;
+    delete state.retry;
 
-      if (outcome === 'updated') {
-        state.updated++;
-      } else {
-        state.duplicates++;
-        this.logger.warn(
-          `Skipping external asset ${asset.id}: ${asset.originalPath}: checksum ${checksum!.toString(
-            'base64',
-          )} already exists for this owner`,
-        );
-      }
+    if (!outcome) {
+      state.failed++;
+      this.logger.warn(
+        `Unable to update checksum for external asset ${asset.id}: ${asset.originalPath}; skipping after ${attempts} attempts: ${failure}`,
+      );
+    } else if (outcome === 'updated') {
+      state.updated++;
+    } else {
+      state.duplicates++;
+      this.logger.warn(
+        `Skipping external asset ${asset.id}: ${asset.originalPath}: checksum ${checksum!.toString(
+          'base64',
+        )} already exists for this owner`,
+      );
     }
 
     await this.systemMetadataRepository.set(SystemMetadataKey.ExternalLibraryChecksumBackfill, state);
     this.logger.log(
       `External library checksum backfill progress: ${state.scanned} scanned, ${state.updated} updated, ${state.duplicates} duplicates, ${state.failed} failed`,
     );
-    await this.jobRepository.queue({ name: JobName.LibraryBackfillChecksums });
+
+    if (job.isLast) {
+      await this.jobRepository.queue({
+        name: JobName.LibraryBackfillChecksums,
+        data: { backfillId: state.startedAt, afterId: state.afterId },
+      });
+    }
 
     return JobStatus.Success;
   }
@@ -455,24 +510,14 @@ export class LibraryService extends BaseService {
       return;
     }
 
-    await this.jobRepository.queue({ name: JobName.LibraryBackfillChecksums });
-  }
-
-  private getExternalLibraryHashBatch<T extends { originalPath: string }>(assets: T[]): T[] {
-    const batch: T[] = [];
-
-    for (const asset of assets) {
-      if (mimeTypes.isVideo(asset.originalPath)) {
-        if (batch.length === 0) {
-          batch.push(asset);
-        }
-        break;
-      }
-
-      batch.push(asset);
-    }
-
-    return batch;
+    await this.jobRepository.queue(
+      state
+        ? {
+            name: JobName.LibraryBackfillChecksums,
+            data: { backfillId: state.startedAt, afterId: state.afterId },
+          }
+        : { name: JobName.LibraryBackfillChecksums },
+    );
   }
 
   private async hashExternalFile(assetPath: string) {

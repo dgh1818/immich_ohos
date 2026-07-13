@@ -254,6 +254,15 @@ export class JobRepository {
 
   private getJobOptions(item: JobItem): JobsOptions | null {
     switch (item.name) {
+      case JobName.LibraryBackfillChecksums: {
+        if (!item.data?.backfillId || item.data.asset) {
+          return null;
+        }
+
+        return {
+          jobId: `${JobName.LibraryBackfillChecksums}/${encodeURIComponent(item.data.backfillId)}/${item.data.afterId ?? 'start'}`,
+        };
+      }
       case JobName.NotifyAlbumUpdate: {
         return {
           jobId: `${item.data.id}/${item.data.recipientId}`,

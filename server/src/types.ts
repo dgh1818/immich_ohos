@@ -260,6 +260,18 @@ export interface ILibraryBulkIdsJob {
   totalAssets: number;
 }
 
+export interface ILibraryChecksumBackfillJob extends IBaseJob {
+  backfillId?: string;
+  afterId?: string;
+  asset?: {
+    id: string;
+    ownerId: string;
+    originalPath: string;
+  };
+  previousId?: string;
+  isLast?: boolean;
+}
+
 export interface IBulkEntityJob {
   ids: string[];
 }
@@ -445,7 +457,7 @@ export type JobItem =
   | { name: JobName.LibraryDelete; data: IEntityJob }
   | { name: JobName.LibraryScanQueueAll; data?: IBaseJob }
   | { name: JobName.LibraryDeleteCheck; data: IBaseJob }
-  | { name: JobName.LibraryBackfillChecksums; data?: IBaseJob }
+  | { name: JobName.LibraryBackfillChecksums; data?: ILibraryChecksumBackfillJob }
   | { name: JobName.LibraryBackfillPathChecksums; data?: IBaseJob }
 
   // Notification
