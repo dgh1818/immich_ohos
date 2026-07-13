@@ -565,6 +565,7 @@ export type ExternalLibraryChecksumBackfillState = {
   failed: number;
   /** last processed asset id for resuming after crash */
   afterId?: string;
+  retry?: { id: string; attempts: number };
 };
 export type ExternalLibraryPathChecksumBackfillState = {
   startedAt: string;
@@ -574,6 +575,7 @@ export type ExternalLibraryPathChecksumBackfillState = {
   failed: number;
   /** last processed asset id for resuming after crash */
   afterId?: string;
+  retry?: { id: string; attempts: number };
 };
 export type StorageTemplateMigrationState = {
   queuedAt: string;

@@ -281,12 +281,6 @@ export class JobRepository {
       case JobName.DatabaseBackup: {
         return { deduplication: { id: JobName.DatabaseBackup } };
       }
-      case JobName.LibraryBackfillChecksums: {
-        return { jobId: JobName.LibraryBackfillChecksums };
-      }
-      case JobName.LibraryBackfillPathChecksums: {
-        return { jobId: JobName.LibraryBackfillPathChecksums };
-      }
       default: {
         return null;
       }

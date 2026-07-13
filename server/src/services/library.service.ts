@@ -39,6 +39,7 @@ import { mimeTypes } from 'src/utils/mime-types';
 import { handlePromiseError } from 'src/utils/misc';
 
 const EXTERNAL_LIBRARY_IMAGE_HASH_BATCH_SIZE = 100;
+const EXTERNAL_LIBRARY_HASH_RETRY_ATTEMPTS = 3;
 
 @Injectable()
 export class LibraryService extends BaseService {
@@ -289,6 +290,7 @@ export class LibraryService extends BaseService {
       duplicates: currentState?.duplicates ?? 0,
       failed: currentState?.failed ?? 0,
       afterId: currentState?.afterId,
+      retry: currentState?.retry,
     };
 
     const assets = await this.assetRepository.getExternalLibraryChecksumBackfillPage({
@@ -299,6 +301,7 @@ export class LibraryService extends BaseService {
     if (assets.length === 0) {
       state.completedAt = new Date().toISOString();
       delete state.afterId;
+      delete state.retry;
       await this.systemMetadataRepository.set(SystemMetadataKey.ExternalLibraryChecksumBackfill, state);
       this.logger.log(
         `Finished external library checksum backfill: ${state.scanned} scanned, ${state.updated} updated, ${state.duplicates} duplicates, ${state.failed} failed`,
@@ -307,34 +310,60 @@ export class LibraryService extends BaseService {
     }
 
     for (const asset of this.getExternalLibraryHashBatch(assets)) {
-      state.scanned++;
-      state.afterId = asset.id;
+      let checksum: Buffer | undefined;
+      let failure: unknown;
+      let outcome: 'updated' | 'duplicate' | undefined;
 
-      let checksum: Buffer;
       try {
-        checksum = await this.cryptoRepository.hashFile(asset.originalPath);
+        ({ checksum } = await this.hashExternalFile(asset.originalPath));
+        const existingChecksums = await this.assetRepository.getExistingChecksums(asset.ownerId, [checksum]);
+        if (existingChecksums.has(checksum.toString('base64'))) {
+          outcome = 'duplicate';
+        } else {
+          await this.assetRepository.updateChecksum(asset.id, checksum, ChecksumAlgorithm.sha1File);
+          outcome = 'updated';
+        }
       } catch (error: Error | any) {
+        if (checksum && isAssetChecksumConstraint(error)) {
+          outcome = 'duplicate';
+        } else {
+          failure = error;
+        }
+      }
+
+      if (failure) {
+        const attempts = state.retry?.id === asset.id ? state.retry.attempts + 1 : 1;
+        if (attempts < EXTERNAL_LIBRARY_HASH_RETRY_ATTEMPTS) {
+          state.retry = { id: asset.id, attempts };
+          this.logger.warn(
+            `Unable to update checksum for external asset ${asset.id}: ${asset.originalPath}; retry ${attempts}/${EXTERNAL_LIBRARY_HASH_RETRY_ATTEMPTS}: ${failure}`,
+          );
+          break;
+        }
+
+        state.scanned++;
         state.failed++;
-        this.logger.warn(`Unable to hash external asset ${asset.id}: ${asset.originalPath}: ${error}`);
+        state.afterId = asset.id;
+        delete state.retry;
+        this.logger.warn(
+          `Unable to update checksum for external asset ${asset.id}: ${asset.originalPath}; skipping after ${attempts} attempts: ${failure}`,
+        );
         continue;
       }
 
-      try {
-        await this.assetRepository.updateChecksum(asset.id, checksum, ChecksumAlgorithm.sha1File);
-        state.updated++;
-      } catch (error: Error | any) {
-        if (isAssetChecksumConstraint(error)) {
-          state.duplicates++;
-          this.logger.warn(
-            `Skipping external asset ${asset.id}: ${asset.originalPath}: checksum ${checksum.toString(
-              'base64',
-            )} already exists in this library`,
-          );
-          continue;
-        }
+      state.scanned++;
+      state.afterId = asset.id;
+      delete state.retry;
 
-        state.failed++;
-        this.logger.warn(`Unable to update checksum for external asset ${asset.id}: ${asset.originalPath}: ${error}`);
+      if (outcome === 'updated') {
+        state.updated++;
+      } else {
+        state.duplicates++;
+        this.logger.warn(
+          `Skipping external asset ${asset.id}: ${asset.originalPath}: checksum ${checksum!.toString(
+            'base64',
+          )} already exists for this owner`,
+        );
       }
     }
 
@@ -354,9 +383,7 @@ export class LibraryService extends BaseService {
       return JobStatus.Skipped;
     }
 
-    const currentState = await this.systemMetadataRepository.get(
-      SystemMetadataKey.ExternalLibraryPathChecksumBackfill,
-    );
+    const currentState = await this.systemMetadataRepository.get(SystemMetadataKey.ExternalLibraryPathChecksumBackfill);
     if (currentState?.completedAt) {
       return JobStatus.Skipped;
     }
@@ -367,6 +394,7 @@ export class LibraryService extends BaseService {
       updated: currentState?.updated ?? 0,
       failed: currentState?.failed ?? 0,
       afterId: currentState?.afterId,
+      retry: currentState?.retry,
     };
 
     const assets = await this.assetRepository.getExternalLibraryPathChecksumBackfillPage({
@@ -377,10 +405,8 @@ export class LibraryService extends BaseService {
     if (assets.length === 0) {
       state.completedAt = new Date().toISOString();
       delete state.afterId;
-      await this.systemMetadataRepository.set(
-        SystemMetadataKey.ExternalLibraryPathChecksumBackfill,
-        state,
-      );
+      delete state.retry;
+      await this.systemMetadataRepository.set(SystemMetadataKey.ExternalLibraryPathChecksumBackfill, state);
       this.logger.log(
         `Finished external library path checksum backfill: ${state.scanned} scanned, ${state.updated} updated, ${state.failed} failed`,
       );
@@ -395,19 +421,26 @@ export class LibraryService extends BaseService {
       state.updated += ids.length;
       state.afterId = lastId;
       state.scanned += ids.length;
+      delete state.retry;
     } catch (error: Error | any) {
-      // Advance past the failed batch so we don't loop forever,
-      // but record the failure
-      this.logger.error(`Failed to update path checksums for batch ending at ${lastId}: ${error}`);
-      state.failed += ids.length;
-      state.afterId = lastId;
-      state.scanned += ids.length;
+      const attempts = state.retry?.id === lastId ? state.retry.attempts + 1 : 1;
+      if (attempts < EXTERNAL_LIBRARY_HASH_RETRY_ATTEMPTS) {
+        state.retry = { id: lastId, attempts };
+        this.logger.error(
+          `Failed to update path checksums for batch ending at ${lastId}; retry ${attempts}/${EXTERNAL_LIBRARY_HASH_RETRY_ATTEMPTS}: ${error}`,
+        );
+      } else {
+        this.logger.error(
+          `Failed to update path checksums for batch ending at ${lastId} after ${attempts} attempts: ${error}`,
+        );
+        state.failed += ids.length;
+        state.afterId = lastId;
+        state.scanned += ids.length;
+        delete state.retry;
+      }
     }
 
-    await this.systemMetadataRepository.set(
-      SystemMetadataKey.ExternalLibraryPathChecksumBackfill,
-      state,
-    );
+    await this.systemMetadataRepository.set(SystemMetadataKey.ExternalLibraryPathChecksumBackfill, state);
     this.logger.log(
       `External library path checksum backfill progress: ${state.scanned} scanned, ${state.updated} updated, ${state.failed} failed`,
     );
@@ -440,6 +473,18 @@ export class LibraryService extends BaseService {
     }
 
     return batch;
+  }
+
+  private async hashExternalFile(assetPath: string) {
+    const before = await this.storageRepository.stat(assetPath);
+    const checksum = await this.cryptoRepository.hashFile(assetPath);
+    const after = await this.storageRepository.stat(assetPath);
+
+    if (before.size !== after.size || before.mtime.valueOf() !== after.mtime.valueOf()) {
+      throw new Error(`File changed while hashing: ${assetPath}`);
+    }
+
+    return { checksum, stat: after };
   }
 
   private async queueExternalLibraryImportBatches(
@@ -537,14 +582,10 @@ export class LibraryService extends BaseService {
       };
 
       if (useContentHash) {
-        // When content hash is enabled, detect duplicate checksums within
-        // this library and fall back to path-based hash for duplicates.
-        // The first copy retains the content hash for mobile deduplication.
+        // Keep one content checksum per owner for mobile deduplication and
+        // use path checksums for additional copies.
         const checksums = imports.map((a) => a.checksum!);
-        const existingChecksums = await this.assetRepository.getExistingChecksums(
-          job.libraryId,
-          checksums,
-        );
+        const existingChecksums = await this.assetRepository.getExistingChecksums(library.ownerId, checksums);
 
         let fallbackCount = 0;
         const batchChecksums = new Set<string>();
@@ -603,7 +644,10 @@ export class LibraryService extends BaseService {
 
         assetImports.push(await this.processEntity(path, library.ownerId, job.libraryId, useContentHash));
 
-        if (useContentHash && (isVideo || assetImports.length >= EXTERNAL_LIBRARY_IMAGE_HASH_BATCH_SIZE)) {
+        if (
+          (!useContentHash && assetImports.length >= 10) ||
+          (useContentHash && (isVideo || assetImports.length >= EXTERNAL_LIBRARY_IMAGE_HASH_BATCH_SIZE))
+        ) {
           await importAssets();
         }
       } catch (error: any) {
@@ -742,14 +786,17 @@ export class LibraryService extends BaseService {
 
   private async processEntity(filePath: string, ownerId: string, libraryId: string, useContentHash: boolean) {
     const assetPath = path.normalize(filePath);
-    const stat = await this.storageRepository.stat(assetPath);
+    const { checksum, stat } = useContentHash
+      ? await this.hashExternalFile(assetPath)
+      : {
+          checksum: this.cryptoRepository.hashSha1(`path:${assetPath}`),
+          stat: await this.storageRepository.stat(assetPath),
+        };
 
     return {
       ownerId,
       libraryId,
-      checksum: useContentHash
-        ? await this.cryptoRepository.hashFile(assetPath)
-        : this.cryptoRepository.hashSha1(`path:${assetPath}`),
+      checksum,
       checksumAlgorithm: useContentHash ? ChecksumAlgorithm.sha1File : ChecksumAlgorithm.sha1Path,
       originalPath: assetPath,
 
@@ -764,13 +811,14 @@ export class LibraryService extends BaseService {
   }
 
   async queuePostSyncJobs(assetIds: string[]) {
-    this.logger.debug(`Queuing post-sync jobs for ${assetIds.length} asset(s)`);
+    this.logger.debug(`Queuing sidecar discovery for ${assetIds.length} asset(s)`);
 
+    // We queue a sidecar discovery which, in turn, queues metadata extraction
     await this.jobRepository.queueAll(
-      assetIds.flatMap((assetId) => [
-        { name: JobName.SidecarCheck, data: { id: assetId, source: 'upload' } as const },
-        { name: JobName.AssetExtractMetadata, data: { id: assetId, source: 'upload' } as const },
-      ]),
+      assetIds.map((assetId) => ({
+        name: JobName.SidecarCheck,
+        data: { id: assetId, source: 'upload' },
+      })),
     );
   }
 

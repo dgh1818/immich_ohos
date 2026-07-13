@@ -193,6 +193,10 @@ describe(LibraryService.name, () => {
   });
 
   describe('handleBackfillChecksums', () => {
+    beforeEach(() => {
+      mocks.storage.stat.mockResolvedValue({ size: 100, mtime: new Date('2026-01-01') } as Stats);
+    });
+
     it('should skip after the backfill has completed', async () => {
       mocks.systemMetadata.get.mockImplementation((key) => {
         if (key === SystemMetadataKey.SystemConfig) {
@@ -305,6 +309,178 @@ describe(LibraryService.name, () => {
           failed: 0,
         }),
       );
+    });
+
+    it('should skip content checksums that already exist for the owner', async () => {
+      const checksum = Buffer.from('file checksum');
+      const asset = AssetFactory.create({
+        checksumAlgorithm: ChecksumAlgorithm.sha1Path,
+        isExternal: true,
+        libraryId: newUuid(),
+        originalPath: '/data/user1/photo.jpg',
+      });
+
+      mocks.systemMetadata.get.mockImplementation((key) =>
+        Promise.resolve(key === SystemMetadataKey.SystemConfig ? { library: { useContentHash: true } } : null),
+      );
+      mocks.crypto.hashFile.mockResolvedValue(checksum);
+      mocks.asset.getExternalLibraryChecksumBackfillPage.mockResolvedValueOnce([asset]);
+      mocks.asset.getExistingChecksums.mockResolvedValue(new Set([checksum.toString('base64')]));
+
+      await expect(sut.handleBackfillChecksums()).resolves.toBe(JobStatus.Success);
+
+      expect(mocks.asset.getExistingChecksums).toHaveBeenCalledWith(asset.ownerId, [checksum]);
+      expect(mocks.asset.updateChecksum).not.toHaveBeenCalled();
+      expect(mocks.systemMetadata.set).toHaveBeenLastCalledWith(
+        SystemMetadataKey.ExternalLibraryChecksumBackfill,
+        expect.objectContaining({ scanned: 1, updated: 0, duplicates: 1, failed: 0, afterId: asset.id }),
+      );
+    });
+
+    it('should retry a failed checksum without advancing the checkpoint', async () => {
+      const asset = AssetFactory.create({
+        checksumAlgorithm: ChecksumAlgorithm.sha1Path,
+        isExternal: true,
+        libraryId: newUuid(),
+        originalPath: '/data/user1/photo.jpg',
+      });
+
+      mocks.systemMetadata.get.mockImplementation((key) =>
+        Promise.resolve(key === SystemMetadataKey.SystemConfig ? { library: { useContentHash: true } } : null),
+      );
+      mocks.asset.getExternalLibraryChecksumBackfillPage.mockResolvedValueOnce([asset]);
+      mocks.storage.stat.mockRejectedValue(new Error('File is still being copied'));
+
+      await expect(sut.handleBackfillChecksums()).resolves.toBe(JobStatus.Success);
+
+      expect(mocks.systemMetadata.set).toHaveBeenLastCalledWith(
+        SystemMetadataKey.ExternalLibraryChecksumBackfill,
+        expect.objectContaining({
+          scanned: 0,
+          updated: 0,
+          failed: 0,
+          afterId: undefined,
+          retry: { id: asset.id, attempts: 1 },
+        }),
+      );
+      expect(mocks.job.queue).toHaveBeenCalledWith({ name: JobName.LibraryBackfillChecksums });
+    });
+
+    it('should advance past a checksum after the retry limit', async () => {
+      const asset = AssetFactory.create({
+        checksumAlgorithm: ChecksumAlgorithm.sha1Path,
+        isExternal: true,
+        libraryId: newUuid(),
+        originalPath: '/data/user1/photo.jpg',
+      });
+
+      mocks.systemMetadata.get.mockImplementation((key) => {
+        if (key === SystemMetadataKey.SystemConfig) {
+          return Promise.resolve({ library: { useContentHash: true } });
+        }
+
+        if (key === SystemMetadataKey.ExternalLibraryChecksumBackfill) {
+          return Promise.resolve({
+            startedAt: '2026-01-01T00:00:00.000Z',
+            scanned: 0,
+            updated: 0,
+            duplicates: 0,
+            failed: 0,
+            retry: { id: asset.id, attempts: 2 },
+          });
+        }
+
+        return Promise.resolve(null);
+      });
+      mocks.asset.getExternalLibraryChecksumBackfillPage.mockResolvedValueOnce([asset]);
+      mocks.storage.stat.mockRejectedValue(new Error('File is still being copied'));
+
+      await expect(sut.handleBackfillChecksums()).resolves.toBe(JobStatus.Success);
+
+      expect(mocks.systemMetadata.set).toHaveBeenLastCalledWith(
+        SystemMetadataKey.ExternalLibraryChecksumBackfill,
+        expect.objectContaining({ scanned: 1, updated: 0, failed: 1, afterId: asset.id }),
+      );
+      expect(mocks.systemMetadata.set.mock.lastCall?.[1]).not.toHaveProperty('retry');
+    });
+  });
+
+  describe('handleBackfillPathChecksums', () => {
+    it('should update one batch and queue the next batch', async () => {
+      const asset = AssetFactory.create({
+        checksumAlgorithm: ChecksumAlgorithm.sha1File,
+        isExternal: true,
+        libraryId: newUuid(),
+      });
+
+      mocks.systemMetadata.get.mockResolvedValue(null);
+      mocks.asset.getExternalLibraryPathChecksumBackfillPage.mockResolvedValueOnce([asset]);
+
+      await expect(sut.handleBackfillPathChecksums()).resolves.toBe(JobStatus.Success);
+
+      expect(mocks.asset.updateAllExternalToPathHash).toHaveBeenCalledWith([asset.id]);
+      expect(mocks.systemMetadata.set).toHaveBeenLastCalledWith(
+        SystemMetadataKey.ExternalLibraryPathChecksumBackfill,
+        expect.objectContaining({ scanned: 1, updated: 1, failed: 0, afterId: asset.id }),
+      );
+      expect(mocks.job.queue).toHaveBeenCalledWith({ name: JobName.LibraryBackfillPathChecksums });
+    });
+
+    it('should retry a failed batch without advancing the checkpoint', async () => {
+      const asset = AssetFactory.create({
+        checksumAlgorithm: ChecksumAlgorithm.sha1File,
+        isExternal: true,
+        libraryId: newUuid(),
+      });
+
+      mocks.systemMetadata.get.mockResolvedValue(null);
+      mocks.asset.getExternalLibraryPathChecksumBackfillPage.mockResolvedValueOnce([asset]);
+      mocks.asset.updateAllExternalToPathHash.mockRejectedValue(new Error('Database is busy'));
+
+      await expect(sut.handleBackfillPathChecksums()).resolves.toBe(JobStatus.Success);
+
+      expect(mocks.systemMetadata.set).toHaveBeenLastCalledWith(
+        SystemMetadataKey.ExternalLibraryPathChecksumBackfill,
+        expect.objectContaining({
+          scanned: 0,
+          updated: 0,
+          failed: 0,
+          afterId: undefined,
+          retry: { id: asset.id, attempts: 1 },
+        }),
+      );
+    });
+
+    it('should advance past a path checksum batch after the retry limit', async () => {
+      const asset = AssetFactory.create({
+        checksumAlgorithm: ChecksumAlgorithm.sha1File,
+        isExternal: true,
+        libraryId: newUuid(),
+      });
+
+      mocks.systemMetadata.get.mockImplementation((key) =>
+        Promise.resolve(
+          key === SystemMetadataKey.ExternalLibraryPathChecksumBackfill
+            ? {
+                startedAt: '2026-01-01T00:00:00.000Z',
+                scanned: 0,
+                updated: 0,
+                failed: 0,
+                retry: { id: asset.id, attempts: 2 },
+              }
+            : null,
+        ),
+      );
+      mocks.asset.getExternalLibraryPathChecksumBackfillPage.mockResolvedValueOnce([asset]);
+      mocks.asset.updateAllExternalToPathHash.mockRejectedValue(new Error('Database is busy'));
+
+      await expect(sut.handleBackfillPathChecksums()).resolves.toBe(JobStatus.Success);
+
+      expect(mocks.systemMetadata.set).toHaveBeenLastCalledWith(
+        SystemMetadataKey.ExternalLibraryPathChecksumBackfill,
+        expect.objectContaining({ scanned: 1, updated: 0, failed: 1, afterId: asset.id }),
+      );
+      expect(mocks.systemMetadata.set.mock.lastCall?.[1]).not.toHaveProperty('retry');
     });
   });
 
@@ -817,7 +993,41 @@ describe(LibraryService.name, () => {
           originalPath: normalizedPath,
         }),
       ]);
-      expect(mocks.asset.getExistingChecksums).toHaveBeenCalledWith(library.id, [checksum]);
+      expect(mocks.asset.getExistingChecksums).toHaveBeenCalledWith(library.ownerId, [checksum]);
+    });
+
+    it('should skip a file that changes while its content is being hashed', async () => {
+      const library = factory.library();
+      const importedPath = '/data/user1/photo.jpg';
+
+      mocks.systemMetadata.get.mockImplementation((key) =>
+        Promise.resolve(key === SystemMetadataKey.SystemConfig ? { library: { useContentHash: true } } : null),
+      );
+      mocks.library.get.mockResolvedValue(library);
+      mocks.crypto.hashFile.mockResolvedValue(Buffer.from('file checksum'));
+      mocks.storage.stat
+        .mockResolvedValueOnce({ size: 100, mtime: new Date('2026-01-01T00:00:00Z') } as Stats)
+        .mockResolvedValueOnce({ size: 200, mtime: new Date('2026-01-01T00:00:01Z') } as Stats);
+
+      await expect(sut.handleSyncFiles({ libraryId: library.id, paths: [importedPath] })).resolves.toBe(
+        JobStatus.Success,
+      );
+
+      expect(mocks.asset.createAll).not.toHaveBeenCalled();
+    });
+
+    it('should retain small insert batches when content hashing is disabled', async () => {
+      const library = factory.library();
+      const paths = Array.from({ length: 11 }, (_, index) => `/data/user1/photo-${index}.jpg`);
+
+      mocks.library.get.mockResolvedValue(library);
+      mocks.asset.createAll.mockResolvedValue([]);
+
+      await expect(sut.handleSyncFiles({ libraryId: library.id, paths })).resolves.toBe(JobStatus.Success);
+
+      expect(mocks.asset.createAll).toHaveBeenCalledTimes(2);
+      expect(mocks.asset.createAll.mock.calls[0][0]).toHaveLength(10);
+      expect(mocks.asset.createAll.mock.calls[1][0]).toHaveLength(1);
     });
 
     it('should retry concurrent content hash insert conflicts with path hash', async () => {

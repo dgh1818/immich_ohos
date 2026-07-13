@@ -133,7 +133,7 @@
     "library_watching_settings": "资源库监控 [实验性功能]",
     "library_watching_settings_description": "自动监控文件变更",
     "library_content_hash": "内容校验和去重 [实验性功能]",
-    "library_content_hash_description": "外部图库使用文件内容哈希（而非路径哈希）。开启后手机备份可通过内容匹配外部图库文件，避免重复上传。注意：同库内相同内容的不同路径文件，首个保留内容哈希，其余自动转为路径哈希以避免冲突。",
+    "library_content_hash_description": "外部图库使用文件内容哈希（而非路径哈希）。开启后手机备份可通过内容匹配外部图库文件，避免重复上传。注意：同一用户下相同内容的首个文件保留内容哈希，其余文件自动使用路径哈希以避免重复匹配。",
     "library_content_hash_enable_description": "启用文件内容校验和去重",
     "logging_enable_description": "启用日志记录",
     "logging_level_description": "启用后，所采用的日志级别。",

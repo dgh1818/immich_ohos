@@ -475,8 +475,8 @@ export class AssetRepository {
     return ids.map(({ id }) => id);
   }
 
-  /** Returns base64 checksums that already exist in the given external library */
-  async getExistingChecksums(libraryId: string, checksums: Buffer[]): Promise<Set<string>> {
+  /** Returns base64 checksums that already exist for the given owner */
+  async getExistingChecksums(ownerId: string, checksums: Buffer[]): Promise<Set<string>> {
     if (checksums.length === 0) {
       return new Set();
     }
@@ -484,8 +484,7 @@ export class AssetRepository {
     const result = await this.db
       .selectFrom('asset')
       .select('checksum')
-      .where('libraryId', '=', asUuid(libraryId))
-      .where('isExternal', '=', true)
+      .where('ownerId', '=', asUuid(ownerId))
       .where('checksum', 'in', checksums)
       .execute();
 
