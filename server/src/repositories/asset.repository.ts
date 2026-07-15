@@ -83,8 +83,8 @@ interface LivePhotoSearchOptions {
 interface OhosLivePhotoSearchOptions {
   ownerId: string;
   libraryId?: string | null;
-  path: string;
-  name: string;
+  path?: string;
+  names: string[];
   otherAssetId: string;
   type: AssetType;
 }
@@ -791,17 +791,28 @@ export class AssetRepository {
   }
 
   findOhosLivePhotoMatch(options: OhosLivePhotoSearchOptions) {
-    const { ownerId, otherAssetId, path, name, type } = options;
-    return this.db
+    const { ownerId, libraryId, otherAssetId, path, names, type } = options;
+    let query = this.db
       .selectFrom('asset')
-      .select(['asset.id', 'asset.ownerId', 'asset.livePhotoVideoId'])
+      .select(['asset.id', 'asset.ownerId', 'asset.livePhotoVideoId', 'asset.originalPath'])
       .where('id', '!=', asUuid(otherAssetId))
       .where('ownerId', '=', asUuid(ownerId))
       .where('type', '=', type)
-      .where(sql<SqlBool>`regexp_replace("asset"."originalPath", '/[^/]*$', '') = ${path}`)
-      .where('asset.originalFileName', '=', name)
-      .limit(1)
-      .executeTakeFirst();
+      .where((eb) =>
+        eb.or(names.map((name) => sql<SqlBool>`lower("asset"."originalFileName") = ${name.toLowerCase()}`)),
+      );
+
+    if (path !== undefined) {
+      query = query.where(sql<SqlBool>`regexp_replace("asset"."originalPath", '/[^/]*$', '') = ${path}`);
+    }
+
+    if (libraryId === null) {
+      query = query.where('asset.libraryId', 'is', null);
+    } else if (libraryId) {
+      query = query.where('asset.libraryId', '=', asUuid(libraryId));
+    }
+
+    return query.limit(1).executeTakeFirst();
   }
 
   getStatistics(ownerId: string, { visibility, isFavorite, isTrashed }: AssetStatsOptions): Promise<AssetStats> {
