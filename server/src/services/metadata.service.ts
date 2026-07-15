@@ -243,32 +243,26 @@ export class MetadataService extends BaseService {
     livePhotoVideoId?: string | null;
     libraryId: string | null;
   }): Promise<OhosLivePhotoLinkResult> {
-    const otherType = asset.type === AssetType.Video ? AssetType.Image : AssetType.Video;
     const { dir } = parse(asset.originalPath);
     const baseName = parse(asset.originalFileName).name;
-    const names = otherType === AssetType.Video ? [`${baseName}.mp4`] : [`${baseName}.jpg`, `${baseName}.heic`];
-    let match = await this.assetRepository.findOhosLivePhotoMatch({
-      path: dir,
-      name: names[0],
-      ownerId: asset.ownerId,
-      libraryId: asset.libraryId,
-      otherAssetId: asset.id,
-      type: otherType,
-    });
-
-    for (const name of names.slice(1)) {
-      if (match) {
-        break;
-      }
-
-      match = await this.assetRepository.findOhosLivePhotoMatch({
+    const findMatch = (name: string, type: AssetType) =>
+      this.assetRepository.findOhosLivePhotoMatch({
         path: dir,
         name,
         ownerId: asset.ownerId,
         libraryId: asset.libraryId,
         otherAssetId: asset.id,
-        type: otherType,
+        type,
       });
+
+    let match: Awaited<ReturnType<typeof findMatch>>;
+    if (asset.type === AssetType.Image) {
+      match = await findMatch(`${baseName}.mp4`, AssetType.Video);
+    } else {
+      match = await findMatch(`${baseName}.jpg`, AssetType.Image);
+      if (!match) {
+        match = await findMatch(`${baseName}.heic`, AssetType.Image);
+      }
     }
 
     if (!match) {
