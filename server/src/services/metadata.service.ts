@@ -246,14 +246,30 @@ export class MetadataService extends BaseService {
     const otherType = asset.type === AssetType.Video ? AssetType.Image : AssetType.Video;
     const { dir } = parse(asset.originalPath);
     const baseName = parse(asset.originalFileName).name;
-    const match = await this.assetRepository.findOhosLivePhotoMatch({
+    const names = otherType === AssetType.Video ? [`${baseName}.mp4`] : [`${baseName}.jpg`, `${baseName}.heic`];
+    let match = await this.assetRepository.findOhosLivePhotoMatch({
       path: dir,
-      name: `${baseName}.${otherType === AssetType.Video ? 'mp4' : 'jpg'}`,
+      name: names[0],
       ownerId: asset.ownerId,
       libraryId: asset.libraryId,
       otherAssetId: asset.id,
       type: otherType,
     });
+
+    for (const name of names.slice(1)) {
+      if (match) {
+        break;
+      }
+
+      match = await this.assetRepository.findOhosLivePhotoMatch({
+        path: dir,
+        name,
+        ownerId: asset.ownerId,
+        libraryId: asset.libraryId,
+        otherAssetId: asset.id,
+        type: otherType,
+      });
+    }
 
     if (!match) {
       return 'missing';
