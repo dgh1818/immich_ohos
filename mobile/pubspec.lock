@@ -795,10 +795,10 @@ packages:
     dependency: "direct main"
     description:
       name: home_widget
-      sha256: "908d033514a981f829fd98213909e11a428104327be3b422718aa643ac9d084a"
+      sha256: fece84c7464099873c3ace38394ad7053509a4b0e36e57a1105a6aa31f47f23c
       url: "https://pub.flutter-io.cn"
     source: hosted
-    version: "0.8.1"
+    version: "0.9.3"
   hooks:
     dependency: transitive
     description:
@@ -1548,14 +1548,6 @@ packages:
     description:
       name: riverpod
       sha256: "59062512288d3056b2321804332a13ffdd1bf16df70dcc8e506e411280a72959"
-      url: "https://pub.flutter-io.cn"
-    source: hosted
-    version: "2.6.1"
-  riverpod_annotation:
-    dependency: "direct main"
-    description:
-      name: riverpod_annotation
-      sha256: e14b0bf45b71326654e2705d462f21b958f987087be850afd60578fcd502d1b8
       url: "https://pub.flutter-io.cn"
     source: hosted
     version: "2.6.1"

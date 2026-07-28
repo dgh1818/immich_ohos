@@ -164,9 +164,7 @@ export class QueueService extends BaseService {
         throw new BadRequestException(`The BackgroundTask queue cannot be paused`);
       }
       await this.jobRepository.pause(name);
-    }
-
-    if (dto.isPaused === false) {
+    } else if (dto.isPaused === false) {
       await this.jobRepository.resume(name);
     }
 

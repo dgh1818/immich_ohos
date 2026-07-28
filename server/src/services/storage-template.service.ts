@@ -23,7 +23,7 @@ import { ArgOf } from 'src/repositories/event.repository';
 import { BaseService } from 'src/services/base.service';
 import { JobOf, StorageAsset, StorageTemplateMigrationFailure, StorageTemplateMigrationState } from 'src/types';
 import { getAssetFile } from 'src/utils/asset.util';
-import { getLivePhotoMotionFilename } from 'src/utils/file';
+import { getFilenameExtension, getLivePhotoMotionFilename } from 'src/utils/file';
 
 const STORAGE_TEMPLATE_MIGRATION_FILE_TIMEOUT_MS = 3 * 60 * 1000;
 
@@ -206,8 +206,8 @@ export class StorageTemplateService extends BaseService {
   @OnJob({ name: JobName.StorageTemplateMigrationSingle, queue: QueueName.StorageTemplateMigration })
   async handleMigrationSingle({ id }: JobOf<JobName.StorageTemplateMigrationSingle>): Promise<JobStatus> {
     const config = await this.getConfig({ withCache: true });
-    const storageTemplateEnabled = config.storageTemplate.enabled;
-    if (!storageTemplateEnabled) {
+    const isStorageTemplateEnabled = config.storageTemplate.enabled;
+    if (!isStorageTemplateEnabled) {
       return JobStatus.Skipped;
     }
 
@@ -541,121 +541,126 @@ export class StorageTemplateService extends BaseService {
   ): Promise<string> {
     const { storageLabel, filename } = metadata;
 
-    const filenameWithoutExtension = path.basename(filename, path.extname(filename));
+    try {
+      const filenameWithoutExtension = path.basename(filename, getFilenameExtension(filename));
 
-    const source = asset.originalPath;
-    let extension = path.extname(source).split('.').pop() as string;
-    const sanitized = sanitize(path.basename(filenameWithoutExtension, `.${extension}`));
-    extension = extension?.toLowerCase();
-    const rootPath = StorageCore.getLibraryFolder({ id: asset.ownerId, storageLabel });
+      const source = asset.originalPath;
+      let extension = getFilenameExtension(source).split('.').pop() as string;
+      const sanitized = sanitize(path.basename(filenameWithoutExtension, `.${extension}`));
+      extension = extension?.toLowerCase();
+      const rootPath = StorageCore.getLibraryFolder({ id: asset.ownerId, storageLabel });
 
-    switch (extension) {
-      case 'jpeg':
-      case 'jpe': {
-        extension = 'jpg';
-        break;
-      }
-      case 'tif': {
-        extension = 'tiff';
-        break;
-      }
-      case '3gpp': {
-        extension = '3gp';
-        break;
-      }
-      case 'mpeg':
-      case 'mpe': {
-        extension = 'mpg';
-        break;
-      }
-      case 'm2ts':
-      case 'm2t': {
-        extension = 'mts';
-        break;
-      }
-    }
-
-    let albumName = null;
-    let albumStartDate = null;
-    let albumEndDate = null;
-    const assetForMetadata = stillPhoto || asset;
-
-    if (this.template.needsAlbum) {
-      // For motion videos, use the still photo's album information since motion videos
-      // don't have album metadata attached directly
-      const albums = await this.albumRepository.getByAssetId(assetForMetadata.ownerId, assetForMetadata.id);
-      const album = albums?.[0];
-      if (album) {
-        albumName = album.albumName || null;
-
-        if (this.template.needsAlbumMetadata) {
-          const [metadata] = await this.albumRepository.getMetadataForIds([album.id]);
-          albumStartDate = metadata?.startDate || null;
-          albumEndDate = metadata?.endDate || null;
+      switch (extension) {
+        case 'jpeg':
+        case 'jpe': {
+          extension = 'jpg';
+          break;
+        }
+        case 'tif': {
+          extension = 'tiff';
+          break;
+        }
+        case '3gpp': {
+          extension = '3gp';
+          break;
+        }
+        case 'mpeg':
+        case 'mpe': {
+          extension = 'mpg';
+          break;
+        }
+        case 'm2ts':
+        case 'm2t': {
+          extension = 'mts';
+          break;
         }
       }
-    }
 
-    // For motion videos that are part of live photos, use the still photo's date
-    // to ensure both parts end up in the same folder
-    const storagePath = this.render(this.template.compiled, {
-      asset: assetForMetadata,
-      filename: sanitized,
-      extension,
-      albumName,
-      albumStartDate,
-      albumEndDate,
-      make: assetForMetadata.make,
-      model: assetForMetadata.model,
-      lensModel: assetForMetadata.lensModel,
-    });
-    const fullPath = path.normalize(path.join(rootPath, storagePath));
-    let destination = `${fullPath}.${extension}`;
+      let albumName = null;
+      let albumStartDate = null;
+      let albumEndDate = null;
+      const assetForMetadata = stillPhoto || asset;
 
-    if (!fullPath.startsWith(rootPath)) {
-      this.logger.warn(`Skipped attempt to access an invalid path: ${fullPath}. Path should start with ${rootPath}`);
-      return source;
-    }
+      if (this.template.needsAlbum) {
+        // For motion videos, use the still photo's album information since motion videos
+        // don't have album metadata attached directly
+        const albums = await this.albumRepository.getByAssetId(assetForMetadata.ownerId, assetForMetadata.id);
+        const album = albums?.[0];
+        if (album) {
+          albumName = album.albumName || null;
 
-    if (source === destination) {
-      return source;
-    }
+          if (this.template.needsAlbumMetadata) {
+            const [metadata] = await this.albumRepository.getMetadataForIds([album.id]);
+            albumStartDate = metadata?.startDate || null;
+            albumEndDate = metadata?.endDate || null;
+          }
+        }
+      }
 
-    /**
-     * In case of migrating duplicate filename to a new path, we need to check if it is already migrated
-     * Due to the mechanism of appending +1, +2, +3, etc to the filename
-     *
-     * Example:
-     * Source = upload/abc/def/FullSizeRender+7.heic
-     * Expected Destination = upload/abc/def/FullSizeRender.heic
-     *
-     * The file is already at the correct location, but since there are other FullSizeRender.heic files in the
-     * destination, it was renamed to FullSizeRender+7.heic.
-     *
-     * The lines below will be used to check if the differences between the source and destination is only the
-     * +7 suffix, and if so, it will be considered as already migrated.
-     */
-    if (source.startsWith(fullPath) && source.endsWith(`.${extension}`)) {
-      const diff = source.replace(fullPath, '').replace(`.${extension}`, '');
-      const hasDuplicationAnnotation = /^\+\d+$/.test(diff);
-      if (hasDuplicationAnnotation) {
+      // For motion videos that are part of live photos, use the still photo's date
+      // to ensure both parts end up in the same folder
+      const storagePath = this.render(this.template.compiled, {
+        asset: assetForMetadata,
+        filename: sanitized,
+        extension,
+        albumName,
+        albumStartDate,
+        albumEndDate,
+        make: assetForMetadata.make,
+        model: assetForMetadata.model,
+        lensModel: assetForMetadata.lensModel,
+      });
+      const fullPath = path.normalize(path.join(rootPath, storagePath));
+      let destination = `${fullPath}.${extension}`;
+
+      if (!fullPath.startsWith(rootPath)) {
+        this.logger.warn(`Skipped attempt to access an invalid path: ${fullPath}. Path should start with ${rootPath}`);
         return source;
       }
-    }
 
-    let duplicateCount = 0;
-
-    while (true) {
-      const exists = await this.storageRepository.checkFileExists(destination);
-      if (!exists) {
-        break;
+      if (source === destination) {
+        return source;
       }
 
-      duplicateCount++;
-      destination = `${fullPath}+${duplicateCount}.${extension}`;
-    }
+      /**
+       * In case of migrating duplicate filename to a new path, we need to check if it is already migrated
+       * Due to the mechanism of appending +1, +2, +3, etc to the filename
+       *
+       * Example:
+       * Source = upload/abc/def/FullSizeRender+7.heic
+       * Expected Destination = upload/abc/def/FullSizeRender.heic
+       *
+       * The file is already at the correct location, but since there are other FullSizeRender.heic files in the
+       * destination, it was renamed to FullSizeRender+7.heic.
+       *
+       * The lines below will be used to check if the differences between the source and destination is only the
+       * +7 suffix, and if so, it will be considered as already migrated.
+       */
+      if (source.startsWith(fullPath) && source.endsWith(`.${extension}`)) {
+        const diff = source.replace(fullPath, '').replace(`.${extension}`, '');
+        const hasDuplicationAnnotation = /^\+\d+$/.test(diff);
+        if (hasDuplicationAnnotation) {
+          return source;
+        }
+      }
 
-    return destination;
+      let duplicateCount = 0;
+
+      while (true) {
+        const isExists = await this.storageRepository.checkFileExists(destination);
+        if (!isExists) {
+          break;
+        }
+
+        duplicateCount++;
+        destination = `${fullPath}+${duplicateCount}.${extension}`;
+      }
+
+      return destination;
+    } catch (error: any) {
+      this.logger.error(`Unable to get template path for ${filename}: ${error}`);
+      return asset.originalPath;
+    }
   }
 
   private compile(template: string) {

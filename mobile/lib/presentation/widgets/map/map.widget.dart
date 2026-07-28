@@ -16,7 +16,6 @@ import 'package:immich_mobile/presentation/widgets/bottom_sheet/map_bottom_sheet
 import 'package:immich_mobile/presentation/widgets/map/map.state.dart';
 import 'package:immich_mobile/presentation/widgets/map/map_utils.dart';
 import 'package:immich_mobile/providers/routes.provider.dart';
-import 'package:immich_mobile/routing/router.dart';
 import 'package:immich_mobile/utils/async_mutex.dart';
 import 'package:immich_mobile/utils/debounce.dart';
 import 'package:immich_mobile/widgets/common/immich_toast.dart';
@@ -74,7 +73,6 @@ class DriftMap extends ConsumerStatefulWidget {
 }
 
 class _DriftMapState extends ConsumerState<DriftMap> {
-
   MapLibreMapController? mapController;
   final _reloadMutex = AsyncMutex();
   final _debouncer = Debouncer(interval: const Duration(milliseconds: 500), maxWaitTime: const Duration(seconds: 2));
@@ -86,7 +84,7 @@ class _DriftMapState extends ConsumerState<DriftMap> {
   DriftMapSelectedAsset? _pinnedAsset;
   DriftMapSelectedAsset? _pendingSelectedAsset;
   DriftMapSelectedAsset? _selectedAsset;
-  
+
   final _sheetCameraDebouncer = Debouncer(interval: const Duration(milliseconds: 120));
   static const double _selectedMarkerSize = 100;
   bool _isReanchoring = false;
@@ -224,8 +222,7 @@ class _DriftMapState extends ConsumerState<DriftMap> {
     // When the AssetViewer is open, the DriftMap route stays alive in the background.
     // If we continue to update bounds, the map-scoped timeline service gets recreated and the previous one disposed,
     // which can invalidate the TimelineService instance that was passed into AssetViewerRoute (causing "loading forever").
-    final currentRoute = ref.read(currentRouteNameProvider);
-    if (currentRoute == AssetViewerRoute.name) {
+    if (ref.read(isAssetViewerOpenProvider)) {
       return;
     }
 
@@ -285,7 +282,9 @@ class _DriftMapState extends ConsumerState<DriftMap> {
   // 所以这里计算当前仍然可见的地图区域中心，避免 marker 被时间线遮住。
   double _visibleMapCenterY() {
     final top = max(_selectedMarkerSize / 2, context.padding.top + 96.0);
-    final bottom = (!widget.showTimelineSheet || !context.isMobile) ? context.height : context.height * (1.0 - bottomSheetOffset.value);
+    final bottom = (!widget.showTimelineSheet || !context.isMobile)
+        ? context.height
+        : context.height * (1.0 - bottomSheetOffset.value);
     return bottom <= top ? top : (top + bottom) / 2;
   }
 
@@ -317,10 +316,7 @@ class _DriftMapState extends ConsumerState<DriftMap> {
     }
 
     _isReanchoring = true;
-    await controller.animateCamera(
-      CameraUpdate.scrollBy(0, scrollDy),
-      duration: const Duration(milliseconds: 300),
-    );
+    await controller.animateCamera(CameraUpdate.scrollBy(0, scrollDy), duration: const Duration(milliseconds: 300));
     // Delay reset to cover trailing onMapMoved callbacks, then refresh timeline bounds
     Future.delayed(const Duration(milliseconds: 500), () {
       _isReanchoring = false;
@@ -456,6 +452,12 @@ class _DriftMapState extends ConsumerState<DriftMap> {
         },
       );
     }
+
+    ref.listen<bool>(isAssetViewerOpenProvider, (previous, current) {
+      if (previous == true && !current) {
+        _debouncer.run(() => setBounds(forceReload: true));
+      }
+    });
 
     return Stack(
       children: [

@@ -16,16 +16,19 @@ export class ConnectivityApiImpl extends ConnectivityApi {
   }
 
   override getCapabilities(): Array<NetworkCapability> {
-    let connectivityManager = connection.getDefaultNetSync();
-    let netCapability = connection.getNetCapabilitiesSync(connectivityManager);
-    let networkCap = netCapability.networkCap || [];
-    let hasWifi = wifiManager.isConnected();
-    let isWifiEnabled = wifiManager.isWifiActive();
-    let hasCellular = networkCap.includes(connection.NetCap.NET_CAPABILITY_NOT_METERED)
-    let hasVpn = !networkCap.includes(connection.NetCap.NET_CAPABILITY_NOT_VPN)
-    let isUnmetered = hasWifi || networkCap.includes(connection.NetCap.NET_CAPABILITY_NOT_METERED)
+    const connectivityManager = connection.getDefaultNetSync();
+    const netCapability = connection.getNetCapabilitiesSync(connectivityManager);
+    const networkCap = netCapability.networkCap || [];
+    const bearerTypes = netCapability.bearerTypes;
+    const hasWifi = bearerTypes.includes(connection.NetBearType.BEARER_WIFI) || wifiManager.isConnected();
+    const hasCellular = bearerTypes.includes(connection.NetBearType.BEARER_CELLULAR);
+    const hasVpn =
+      bearerTypes.includes(connection.NetBearType.BEARER_VPN) ||
+      !networkCap.includes(connection.NetCap.NET_CAPABILITY_NOT_VPN);
+    const isUnmetered =
+      !hasCellular && networkCap.includes(connection.NetCap.NET_CAPABILITY_NOT_METERED);
 
-    let res: Array<NetworkCapability | NetworkCapabilityEnum> = [];
+    const res: Array<NetworkCapability | NetworkCapabilityEnum> = [];
     if (hasWifi) {
       res.push(this.wrapCapability(NetworkCapability.WIFI))
     }
@@ -35,7 +38,7 @@ export class ConnectivityApiImpl extends ConnectivityApi {
     if (hasVpn) {
       res.push(this.wrapCapability(NetworkCapability.VPN));
       if (!hasWifi && !hasCellular) {
-        if (isWifiEnabled) {
+        if (wifiManager.isWifiActive()) {
           res.push(this.wrapCapability(NetworkCapability.WIFI))
         } else {
           res.push(this.wrapCapability(NetworkCapability.CELLULAR))
@@ -51,4 +54,3 @@ export class ConnectivityApiImpl extends ConnectivityApi {
     return res as Array<NetworkCapability>;
   }
 }
-

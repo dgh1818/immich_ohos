@@ -17,10 +17,10 @@ import 'package:immich_mobile/platform/native_sync_api_ohos.g.dart';
 import 'package:immich_mobile/repositories/asset_media.repository.dart';
 import 'package:mocktail/mocktail.dart';
 
-import '../../domain/service.mock.dart';
 import '../../fixtures/asset.stub.dart';
 import '../../infrastructure/repository.mock.dart';
 import '../../repository.mocks.dart';
+import '../../service.mocks.dart';
 
 void main() {
   late LocalSyncService sut;

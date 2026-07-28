@@ -120,9 +120,7 @@ const validateRange = (value: number | undefined, min: number, max: number): Non
 };
 
 const getLensModel = (exifTags: ImmichTags): string | null => {
-  const lensModel = String(
-    exifTags.LensID ?? exifTags.LensType ?? exifTags.LensSpec ?? exifTags.LensModel ?? '',
-  ).trim();
+  const lensModel = (exifTags.LensID ?? exifTags.LensType ?? exifTags.LensSpec ?? exifTags.LensModel ?? '').trim();
   if (lensModel === '----') {
     return null;
   }
@@ -584,7 +582,7 @@ export class MetadataService extends BaseService {
       exifImageHeight: validate(height),
       exifImageWidth: validate(width),
       orientation: validate(exifTags.Orientation)?.toString() ?? null,
-      projectionType: exifTags.ProjectionType ? String(exifTags.ProjectionType).toUpperCase() : null,
+      projectionType: exifTags.ProjectionType ? exifTags.ProjectionType.toUpperCase() : null,
       bitsPerSample: this.getBitsPerSample(exifTags),
       colorspace: exifTags.ColorSpace === undefined ? null : String(exifTags.ColorSpace),
 
@@ -593,7 +591,7 @@ export class MetadataService extends BaseService {
         exifTags.Make ?? exifTags.Device?.Manufacturer ?? exifTags.AndroidMake ?? (exifTags.DeviceManufacturer || null),
       model:
         exifTags.Model ?? exifTags.Device?.ModelName ?? exifTags.AndroidModel ?? (exifTags.DeviceModelName || null),
-      fps: video?.frameRate ?? validate(Number.parseFloat(exifTags.VideoFrameRate!)),
+      fps: video?.frameRate ?? validate(Number(exifTags.VideoFrameRate!)),
       iso: validate(exifTags.ISO) as number,
       exposureTime: exifTags.ExposureTime ?? null,
       lensModel: getLensModel(exifTags),
@@ -624,7 +622,7 @@ export class MetadataService extends BaseService {
         : undefined;
 
     const videoData =
-      format?.formatName && format?.formatLongName && video?.codecName && video?.timeBase
+      format?.formatName && format.formatLongName && video?.codecName && video?.timeBase
         ? {
             assetId: asset.id,
             bitrate: video.bitrate,
@@ -670,8 +668,8 @@ export class MetadataService extends BaseService {
         : undefined;
 
     const isSidewards = exifTags.Orientation && this.isOrientationSidewards(exifTags.Orientation);
-    const assetWidth = isSidewards ? validate(height) : validate(width);
-    const assetHeight = isSidewards ? validate(width) : validate(height);
+    const assetWidth = validate(isSidewards ? height : width);
+    const assetHeight = validate(isSidewards ? width : height);
 
     const tasks = new Tasks();
 
@@ -760,8 +758,8 @@ export class MetadataService extends BaseService {
 
     let sidecarPath = null;
     for (const candidate of this.getSidecarCandidates(asset)) {
-      const exists = await this.storageRepository.checkFileExists(candidate, constants.R_OK);
-      if (!exists) {
+      const isExists = await this.storageRepository.checkFileExists(candidate, constants.R_OK);
+      if (!isExists) {
         continue;
       }
 
@@ -1140,8 +1138,8 @@ export class MetadataService extends BaseService {
       }
 
       // write extracted motion video to disk, especially if the encoded-video folder has been deleted
-      const existsOnDisk = await this.storageRepository.checkFileExists(motionAsset.originalPath);
-      if (!existsOnDisk) {
+      const isExistsOnDisk = await this.storageRepository.checkFileExists(motionAsset.originalPath);
+      if (!isExistsOnDisk) {
         this.storageCore.ensureFolders(motionAsset.originalPath);
         await this.storageRepository.createFile(motionAsset.originalPath, video);
         this.logger.log(`Wrote motion photo video to ${motionAsset.originalPath}`);
@@ -1421,6 +1419,7 @@ export class MetadataService extends BaseService {
 
   private getDuration(tags: ImmichTags): number | null {
     const duration = tags.Duration;
+    // eslint-disable-next-line unicorn/prefer-number-coercion
     const seconds = typeof duration === 'number' ? duration : Number.parseFloat(duration as string);
     return Number.isFinite(seconds) ? Math.round(Duration.fromObject({ seconds }).toMillis()) : null;
   }

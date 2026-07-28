@@ -386,7 +386,7 @@ export class StorageCore {
   }
 
   static getNestedPath(folder: StorageFolder, ownerId: string, filename: string): string {
-    return join(this.getNestedFolder(folder, ownerId, filename), filename);
+    return join(StorageCore.getNestedFolder(folder, ownerId, filename), filename);
   }
 
   static getTempPathInDir(dir: string): string {

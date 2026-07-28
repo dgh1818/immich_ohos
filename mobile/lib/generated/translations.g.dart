@@ -192,6 +192,8 @@ class Translations extends _BaseTranslations {
   String get asset_viewer_settings_title => _t('asset_viewer_settings_title');
   String get assets => _t('assets');
   String assets_added_to_album_count({required int count}) => _t('assets_added_to_album_count', {'count': count});
+  String assets_added_to_album_partial_count({required int totalCount, required Object successCount}) =>
+      _t('assets_added_to_album_partial_count', {'totalCount': totalCount, 'successCount': successCount});
   String assets_added_to_albums_count({required int assetTotal, required int albumTotal}) =>
       _t('assets_added_to_albums_count', {'assetTotal': assetTotal, 'albumTotal': albumTotal});
   String assets_cannot_be_added_to_album_count({required int count}) =>
@@ -429,7 +431,6 @@ class Translations extends _BaseTranslations {
   String get custom_date => _t('custom_date');
   String get custom_locale => _t('custom_locale');
   String get custom_locale_description => _t('custom_locale_description');
-  String get custom_url => _t('custom_url');
   String get cutoff_date_description => _t('cutoff_date_description');
   String cutoff_day({required int count}) => _t('cutoff_day', {'count': count});
   String cutoff_year({required int count}) => _t('cutoff_year', {'count': count});
@@ -1087,6 +1088,7 @@ class Translations extends _BaseTranslations {
   String get not_available => _t('not_available');
   String get not_in_any_album => _t('not_in_any_album');
   String get not_selected => _t('not_selected');
+  String get not_set => _t('not_set');
   String get notes => _t('notes');
   String get nothing_here_yet => _t('nothing_here_yet');
   String get notification_backup_reliability => _t('notification_backup_reliability');
@@ -1522,6 +1524,8 @@ class Translations extends _BaseTranslations {
   String get shared_link_clipboard_copied_massage => _t('shared_link_clipboard_copied_massage');
   String get shared_link_create_error => _t('shared_link_create_error');
   String get shared_link_custom_url_description => _t('shared_link_custom_url_description');
+  String get shared_link_custom_url_title => _t('shared_link_custom_url_title');
+  String get shared_link_custom_url_warning => _t('shared_link_custom_url_warning');
   String get shared_link_edit_description_hint => _t('shared_link_edit_description_hint');
   String get shared_link_edit_expire_after_option_day => _t('shared_link_edit_expire_after_option_day');
   String shared_link_edit_expire_after_option_days({required int count}) =>
@@ -1739,6 +1743,7 @@ class Translations extends _BaseTranslations {
   String get unknown => _t('unknown');
   String get unknown_country => _t('unknown_country');
   String get unknown_date => _t('unknown_date');
+  String get unknown_schema => _t('unknown_schema');
   String get unknown_year => _t('unknown_year');
   String get unlimited => _t('unlimited');
   String get unlink_motion_video => _t('unlink_motion_video');
@@ -2327,6 +2332,10 @@ class _AdminTranslations extends _BaseTranslations {
   String get transcoding_realtime_description => _t('admin.transcoding_realtime_description');
   String get transcoding_realtime_enabled => _t('admin.transcoding_realtime_enabled');
   String get transcoding_realtime_enabled_description => _t('admin.transcoding_realtime_enabled_description');
+  String get transcoding_realtime_resolutions => _t('admin.transcoding_realtime_resolutions');
+  String get transcoding_realtime_resolutions_description => _t('admin.transcoding_realtime_resolutions_description');
+  String get transcoding_realtime_video_codecs => _t('admin.transcoding_realtime_video_codecs');
+  String get transcoding_realtime_video_codecs_description => _t('admin.transcoding_realtime_video_codecs_description');
   String get transcoding_reference_frames => _t('admin.transcoding_reference_frames');
   String get transcoding_reference_frames_description => _t('admin.transcoding_reference_frames_description');
   String get transcoding_required_description => _t('admin.transcoding_required_description');

@@ -155,7 +155,7 @@ class GCastService {
     _currentPlaybackAssetKey = _playbackAssetKey(
       isVideo: asset?.isVideo ?? false,
       assetId: asset?.remoteId,
-      mediaId: asset?.livePhotoVideoId,
+      mediaId: asset is RemoteAsset ? asset.livePhotoVideoId : null,
     );
   }
 
@@ -186,7 +186,7 @@ class GCastService {
     final assetKey = _playbackAssetKey(
       isVideo: asset.isVideo,
       assetId: asset.remoteId,
-      mediaId: asset.livePhotoVideoId,
+      mediaId: asset is RemoteAsset ? asset.livePhotoVideoId : null,
     );
     if (assetKey == null || asset.remoteId == null) {
       await clearPreparedPlaybackSessionIfCurrent();

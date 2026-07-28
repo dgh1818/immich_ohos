@@ -16,6 +16,7 @@ import { makeStream, newTestService, ServiceMocks } from 'test/utils';
 import { vitest } from 'vitest';
 
 async function* mockWalk() {
+  // eslint-disable-next-line unicorn/no-useless-promise-resolve-reject
   yield await Promise.resolve(['/data/user1/photo.jpg']);
 }
 
@@ -930,6 +931,10 @@ describe(LibraryService.name, () => {
       ]);
       expect(mocks.crypto.hashSha1).toHaveBeenCalledWith(`path:${normalizedPath}`);
       expect(mocks.crypto.hashFile).not.toHaveBeenCalled();
+
+      expect(mocks.event.emit).toHaveBeenCalledWith('AssetCreate', {
+        asset: { id: asset.id, ownerId: library.ownerId },
+      });
 
       expect(mocks.job.queueAll).toHaveBeenCalledWith([
         {

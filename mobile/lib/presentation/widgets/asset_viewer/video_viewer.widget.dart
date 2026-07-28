@@ -109,10 +109,7 @@ class _NativeVideoViewerState extends ConsumerState<NativeVideoViewer> with Widg
         }
       case AppLifecycleState.paused:
         _shouldPlayOnForeground = await _controller?.isPlaying() ?? true;
-        if (!_canUseRef) {
-          return;
-        }
-        if (_shouldPlayOnForeground) {
+        if (_shouldPlayOnForeground && mounted) {
           await _notifier.pause();
         }
       default:
@@ -150,7 +147,7 @@ class _NativeVideoViewerState extends ConsumerState<NativeVideoViewer> with Widg
         );
       }
 
-      if (videoAsset.hasLocal && videoAsset.livePhotoVideoId == null) {
+      if (videoAsset.hasLocal && (videoAsset is! RemoteAsset || videoAsset.livePhotoVideoId == null)) {
         final id = videoAsset is LocalAsset ? videoAsset.id : (videoAsset as RemoteAsset).localId!;
         if (Platform.isOhos) {
           final path = await NativeSyncApiOhos().getPathFromUri(id);
@@ -281,13 +278,13 @@ class _NativeVideoViewerState extends ConsumerState<NativeVideoViewer> with Widg
       return;
     }
 
-    await _notifier.load(source);
-    if (!_canUseRef) {
-      return;
-    }
+    // Grab refs to prevent reading after dispose
     final loopVideo = ref.read(appConfigProvider).viewer.loopVideo;
-    await _notifier.setLoop(!widget.asset.isMotionPhoto && loopVideo);
-    await _notifier.setVolume(1);
+    final localNotifier = _notifier;
+
+    await localNotifier.load(source);
+    await localNotifier.setLoop(!widget.asset.isMotionPhoto && loopVideo);
+    await localNotifier.setVolume(1);
   }
 
   void _initController(NativeVideoPlayerController nc) {
