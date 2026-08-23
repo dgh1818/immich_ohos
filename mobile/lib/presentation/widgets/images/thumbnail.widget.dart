@@ -1,12 +1,13 @@
 import 'dart:ui' as ui;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:immich_mobile/domain/models/asset/base_asset.model.dart';
 import 'package:immich_mobile/extensions/build_context_extensions.dart';
 import 'package:immich_mobile/extensions/theme_extensions.dart';
 import 'package:immich_mobile/presentation/widgets/images/image_provider.dart';
 import 'package:immich_mobile/presentation/widgets/images/remote_image_provider.dart';
-// import 'package:immich_mobile/presentation/widgets/images/thumb_hash_provider.dart';
+import 'package:immich_mobile/presentation/widgets/images/thumb_hash_provider.dart';
 import 'package:immich_mobile/presentation/widgets/timeline/constants.dart';
 import 'package:logging/logging.dart';
 
@@ -38,11 +39,9 @@ class Thumbnail extends StatefulWidget {
     Size size = kThumbnailResolution,
     super.key,
   }) : thumbhashProvider = switch (asset) {
-         /*
-         RemoteAsset() when asset.thumbHash != null && asset.localId == null => ThumbHashProvider(
-           thumbHash: asset.thumbHash!,
-         ),
-         */
+         RemoteAsset()
+             when defaultTargetPlatform != TargetPlatform.ohos && asset.thumbHash != null && asset.localId == null =>
+           ThumbHashProvider(thumbHash: asset.thumbHash!),
          _ => null,
        },
        imageProvider = asset == null ? null : getThumbnailImageProvider(asset, size: size);
@@ -82,7 +81,6 @@ class _ThumbnailState extends State<Thumbnail> with SingleTickerProviderStateMix
   }
 
   void _loadFromThumbhashProvider() {
-    /*
     _stopListeningToThumbhashStream();
     final thumbhashProvider = widget.thumbhashProvider;
     if (thumbhashProvider == null || _providerImage != null) {
@@ -108,7 +106,6 @@ class _ThumbnailState extends State<Thumbnail> with SingleTickerProviderStateMix
       },
     );
     thumbhashStream.addListener(thumbhashStreamListener);
-    */
   }
 
   void _loadFromImageProvider() {

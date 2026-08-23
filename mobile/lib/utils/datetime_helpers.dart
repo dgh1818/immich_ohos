@@ -2,11 +2,7 @@ const int _maxMillisecondsSinceEpoch = 8640000000000000; // 275760-09-13
 const int _minMillisecondsSinceEpoch = -62135596800000; // 0001-01-01
 
 DateTime? tryFromSecondsSinceEpoch(int? secondsSinceEpoch, {bool isUtc = false}) {
-  if (secondsSinceEpoch == null) {
-    return null;
-  }
-
-  if (secondsSinceEpoch == -1) {
+  if (secondsSinceEpoch == null || secondsSinceEpoch == -1) {
     return null;
   }
 

@@ -1,9 +1,6 @@
 **/node_modules/**
 
 .DS_Store
-.tmp/
-tmp/
-tmp_*/
 .vscode/*
 !.vscode/launch.json
 !.vscode/extensions.json
@@ -33,18 +30,3 @@ vite.config.js.timestamp-*
 .devcontainer/.env*
 *.tsbuildinfo
 *.tsbuildInfo
-
-# # ignore any directory named cache
-# cache/
-# .cache/
-
-# ignore any directory named cache
-intermediates/
-.intermediates/
-
-# ignore any directory named cache
-build/
-.build/
-
-**/oh_modules/**
-node_modules

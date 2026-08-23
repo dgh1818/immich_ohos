@@ -1,8 +1,11 @@
 import 'dart:math';
 
 import 'package:auto_route/auto_route.dart';
+import 'package:coordtransform_dart/coordtransform_dart.dart';
 import 'package:easy_localization/easy_localization.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:immich_mobile/extensions/asyncvalue_extensions.dart';
@@ -11,10 +14,6 @@ import 'package:immich_mobile/extensions/maplibrecontroller_extensions.dart';
 import 'package:immich_mobile/utils/map_utils.dart';
 import 'package:immich_mobile/widgets/map/map_theme_override.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
-
-import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart';
-import 'package:coordtransform_dart/coordtransform_dart.dart';
 
 @RoutePage()
 class MapLocationPickerPage extends HookConsumerWidget {
@@ -28,35 +27,29 @@ class MapLocationPickerPage extends HookConsumerWidget {
     final controller = useRef<MapLibreMapController?>(null);
     final marker = useRef<Symbol?>(null);
 
+    Future<void> addOhosMarker(LatLng position) async =>
+        controller.value?.addMarkerAtLatLng_Ohos(position, await rootBundle.load("assets/location-pin.png"), 0.15);
+
     Future<void> onStyleLoaded() async {
-      // marker.value = await controller.value?.addMarkerAtLatLng(initialLatLng);
-      if (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS) {
-        marker.value = await controller.value?.addMarkerAtLatLng(initialLatLng);
-      } else if (defaultTargetPlatform == TargetPlatform.ohos) {
-        ByteData mapMarkData = await rootBundle.load("assets/location-pin.png");
-        await controller.value?.addMarkerAtLatLng_Ohos(initialLatLng, mapMarkData, 0.15);
+      if (defaultTargetPlatform == TargetPlatform.ohos) {
+        return addOhosMarker(initialLatLng);
       }
+      marker.value = await controller.value?.addMarkerAtLatLng(initialLatLng);
     }
 
     Future<void> onMapClick(Point<num> _, LatLng centre) async {
-      selectedLatLng.value = centre;
-
       if (defaultTargetPlatform == TargetPlatform.ohos) {
         final outLngLat = CoordinateTransformUtil.gcj02ToWgs84(centre.longitude, centre.latitude);
-        final LatLng centreProcessed = LatLng(outLngLat[1], outLngLat[0]);
-        selectedLatLng.value = centreProcessed;
+        selectedLatLng.value = LatLng(outLngLat[1], outLngLat[0]);
+      } else {
+        selectedLatLng.value = centre;
       }
 
       await controller.value?.animateCamera(CameraUpdate.newLatLng(centre));
-      if (marker.value != null) {
-        if (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS) {
-          await controller.value?.updateSymbol(marker.value!, SymbolOptions(geometry: centre));
-        }
-      }
-
       if (defaultTargetPlatform == TargetPlatform.ohos) {
-        ByteData mapMarkData = await rootBundle.load("assets/location-pin.png");
-        await controller.value?.addMarkerAtLatLng_Ohos(centre, mapMarkData, 0.15);
+        await addOhosMarker(centre);
+      } else if (marker.value != null) {
+        await controller.value?.updateSymbol(marker.value!, SymbolOptions(geometry: centre));
       }
     }
 
@@ -76,8 +69,7 @@ class MapLocationPickerPage extends HookConsumerWidget {
       await controller.value?.animateCamera(CameraUpdate.newLatLngZoom(currentLatLng, 12));
 
       if (defaultTargetPlatform == TargetPlatform.ohos) {
-        ByteData mapMarkData = await rootBundle.load("assets/location-pin.png");
-        await controller.value?.addMarkerAtLatLng_Ohos(currentLatLng, mapMarkData, 0.15);
+        await addOhosMarker(currentLatLng);
       }
     }
 

@@ -29,13 +29,12 @@ class LocalImageRequest extends ImageRequest {
     }
 
     final pointer = info["pointer"] as int?;
-
     if (pointer == null) {
       return null;
     }
 
     final frame = await _fromDecodedPlatformImage(
-      info["pointer"]! as int,
+      pointer,
       info["width"]! as int,
       info["height"]! as int,
       info["rowBytes"]! as int,
@@ -63,10 +62,11 @@ class LocalImageRequest extends ImageRequest {
     }
 
     final pointer = info['pointer'] as int?;
-    if (pointer == null) return null;
+    if (pointer == null) {
+      return null;
+    }
 
-    final (codec, _) =
-        await _codecFromEncodedPlatformImage(info['pointer']! as int, info['length']! as int) ?? (null, null);
+    final (codec, _) = await _codecFromEncodedPlatformImage(pointer, info['length']! as int) ?? (null, null);
     return codec;
   }
 

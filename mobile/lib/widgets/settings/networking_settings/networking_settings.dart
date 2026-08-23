@@ -1,4 +1,5 @@
 import 'package:easy_localization/easy_localization.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -12,8 +13,6 @@ import 'package:immich_mobile/widgets/settings/networking_settings/external_netw
 import 'package:immich_mobile/widgets/settings/networking_settings/local_network_preference.dart';
 import 'package:immich_mobile/widgets/settings/setting_group_title.dart';
 import 'package:immich_mobile/widgets/settings/settings_switch_list_tile.dart';
-
-import 'package:flutter/foundation.dart';
 
 class NetworkingSettings extends HookConsumerWidget {
   const NetworkingSettings({super.key});
@@ -88,7 +87,6 @@ class NetworkingSettings extends HookConsumerWidget {
         if (defaultTargetPlatform == TargetPlatform.ohos) {
           return null;
         }
-
         checkWifiReadPermission();
       }
       return null;

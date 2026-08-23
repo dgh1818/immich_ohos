@@ -1,10 +1,15 @@
+import 'dart:async';
+import 'dart:io';
+
+import 'package:auto_route/auto_route.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:immich_mobile/domain/models/exif.model.dart';
+import 'package:immich_mobile/routing/router.dart';
+import 'package:immich_mobile/utils/debug_print.dart';
 import 'package:immich_mobile/widgets/map/map_thumbnail.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
-
-import 'package:immich_mobile/routing/router.dart';
-import 'package:auto_route/auto_route.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class ExifMap extends StatelessWidget {
   final ExifInfo exifInfo;
@@ -27,7 +32,7 @@ class ExifMap extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    /*
+    final hasCoordinates = exifInfo.hasCoordinates;
     Future<Uri?> createCoordinatesUri() async {
       if (!hasCoordinates) {
         return null;
@@ -38,22 +43,22 @@ class ExifMap extends StatelessWidget {
 
       const zoomLevel = 16;
 
-    if (Platform.isAndroid) {
-      Uri uri = Uri(
-        scheme: 'geo',
-        host: '$latitude,$longitude',
-        queryParameters: {'z': '$zoomLevel', 'q': '$latitude,$longitude'},
-      );
-      if (await canLaunchUrl(uri)) {
-        return uri;
+      if (Platform.isAndroid) {
+        Uri uri = Uri(
+          scheme: 'geo',
+          host: '$latitude,$longitude',
+          queryParameters: {'z': '$zoomLevel', 'q': '$latitude,$longitude'},
+        );
+        if (await canLaunchUrl(uri)) {
+          return uri;
+        }
+      } else if (Platform.isIOS) {
+        var params = {'ll': '$latitude,$longitude', 'q': '$latitude,$longitude', 'z': '$zoomLevel'};
+        Uri uri = Uri.https('maps.apple.com', '/', params);
+        if (await canLaunchUrl(uri)) {
+          return uri;
+        }
       }
-    } else if (Platform.isIOS) {
-      var params = {'ll': '$latitude,$longitude', 'q': '$latitude,$longitude', 'z': '$zoomLevel'};
-      Uri uri = Uri.https('maps.apple.com', '/', params);
-      if (await canLaunchUrl(uri)) {
-        return uri;
-      }
-    }
 
       return Uri(
         scheme: 'https',
@@ -62,7 +67,6 @@ class ExifMap extends StatelessWidget {
         fragment: 'map=$zoomLevel/$latitude/$longitude',
       );
     }
-*/
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -74,17 +78,18 @@ class ExifMap extends StatelessWidget {
           assetMarkerRemoteId: markerId,
           assetThumbhash: markerAssetThumbhash,
           onReverseGeocoded: onReverseGeocoded,
-          onTap: (tapPosition, latLong) {
-            context.pushRoute<LatLng?>(
-              DriftMapRoute(
-                initialLocation: LatLng(exifInfo.latitude ?? 0, exifInfo.longitude ?? 0),
-                initialAssetId: markerId,
-                initialAssetThumbhash: markerAssetThumbhash,
-              ),
-            );
-          },
-          /*
           onTap: (tapPosition, latLong) async {
+            if (defaultTargetPlatform == TargetPlatform.ohos) {
+              await context.pushRoute<LatLng?>(
+                DriftMapRoute(
+                  initialLocation: LatLng(exifInfo.latitude ?? 0, exifInfo.longitude ?? 0),
+                  initialAssetId: markerId,
+                  initialAssetThumbhash: markerAssetThumbhash,
+                ),
+              );
+              return;
+            }
+
             Uri? uri = await createCoordinatesUri();
 
             if (uri == null) {
@@ -94,7 +99,6 @@ class ExifMap extends StatelessWidget {
             dPrint(() => 'Opening Map Uri: $uri');
             unawaited(launchUrl(uri));
           },
-*/
           onCreated: onMapCreated,
         );
       },

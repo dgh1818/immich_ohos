@@ -4,6 +4,7 @@ import 'package:auto_route/auto_route.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/svg.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:immich_mobile/extensions/build_context_extensions.dart';
 import 'package:immich_mobile/models/cast/cast_manager_state.dart';
@@ -53,7 +54,6 @@ class ImmichSliverAppBar extends ConsumerWidget {
         opacity: isMultiSelectEnabled ? 0 : 1,
         sliver: SliverAppBar(
           backgroundColor: Colors.transparent,
-          //surfaceTintColor: context.colorScheme.surfaceTint,
           elevation: 0,
           scrolledUnderElevation: 1.0,
           floating: floating,
@@ -63,7 +63,9 @@ class ImmichSliverAppBar extends ConsumerWidget {
           shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(5))),
           automaticallyImplyLeading: false,
           centerTitle: false,
-          title: title ?? const _ImmichLogoWithText(),
+          title:
+              title ??
+              (defaultTargetPlatform == TargetPlatform.ohos ? const SizedBox.shrink() : const _ImmichLogoWithText()),
           actions: [
             if (isCasting && !isReadonlyModeEnabled)
               Padding(
@@ -73,19 +75,8 @@ class ImmichSliverAppBar extends ConsumerWidget {
                   icon: Icon(isCasting ? Icons.cast_connected_rounded : Icons.cast_rounded),
                 ),
               ),
-            //const SyncStatusIndicator(),
             if (actions != null)
               ...actions!.map((action) => Padding(padding: const EdgeInsets.only(right: 16), child: action)),
-            // if ((kDebugMode || kProfileMode) && !isReadonlyModeEnabled)
-            //   IconButton(
-            //     icon: const Icon(Icons.palette_rounded),
-            //     onPressed: () => context.pushRoute(const ImmichUIShowcaseRoute()),
-            //   ),
-            /*
-            if (showUploadButton && !isReadonlyModeEnabled)
-              const Padding(padding: EdgeInsets.only(right: 20), child: BackupIndicator()),
-            const Padding(padding: EdgeInsets.only(right: 20), child: ProfileIndicator()),
-            */
           ],
         ),
       ),
@@ -97,11 +88,17 @@ class _ImmichLogoWithText extends StatelessWidget {
   const _ImmichLogoWithText();
 
   @override
-  Widget build(BuildContext context) => const SizedBox.shrink();
+  Widget build(BuildContext context) => AnimatedOpacity(
+    opacity: IconTheme.of(context).opacity ?? 1,
+    duration: kThemeChangeDuration,
+    child: SvgPicture.asset(
+      context.isDarkTheme ? 'assets/immich-logo-inline-dark.svg' : 'assets/immich-logo-inline-light.svg',
+      height: 40,
+    ),
+  );
 }
 
 class ProfileIndicator extends ConsumerWidget {
-  //ui鍙樻洿 闇€瑕佸彉涓簆ublic 鍑芥暟
   const ProfileIndicator({super.key});
 
   @override
@@ -176,7 +173,6 @@ class ProfileIndicator extends ConsumerWidget {
 const double _kBadgeWidgetSize = 30.0;
 
 class BackupIndicator extends ConsumerWidget {
-  //ui鍙樻洿 闇€瑕佸彉涓簆ublic 鍑芥暟
   const BackupIndicator({super.key});
 
   @override

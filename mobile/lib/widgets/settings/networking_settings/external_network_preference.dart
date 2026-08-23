@@ -41,7 +41,7 @@ class ExternalNetworkPreference extends HookConsumerWidget {
 
     handleReorder(int oldIndex, int newIndex) {
       if (newIndex > oldIndex) {
-        newIndex -= 1;
+        newIndex--;
       }
       final entry = entries.value.removeAt(oldIndex);
       entries.value.insert(newIndex, entry);

@@ -42,60 +42,24 @@ class GCastRepository {
     String title,
     int duration, {
     AVSessionType sessionType = AVSessionType.video,
-  }) async {
-    return await _huaweiCast.setMetadata(
-      contentUrl,
-      mediaImage,
-      title,
-      duration,
-      sessionType: sessionType,
-    );
-  }
+  }) => _huaweiCast.setMetadata(contentUrl, mediaImage, title, duration, sessionType: sessionType);
 
-  FutureOr<dynamic> setCurrentPosition(int position, bool isPlaying) async {
-    return await _huaweiCast.setCurrentPosition(position, isPlaying);
-  }
+  FutureOr<dynamic> setCurrentPosition(int position, bool isPlaying) =>
+      _huaweiCast.setCurrentPosition(position, isPlaying);
 
-  FutureOr<dynamic> clearSession() async {
-    return await _huaweiCast.clearSession();
-  }
+  FutureOr<dynamic> clearSession() => _huaweiCast.clearSession();
 
-  FutureOr<dynamic> play() async {
-    return await _huaweiCast.play();
-  }
+  FutureOr<dynamic> play() => _huaweiCast.play();
 
-  FutureOr<dynamic> pause() async {
-    return await _huaweiCast.pause();
-  }
+  FutureOr<dynamic> pause() => _huaweiCast.pause();
 
-  FutureOr<dynamic> seekTo(int position) async {
-    return await _huaweiCast.seekTo(position);
-  }
+  FutureOr<dynamic> seekTo(int position) => _huaweiCast.seekTo(position);
 
   Future<void> disconnect() async {
     await _huaweiCast.stopCast();
   }
 
-  FutureOr<dynamic> stopCast() async {
-    return await _huaweiCast.stopCast();
-  }
-
-  /*
-   * The upstream Google Cast repository also used getSessionId() and
-   * sendMessage() helpers backed by Chromecast namespaces such as
-   * kNamespaceReceiver and the CC1AD845 default receiver app.
-   *
-   * We intentionally keep those functions disabled on OHOS because the
-   * AVCastPicker/AVSession backend does not expose a Chromecast-compatible
-   * namespace transport channel to Flutter.
-   */
-  /*
-  String? getSessionId() {
-    return null;
-  }
-
-  void sendMessage(String namespace, Map<String, dynamic> message) {}
-  */
+  FutureOr<dynamic> stopCast() => _huaweiCast.stopCast();
 
   void dispose() {
     _statusSubscription.cancel();

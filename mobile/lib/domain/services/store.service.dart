@@ -64,12 +64,7 @@ class StoreService {
   }
 
   /// Returns the cached value for [key], or `null`
-  T? tryGet<T>(StoreKey<T> key) {
-    if (key == StoreKey.ignoreIcloudAssets) {
-      return true as T;
-    }
-    return _cache[key.id] as T?;
-  }
+  T? tryGet<T>(StoreKey<T> key) => key == StoreKey.ignoreIcloudAssets ? true as T : _cache[key.id] as T?;
 
   /// Returns the stored value for [key] or [defaultValue].
   /// Throws [StoreKeyNotFoundException] if value and [defaultValue] are null.

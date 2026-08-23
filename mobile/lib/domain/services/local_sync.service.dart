@@ -46,18 +46,7 @@ class LocalSyncService {
        _permissionRepository = permissionRepository,
        _nativeSyncApi = nativeSyncApi,
        _cancellation = cancellation {
-    final cancellation = _cancellation;
-    if (cancellation != null) {
-      unawaited(
-        cancellation.future.then((_) async {
-          try {
-            await _nativeSyncApi.cancelSync();
-          } catch (error, stackTrace) {
-            _log.warning("Failed to cancel native sync", error, stackTrace);
-          }
-        }),
-      );
-    }
+    _cancellation?.future.then((_) => _nativeSyncApi.cancelSync().onError(_log.warning));
   }
 
   bool get _isCancelled => _cancellation?.isCompleted ?? false;
@@ -74,19 +63,19 @@ class LocalSyncService {
         }
       }
 
-      if (CurrentPlatform.isIOS || defaultTargetPlatform == TargetPlatform.ohos) {
+      if (CurrentPlatform.isIOS) {
         // final assets = await _localAssetRepository.getEmptyCloudIdAssets();
         // await _mapIosCloudIds(assets);
       }
 
       if (full || await _nativeSyncApi.shouldFullSync()) {
         _log.fine("Full sync request from ${full ? "user" : "native"}");
-        return await fullSync();
+        return fullSync();
       }
 
       if (CurrentPlatform.isOhos) {
         _log.fine("OHOS media change delta sync is not supported. Falling back to full sync");
-        return await fullSync();
+        return fullSync();
       }
 
       final delta = await _nativeSyncApi.getMediaChanges();
@@ -148,8 +137,9 @@ class LocalSyncService {
           }
           await updateAlbum(dbAlbum, album);
         }
+
+        await _mapIosCloudIds(newAssets);
       }
-      await _mapIosCloudIds(newAssets);
       await _nativeSyncApi.checkpointSync();
     } on PlatformException catch (e, s) {
       if (e.code == _kSyncCancelledCode) {
@@ -380,7 +370,7 @@ class LocalSyncService {
 
   // ignore: avoid-unused-parameters
   Future<void> _mapIosCloudIds(List<LocalAsset> assets) async {
-    // if ((!(CurrentPlatform.isIOS || defaultTargetPlatform == TargetPlatform.ohos)) || assets.isEmpty) {
+    // if (!CurrentPlatform.isIOS || assets.isEmpty) {
     return;
     // }
 

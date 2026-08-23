@@ -180,9 +180,7 @@ enum ActionButtonType {
             context.timelineOrigin != TimelineOrigin.archive &&
             context.timelineOrigin != TimelineOrigin.localAlbum &&
             context.isOwner,
-      ActionButtonType.cast =>
-        (context.isCasting || context.asset.hasRemote) && //
-            context.asset.isVideo,
+      ActionButtonType.cast => context.asset.isVideo && (context.isCasting || context.asset.hasRemote),
       ActionButtonType.slideshow => true,
     };
   }

@@ -97,12 +97,7 @@ class MapUtils {
 
       Position currentUserLocation = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
-        timeLimit: Duration(seconds: 5),
-        // locationSettings: const LocationSettings(
-        //   accuracy: LocationAccuracy.high,
-        //   distanceFilter: 0,
-        //   timeLimit: Duration(seconds: 5),
-        // ),
+        timeLimit: const Duration(seconds: 5),
       );
       return (currentUserLocation, null);
     } catch (error, stack) {

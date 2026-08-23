@@ -1,5 +1,6 @@
 import 'dart:ui';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:immich_mobile/domain/models/asset/base_asset.model.dart';
@@ -7,7 +8,7 @@ import 'package:immich_mobile/extensions/build_context_extensions.dart';
 import 'package:immich_mobile/presentation/widgets/asset_viewer/video_viewer.widget.dart';
 import 'package:immich_mobile/presentation/widgets/images/full_image.widget.dart';
 import 'package:immich_mobile/presentation/widgets/images/image_provider.dart';
-// import 'package:immich_mobile/utils/hooks/blurhash_hook.dart';
+import 'package:immich_mobile/utils/hooks/blurhash_hook.dart';
 
 class DriftMemoryCard extends StatelessWidget {
   final RemoteAsset asset;
@@ -94,9 +95,8 @@ class _BlurredBackdrop extends HookWidget {
 
   @override
   Widget build(BuildContext context) {
-    /*
     final blurhash = useDriftBlurHashRef(asset).value;
-    if (blurhash != null) {
+    if (defaultTargetPlatform != TargetPlatform.ohos && blurhash != null) {
       // Use a nice cheap blur hash image decoration
       return Container(
         decoration: BoxDecoration(
@@ -105,22 +105,21 @@ class _BlurredBackdrop extends HookWidget {
         child: Container(color: Colors.black.withValues(alpha: 0.2)),
       );
     } else {
-    // Fall back to using a more expensive image filtered
-    // Since the ImmichImage is already precached, we can
-    // safely use that as the image provider
-    */
-    return ImageFiltered(
-      imageFilter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
-      child: Container(
-        decoration: BoxDecoration(
-          image: DecorationImage(
-            image: getFullImageProvider(asset, size: Size(context.width, context.height)),
-            fit: BoxFit.cover,
+      // Fall back to using a more expensive image filtered
+      // Since the ImmichImage is already precached, we can
+      // safely use that as the image provider
+      return ImageFiltered(
+        imageFilter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
+        child: Container(
+          decoration: BoxDecoration(
+            image: DecorationImage(
+              image: getFullImageProvider(asset, size: Size(context.width, context.height)),
+              fit: BoxFit.cover,
+            ),
           ),
+          child: Container(color: Colors.black.withValues(alpha: 0.2)),
         ),
-        child: Container(color: Colors.black.withValues(alpha: 0.2)),
-      ),
-    );
-    //}
+      );
+    }
   }
 }

@@ -47,12 +47,7 @@ class _TabShellPageState extends ConsumerState<TabShellPage> with SingleTickerPr
   }
 
   void toggleRail() {
-    if (isRailExpanded) {
-      animationController.forward();
-    } else {
-      animationController.reverse();
-    }
-
+    isRailExpanded ? animationController.forward() : animationController.reverse();
     setState(() => isRailExpanded = !isRailExpanded);
   }
 
@@ -93,14 +88,21 @@ class _TabShellPageState extends ConsumerState<TabShellPage> with SingleTickerPr
       return AnimatedPositioned(
         duration: const Duration(milliseconds: 400),
         curve: Curves.easeInOut,
-        left: isRailExpanded ? 0 : -72, // 收起时向左移出屏幕
+        left: isRailExpanded ? 0 : -railWidth,
         top: 0,
         bottom: 0,
         child: Material(
           elevation: 4,
           child: NavigationRail(
             destinations: navigationDestinations
-                .map((e) => NavigationRailDestination(icon: e.icon, label: Text(e.label), selectedIcon: e.selectedIcon))
+                .map(
+                  (e) => NavigationRailDestination(
+                    icon: e.icon,
+                    label: Text(e.label),
+                    selectedIcon: e.selectedIcon,
+                    disabled: !e.enabled,
+                  ),
+                )
                 .toList(),
             onDestinationSelected: (index) => _onNavigationSelected(tabsRouter, index, ref),
             selectedIndex: tabsRouter.activeIndex,
@@ -111,45 +113,6 @@ class _TabShellPageState extends ConsumerState<TabShellPage> with SingleTickerPr
       );
     }
 
-    /*
-    Future<void> pickUploadImage() async {
-      final List<XFile> medias = await ImagePicker().pickMultipleMedia();
-
-      if (medias.isEmpty) return;
-
-      final backupService = ref.read(backupServiceProvider);
-      int successCount = 0;
-
-      for (final xfile in medias) {
-        try {
-          // 调用您提供的 uploadImageDirectly 方法
-          await backupService.uploadImageDirectly(xfile);
-          successCount++;
-
-          // 每成功上传一个文件显示消息
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text('“${xfile.name}” 上传成功'), duration: const Duration(seconds: 1)));
-        } catch (e) {
-          debugPrint('上传失败: ${xfile.name} — $e');
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('“${xfile.name}” 上传失败: ${e.toString()}'),
-              backgroundColor: Colors.redAccent,
-              duration: const Duration(seconds: 3),
-            ),
-          );
-        }
-      }
-
-      // 显示总结消息
-      if (successCount > 0) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('✅ $successCount 个照片/视频上传完成'), duration: const Duration(seconds: 2)));
-      }
-    }
-*/
     Widget buildLogo() {
       return Badge(
         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
@@ -168,18 +131,14 @@ class _TabShellPageState extends ConsumerState<TabShellPage> with SingleTickerPr
         ),
         child: Padding(
           padding: const EdgeInsets.only(top: 3.0),
-          child: SvgPicture.asset(
-            context.isDarkTheme ? 'assets/immich-logo.svg' : 'assets/immich-logo.svg',
-            height: 40,
-          ),
+          child: SvgPicture.asset('assets/immich-logo.svg', height: 40),
         ),
       );
     }
 
     final screenWidth = MediaQuery.of(context).size.width;
-    final baseWidth = screenWidth - railWidth; // assume base when rail expanded
-    final collapsedAvailable = screenWidth; // when rail is hidden (右边不变，左边扩展到 0)
-    final targetScale = collapsedAvailable / baseWidth; // >1, 比例放大值
+    final baseWidth = screenWidth - railWidth;
+    final targetScale = screenWidth / baseWidth;
 
     return AutoTabsRouter(
       routes: const [MainTimelineRoute(), DriftSearchRoute(), DriftAlbumsRoute(), DriftLibraryRoute()],
@@ -197,7 +156,6 @@ class _TabShellPageState extends ConsumerState<TabShellPage> with SingleTickerPr
             body: isScreenLandscape
                 ? Stack(
                     children: [
-                      // 左侧导航栏
                       navigationRail(tabsRouter),
                       AnimatedPositioned(
                         duration: const Duration(milliseconds: 300),
@@ -207,38 +165,27 @@ class _TabShellPageState extends ConsumerState<TabShellPage> with SingleTickerPr
                         left: isRailExpanded ? railWidth : 0,
                         right: 0,
                         child: ClipRect(
-                          // Positioned.fill(
-                          //   left: isRailExpanded ? railWidth : 0, // 用 left 控制点击时的动画起点（可选）
-                          //   child: ClipRect(
-                          // 防止溢出的绘制
                           child: Align(
-                            alignment: Alignment.topRight, // 缩放以右上角为锚点（右边固定）
+                            alignment: Alignment.topRight,
                             child: AnimatedBuilder(
                               animation: animationController,
                               builder: (context, _) {
-                                // 从 1.0 到 targetScale 线性插值；你可以用 CurvedAnimation 包装 controller
                                 final scale = 1.0 + (targetScale - 1.0) * animationController.value;
                                 return Transform.scale(
                                   scale: scale,
-                                  alignment: Alignment.topRight, // 以右上角为锚点，防止顶部图标上移出屏
-                                  child: SizedBox(
-                                    // 这个宽度是缩放前的“基准宽度”，也就是内容本来能占用的宽度
-                                    width: baseWidth,
-                                    // 如果希望竖直方向也受限制，可以加 height
-                                    child: heroedChild, // 你的 AutoTabsRouter 的 child
-                                  ),
+                                  alignment: Alignment.topRight,
+                                  child: SizedBox(width: baseWidth, child: heroedChild),
                                 );
                               },
                             ),
                           ),
                         ),
                       ),
-                      //Logo按钮（放在Stack顶层）
                       Positioned(
                         top: 30,
                         left: 10,
                         child: GestureDetector(
-                          onTap: toggleRail, // 点击切换状态
+                          onTap: toggleRail,
                           child: Container(
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
@@ -347,44 +294,5 @@ class _BottomNavigationBarState extends ConsumerState<_BottomNavigationBar> {
       selectedIndex: widget.tabsRouter.activeIndex,
       onDestinationSelected: (index) => _onNavigationSelected(widget.tabsRouter, index, ref),
     );
-    /*
-    return Stack(
-      children: [
-        Positioned(
-          left: 0,
-          right: 0,
-          bottom: 0,
-          height: 1.25 * kBottomNavigationBarHeight,
-          child: IgnorePointer(
-            child: ClipRect(
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
-                child: Container(decoration: BoxDecoration(color: Colors.white.withOpacity(0.2))),
-              ),
-            ),
-          ),
-        ),
-
-        Positioned(
-          left: 0,
-          right: 0,
-          //bottom: 0.5 * bottomPadding, // 考虑安全区
-          bottom: 0, // 考虑安全区
-          child: SafeArea(
-            bottom: false,
-            child: Container(
-              height: kBottomNavigationBarHeight,
-              child: NavigationBar(
-                selectedIndex: widget.tabsRouter.activeIndex,
-                onDestinationSelected: (index) => _onNavigationSelected(widget.tabsRouter, index, ref),
-                destinations: widget.destinations,
-                backgroundColor: Colors.transparent,
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-    */
   }
 }

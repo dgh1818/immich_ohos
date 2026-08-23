@@ -55,5 +55,9 @@ default.isar
 default.isar.lock
 libisar.so
 
+# Translation file
+lib/generated/
+
 # FVM Version
 .fvm/
+.vscode/mcp.json
