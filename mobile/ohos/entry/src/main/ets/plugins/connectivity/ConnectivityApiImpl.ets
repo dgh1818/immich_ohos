@@ -25,8 +25,12 @@ export class ConnectivityApiImpl extends ConnectivityApi {
     const hasVpn =
       bearerTypes.includes(connection.NetBearType.BEARER_VPN) ||
       !networkCap.includes(connection.NetCap.NET_CAPABILITY_NOT_VPN);
+    // OHOS 只给 VPN/穿戴分布式网络报 NOT_METERED,WiFi 默认网络不会报,
+    // 需按承载类型判定,否则 WiFi 下永远被视为计费网络
     const isUnmetered =
-      !hasCellular && networkCap.includes(connection.NetCap.NET_CAPABILITY_NOT_METERED);
+      !hasCellular &&
+      (networkCap.includes(connection.NetCap.NET_CAPABILITY_NOT_METERED) ||
+        bearerTypes.includes(connection.NetBearType.BEARER_WIFI));
 
     const res: Array<NetworkCapability | NetworkCapabilityEnum> = [];
     if (hasWifi) {
