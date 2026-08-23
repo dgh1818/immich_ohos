@@ -282,14 +282,6 @@ packages:
       url: "https://github.com/dgh1818/coordtransform_dart.git"
     source: git
     version: "1.0.4"
-  cronet_http:
-    dependency: "direct main"
-    description:
-      name: cronet_http
-      sha256: "8e77bc6f203e0bc9126e6a9092508a3435dbcb04da3b53ed1a358909385c5e0e"
-      url: "https://pub.flutter-io.cn"
-    source: hosted
-    version: "1.8.0"
   crop_image:
     dependency: "direct main"
     description:
@@ -1417,16 +1409,20 @@ packages:
   photo_manager:
     dependency: "direct main"
     description:
-      path: flutter_photo_manager
-      relative: true
-    source: path
+      path: "."
+      ref: "68089cb23816e185cf9c0ee777cb930fdfeb9961"
+      resolved-ref: "68089cb23816e185cf9c0ee777cb930fdfeb9961"
+      url: "https://github.com/dgh1818/flutter_photo_manager.git"
+    source: git
     version: "3.6.4"
   photo_manager_image_provider:
-    dependency: "direct overridden"
+    dependency: "direct main"
     description:
-      path: photo_manager_image_provider
-      relative: true
-    source: path
+      path: "."
+      ref: ee9bd8b05b1c52a98a9982b035c2263a6734ecae
+      resolved-ref: ee9bd8b05b1c52a98a9982b035c2263a6734ecae
+      url: "https://github.com/dgh1818/photo_manager_image_provider.git"
+    source: git
     version: "2.2.0"
   pigeon:
     dependency: "direct dev"

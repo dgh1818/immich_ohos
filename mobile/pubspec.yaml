@@ -214,7 +214,7 @@ dependency_overrides:
   photo_manager:
     git:
       url: https://github.com/dgh1818/flutter_photo_manager.git
-      ref: 0125f4d0f862f1e0739bc13541dcd99ad5124fb3
+      ref: 68089cb23816e185cf9c0ee777cb930fdfeb9961
   coordtransform_dart:
     git:
       url: https://github.com/dgh1818/coordtransform_dart.git
