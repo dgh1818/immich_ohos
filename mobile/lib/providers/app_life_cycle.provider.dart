@@ -225,7 +225,10 @@ class AppLifeCycleNotifier extends StateNotifier<AppLifeCycleEnum> {
 
   Future<void> _performPause() {
     if (_ref.read(authProvider).isAuthenticated) {
-      _ref.read(driftBackupProvider.notifier).stopForegroundBackup();
+      // OHOS: 退后台不停备份/长时任务(dataTransfer 保活),上传由系统长时任务继续
+      if (!CurrentPlatform.isOhos) {
+        _ref.read(driftBackupProvider.notifier).stopForegroundBackup();
+      }
 
       _ref.read(websocketProvider.notifier).disconnect();
     }
