@@ -3,7 +3,28 @@
 ## Environment
 
 - Huawei DevEco Studio SDK path:
-  - `C:\Program Files\Huawei\DevEco Studio\sdk\default`
+  - `C:\Program Files\Huawei\DevEco Studio\sdk`
+- `DEVECO_SDK_HOME` and Flutter's `ohos-sdk` configuration must point to the SDK root above, not to `...\sdk\default`. With the current all-in-one DevEco SDK, using `...\sdk\default` makes Hvigor fail with `00303312 Cannot find the corresponding SDK version under the specified SDK path`.
+- DevEco command-line tools required on `PATH`:
+  - `C:\Program Files\Huawei\DevEco Studio\tools\ohpm\bin`
+  - `C:\Program Files\Huawei\DevEco Studio\tools\hvigor\bin`
+  - `C:\Program Files\Huawei\DevEco Studio\tools\node`
+
+## HAP release build troubleshooting
+
+- Use the project OHOS Flutter SDK and build from `F:\immich_ohos\mobile`:
+  - `fvm flutter build hap --release`
+  - A plain `flutter build hap --release` is equivalent only when `Get-Command flutter` resolves to `F:\fvm\versions\custom_3.41.9\bin\flutter.bat`.
+- 2026-08-23 failure and root cause:
+  - `flutter_26.log` and `flutter_27.log` recorded `ProcessException`, exit code `255`, at `ohpm install --all`.
+  - Their `flutter doctor` output explicitly reported `Ohpm is missing, please configure "ohpm" to the environment variable PATH`.
+  - This was a shell/toolchain environment failure before Hvigor compilation, not an Immich Dart, ArkTS, dependency, or signing error.
+- Fix:
+  1. Ensure `C:\Program Files\Huawei\DevEco Studio\tools\ohpm\bin` is in the persistent Windows `PATH`, then fully close and reopen PowerShell/Codex/IDE terminals so they inherit the new environment.
+  2. Verify `Get-Command ohpm` resolves to DevEco Studio, `ohpm --version` succeeds, and `flutter doctor -v` marks the HarmonyOS toolchain healthy.
+  3. Verify `$env:DEVECO_SDK_HOME` and `flutter config --list` use `C:\Program Files\Huawei\DevEco Studio\sdk`, not the `default` child directory.
+  4. Re-run `fvm flutter build hap --release`.
+- 2026-08-23 verification after restoring the tool paths: both `fvm flutter build hap --release` and plain `flutter build hap --release` completed successfully and produced `ohos\entry\build\default\outputs\default\entry-default-signed.hap` (79.9 MB).
 
 ## Flutter engine OHOS artifacts
 
