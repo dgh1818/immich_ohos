@@ -20,13 +20,28 @@ class FeatureHighlight {
 
 /// The release this batch of highlights was authored for. Content-defined:
 /// bump it only when publishing a new batch, never from the running app version.
-const featureMessageRelease = SemVer(major: 3, minor: 0, patch: 0);
+const featureMessageRelease = SemVer(major: 3, minor: 1, patch: 0);
 
 /// Highlights relevant to the current platform.
 List<FeatureHighlight> get visibleFeatureMessageHighlights =>
     featureMessageHighlights.where((h) => h.isVisibleOnCurrentPlatform).toList();
 
 const List<FeatureHighlight> featureMessageHighlights = [
+  FeatureHighlight(
+    titleKey: 'ohos_fix_background_backup_title',
+    bodyKey: 'ohos_fix_background_backup_body',
+    platform: [.ohos],
+  ),
+  FeatureHighlight(
+    titleKey: 'ohos_fix_wifi_backup_title',
+    bodyKey: 'ohos_fix_wifi_backup_body',
+    platform: [.ohos],
+  ),
+  FeatureHighlight(
+    titleKey: 'ohos_fix_bulk_delete_title',
+    bodyKey: 'ohos_fix_bulk_delete_body',
+    platform: [.ohos],
+  ),
   FeatureHighlight(
     image: 'assets/feature_message/share_quality.webp',
     titleKey: 'share_quality_title',
