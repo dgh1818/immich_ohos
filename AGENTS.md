@@ -7,6 +7,19 @@
 - Do not introduce unnecessary abstractions, wrappers, or local deviations from upstream behavior.
 - Do not rewrite upstream logic unless required for the task.
 
+## NetStack 修复后的 NetworkKit 切换
+
+- 当前 HDR 交付线继续使用 libcurl,不得仅因为 OpenHarmony/GitCode 源码已经合入修复就切回 NetworkKit。只有修复已经进入目标手机的系统固件,并在该固件上验证 `requestInStream` + `multiFormDataList` 同时传入 `filePath` 和 `remoteFileName` 时仍通过文件路径流式上传,才允许开始切换。
+- 系统回归必须包含一个大于 2 GiB 的真实视频 multipart 上传,并确认上传进度持续推进、应用及系统网络进程无 OOM/崩溃、服务端可正确解析响应。CI、编译通过、小文件测试或只检查 OpenHarmony 源码均不能替代此真机回归。
+- 切换时以以下备份分支作为 NetworkKit 实现参考:
+  - `F:\immich_ohos\mobile`: `backup/networkkit-native-bridge-20260825`
+  - `F:\package_flutter\ohos_http`: `backup/networkkit-native-bridge-20260825`
+  - `F:\package_flutter\background_downloader_ohos`: `backup/networkkit-ohos-http-20260825`
+- 不得直接把三个仓库整体重置或长期切回上述旧备份分支。应从届时各仓库的最新交付分支新建切换分支,逐项对照并迁移 NetworkKit 实现,保留备份分支创建后新增的 HDR 功能、上游合并和 bug 修复。
+- 切换目标是 `ohos_http` 不再打包 libcurl、`background_downloader_ohos` 只依赖 `ohos_http` 的系统 HTTP 能力、HDR 安装包不包含 x86 模拟器原生库。不得重新引入大于 2 GiB 时改走 `request.uploadFile` 的分流。
+- 迁移时必须保留并重新验证自签名 CA、跳过服务端证书校验、P12 客户端证书及密码透传;Worker 必须使用 `ApplicationContext` 对应的应用级 `filesDir`,与 `ssl_client_cert` 及 cache 目录的创建位置一致,不得退回曾经错误的 UIContext/cache 路径解析。
+- 切换后的 release HAP 必须实际解包确认不含 `libcurl.so*`、x86 原生库和 `integration_test.har`,然后安装到目标真机,完成登录/同步、后台备份、超大视频上传和自签名服务器回归。验证未全部完成时不得把 NetworkKit 切换标记为完成。
+
 ## Merging Upstream Tags (OHOS)
 
 - 上游 merge 可能**在无任何冲突标记的情况下**覆盖掉 OHOS 本地修复(上游代码"看起来正常"就被接受)。merge 是否干净不代表安全,以下文件每次 merge 后必须人工 diff,禁止只看冲突标记。
