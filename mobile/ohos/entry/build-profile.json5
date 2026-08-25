@@ -8,6 +8,13 @@
       ],
       "arguments": "-DCMAKE_BUILD_TYPE=RelWithDebInfo"
     },
+    "nativeLib": {
+      "filter": {
+        "excludes": [
+          "**/x86_64/*.so"
+        ]
+      }
+    },
     "sourceOption": {
       "workers": [
         //上架屏蔽
