@@ -1,0 +1,711 @@
+08-23 02:35:43.059     0     0 I I00000/HiLog: ========Zeroth log of type: init
+08-23 02:35:42.945   558   558 I I02C01/hmos_cust_carrier_mount/CustCarrierMount: MountCarrierToShared start
+08-23 02:35:42.945   558   558 I I02C01/hmos_cust_carrier_mount/CustCarrierMount: success to mount carrier to shared
+08-23 02:35:42.945   558   558 I I02C01/hmos_cust_carrier_mount/CustCarrierMount: MountCarrierToShared start
+08-23 02:35:42.945   558   558 I I02C01/hmos_cust_carrier_mount/CustCarrierMount: success to mount ANCO_APP_DATA to shared
+08-23 02:35:44.457   948   948 E I04301/light_sensor/LIGHT_SENSOR: AlsGetDetailInfo: readBytes fail, readBytes 12
+08-23 02:35:44.458   948   948 E I04301/light_sensor/LIGHT_SENSOR: AlsGetDetailInfo: readBytes fail, readBytes 13
+08-23 02:35:44.898  1088  1088 W I02C01/hmos_cust_carrier_mount/CustCarrierMount: not exsit CUST_GLOBAL_CARRIER_DIR or COTA_PARAM_CARRIER_DIR
+08-23 23:40:44.011  1832  9693 I C02D13/hdcd/HDC_LOG: [FinishShellProc:88] FinishShellProc finish pipeRead fd:17 pid:9692 count:1
+08-23 23:40:44.011  1832  9693 I C02D13/hdcd/HDC_LOG: [TaskFinish:55] HdcTaskBase::TaskFinish notify begin type:0 cid:1346169843 sid:295******063(L:10)
+08-23 23:40:44.012  1832  9693 I C02D13/hdcd/HDC_LOG: [TaskFinish:58] HdcTaskBase::TaskFinish notify end type:0 cid:1346169843 sid:295******063(L:10)
+08-23 23:40:44.014  1832 45740 I C02D13/hdcd/HDC_LOG: [FetchCommand:1142] FetchCommand channelId:1346169843 command:2
+08-23 23:40:44.014  1832 45740 W C02D13/hdcd/HDC_LOG: [BeginRemoveTask:160] BeginRemoveTask taskType:0 channelId:1346169843
+08-23 23:40:44.014  1832 45740 W C02D13/hdcd/HDC_LOG: [ClearOwnTasks:190] ClearOwnTasks OP_CLEAR finish, sessionId:295******063(L:10) channelIDInput:1346169843
+08-23 23:40:44.014  1832 45740 W C02D13/hdcd/HDC_LOG: [TaskClassDeleteRetry:115] taskClassDeleteRetry start clear task, taskType:0 cid:1346169843 sid:295******063(L:10)
+08-23 23:40:44.014  1832 45740 I C02D13/hdcd/HDC_LOG: [DoRelease:69] DoRelease rc:0 pid:9692
+08-23 23:40:44.014  1832 45740 I C02D13/hdcd/HDC_LOG: [TaskClassDeleteRetry:126] TaskDelay task remove retry count 0/30, taskType:0 channelId:1346169843, sessionId:295******063(L:10)
+08-23 23:40:44.014  1832 45740 I C02D13/hdcd/HDC_LOG: [~HdcDaemonUnity:31] ~HdcDaemonUnity cid:1346169843 sid:295******063(L:10)
+08-23 23:40:44.014  1832 45740 I C02D13/hdcd/HDC_LOG: [~HdcTaskBase:40] ~HdcTaskBase type:0 cid:1346169843 sid:295******063(L:10)
+08-23 23:40:44.014  1832 45740 W C02D13/hdcd/HDC_LOG: [TaskClassDeleteRetry:134] TaskDelay task remove finish, channelId:1346169843
+08-23 23:40:44.014  1832 45740 I C02D13/hdcd/HDC_LOG: [DispUvStreamInfo:969] before uv handle close, the uv handle type is 13
+08-23 23:40:44.031  1832 45740 I C02D13/hdcd/HDC_LOG: [FetchCommand:1142] FetchCommand channelId:1346169843 command:2
+08-23 23:40:44.032  8895  8895 E A03D00/com.dgh18.immich/JSAPP: MessagesImplBase 8 
+08-23 23:40:44.032  8895  8895 I C05A01/com.dgh18.immich/ATM: [GetContext]Get context success, tokenId: 537317011, bundleName: com.dgh18.immich
+08-23 23:40:44.032  8895  8895 I C05A01/com.dgh18.immich/ATM: [ParseRequestPermissionFromUser]AsyncContext.uiAbilityFlag is: 1.
+08-23 23:40:44.032  8895  8895 I C05A01/com.dgh18.immich/ATM: [ParseStringArray]Array size is 3
+08-23 23:40:44.032   952   869 I C05A01/accesstoken_service/ATM: [GetSelfPermissionsState]Bundle com.huawei.hmos.security.privacycenter, uiExAbility PermissionGrantAbility, serExAbility PermissionServiceGrantAbility, callerPid 8895.
+08-23 23:40:44.032   952   869 I C05A01/accesstoken_service/ATM: [GetPermissionsState]Id 537317011, api 23.
+08-23 23:40:44.033   952   869 I C05A01/accesstoken_service/ATM: [GetLocationPermissionIndex]vague index is -1, accurate index is -1, background index is -1!
+08-23 23:40:44.033   952   869 I C05A01/accesstoken_service/ATM: [GetSelfPermissionState]ohos.permission.MEDIA_LOCATION: status: 0, flag: 2
+08-23 23:40:44.033   952   869 I C05A01/accesstoken_service/ATM: [GetSelfPermissionState]ohos.permission.READ_IMAGEVIDEO: status: 0, flag: 2
+08-23 23:40:44.033   952   869 I C05A01/accesstoken_service/ATM: [GetSelfPermissionState]ohos.permission.WRITE_IMAGEVIDEO: status: 0, flag: 2
+08-23 23:40:44.033   952   869 I C05A01/accesstoken_service/ATM: [IsPermDialogForbidden]0
+08-23 23:40:44.033  8895  9549 I C05A01/com.dgh18.immich/ATM: [IsDynamicRequest]TokenID: 537317011, bundle: com.huawei.hmos.security.privacycenter, uiExAbility: PermissionGrantAbility, serExAbility: PermissionServiceGrantAbility.
+08-23 23:40:44.033  8895  9549 I C05A01/com.dgh18.immich/ATM: [IsDynamicRequest]Permission: ohos.permission.MEDIA_LOCATION: state: 0, errorReason: 0
+08-23 23:40:44.033  8895  9549 I C05A01/com.dgh18.immich/ATM: [IsDynamicRequest]Permission: ohos.permission.READ_IMAGEVIDEO: state: 0, errorReason: 0
+08-23 23:40:44.033  8895  9549 I C05A01/com.dgh18.immich/ATM: [IsDynamicRequest]Permission: ohos.permission.WRITE_IMAGEVIDEO: state: 0, errorReason: 0
+08-23 23:40:44.033  8895  9549 I C05A01/com.dgh18.immich/ATM: [RequestPermissionsFromUserExecute]It does not need to request permission
+08-23 23:40:44.034  8895  8895 I C03F05/com.dgh18.immich/NAPI: taskpool:: Task Allocation: 1183530328, 1
+08-23 23:40:44.034  8895  9504 I C03F05/com.dgh18.immich/NAPI: taskpool:: Task Perform: getAssetsForAlbumTask, 1183530328, runningLoop: 394160955264
+08-23 23:40:44.037  8895  9504 I C02B70/com.dgh18.immich/MediaLibrary: MediaLibraryNapiUtils:{PrintPredicateSafe:458} predicate: SingleParams: ["uri", "file://media/PhotoAlbum/37", T::monostate], MultiParams: [], Operation: 1
+08-23 23:40:44.046  8895  9504 I C02B70/com.dgh18.immich/MediaLibrary: MediaLibraryNapiUtils:{PrintPredicateSafe:458} predicate: SingleParams: ["uri", "file://media/PhotoAlbum/37", T::monostate], MultiParams: [], Operation: 1
+08-23 23:40:44.055  8895  9504 I C02B70/com.dgh18.immich/MediaLibrary: MediaLibraryNapiUtils:{PrintPredicateSafe:458} predicate: SingleParams: ["uri", "file://media/PhotoAlbum/37", T::monostate], MultiParams: [], Operation: 1
+08-23 23:40:44.065  8895  9504 I C02B70/com.dgh18.immich/MediaLibrary: MediaLibraryNapiUtils:{PrintPredicateSafe:458} predicate: 
+08-23 23:40:44.066 16107  5603 I C02B70/.medialibrary.medialibrarydata/MediaLibrary: MediaAlbumsControllerService:{AlbumGetAssets:751} enter
+08-23 23:40:44.125  1832 45740 I C02D13/hdcd/HDC_LOG: [FetchCommand:1142] FetchCommand channelId:0 command:5000
+08-23 23:40:44.125  1832 45740 I C02D13/hdcd/HDC_LOG: [FetchCommand:1163] recv heartbeat count is 926 for session 295******063(L:10)
+08-23 23:40:44.153  8895  8895 E A03D00/com.dgh18.immich/JSAPP: MessagesImplBase 7 
+08-23 23:40:44.153  8895  8895 I C05A01/com.dgh18.immich/ATM: [GetContext]Get context success, tokenId: 537317011, bundleName: com.dgh18.immich
+08-23 23:40:44.153  8895  8895 I C05A01/com.dgh18.immich/ATM: [ParseRequestPermissionFromUser]AsyncContext.uiAbilityFlag is: 1.
+08-23 23:40:44.153  8895  8895 I C05A01/com.dgh18.immich/ATM: [ParseStringArray]Array size is 3
+08-23 23:40:44.154   952   869 I C05A01/accesstoken_service/ATM: [GetSelfPermissionsState]Bundle com.huawei.hmos.security.privacycenter, uiExAbility PermissionGrantAbility, serExAbility PermissionServiceGrantAbility, callerPid 8895.
+08-23 23:40:44.154   952   869 I C05A01/accesstoken_service/ATM: [GetPermissionsState]Id 537317011, api 23.
+08-23 23:40:44.154   952   869 I C05A01/accesstoken_service/ATM: [GetLocationPermissionIndex]vague index is -1, accurate index is -1, background index is -1!
+08-23 23:40:44.154   952   869 I C05A01/accesstoken_service/ATM: [GetSelfPermissionState]ohos.permission.MEDIA_LOCATION: status: 0, flag: 2
+08-23 23:40:44.154   952   869 I C05A01/accesstoken_service/ATM: [GetSelfPermissionState]ohos.permission.READ_IMAGEVIDEO: status: 0, flag: 2
+08-23 23:40:44.154   952   869 I C05A01/accesstoken_service/ATM: [GetSelfPermissionState]ohos.permission.WRITE_IMAGEVIDEO: status: 0, flag: 2
+08-23 23:40:44.154   952   869 I C05A01/accesstoken_service/ATM: [IsPermDialogForbidden]0
+08-23 23:40:44.155  8895  9600 I C05A01/com.dgh18.immich/ATM: [IsDynamicRequest]TokenID: 537317011, bundle: com.huawei.hmos.security.privacycenter, uiExAbility: PermissionGrantAbility, serExAbility: PermissionServiceGrantAbility.
+08-23 23:40:44.155  8895  9600 I C05A01/com.dgh18.immich/ATM: [IsDynamicRequest]Permission: ohos.permission.MEDIA_LOCATION: state: 0, errorReason: 0
+08-23 23:40:44.155  8895  9600 I C05A01/com.dgh18.immich/ATM: [IsDynamicRequest]Permission: ohos.permission.READ_IMAGEVIDEO: state: 0, errorReason: 0
+08-23 23:40:44.155  8895  9600 I C05A01/com.dgh18.immich/ATM: [IsDynamicRequest]Permission: ohos.permission.WRITE_IMAGEVIDEO: state: 0, errorReason: 0
+08-23 23:40:44.155  8895  9600 I C05A01/com.dgh18.immich/ATM: [RequestPermissionsFromUserExecute]It does not need to request permission
+08-23 23:40:44.155  8895  8895 I C02B70/com.dgh18.immich/MediaLibrary: MediaLibraryNapiUtils:{PrintPredicateSafe:458} predicate: SingleParams: ["uri", "file://media/PhotoAlbum/44", T::monostate], MultiParams: [], Operation: 1
+08-23 23:40:44.161  8895  8895 I C02B70/com.dgh18.immich/MediaLibrary: MediaLibraryNapiUtils:{PrintPredicateSafe:458} predicate: SingleParams: ["uri", "file://media/PhotoAlbum/44", T::monostate], MultiParams: [], Operation: 1
+08-23 23:40:44.167  8895  8895 I C02B70/com.dgh18.immich/MediaLibrary: MediaLibraryNapiUtils:{PrintPredicateSafe:458} predicate: SingleParams: ["uri", "file://media/PhotoAlbum/44", T::monostate], MultiParams: [], Operation: 1
+08-23 23:40:44.173  2619  2906 I C01560/wifi_manager_service/StaStateMachine: SignalPoll,bssid:08:bf:**:**:**:c4,ssid:con******GHz,networkId:185,band:2,freq:5260,rssi:-31,noise:-78,chload:70,snr:38,ulDelay:1,txLinkSpeed:24019,rxLinkSpeed:22685,txBytes:156629302,rxBytes:2755069815,txFailed:0,txPackets:782940,rxPackets:5001568,wifiCategory:2, wifiLinkType:0,GetWifiStandard:6,rxmax:2401,txmax:2401,connState:4,detState:10,lastSignal:4,chloadSelf:4,c0Rssi:-31,c1Rssi:-128
+08-23 23:40:44.173  2619  2906 I C01560/wifi_manager_service/WifiEnhanceInfoRequestor: GetSignalExtInfo signalInfo.ext is invalid
+08-23 23:40:44.174  8895  8895 I C02B70/com.dgh18.immich/MediaLibrary: MediaLibraryNapiUtils:{PrintPredicateSafe:458} predicate: SingleParams: ["change_time", 1.000000, T::monostate], MultiParams: [], Operation: 3
+08-23 23:40:44.175 16107  5603 I C02B70/.medialibrary.medialibrarydata/MediaLibrary: MediaAlbumsControllerService:{AlbumGetAssets:751} enter
+08-23 23:40:44.196  8895  8895 E A03D00/com.dgh18.immich/JSAPP: MessagesImplBase 8 
+08-23 23:40:44.197  8895  8895 I C05A01/com.dgh18.immich/ATM: [GetContext]Get context success, tokenId: 537317011, bundleName: com.dgh18.immich
+08-23 23:40:44.197  8895  8895 I C05A01/com.dgh18.immich/ATM: [ParseRequestPermissionFromUser]AsyncContext.uiAbilityFlag is: 1.
+08-23 23:40:44.197  8895  8895 I C05A01/com.dgh18.immich/ATM: [ParseStringArray]Array size is 3
+08-23 23:40:44.198   952   869 I C05A01/accesstoken_service/ATM: [GetSelfPermissionsState]Bundle com.huawei.hmos.security.privacycenter, uiExAbility PermissionGrantAbility, serExAbility PermissionServiceGrantAbility, callerPid 8895.
+08-23 23:40:44.198   952   869 I C05A01/accesstoken_service/ATM: [GetPermissionsState]Id 537317011, api 23.
+08-23 23:40:44.198   952   869 I C05A01/accesstoken_service/ATM: [GetLocationPermissionIndex]vague index is -1, accurate index is -1, background index is -1!
+08-23 23:40:44.198   952   869 I C05A01/accesstoken_service/ATM: [GetSelfPermissionState]ohos.permission.MEDIA_LOCATION: status: 0, flag: 2
+08-23 23:40:44.198   952   869 I C05A01/accesstoken_service/ATM: [GetSelfPermissionState]ohos.permission.READ_IMAGEVIDEO: status: 0, flag: 2
+08-23 23:40:44.198   952   869 I C05A01/accesstoken_service/ATM: [GetSelfPermissionState]ohos.permission.WRITE_IMAGEVIDEO: status: 0, flag: 2
+08-23 23:40:44.198   952   869 I C05A01/accesstoken_service/ATM: [IsPermDialogForbidden]0
+08-23 23:40:44.198  8895  9609 I C05A01/com.dgh18.immich/ATM: [IsDynamicRequest]TokenID: 537317011, bundle: com.huawei.hmos.security.privacycenter, uiExAbility: PermissionGrantAbility, serExAbility: PermissionServiceGrantAbility.
+08-23 23:40:44.198  8895  9609 I C05A01/com.dgh18.immich/ATM: [IsDynamicRequest]Permission: ohos.permission.MEDIA_LOCATION: state: 0, errorReason: 0
+08-23 23:40:44.198  8895  9609 I C05A01/com.dgh18.immich/ATM: [IsDynamicRequest]Permission: ohos.permission.READ_IMAGEVIDEO: state: 0, errorReason: 0
+08-23 23:40:44.198  8895  9609 I C05A01/com.dgh18.immich/ATM: [IsDynamicRequest]Permission: ohos.permission.WRITE_IMAGEVIDEO: state: 0, errorReason: 0
+08-23 23:40:44.198  8895  9609 I C05A01/com.dgh18.immich/ATM: [RequestPermissionsFromUserExecute]It does not need to request permission
+08-23 23:40:44.199  8895  8895 I C03F05/com.dgh18.immich/NAPI: taskpool:: Task Allocation: 604011609, 1
+08-23 23:40:44.199  8895  9611 I C03F05/com.dgh18.immich/NAPI: taskpool:: Task Perform: getAssetsForAlbumTask, 604011609, runningLoop: 399827247488
+08-23 23:40:44.202  8895  9611 I C02B70/com.dgh18.immich/MediaLibrary: MediaLibraryNapiUtils:{PrintPredicateSafe:458} predicate: SingleParams: ["uri", "file://media/PhotoAlbum/44", T::monostate], MultiParams: [], Operation: 1
+08-23 23:40:44.209  8895  9611 I C02B70/com.dgh18.immich/MediaLibrary: MediaLibraryNapiUtils:{PrintPredicateSafe:458} predicate: SingleParams: ["uri", "file://media/PhotoAlbum/44", T::monostate], MultiParams: [], Operation: 1
+08-23 23:40:44.220  8895  9611 I C02B70/com.dgh18.immich/MediaLibrary: MediaLibraryNapiUtils:{PrintPredicateSafe:458} predicate: SingleParams: ["uri", "file://media/PhotoAlbum/44", T::monostate], MultiParams: [], Operation: 1
+08-23 23:40:44.227  8895  9611 I C02B70/com.dgh18.immich/MediaLibrary: MediaLibraryNapiUtils:{PrintPredicateSafe:458} predicate: 
+08-23 23:40:44.228 16107  5603 I C02B70/.medialibrary.medialibrarydata/MediaLibrary: MediaAlbumsControllerService:{AlbumGetAssets:751} enter
+08-23 23:40:44.260  8895  8895 E A03D00/com.dgh18.immich/JSAPP: MessagesImplBase 7 
+08-23 23:40:44.260  8895  8895 I C05A01/com.dgh18.immich/ATM: [GetContext]Get context success, tokenId: 537317011, bundleName: com.dgh18.immich
+08-23 23:40:44.260  8895  8895 I C05A01/com.dgh18.immich/ATM: [ParseRequestPermissionFromUser]AsyncContext.uiAbilityFlag is: 1.
+08-23 23:40:44.260  8895  8895 I C05A01/com.dgh18.immich/ATM: [ParseStringArray]Array size is 3
+08-23 23:40:44.261   952   869 I C05A01/accesstoken_service/ATM: [GetSelfPermissionsState]Bundle com.huawei.hmos.security.privacycenter, uiExAbility PermissionGrantAbility, serExAbility PermissionServiceGrantAbility, callerPid 8895.
+08-23 23:40:44.261   952   869 I C05A01/accesstoken_service/ATM: [GetPermissionsState]Id 537317011, api 23.
+08-23 23:40:44.261   952   869 I C05A01/accesstoken_service/ATM: [GetLocationPermissionIndex]vague index is -1, accurate index is -1, background index is -1!
+08-23 23:40:44.261   952   869 I C05A01/accesstoken_service/ATM: [GetSelfPermissionState]ohos.permission.MEDIA_LOCATION: status: 0, flag: 2
+08-23 23:40:44.261   952   869 I C05A01/accesstoken_service/ATM: [GetSelfPermissionState]ohos.permission.READ_IMAGEVIDEO: status: 0, flag: 2
+08-23 23:40:44.261   952   869 I C05A01/accesstoken_service/ATM: [GetSelfPermissionState]ohos.permission.WRITE_IMAGEVIDEO: status: 0, flag: 2
+08-23 23:40:44.261   952   869 I C05A01/accesstoken_service/ATM: [IsPermDialogForbidden]0
+08-23 23:40:44.261  8895  9602 I C05A01/com.dgh18.immich/ATM: [IsDynamicRequest]TokenID: 537317011, bundle: com.huawei.hmos.security.privacycenter, uiExAbility: PermissionGrantAbility, serExAbility: PermissionServiceGrantAbility.
+08-23 23:40:44.261  8895  9602 I C05A01/com.dgh18.immich/ATM: [IsDynamicRequest]Permission: ohos.permission.MEDIA_LOCATION: state: 0, errorReason: 0
+08-23 23:40:44.261  8895  9602 I C05A01/com.dgh18.immich/ATM: [IsDynamicRequest]Permission: ohos.permission.READ_IMAGEVIDEO: state: 0, errorReason: 0
+08-23 23:40:44.262  8895  9602 I C05A01/com.dgh18.immich/ATM: [IsDynamicRequest]Permission: ohos.permission.WRITE_IMAGEVIDEO: state: 0, errorReason: 0
+08-23 23:40:44.262  8895  9602 I C05A01/com.dgh18.immich/ATM: [RequestPermissionsFromUserExecute]It does not need to request permission
+08-23 23:40:44.262  8895  8895 I C02B70/com.dgh18.immich/MediaLibrary: MediaLibraryNapiUtils:{PrintPredicateSafe:458} predicate: SingleParams: ["uri", "file://media/PhotoAlbum/506", T::monostate], MultiParams: [], Operation: 1
+08-23 23:40:44.273  8895  8895 I C02B70/com.dgh18.immich/MediaLibrary: MediaLibraryNapiUtils:{PrintPredicateSafe:458} predicate: SingleParams: ["uri", "file://media/PhotoAlbum/506", T::monostate], MultiParams: [], Operation: 1
+08-23 23:40:44.273  1440 43808 I C02986/powermgr/DisplayPowerBrightness: PrintCurrentLuxLog, lux=[32.7/350, 32.7/351, 32.7/350, 32.7/350, 32.7/351, 32.8|75908210], slux=16.0, blux=0.0, oLux=16.0, bTh=54.0, bTh2=59.6, sbTh=136.0, dTh=4.2, dTh2=-1.9, bt=1200, dt=1500, pxs=0, sz=30, bl=71, scene=DefaultMode, als=1, als1=0, color=0, pxa=0, locked=0, dl=62.2
+08-23 23:40:44.279  8895  8895 I C02B70/com.dgh18.immich/MediaLibrary: MediaLibraryNapiUtils:{PrintPredicateSafe:458} predicate: SingleParams: ["uri", "file://media/PhotoAlbum/506", T::monostate], MultiParams: [], Operation: 1
+08-23 23:40:44.289  8895  8895 I C02B70/com.dgh18.immich/MediaLibrary: MediaLibraryNapiUtils:{PrintPredicateSafe:458} predicate: SingleParams: ["change_time", 1.000000, T::monostate], MultiParams: [], Operation: 3
+08-23 23:40:44.290 16107  5603 I C02B70/.medialibrary.medialibrarydata/MediaLibrary: MediaAlbumsControllerService:{AlbumGetAssets:751} enter
+08-23 23:40:44.312  8895  8895 E A03D00/com.dgh18.immich/JSAPP: MessagesImplBase 8 
+08-23 23:40:44.313  8895  8895 I C05A01/com.dgh18.immich/ATM: [GetContext]Get context success, tokenId: 537317011, bundleName: com.dgh18.immich
+08-23 23:40:44.313  8895  8895 I C05A01/com.dgh18.immich/ATM: [ParseRequestPermissionFromUser]AsyncContext.uiAbilityFlag is: 1.
+08-23 23:40:44.313  8895  8895 I C05A01/com.dgh18.immich/ATM: [ParseStringArray]Array size is 3
+08-23 23:40:44.314   952   869 I C05A01/accesstoken_service/ATM: [GetSelfPermissionsState]Bundle com.huawei.hmos.security.privacycenter, uiExAbility PermissionGrantAbility, serExAbility PermissionServiceGrantAbility, callerPid 8895.
+08-23 23:40:44.314   952   869 I C05A01/accesstoken_service/ATM: [GetPermissionsState]Id 537317011, api 23.
+08-23 23:40:44.314   952   869 I C05A01/accesstoken_service/ATM: [GetLocationPermissionIndex]vague index is -1, accurate index is -1, background index is -1!
+08-23 23:40:44.315   952   869 I C05A01/accesstoken_service/ATM: [GetSelfPermissionState]ohos.permission.MEDIA_LOCATION: status: 0, flag: 2
+08-23 23:40:44.315   952   869 I C05A01/accesstoken_service/ATM: [GetSelfPermissionState]ohos.permission.READ_IMAGEVIDEO: status: 0, flag: 2
+08-23 23:40:44.315   952   869 I C05A01/accesstoken_service/ATM: [GetSelfPermissionState]ohos.permission.WRITE_IMAGEVIDEO: status: 0, flag: 2
+08-23 23:40:44.315   952   869 I C05A01/accesstoken_service/ATM: [IsPermDialogForbidden]0
+08-23 23:40:44.315  8895  9549 I C05A01/com.dgh18.immich/ATM: [IsDynamicRequest]TokenID: 537317011, bundle: com.huawei.hmos.security.privacycenter, uiExAbility: PermissionGrantAbility, serExAbility: PermissionServiceGrantAbility.
+08-23 23:40:44.316  8895  9549 I C05A01/com.dgh18.immich/ATM: [IsDynamicRequest]Permission: ohos.permission.MEDIA_LOCATION: state: 0, errorReason: 0
+08-23 23:40:44.316  8895  9549 I C05A01/com.dgh18.immich/ATM: [IsDynamicRequest]Permission: ohos.permission.READ_IMAGEVIDEO: state: 0, errorReason: 0
+08-23 23:40:44.316  8895  9549 I C05A01/com.dgh18.immich/ATM: [IsDynamicRequest]Permission: ohos.permission.WRITE_IMAGEVIDEO: state: 0, errorReason: 0
+08-23 23:40:44.316  8895  9549 I C05A01/com.dgh18.immich/ATM: [RequestPermissionsFromUserExecute]It does not need to request permission
+08-23 23:40:44.317  8895  8895 I C03F05/com.dgh18.immich/NAPI: taskpool:: Task Allocation: 1198775130, 1
+08-23 23:40:44.318  8895  9613 I C03F05/com.dgh18.immich/NAPI: taskpool:: Task Perform: getAssetsForAlbumTask, 1198775130, runningLoop: 400355138944
+08-23 23:40:44.324  8895  9613 I C02B70/com.dgh18.immich/MediaLibrary: MediaLibraryNapiUtils:{PrintPredicateSafe:458} predicate: SingleParams: ["uri", "file://media/PhotoAlbum/506", T::monostate], MultiParams: [], Operation: 1
+08-23 23:40:44.332  8895  9613 I C02B70/com.dgh18.immich/MediaLibrary: MediaLibraryNapiUtils:{PrintPredicateSafe:458} predicate: SingleParams: ["uri", "file://media/PhotoAlbum/506", T::monostate], MultiParams: [], Operation: 1
+08-23 23:40:44.339  8895  9613 I C02B70/com.dgh18.immich/MediaLibrary: MediaLibraryNapiUtils:{PrintPredicateSafe:458} predicate: SingleParams: ["uri", "file://media/PhotoAlbum/506", T::monostate], MultiParams: [], Operation: 1
+08-23 23:40:44.347  8895  9613 I C02B70/com.dgh18.immich/MediaLibrary: MediaLibraryNapiUtils:{PrintPredicateSafe:458} predicate: 
+08-23 23:40:44.347 16107  5603 I C02B70/.medialibrary.medialibrarydata/MediaLibrary: MediaAlbumsControllerService:{AlbumGetAssets:751} enter
+08-23 23:40:44.362  8895  8895 E A03D00/com.dgh18.immich/JSAPP: MessagesImplBase 7 
+08-23 23:40:44.362  8895  8895 I C05A01/com.dgh18.immich/ATM: [GetContext]Get context success, tokenId: 537317011, bundleName: com.dgh18.immich
+08-23 23:40:44.362  8895  8895 I C05A01/com.dgh18.immich/ATM: [ParseRequestPermissionFromUser]AsyncContext.uiAbilityFlag is: 1.
+08-23 23:40:44.362  8895  8895 I C05A01/com.dgh18.immich/ATM: [ParseStringArray]Array size is 3
+08-23 23:40:44.363   952   869 I C05A01/accesstoken_service/ATM: [GetSelfPermissionsState]Bundle com.huawei.hmos.security.privacycenter, uiExAbility PermissionGrantAbility, serExAbility PermissionServiceGrantAbility, callerPid 8895.
+08-23 23:40:44.363   952   869 I C05A01/accesstoken_service/ATM: [GetPermissionsState]Id 537317011, api 23.
+08-23 23:40:44.363   952   869 I C05A01/accesstoken_service/ATM: [GetLocationPermissionIndex]vague index is -1, accurate index is -1, background index is -1!
+08-23 23:40:44.363   952   869 I C05A01/accesstoken_service/ATM: [GetSelfPermissionState]ohos.permission.MEDIA_LOCATION: status: 0, flag: 2
+08-23 23:40:44.364   952   869 I C05A01/accesstoken_service/ATM: [GetSelfPermissionState]ohos.permission.READ_IMAGEVIDEO: status: 0, flag: 2
+08-23 23:40:44.364   952   869 I C05A01/accesstoken_service/ATM: [GetSelfPermissionState]ohos.permission.WRITE_IMAGEVIDEO: status: 0, flag: 2
+08-23 23:40:44.364   952   869 I C05A01/accesstoken_service/ATM: [IsPermDialogForbidden]0
+08-23 23:40:44.364  8895  9601 I C05A01/com.dgh18.immich/ATM: [IsDynamicRequest]TokenID: 537317011, bundle: com.huawei.hmos.security.privacycenter, uiExAbility: PermissionGrantAbility, serExAbility: PermissionServiceGrantAbility.
+08-23 23:40:44.364  8895  9601 I C05A01/com.dgh18.immich/ATM: [IsDynamicRequest]Permission: ohos.permission.MEDIA_LOCATION: state: 0, errorReason: 0
+08-23 23:40:44.364  8895  9601 I C05A01/com.dgh18.immich/ATM: [IsDynamicRequest]Permission: ohos.permission.READ_IMAGEVIDEO: state: 0, errorReason: 0
+08-23 23:40:44.364  8895  9601 I C05A01/com.dgh18.immich/ATM: [IsDynamicRequest]Permission: ohos.permission.WRITE_IMAGEVIDEO: state: 0, errorReason: 0
+08-23 23:40:44.364  8895  9601 I C05A01/com.dgh18.immich/ATM: [RequestPermissionsFromUserExecute]It does not need to request permission
+08-23 23:40:44.365  8895  8895 I C02B70/com.dgh18.immich/MediaLibrary: MediaLibraryNapiUtils:{PrintPredicateSafe:458} predicate: SingleParams: ["uri", "file://media/PhotoAlbum/608", T::monostate], MultiParams: [], Operation: 1
+08-23 23:40:44.372  8895  8895 I C02B70/com.dgh18.immich/MediaLibrary: MediaLibraryNapiUtils:{PrintPredicateSafe:458} predicate: SingleParams: ["uri", "file://media/PhotoAlbum/608", T::monostate], MultiParams: [], Operation: 1
+08-23 23:40:44.378  8895  8895 I C02B70/com.dgh18.immich/MediaLibrary: MediaLibraryNapiUtils:{PrintPredicateSafe:458} predicate: SingleParams: ["uri", "file://media/PhotoAlbum/608", T::monostate], MultiParams: [], Operation: 1
+08-23 23:40:44.386  8895  8895 I C02B70/com.dgh18.immich/MediaLibrary: MediaLibraryNapiUtils:{PrintPredicateSafe:458} predicate: SingleParams: ["change_time", 1.000000, T::monostate], MultiParams: [], Operation: 3
+08-23 23:40:44.387 16107  5603 I C02B70/.medialibrary.medialibrarydata/MediaLibrary: MediaAlbumsControllerService:{AlbumGetAssets:751} enter
+08-23 23:40:44.400  8895  8895 E A03D00/com.dgh18.immich/JSAPP: MessagesImplBase 8 
+08-23 23:40:44.400  8895  8895 I C05A01/com.dgh18.immich/ATM: [GetContext]Get context success, tokenId: 537317011, bundleName: com.dgh18.immich
+08-23 23:40:44.401  8895  8895 I C05A01/com.dgh18.immich/ATM: [ParseRequestPermissionFromUser]AsyncContext.uiAbilityFlag is: 1.
+08-23 23:40:44.401  8895  8895 I C05A01/com.dgh18.immich/ATM: [ParseStringArray]Array size is 3
+08-23 23:40:44.402   952   869 I C05A01/accesstoken_service/ATM: [GetSelfPermissionsState]Bundle com.huawei.hmos.security.privacycenter, uiExAbility PermissionGrantAbility, serExAbility PermissionServiceGrantAbility, callerPid 8895.
+08-23 23:40:44.402   952   869 I C05A01/accesstoken_service/ATM: [GetPermissionsState]Id 537317011, api 23.
+08-23 23:40:44.403   952   869 I C05A01/accesstoken_service/ATM: [GetLocationPermissionIndex]vague index is -1, accurate index is -1, background index is -1!
+08-23 23:40:44.403   952   869 I C05A01/accesstoken_service/ATM: [GetSelfPermissionState]ohos.permission.MEDIA_LOCATION: status: 0, flag: 2
+08-23 23:40:44.403   952   869 I C05A01/accesstoken_service/ATM: [GetSelfPermissionState]ohos.permission.READ_IMAGEVIDEO: status: 0, flag: 2
+08-23 23:40:44.403   952   869 I C05A01/accesstoken_service/ATM: [GetSelfPermissionState]ohos.permission.WRITE_IMAGEVIDEO: status: 0, flag: 2
+08-23 23:40:44.403   952   869 I C05A01/accesstoken_service/ATM: [IsPermDialogForbidden]0
+08-23 23:40:44.404  8895  9600 I C05A01/com.dgh18.immich/ATM: [IsDynamicRequest]TokenID: 537317011, bundle: com.huawei.hmos.security.privacycenter, uiExAbility: PermissionGrantAbility, serExAbility: PermissionServiceGrantAbility.
+08-23 23:40:44.404  8895  9600 I C05A01/com.dgh18.immich/ATM: [IsDynamicRequest]Permission: ohos.permission.MEDIA_LOCATION: state: 0, errorReason: 0
+08-23 23:40:44.404  8895  9600 I C05A01/com.dgh18.immich/ATM: [IsDynamicRequest]Permission: ohos.permission.READ_IMAGEVIDEO: state: 0, errorReason: 0
+08-23 23:40:44.404  8895  9600 I C05A01/com.dgh18.immich/ATM: [IsDynamicRequest]Permission: ohos.permission.WRITE_IMAGEVIDEO: state: 0, errorReason: 0
+08-23 23:40:44.404  8895  9600 I C05A01/com.dgh18.immich/ATM: [RequestPermissionsFromUserExecute]It does not need to request permission
+08-23 23:40:44.406  8895  8895 I C03F05/com.dgh18.immich/NAPI: taskpool:: Task Allocation: 1198767451, 1
+08-23 23:40:44.406  8895  9504 I C03F05/com.dgh18.immich/NAPI: taskpool:: Task Perform: getAssetsForAlbumTask, 1198767451, runningLoop: 394160955264
+08-23 23:40:44.411  8895  9504 I C02B70/com.dgh18.immich/MediaLibrary: MediaLibraryNapiUtils:{PrintPredicateSafe:458} predicate: SingleParams: ["uri", "file://media/PhotoAlbum/608", T::monostate], MultiParams: [], Operation: 1
+08-23 23:40:44.417  8895  9504 I C02B70/com.dgh18.immich/MediaLibrary: MediaLibraryNapiUtils:{PrintPredicateSafe:458} predicate: SingleParams: ["uri", "file://media/PhotoAlbum/608", T::monostate], MultiParams: [], Operation: 1
+08-23 23:40:44.424  8895  9504 I C02B70/com.dgh18.immich/MediaLibrary: MediaLibraryNapiUtils:{PrintPredicateSafe:458} predicate: SingleParams: ["uri", "file://media/PhotoAlbum/608", T::monostate], MultiParams: [], Operation: 1
+08-23 23:40:44.425  1509  1928 I C01406/render_service/skia: RSSurfaceRenderNodeDrawable::OnDraw name:immich0, the number of total processedNodes: 17
+08-23 23:40:44.431  8895  9504 I C02B70/com.dgh18.immich/MediaLibrary: MediaLibraryNapiUtils:{PrintPredicateSafe:458} predicate: 
+08-23 23:40:44.432 16107  5603 I C02B70/.medialibrary.medialibrarydata/MediaLibrary: MediaAlbumsControllerService:{AlbumGetAssets:751} enter
+08-23 23:40:44.443  8895  8895 E A03D00/com.dgh18.immich/JSAPP: MessagesImplBase 7 
+08-23 23:40:44.443  8895  8895 I C05A01/com.dgh18.immich/ATM: [GetContext]Get context success, tokenId: 537317011, bundleName: com.dgh18.immich
+08-23 23:40:44.443  8895  8895 I C05A01/com.dgh18.immich/ATM: [ParseRequestPermissionFromUser]AsyncContext.uiAbilityFlag is: 1.
+08-23 23:40:44.443  8895  8895 I C05A01/com.dgh18.immich/ATM: [ParseStringArray]Array size is 3
+08-23 23:40:44.444   952   869 I C05A01/accesstoken_service/ATM: [GetSelfPermissionsState]Bundle com.huawei.hmos.security.privacycenter, uiExAbility PermissionGrantAbility, serExAbility PermissionServiceGrantAbility, callerPid 8895.
+08-23 23:40:44.444   952   869 I C05A01/accesstoken_service/ATM: [GetPermissionsState]Id 537317011, api 23.
+08-23 23:40:44.444   952   869 I C05A01/accesstoken_service/ATM: [GetLocationPermissionIndex]vague index is -1, accurate index is -1, background index is -1!
+08-23 23:40:44.444   952   869 I C05A01/accesstoken_service/ATM: [GetSelfPermissionState]ohos.permission.MEDIA_LOCATION: status: 0, flag: 2
+08-23 23:40:44.444   952   869 I C05A01/accesstoken_service/ATM: [GetSelfPermissionState]ohos.permission.READ_IMAGEVIDEO: status: 0, flag: 2
+08-23 23:40:44.444   952   869 I C05A01/accesstoken_service/ATM: [GetSelfPermissionState]ohos.permission.WRITE_IMAGEVIDEO: status: 0, flag: 2
+08-23 23:40:44.444   952   869 I C05A01/accesstoken_service/ATM: [IsPermDialogForbidden]0
+08-23 23:40:44.444  8895  9500 I C05A01/com.dgh18.immich/ATM: [IsDynamicRequest]TokenID: 537317011, bundle: com.huawei.hmos.security.privacycenter, uiExAbility: PermissionGrantAbility, serExAbility: PermissionServiceGrantAbility.
+08-23 23:40:44.444  8895  9500 I C05A01/com.dgh18.immich/ATM: [IsDynamicRequest]Permission: ohos.permission.MEDIA_LOCATION: state: 0, errorReason: 0
+08-23 23:40:44.444  8895  9500 I C05A01/com.dgh18.immich/ATM: [IsDynamicRequest]Permission: ohos.permission.READ_IMAGEVIDEO: state: 0, errorReason: 0
+08-23 23:40:44.444  8895  9500 I C05A01/com.dgh18.immich/ATM: [IsDynamicRequest]Permission: ohos.permission.WRITE_IMAGEVIDEO: state: 0, errorReason: 0
+08-23 23:40:44.444  8895  9500 I C05A01/com.dgh18.immich/ATM: [RequestPermissionsFromUserExecute]It does not need to request permission
+08-23 23:40:44.445  8895  8895 I C02B70/com.dgh18.immich/MediaLibrary: MediaLibraryNapiUtils:{PrintPredicateSafe:458} predicate: SingleParams: ["uri", "file://media/PhotoAlbum/609", T::monostate], MultiParams: [], Operation: 1
+08-23 23:40:44.451  8895  8895 I C02B70/com.dgh18.immich/MediaLibrary: MediaLibraryNapiUtils:{PrintPredicateSafe:458} predicate: SingleParams: ["uri", "file://media/PhotoAlbum/609", T::monostate], MultiParams: [], Operation: 1
+08-23 23:40:44.457  8895  8895 I C02B70/com.dgh18.immich/MediaLibrary: MediaLibraryNapiUtils:{PrintPredicateSafe:458} predicate: SingleParams: ["uri", "file://media/PhotoAlbum/609", T::monostate], MultiParams: [], Operation: 1
+08-23 23:40:44.464  8895  8895 I C02B70/com.dgh18.immich/MediaLibrary: MediaLibraryNapiUtils:{PrintPredicateSafe:458} predicate: SingleParams: ["change_time", 1.000000, T::monostate], MultiParams: [], Operation: 3
+08-23 23:40:44.465 16107  5603 I C02B70/.medialibrary.medialibrarydata/MediaLibrary: MediaAlbumsControllerService:{AlbumGetAssets:751} enter
+08-23 23:40:44.473  8895  8895 E A03D00/com.dgh18.immich/JSAPP: MessagesImplBase 8 
+08-23 23:40:44.474  8895  8895 I C05A01/com.dgh18.immich/ATM: [GetContext]Get context success, tokenId: 537317011, bundleName: com.dgh18.immich
+08-23 23:40:44.474  8895  8895 I C05A01/com.dgh18.immich/ATM: [ParseRequestPermissionFromUser]AsyncContext.uiAbilityFlag is: 1.
+08-23 23:40:44.474  8895  8895 I C05A01/com.dgh18.immich/ATM: [ParseStringArray]Array size is 3
+08-23 23:40:44.474   952   869 I C05A01/accesstoken_service/ATM: [GetSelfPermissionsState]Bundle com.huawei.hmos.security.privacycenter, uiExAbility PermissionGrantAbility, serExAbility PermissionServiceGrantAbility, callerPid 8895.
+08-23 23:40:44.474   952   869 I C05A01/accesstoken_service/ATM: [GetPermissionsState]Id 537317011, api 23.
+08-23 23:40:44.474   952   869 I C05A01/accesstoken_service/ATM: [GetLocationPermissionIndex]vague index is -1, accurate index is -1, background index is -1!
+08-23 23:40:44.474   952   869 I C05A01/accesstoken_service/ATM: [GetSelfPermissionState]ohos.permission.MEDIA_LOCATION: status: 0, flag: 2
+08-23 23:40:44.474   952   869 I C05A01/accesstoken_service/ATM: [GetSelfPermissionState]ohos.permission.READ_IMAGEVIDEO: status: 0, flag: 2
+08-23 23:40:44.474   952   869 I C05A01/accesstoken_service/ATM: [GetSelfPermissionState]ohos.permission.WRITE_IMAGEVIDEO: status: 0, flag: 2
+08-23 23:40:44.474   952   869 I C05A01/accesstoken_service/ATM: [IsPermDialogForbidden]0
+08-23 23:40:44.474  8895  9549 I C05A01/com.dgh18.immich/ATM: [IsDynamicRequest]TokenID: 537317011, bundle: com.huawei.hmos.security.privacycenter, uiExAbility: PermissionGrantAbility, serExAbility: PermissionServiceGrantAbility.
+08-23 23:40:44.474  8895  9549 I C05A01/com.dgh18.immich/ATM: [IsDynamicRequest]Permission: ohos.permission.MEDIA_LOCATION: state: 0, errorReason: 0
+08-23 23:40:44.474  8895  9549 I C05A01/com.dgh18.immich/ATM: [IsDynamicRequest]Permission: ohos.permission.READ_IMAGEVIDEO: state: 0, errorReason: 0
+08-23 23:40:44.474  8895  9549 I C05A01/com.dgh18.immich/ATM: [IsDynamicRequest]Permission: ohos.permission.WRITE_IMAGEVIDEO: state: 0, errorReason: 0
+08-23 23:40:44.474  8895  9549 I C05A01/com.dgh18.immich/ATM: [RequestPermissionsFromUserExecute]It does not need to request permission
+08-23 23:40:44.475  8895  8895 I C03F05/com.dgh18.immich/NAPI: taskpool:: Task Allocation: 1199770332, 1
+08-23 23:40:44.475  8895  9612 I C03F05/com.dgh18.immich/NAPI: taskpool:: Task Perform: getAssetsForAlbumTask, 1199770332, runningLoop: 399827165952
+08-23 23:40:44.476  8895  9612 I C02B70/com.dgh18.immich/MediaLibrary: MediaLibraryNapiUtils:{PrintPredicateSafe:458} predicate: SingleParams: ["uri", "file://media/PhotoAlbum/609", T::monostate], MultiParams: [], Operation: 1
+08-23 23:40:44.482  8895  9612 I C02B70/com.dgh18.immich/MediaLibrary: MediaLibraryNapiUtils:{PrintPredicateSafe:458} predicate: SingleParams: ["uri", "file://media/PhotoAlbum/609", T::monostate], MultiParams: [], Operation: 1
+08-23 23:40:44.489  8895  9612 I C02B70/com.dgh18.immich/MediaLibrary: MediaLibraryNapiUtils:{PrintPredicateSafe:458} predicate: SingleParams: ["uri", "file://media/PhotoAlbum/609", T::monostate], MultiParams: [], Operation: 1
+08-23 23:40:44.497  8895  9612 I C02B70/com.dgh18.immich/MediaLibrary: MediaLibraryNapiUtils:{PrintPredicateSafe:458} predicate: 
+08-23 23:40:44.498 16107  5603 I C02B70/.medialibrary.medialibrarydata/MediaLibrary: MediaAlbumsControllerService:{AlbumGetAssets:751} enter
+08-23 23:40:44.508  8895  8895 E A03D00/com.dgh18.immich/JSAPP: MessagesImplBase 7 
+08-23 23:40:44.508  8895  8895 I C05A01/com.dgh18.immich/ATM: [GetContext]Get context success, tokenId: 537317011, bundleName: com.dgh18.immich
+08-23 23:40:44.508  8895  8895 I C05A01/com.dgh18.immich/ATM: [ParseRequestPermissionFromUser]AsyncContext.uiAbilityFlag is: 1.
+08-23 23:40:44.508  8895  8895 I C05A01/com.dgh18.immich/ATM: [ParseStringArray]Array size is 3
+08-23 23:40:44.508   952   869 I C05A01/accesstoken_service/ATM: [GetSelfPermissionsState]Bundle com.huawei.hmos.security.privacycenter, uiExAbility PermissionGrantAbility, serExAbility PermissionServiceGrantAbility, callerPid 8895.
+08-23 23:40:44.508   952   869 I C05A01/accesstoken_service/ATM: [GetPermissionsState]Id 537317011, api 23.
+08-23 23:40:44.509   952   869 I C05A01/accesstoken_service/ATM: [GetLocationPermissionIndex]vague index is -1, accurate index is -1, background index is -1!
+08-23 23:40:44.509   952   869 I C05A01/accesstoken_service/ATM: [GetSelfPermissionState]ohos.permission.MEDIA_LOCATION: status: 0, flag: 2
+08-23 23:40:44.509   952   869 I C05A01/accesstoken_service/ATM: [GetSelfPermissionState]ohos.permission.READ_IMAGEVIDEO: status: 0, flag: 2
+08-23 23:40:44.509   952   869 I C05A01/accesstoken_service/ATM: [GetSelfPermissionState]ohos.permission.WRITE_IMAGEVIDEO: status: 0, flag: 2
+08-23 23:40:44.509   952   869 I C05A01/accesstoken_service/ATM: [IsPermDialogForbidden]0
+08-23 23:40:44.509  8895  9561 I C05A01/com.dgh18.immich/ATM: [IsDynamicRequest]TokenID: 537317011, bundle: com.huawei.hmos.security.privacycenter, uiExAbility: PermissionGrantAbility, serExAbility: PermissionServiceGrantAbility.
+08-23 23:40:44.509  8895  9561 I C05A01/com.dgh18.immich/ATM: [IsDynamicRequest]Permission: ohos.permission.MEDIA_LOCATION: state: 0, errorReason: 0
+08-23 23:40:44.509  8895  9561 I C05A01/com.dgh18.immich/ATM: [IsDynamicRequest]Permission: ohos.permission.READ_IMAGEVIDEO: state: 0, errorReason: 0
+08-23 23:40:44.509  8895  9561 I C05A01/com.dgh18.immich/ATM: [IsDynamicRequest]Permission: ohos.permission.WRITE_IMAGEVIDEO: state: 0, errorReason: 0
+08-23 23:40:44.509  8895  9561 I C05A01/com.dgh18.immich/ATM: [RequestPermissionsFromUserExecute]It does not need to request permission
+08-23 23:40:44.510  8895  8895 I C02B70/com.dgh18.immich/MediaLibrary: MediaLibraryNapiUtils:{PrintPredicateSafe:458} predicate: SingleParams: ["uri", "file://media/PhotoAlbum/615", T::monostate], MultiParams: [], Operation: 1
+08-23 23:40:44.518  8895  8895 I C02B70/com.dgh18.immich/MediaLibrary: MediaLibraryNapiUtils:{PrintPredicateSafe:458} predicate: SingleParams: ["change_time", 1.000000, T::monostate], MultiParams: [], Operation: 3
+08-23 23:40:44.519 16107  5603 I C02B70/.medialibrary.medialibrarydata/MediaLibrary: MediaAlbumsControllerService:{AlbumGetAssets:751} enter
+08-23 23:40:44.535  8895  8895 E A03D00/com.dgh18.immich/JSAPP: MessagesImplBase 8 
+08-23 23:40:44.535  8895  8895 I C05A01/com.dgh18.immich/ATM: [GetContext]Get context success, tokenId: 537317011, bundleName: com.dgh18.immich
+08-23 23:40:44.535  8895  8895 I C05A01/com.dgh18.immich/ATM: [ParseRequestPermissionFromUser]AsyncContext.uiAbilityFlag is: 1.
+08-23 23:40:44.535  8895  8895 I C05A01/com.dgh18.immich/ATM: [ParseStringArray]Array size is 3
+08-23 23:40:44.535   952   869 I C05A01/accesstoken_service/ATM: [GetSelfPermissionsState]Bundle com.huawei.hmos.security.privacycenter, uiExAbility PermissionGrantAbility, serExAbility PermissionServiceGrantAbility, callerPid 8895.
+08-23 23:40:44.536   952   869 I C05A01/accesstoken_service/ATM: [GetPermissionsState]Id 537317011, api 23.
+08-23 23:40:44.536   952   869 I C05A01/accesstoken_service/ATM: [GetLocationPermissionIndex]vague index is -1, accurate index is -1, background index is -1!
+08-23 23:40:44.536   952   869 I C05A01/accesstoken_service/ATM: [GetSelfPermissionState]ohos.permission.MEDIA_LOCATION: status: 0, flag: 2
+08-23 23:40:44.536   952   869 I C05A01/accesstoken_service/ATM: [GetSelfPermissionState]ohos.permission.READ_IMAGEVIDEO: status: 0, flag: 2
+08-23 23:40:44.536   952   869 I C05A01/accesstoken_service/ATM: [GetSelfPermissionState]ohos.permission.WRITE_IMAGEVIDEO: status: 0, flag: 2
+08-23 23:40:44.536   952   869 I C05A01/accesstoken_service/ATM: [IsPermDialogForbidden]0
+08-23 23:40:44.536  8895  9500 I C05A01/com.dgh18.immich/ATM: [IsDynamicRequest]TokenID: 537317011, bundle: com.huawei.hmos.security.privacycenter, uiExAbility: PermissionGrantAbility, serExAbility: PermissionServiceGrantAbility.
+08-23 23:40:44.536  8895  9500 I C05A01/com.dgh18.immich/ATM: [IsDynamicRequest]Permission: ohos.permission.MEDIA_LOCATION: state: 0, errorReason: 0
+08-23 23:40:44.536  8895  9500 I C05A01/com.dgh18.immich/ATM: [IsDynamicRequest]Permission: ohos.permission.READ_IMAGEVIDEO: state: 0, errorReason: 0
+08-23 23:40:44.536  8895  9500 I C05A01/com.dgh18.immich/ATM: [IsDynamicRequest]Permission: ohos.permission.WRITE_IMAGEVIDEO: state: 0, errorReason: 0
+08-23 23:40:44.536  8895  9500 I C05A01/com.dgh18.immich/ATM: [RequestPermissionsFromUserExecute]It does not need to request permission
+08-23 23:40:44.537  8895  8895 I C03F05/com.dgh18.immich/NAPI: taskpool:: Task Allocation: 609410781, 1
+08-23 23:40:44.537  8895  9612 I C03F05/com.dgh18.immich/NAPI: taskpool:: Task Perform: getAssetsForAlbumTask, 609410781, runningLoop: 399827165952
+08-23 23:40:44.540  8895  9612 I C02B70/com.dgh18.immich/MediaLibrary: MediaLibraryNapiUtils:{PrintPredicateSafe:458} predicate: SingleParams: ["uri", "file://media/PhotoAlbum/615", T::monostate], MultiParams: [], Operation: 1
+08-23 23:40:44.547  8895  9612 I C02B70/com.dgh18.immich/MediaLibrary: MediaLibraryNapiUtils:{PrintPredicateSafe:458} predicate: 
+08-23 23:40:44.547 16107  5603 I C02B70/.medialibrary.medialibrarydata/MediaLibrary: MediaAlbumsControllerService:{AlbumGetAssets:751} enter
+08-23 23:40:44.564  8895  8895 E A03D00/com.dgh18.immich/JSAPP: MessagesImplBase 7 
+08-23 23:40:44.564  8895  8895 I C05A01/com.dgh18.immich/ATM: [GetContext]Get context success, tokenId: 537317011, bundleName: com.dgh18.immich
+08-23 23:40:44.564  8895  8895 I C05A01/com.dgh18.immich/ATM: [ParseRequestPermissionFromUser]AsyncContext.uiAbilityFlag is: 1.
+08-23 23:40:44.564  8895  8895 I C05A01/com.dgh18.immich/ATM: [ParseStringArray]Array size is 3
+08-23 23:40:44.564   952   869 I C05A01/accesstoken_service/ATM: [GetSelfPermissionsState]Bundle com.huawei.hmos.security.privacycenter, uiExAbility PermissionGrantAbility, serExAbility PermissionServiceGrantAbility, callerPid 8895.
+08-23 23:40:44.564   952   869 I C05A01/accesstoken_service/ATM: [GetPermissionsState]Id 537317011, api 23.
+08-23 23:40:44.564   952   869 I C05A01/accesstoken_service/ATM: [GetLocationPermissionIndex]vague index is -1, accurate index is -1, background index is -1!
+08-23 23:40:44.564   952   869 I C05A01/accesstoken_service/ATM: [GetSelfPermissionState]ohos.permission.MEDIA_LOCATION: status: 0, flag: 2
+08-23 23:40:44.564   952   869 I C05A01/accesstoken_service/ATM: [GetSelfPermissionState]ohos.permission.READ_IMAGEVIDEO: status: 0, flag: 2
+08-23 23:40:44.564   952   869 I C05A01/accesstoken_service/ATM: [GetSelfPermissionState]ohos.permission.WRITE_IMAGEVIDEO: status: 0, flag: 2
+08-23 23:40:44.565   952   869 I C05A01/accesstoken_service/ATM: [IsPermDialogForbidden]0
+08-23 23:40:44.565  8895  9601 I C05A01/com.dgh18.immich/ATM: [IsDynamicRequest]TokenID: 537317011, bundle: com.huawei.hmos.security.privacycenter, uiExAbility: PermissionGrantAbility, serExAbility: PermissionServiceGrantAbility.
+08-23 23:40:44.565  8895  9601 I C05A01/com.dgh18.immich/ATM: [IsDynamicRequest]Permission: ohos.permission.MEDIA_LOCATION: state: 0, errorReason: 0
+08-23 23:40:44.565  8895  9601 I C05A01/com.dgh18.immich/ATM: [IsDynamicRequest]Permission: ohos.permission.READ_IMAGEVIDEO: state: 0, errorReason: 0
+08-23 23:40:44.565  8895  9601 I C05A01/com.dgh18.immich/ATM: [IsDynamicRequest]Permission: ohos.permission.WRITE_IMAGEVIDEO: state: 0, errorReason: 0
+08-23 23:40:44.565  8895  9601 I C05A01/com.dgh18.immich/ATM: [RequestPermissionsFromUserExecute]It does not need to request permission
+08-23 23:40:44.565  8895  8895 I C02B70/com.dgh18.immich/MediaLibrary: MediaLibraryNapiUtils:{PrintPredicateSafe:458} predicate: SingleParams: ["uri", "file://media/PhotoAlbum/616", T::monostate], MultiParams: [], Operation: 1
+08-23 23:40:44.572  8895  8895 I C02B70/com.dgh18.immich/MediaLibrary: MediaLibraryNapiUtils:{PrintPredicateSafe:458} predicate: SingleParams: ["change_time", 1.000000, T::monostate], MultiParams: [], Operation: 3
+08-23 23:40:44.573 16107  5603 I C02B70/.medialibrary.medialibrarydata/MediaLibrary: MediaAlbumsControllerService:{AlbumGetAssets:751} enter
+08-23 23:40:44.580  8895  8895 E A03D00/com.dgh18.immich/JSAPP: MessagesImplBase 8 
+08-23 23:40:44.580  8895  8895 I C05A01/com.dgh18.immich/ATM: [GetContext]Get context success, tokenId: 537317011, bundleName: com.dgh18.immich
+08-23 23:40:44.580  8895  8895 I C05A01/com.dgh18.immich/ATM: [ParseRequestPermissionFromUser]AsyncContext.uiAbilityFlag is: 1.
+08-23 23:40:44.580  8895  8895 I C05A01/com.dgh18.immich/ATM: [ParseStringArray]Array size is 3
+08-23 23:40:44.581   952   869 I C05A01/accesstoken_service/ATM: [GetSelfPermissionsState]Bundle com.huawei.hmos.security.privacycenter, uiExAbility PermissionGrantAbility, serExAbility PermissionServiceGrantAbility, callerPid 8895.
+08-23 23:40:44.581   952   869 I C05A01/accesstoken_service/ATM: [GetPermissionsState]Id 537317011, api 23.
+08-23 23:40:44.581   952   869 I C05A01/accesstoken_service/ATM: [GetLocationPermissionIndex]vague index is -1, accurate index is -1, background index is -1!
+08-23 23:40:44.581   952   869 I C05A01/accesstoken_service/ATM: [GetSelfPermissionState]ohos.permission.MEDIA_LOCATION: status: 0, flag: 2
+08-23 23:40:44.581   952   869 I C05A01/accesstoken_service/ATM: [GetSelfPermissionState]ohos.permission.READ_IMAGEVIDEO: status: 0, flag: 2
+08-23 23:40:44.581   952   869 I C05A01/accesstoken_service/ATM: [GetSelfPermissionState]ohos.permission.WRITE_IMAGEVIDEO: status: 0, flag: 2
+08-23 23:40:44.581   952   869 I C05A01/accesstoken_service/ATM: [IsPermDialogForbidden]0
+08-23 23:40:44.582  8895  9549 I C05A01/com.dgh18.immich/ATM: [IsDynamicRequest]TokenID: 537317011, bundle: com.huawei.hmos.security.privacycenter, uiExAbility: PermissionGrantAbility, serExAbility: PermissionServiceGrantAbility.
+08-23 23:40:44.582  8895  9549 I C05A01/com.dgh18.immich/ATM: [IsDynamicRequest]Permission: ohos.permission.MEDIA_LOCATION: state: 0, errorReason: 0
+08-23 23:40:44.582  8895  9549 I C05A01/com.dgh18.immich/ATM: [IsDynamicRequest]Permission: ohos.permission.READ_IMAGEVIDEO: state: 0, errorReason: 0
+08-23 23:40:44.582  8895  9549 I C05A01/com.dgh18.immich/ATM: [IsDynamicRequest]Permission: ohos.permission.WRITE_IMAGEVIDEO: state: 0, errorReason: 0
+08-23 23:40:44.582  8895  9549 I C05A01/com.dgh18.immich/ATM: [RequestPermissionsFromUserExecute]It does not need to request permission
+08-23 23:40:44.582  8895  8895 I C03F05/com.dgh18.immich/NAPI: taskpool:: Task Allocation: 1198049630, 1
+08-23 23:40:44.583  8895  9612 I C03F05/com.dgh18.immich/NAPI: taskpool:: Task Perform: getAssetsForAlbumTask, 1198049630, runningLoop: 399827165952
+08-23 23:40:44.585  8895  9612 I C02B70/com.dgh18.immich/MediaLibrary: MediaLibraryNapiUtils:{PrintPredicateSafe:458} predicate: SingleParams: ["uri", "file://media/PhotoAlbum/616", T::monostate], MultiParams: [], Operation: 1
+08-23 23:40:44.591  8895  9612 I C02B70/com.dgh18.immich/MediaLibrary: MediaLibraryNapiUtils:{PrintPredicateSafe:458} predicate: 
+08-23 23:40:44.592 16107  5603 I C02B70/.medialibrary.medialibrarydata/MediaLibrary: MediaAlbumsControllerService:{AlbumGetAssets:751} enter
+08-23 23:40:44.601  8895  8895 E A03D00/com.dgh18.immich/JSAPP: MessagesImplBase 7 
+08-23 23:40:44.601  8895  8895 I C05A01/com.dgh18.immich/ATM: [GetContext]Get context success, tokenId: 537317011, bundleName: com.dgh18.immich
+08-23 23:40:44.601  8895  8895 I C05A01/com.dgh18.immich/ATM: [ParseRequestPermissionFromUser]AsyncContext.uiAbilityFlag is: 1.
+08-23 23:40:44.601  8895  8895 I C05A01/com.dgh18.immich/ATM: [ParseStringArray]Array size is 3
+08-23 23:40:44.602   952   869 I C05A01/accesstoken_service/ATM: [GetSelfPermissionsState]Bundle com.huawei.hmos.security.privacycenter, uiExAbility PermissionGrantAbility, serExAbility PermissionServiceGrantAbility, callerPid 8895.
+08-23 23:40:44.602   952   869 I C05A01/accesstoken_service/ATM: [GetPermissionsState]Id 537317011, api 23.
+08-23 23:40:44.602   952   869 I C05A01/accesstoken_service/ATM: [GetLocationPermissionIndex]vague index is -1, accurate index is -1, background index is -1!
+08-23 23:40:44.602   952   869 I C05A01/accesstoken_service/ATM: [GetSelfPermissionState]ohos.permission.MEDIA_LOCATION: status: 0, flag: 2
+08-23 23:40:44.602   952   869 I C05A01/accesstoken_service/ATM: [GetSelfPermissionState]ohos.permission.READ_IMAGEVIDEO: status: 0, flag: 2
+08-23 23:40:44.602   952   869 I C05A01/accesstoken_service/ATM: [GetSelfPermissionState]ohos.permission.WRITE_IMAGEVIDEO: status: 0, flag: 2
+08-23 23:40:44.602   952   869 I C05A01/accesstoken_service/ATM: [IsPermDialogForbidden]0
+08-23 23:40:44.603  8895  9600 I C05A01/com.dgh18.immich/ATM: [IsDynamicRequest]TokenID: 537317011, bundle: com.huawei.hmos.security.privacycenter, uiExAbility: PermissionGrantAbility, serExAbility: PermissionServiceGrantAbility.
+08-23 23:40:44.603  8895  9600 I C05A01/com.dgh18.immich/ATM: [IsDynamicRequest]Permission: ohos.permission.MEDIA_LOCATION: state: 0, errorReason: 0
+08-23 23:40:44.603  8895  9600 I C05A01/com.dgh18.immich/ATM: [IsDynamicRequest]Permission: ohos.permission.READ_IMAGEVIDEO: state: 0, errorReason: 0
+08-23 23:40:44.603  8895  9600 I C05A01/com.dgh18.immich/ATM: [IsDynamicRequest]Permission: ohos.permission.WRITE_IMAGEVIDEO: state: 0, errorReason: 0
+08-23 23:40:44.603  8895  9600 I C05A01/com.dgh18.immich/ATM: [RequestPermissionsFromUserExecute]It does not need to request permission
+08-23 23:40:44.603  8895  8895 I C02B70/com.dgh18.immich/MediaLibrary: MediaLibraryNapiUtils:{PrintPredicateSafe:458} predicate: SingleParams: ["uri", "file://media/PhotoAlbum/618", T::monostate], MultiParams: [], Operation: 1
+08-23 23:40:44.610  8895  8895 I C02B70/com.dgh18.immich/MediaLibrary: MediaLibraryNapiUtils:{PrintPredicateSafe:458} predicate: SingleParams: ["change_time", 1.000000, T::monostate], MultiParams: [], Operation: 3
+08-23 23:40:44.611 16107  5603 I C02B70/.medialibrary.medialibrarydata/MediaLibrary: MediaAlbumsControllerService:{AlbumGetAssets:751} enter
+08-23 23:40:44.620  8895  8895 E A03D00/com.dgh18.immich/JSAPP: MessagesImplBase 8 
+08-23 23:40:44.620  8895  8895 I C05A01/com.dgh18.immich/ATM: [GetContext]Get context success, tokenId: 537317011, bundleName: com.dgh18.immich
+08-23 23:40:44.620  8895  8895 I C05A01/com.dgh18.immich/ATM: [ParseRequestPermissionFromUser]AsyncContext.uiAbilityFlag is: 1.
+08-23 23:40:44.620  8895  8895 I C05A01/com.dgh18.immich/ATM: [ParseStringArray]Array size is 3
+08-23 23:40:44.620   952   869 I C05A01/accesstoken_service/ATM: [GetSelfPermissionsState]Bundle com.huawei.hmos.security.privacycenter, uiExAbility PermissionGrantAbility, serExAbility PermissionServiceGrantAbility, callerPid 8895.
+08-23 23:40:44.620   952   869 I C05A01/accesstoken_service/ATM: [GetPermissionsState]Id 537317011, api 23.
+08-23 23:40:44.621   952   869 I C05A01/accesstoken_service/ATM: [GetLocationPermissionIndex]vague index is -1, accurate index is -1, background index is -1!
+08-23 23:40:44.621   952   869 I C05A01/accesstoken_service/ATM: [GetSelfPermissionState]ohos.permission.MEDIA_LOCATION: status: 0, flag: 2
+08-23 23:40:44.621   952   869 I C05A01/accesstoken_service/ATM: [GetSelfPermissionState]ohos.permission.READ_IMAGEVIDEO: status: 0, flag: 2
+08-23 23:40:44.621   952   869 I C05A01/accesstoken_service/ATM: [GetSelfPermissionState]ohos.permission.WRITE_IMAGEVIDEO: status: 0, flag: 2
+08-23 23:40:44.621   952   869 I C05A01/accesstoken_service/ATM: [IsPermDialogForbidden]0
+08-23 23:40:44.621  8895  9600 I C05A01/com.dgh18.immich/ATM: [IsDynamicRequest]TokenID: 537317011, bundle: com.huawei.hmos.security.privacycenter, uiExAbility: PermissionGrantAbility, serExAbility: PermissionServiceGrantAbility.
+08-23 23:40:44.621  8895  9600 I C05A01/com.dgh18.immich/ATM: [IsDynamicRequest]Permission: ohos.permission.MEDIA_LOCATION: state: 0, errorReason: 0
+08-23 23:40:44.621  8895  9600 I C05A01/com.dgh18.immich/ATM: [IsDynamicRequest]Permission: ohos.permission.READ_IMAGEVIDEO: state: 0, errorReason: 0
+08-23 23:40:44.621  8895  9600 I C05A01/com.dgh18.immich/ATM: [IsDynamicRequest]Permission: ohos.permission.WRITE_IMAGEVIDEO: state: 0, errorReason: 0
+08-23 23:40:44.621  8895  9600 I C05A01/com.dgh18.immich/ATM: [RequestPermissionsFromUserExecute]It does not need to request permission
+08-23 23:40:44.622  8895  8895 I C03F05/com.dgh18.immich/NAPI: taskpool:: Task Allocation: 610423391, 1
+08-23 23:40:44.622  8895  9612 I C03F05/com.dgh18.immich/NAPI: taskpool:: Task Perform: getAssetsForAlbumTask, 610423391, runningLoop: 399827165952
+08-23 23:40:44.625  8895  9612 I C02B70/com.dgh18.immich/MediaLibrary: MediaLibraryNapiUtils:{PrintPredicateSafe:458} predicate: SingleParams: ["uri", "file://media/PhotoAlbum/618", T::monostate], MultiParams: [], Operation: 1
+08-23 23:40:44.631  8895  9612 I C02B70/com.dgh18.immich/MediaLibrary: MediaLibraryNapiUtils:{PrintPredicateSafe:458} predicate: 
+08-23 23:40:44.632 16107  5603 I C02B70/.medialibrary.medialibrarydata/MediaLibrary: MediaAlbumsControllerService:{AlbumGetAssets:751} enter
+08-23 23:40:44.643  8895  8895 E A03D00/com.dgh18.immich/JSAPP: MessagesImplBase 7 
+08-23 23:40:44.643  8895  8895 I C05A01/com.dgh18.immich/ATM: [GetContext]Get context success, tokenId: 537317011, bundleName: com.dgh18.immich
+08-23 23:40:44.643  8895  8895 I C05A01/com.dgh18.immich/ATM: [ParseRequestPermissionFromUser]AsyncContext.uiAbilityFlag is: 1.
+08-23 23:40:44.643  8895  8895 I C05A01/com.dgh18.immich/ATM: [ParseStringArray]Array size is 3
+08-23 23:40:44.643   952   869 I C05A01/accesstoken_service/ATM: [GetSelfPermissionsState]Bundle com.huawei.hmos.security.privacycenter, uiExAbility PermissionGrantAbility, serExAbility PermissionServiceGrantAbility, callerPid 8895.
+08-23 23:40:44.643   952   869 I C05A01/accesstoken_service/ATM: [GetPermissionsState]Id 537317011, api 23.
+08-23 23:40:44.644   952   869 I C05A01/accesstoken_service/ATM: [GetLocationPermissionIndex]vague index is -1, accurate index is -1, background index is -1!
+08-23 23:40:44.644   952   869 I C05A01/accesstoken_service/ATM: [GetSelfPermissionState]ohos.permission.MEDIA_LOCATION: status: 0, flag: 2
+08-23 23:40:44.644   952   869 I C05A01/accesstoken_service/ATM: [GetSelfPermissionState]ohos.permission.READ_IMAGEVIDEO: status: 0, flag: 2
+08-23 23:40:44.644   952   869 I C05A01/accesstoken_service/ATM: [GetSelfPermissionState]ohos.permission.WRITE_IMAGEVIDEO: status: 0, flag: 2
+08-23 23:40:44.644   952   869 I C05A01/accesstoken_service/ATM: [IsPermDialogForbidden]0
+08-23 23:40:44.644  8895  9600 I C05A01/com.dgh18.immich/ATM: [IsDynamicRequest]TokenID: 537317011, bundle: com.huawei.hmos.security.privacycenter, uiExAbility: PermissionGrantAbility, serExAbility: PermissionServiceGrantAbility.
+08-23 23:40:44.644  8895  9600 I C05A01/com.dgh18.immich/ATM: [IsDynamicRequest]Permission: ohos.permission.MEDIA_LOCATION: state: 0, errorReason: 0
+08-23 23:40:44.644  8895  9600 I C05A01/com.dgh18.immich/ATM: [IsDynamicRequest]Permission: ohos.permission.READ_IMAGEVIDEO: state: 0, errorReason: 0
+08-23 23:40:44.644  8895  9600 I C05A01/com.dgh18.immich/ATM: [IsDynamicRequest]Permission: ohos.permission.WRITE_IMAGEVIDEO: state: 0, errorReason: 0
+08-23 23:40:44.644  8895  9600 I C05A01/com.dgh18.immich/ATM: [RequestPermissionsFromUserExecute]It does not need to request permission
+08-23 23:40:44.645  8895  8895 I C02B70/com.dgh18.immich/MediaLibrary: MediaLibraryNapiUtils:{PrintPredicateSafe:458} predicate: SingleParams: ["uri", "file://media/PhotoAlbum/619", T::monostate], MultiParams: [], Operation: 1
+08-23 23:40:44.651  8895  8895 I C02B70/com.dgh18.immich/MediaLibrary: MediaLibraryNapiUtils:{PrintPredicateSafe:458} predicate: SingleParams: ["change_time", 1.000000, T::monostate], MultiParams: [], Operation: 3
+08-23 23:40:44.652 16107  5603 I C02B70/.medialibrary.medialibrarydata/MediaLibrary: MediaAlbumsControllerService:{AlbumGetAssets:751} enter
+08-23 23:40:44.660  8895  8895 E A03D00/com.dgh18.immich/JSAPP: MessagesImplBase 8 
+08-23 23:40:44.660  8895  8895 I C05A01/com.dgh18.immich/ATM: [GetContext]Get context success, tokenId: 537317011, bundleName: com.dgh18.immich
+08-23 23:40:44.660  8895  8895 I C05A01/com.dgh18.immich/ATM: [ParseRequestPermissionFromUser]AsyncContext.uiAbilityFlag is: 1.
+08-23 23:40:44.660  8895  8895 I C05A01/com.dgh18.immich/ATM: [ParseStringArray]Array size is 3
+08-23 23:40:44.661   952   869 I C05A01/accesstoken_service/ATM: [GetSelfPermissionsState]Bundle com.huawei.hmos.security.privacycenter, uiExAbility PermissionGrantAbility, serExAbility PermissionServiceGrantAbility, callerPid 8895.
+08-23 23:40:44.661   952   869 I C05A01/accesstoken_service/ATM: [GetPermissionsState]Id 537317011, api 23.
+08-23 23:40:44.661   952   869 I C05A01/accesstoken_service/ATM: [GetLocationPermissionIndex]vague index is -1, accurate index is -1, background index is -1!
+08-23 23:40:44.661   952   869 I C05A01/accesstoken_service/ATM: [GetSelfPermissionState]ohos.permission.MEDIA_LOCATION: status: 0, flag: 2
+08-23 23:40:44.661   952   869 I C05A01/accesstoken_service/ATM: [GetSelfPermissionState]ohos.permission.READ_IMAGEVIDEO: status: 0, flag: 2
+08-23 23:40:44.661   952   869 I C05A01/accesstoken_service/ATM: [GetSelfPermissionState]ohos.permission.WRITE_IMAGEVIDEO: status: 0, flag: 2
+08-23 23:40:44.661   952   869 I C05A01/accesstoken_service/ATM: [IsPermDialogForbidden]0
+08-23 23:40:44.661  8895  9602 I C05A01/com.dgh18.immich/ATM: [IsDynamicRequest]TokenID: 537317011, bundle: com.huawei.hmos.security.privacycenter, uiExAbility: PermissionGrantAbility, serExAbility: PermissionServiceGrantAbility.
+08-23 23:40:44.661  8895  9602 I C05A01/com.dgh18.immich/ATM: [IsDynamicRequest]Permission: ohos.permission.MEDIA_LOCATION: state: 0, errorReason: 0
+08-23 23:40:44.661  8895  9602 I C05A01/com.dgh18.immich/ATM: [IsDynamicRequest]Permission: ohos.permission.READ_IMAGEVIDEO: state: 0, errorReason: 0
+08-23 23:40:44.661  8895  9602 I C05A01/com.dgh18.immich/ATM: [IsDynamicRequest]Permission: ohos.permission.WRITE_IMAGEVIDEO: state: 0, errorReason: 0
+08-23 23:40:44.661  8895  9602 I C05A01/com.dgh18.immich/ATM: [RequestPermissionsFromUserExecute]It does not need to request permission
+08-23 23:40:44.662  8895  8895 I C03F05/com.dgh18.immich/NAPI: taskpool:: Task Allocation: 1201133024, 1
+08-23 23:40:44.662  8895  9613 I C03F05/com.dgh18.immich/NAPI: taskpool:: Task Perform: getAssetsForAlbumTask, 1201133024, runningLoop: 400355138944
+08-23 23:40:44.665  8895  9613 I C02B70/com.dgh18.immich/MediaLibrary: MediaLibraryNapiUtils:{PrintPredicateSafe:458} predicate: SingleParams: ["uri", "file://media/PhotoAlbum/619", T::monostate], MultiParams: [], Operation: 1
+08-23 23:40:44.672  8895  9613 I C02B70/com.dgh18.immich/MediaLibrary: MediaLibraryNapiUtils:{PrintPredicateSafe:458} predicate: 
+08-23 23:40:44.672 16107  5603 I C02B70/.medialibrary.medialibrarydata/MediaLibrary: MediaAlbumsControllerService:{AlbumGetAssets:751} enter
+08-23 23:40:44.681  8895  8895 E A03D00/com.dgh18.immich/JSAPP: MessagesImplBase 7 
+08-23 23:40:44.682  8895  8895 I C05A01/com.dgh18.immich/ATM: [GetContext]Get context success, tokenId: 537317011, bundleName: com.dgh18.immich
+08-23 23:40:44.682  8895  8895 I C05A01/com.dgh18.immich/ATM: [ParseRequestPermissionFromUser]AsyncContext.uiAbilityFlag is: 1.
+08-23 23:40:44.682  8895  8895 I C05A01/com.dgh18.immich/ATM: [ParseStringArray]Array size is 3
+08-23 23:40:44.682   952   869 I C05A01/accesstoken_service/ATM: [GetSelfPermissionsState]Bundle com.huawei.hmos.security.privacycenter, uiExAbility PermissionGrantAbility, serExAbility PermissionServiceGrantAbility, callerPid 8895.
+08-23 23:40:44.682   952   869 I C05A01/accesstoken_service/ATM: [GetPermissionsState]Id 537317011, api 23.
+08-23 23:40:44.682   952   869 I C05A01/accesstoken_service/ATM: [GetLocationPermissionIndex]vague index is -1, accurate index is -1, background index is -1!
+08-23 23:40:44.682   952   869 I C05A01/accesstoken_service/ATM: [GetSelfPermissionState]ohos.permission.MEDIA_LOCATION: status: 0, flag: 2
+08-23 23:40:44.682   952   869 I C05A01/accesstoken_service/ATM: [GetSelfPermissionState]ohos.permission.READ_IMAGEVIDEO: status: 0, flag: 2
+08-23 23:40:44.682   952   869 I C05A01/accesstoken_service/ATM: [GetSelfPermissionState]ohos.permission.WRITE_IMAGEVIDEO: status: 0, flag: 2
+08-23 23:40:44.682   952   869 I C05A01/accesstoken_service/ATM: [IsPermDialogForbidden]0
+08-23 23:40:44.683  8895  9610 I C05A01/com.dgh18.immich/ATM: [IsDynamicRequest]TokenID: 537317011, bundle: com.huawei.hmos.security.privacycenter, uiExAbility: PermissionGrantAbility, serExAbility: PermissionServiceGrantAbility.
+08-23 23:40:44.683  8895  9610 I C05A01/com.dgh18.immich/ATM: [IsDynamicRequest]Permission: ohos.permission.MEDIA_LOCATION: state: 0, errorReason: 0
+08-23 23:40:44.683  8895  9610 I C05A01/com.dgh18.immich/ATM: [IsDynamicRequest]Permission: ohos.permission.READ_IMAGEVIDEO: state: 0, errorReason: 0
+08-23 23:40:44.683  8895  9610 I C05A01/com.dgh18.immich/ATM: [IsDynamicRequest]Permission: ohos.permission.WRITE_IMAGEVIDEO: state: 0, errorReason: 0
+08-23 23:40:44.683  8895  9610 I C05A01/com.dgh18.immich/ATM: [RequestPermissionsFromUserExecute]It does not need to request permission
+08-23 23:40:44.683  8895  8895 I C02B70/com.dgh18.immich/MediaLibrary: MediaLibraryNapiUtils:{PrintPredicateSafe:458} predicate: SingleParams: ["uri", "file://media/PhotoAlbum/7", T::monostate], MultiParams: [], Operation: 1
+08-23 23:40:44.690  8895  8895 I C02B70/com.dgh18.immich/MediaLibrary: MediaLibraryNapiUtils:{PrintPredicateSafe:458} predicate: SingleParams: ["uri", "file://media/PhotoAlbum/7", T::monostate], MultiParams: [], Operation: 1
+08-23 23:40:44.696  8895  8895 I C02B70/com.dgh18.immich/MediaLibrary: MediaLibraryNapiUtils:{PrintPredicateSafe:458} predicate: SingleParams: ["change_time", 1.000000, T::monostate], MultiParams: [], Operation: 3
+08-23 23:40:44.697 16107  5603 I C02B70/.medialibrary.medialibrarydata/MediaLibrary: MediaAlbumsControllerService:{AlbumGetAssets:751} enter
+08-23 23:40:44.703 45290 45298 I C02925/bms_behavior/bms_behavior: [WaitConditionStatus]: runState = 1, cvStatus = 1 
+08-23 23:40:44.703 45290 45298 E C02925/bms_behavior/bms_file: [BmsFileReadBuffer]: file /sys/class/hw_power/charger/direct_charger_sc4/direct_charge_succ is invalid
+08-23 23:40:44.705 45290 45298 E C02925/bms_behavior/bms_file: [BmsFileReadBuffer]: file /sys/class/hw_power/charger/direct_charger_sc4/direct_charge_succ is invalid
+08-23 23:40:44.707 45290 45298 E C02925/bms_behavior/bms_file: [BmsFileReadBuffer]: file /sys/class/hw_power/charger/direct_charger_sc4/direct_charge_succ is invalid
+08-23 23:40:44.710 45290 45298 E C02925/bms_behavior/bms_file: [BmsFileReadBuffer]: file /sys/class/hw_power/charger/direct_charger_sc4/direct_charge_succ is invalid
+08-23 23:40:44.724 45290 45298 E C02925/bms_behavior/bms_file: [BmsFileReadBuffer]: file /sys/class/hw_power/charger/direct_charger_sc4/direct_charge_succ is invalid
+08-23 23:40:44.733 45290 45298 E C02925/bms_behavior/bms_file: [BmsFileReadBuffer]: file /sys/class/hw_power/charger/direct_charger_sc4/direct_charge_succ is invalid
+08-23 23:40:44.742 45290 45298 E C02925/bms_behavior/bms_file: [BmsFileReadBuffer]: file /sys/class/hw_power/coul/coul_data/rbatt is invalid
+08-23 23:40:44.745 45290 45298 E C02925/bms_behavior/bms_file: [BmsFileReadBuffer]: file /sys/class/hw_power/bat_heating/heat_up is invalid
+08-23 23:40:44.770 45290 45298 E C02925/bms_behavior/bms_file: [BmsFileReadBuffer]: file /sys/class/hw_power/charger/direct_charger_sc4/direct_charge_succ is invalid
+08-23 23:40:44.780 45290 45298 E C02925/bms_behavior/bms_file: [BmsFileReadBuffer]: file /sys/class/hw_power/charger/direct_charger_sc4/direct_charge_succ is invalid
+08-23 23:40:44.781 45290 45298 E C02925/bms_behavior/bms_file: [BmsFileReadBuffer]: file /sys/class/hw_power/charger/direct_charger_sc4/direct_charge_succ is invalid
+08-23 23:40:44.784 45290 45298 I C02925/bms_behavior/bms_behavior: [Monitor]: monitor interval count 1269, name: battery_gauge_aux
+08-23 23:40:44.830 16107  5603 E C01651/.medialibrary.medialibrarydata/shared_block: Alloc: SharedBlock is full: requested allocation 156 bytes, free space 159 bytes, block size 2097152 bytes
+08-23 23:40:44.830 16107  5603 I C01651/.medialibrary.medialibrarydata/shared_block: AllocRow: Alloc the row failed, so back out the new row accounting from allocRowoffset 8537
+08-23 23:40:44.830 16107  5603 E C01650/.medialibrary.medialibrarydata/RdbResultSetBridge: WriteBlock:SharedBlock is full.
+08-23 23:40:44.897  1125  1326 W C01C42/time_service/TimeService: t3 75911811
+08-23 23:40:44.960   959  1818 I C015B5/netmanager/NetMgrEnhanced: QOE: DumpData# DNS:0,0,0 WifiId:0,2,2,1569,0,24019,22685,9,0,0,0,-31,-78,38,70,1, Flag2:[1,1,1,1],[125,127,125,18908],[-31,-31,-31,-31,-31,-31,-31,-31,-31,-31],4,11,2,5,4, UID:1051 ChId:2 Tcp:0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0 UID:0 ChId:2 Tcp:0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0 UID:20020259 ChId:2 Tcp:0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0 Mov:528
+08-23 23:40:44.960   959  1818 I C015B5/netmanager/NetMgrEnhanced: QOE: AdaBoostPredict# Ada,index:2,NisPsSlow:0,NProba:315,rssi:-40,noise:-78,chload:70,uldelay:1,rtt:0
+08-23 23:40:44.960   959  1818 I C015B5/netmanager/NetMgrEnhanced: QOE: AdaBoostPredict# Ada_app,index:2,NisPsSlow:0,NProba:315,rssi:-40,noise:-78,chload:70,uldelay:1,rtt:0
+08-23 23:40:44.961   959  1818 I C015B5/netmanager/NetMgrEnhanced: QOE: networkQoeChanged:20020259,0,4,0,0,315,0,0,1,2,2,2,4,0,0,315,0,-31,4,0,0,2401900,2268500,11,10,0,12,0,[2,-78,70,1]
+08-23 23:40:45.188  2619  4811 I C01560/wifi_manager_service/StaStateMachine: SignalPoll,bssid:08:bf:**:**:**:c4,ssid:con******GHz,networkId:185,band:2,freq:5260,rssi:-31,noise:-78,chload:70,snr:38,ulDelay:1,txLinkSpeed:24019,rxLinkSpeed:22685,txBytes:156629302,rxBytes:2755070142,txFailed:0,txPackets:782940,rxPackets:5001570,wifiCategory:2, wifiLinkType:0,GetWifiStandard:6,rxmax:2401,txmax:2401,connState:4,detState:10,lastSignal:4,chloadSelf:4,c0Rssi:-31,c1Rssi:-128
+08-23 23:40:45.188  2619  4811 I C01560/wifi_manager_service/WifiEnhanceInfoRequestor: GetSignalExtInfo signalInfo.ext is invalid
+08-23 23:40:45.531  1145  1279 I C02520/hmi_host/hmi_service: [SetChrSwitch:1221] Send SetChrSwitch msg To Kernel, ret: 1
+08-23 23:40:45.531  1145  1279 I C02520/hmi_host/hmi_service: [TimeoutProc:1095] reset chr switch
+08-23 23:40:45.813  1832 45740 I C02D13/hdcd/HDC_LOG: [SendHeartbeatMsg:1519] send heartbeat count is 927 and messages count is 7317 for session 295******063(L:10)
+08-23 23:40:45.838  2619 59872 I C01560/wifi_manager_service/IpQosMonitor: IPv6 deltaTcpTxPkts = 0, deltaTcpRxPkts = 0
+08-23 23:40:46.000   959  1818 I C015B5/netmanager/NetMgrEnhanced: QOE: DumpData# DNS:0,0,0 WifiId:0,2,2,327,0,24019,22685,2,0,0,0,-31,-78,38,70,1, Flag2:[1,1,1,1],[125,127,125,18908],[-31,-31,-31,-31,-31,-31,-31,-31,-31,-31],4,11,2,5,4, UID:1051 ChId:2 Tcp:0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0 UID:0 ChId:2 Tcp:0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0 UID:20020259 ChId:2 Tcp:0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0 Mov:528
+08-23 23:40:46.001   959  1818 I C015B5/netmanager/NetMgrEnhanced: QOE: AdaBoostPredict# Ada,index:2,NisPsSlow:0,NProba:315,rssi:-40,noise:-78,chload:70,uldelay:1,rtt:0
+08-23 23:40:46.001   959  1818 I C015B5/netmanager/NetMgrEnhanced: QOE: AdaBoostPredict# Ada_app,index:2,NisPsSlow:0,NProba:315,rssi:-40,noise:-78,chload:70,uldelay:1,rtt:0
+08-23 23:40:46.002   959  1818 I C015B5/netmanager/NetMgrEnhanced: QOE: networkQoeChanged:20020259,0,4,0,0,315,0,0,1,2,2,2,4,0,0,315,0,-31,4,0,0,2401900,2268500,11,10,0,2,0,[2,-78,70,1]
+08-23 23:40:46.194  2619 41820 I C01560/wifi_manager_service/StaStateMachine: SignalPoll,bssid:08:bf:**:**:**:c4,ssid:con******GHz,networkId:185,band:2,freq:5260,rssi:-30,noise:-78,chload:70,snr:37,ulDelay:1,txLinkSpeed:24019,rxLinkSpeed:22685,txBytes:156629302,rxBytes:2755071711,txFailed:0,txPackets:782940,rxPackets:5001579,wifiCategory:2, wifiLinkType:0,GetWifiStandard:6,rxmax:2401,txmax:2401,connState:4,detState:10,lastSignal:4,chloadSelf:4,c0Rssi:-28,c1Rssi:-128
+08-23 23:40:46.194  2619 41820 I C01560/wifi_manager_service/WifiEnhanceInfoRequestor: GetSignalExtInfo signalInfo.ext is invalid
+08-23 23:40:46.375  1440 43808 I C02986/powermgr/DisplayPowerBrightness: PrintCurrentLuxLog, lux=[32.9/349, 33.0/351, 32.8/351, 32.8/350, 32.7/350, 32.8|75910313], slux=16.0, blux=0.0, oLux=16.0, bTh=54.0, bTh2=59.6, sbTh=136.0, dTh=4.2, dTh2=-1.9, bt=1200, dt=1500, pxs=0, sz=30, bl=71, scene=DefaultMode, als=1, als1=0, color=0, pxa=0, locked=0, dl=62.2
+08-23 23:40:46.546  1342  1961 W C02943/power_host/ThermalHdi: Read node failed, title = brightness
+08-23 23:40:46.813  8895  9548 W C01400/com.dgh18.immich/Vsync: PrintRequestTs: recv vsync timestamp, from:flutterSyncName, now:24195524296308, fromRsTs:24195524006286, timeInterval:290022ns
+08-23 23:40:47.040   959  1818 I C015B5/netmanager/NetMgrEnhanced: QOE: DumpData# DNS:0,0,0 WifiId:0,2,2,1569,0,24019,22685,9,0,0,0,-30,-78,37,70,1, Flag2:[1,1,1,1],[125,127,125,18908],[-31,-31,-31,-32,-31,-31,-31,-31,-31,-31],4,11,2,5,4, UID:1051 ChId:2 Tcp:0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0 UID:0 ChId:2 Tcp:0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,2,0 UID:20020259 ChId:2 Tcp:0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0 Mov:528
+08-23 23:40:47.040   959  1818 I C015B5/netmanager/NetMgrEnhanced: QOE: AdaBoostPredict# Ada,index:2,NisPsSlow:0,NProba:315,rssi:-40,noise:-78,chload:70,uldelay:1,rtt:0
+08-23 23:40:47.040   959  1818 I C015B5/netmanager/NetMgrEnhanced: QOE: AdaBoostPredict# Ada_app,index:2,NisPsSlow:0,NProba:315,rssi:-40,noise:-78,chload:70,uldelay:1,rtt:0
+08-23 23:40:47.040   959  1818 I C015B5/netmanager/NetMgrEnhanced: QOE: networkQoeChanged:20020259,0,4,0,0,315,0,0,1,2,2,2,4,0,0,315,0,-30,4,0,0,2401900,2268500,11,10,0,12,0,[2,-78,70,1]
+08-23 23:40:47.105   916  9480 I C01702/resource_schedule_service/CGS: [a92aba147f18d19 0 0]retCode of collectResult: 0
+08-23 23:40:47.105   916  9480 I C01702/resource_schedule_service/CGS: [a92aba147f18d19 0 0]CgroupSuppressionDecider isSuppressionState_:0, cpuLoadPercent:23, thermalLevel:0, isBootCompleted:0, isContinuousStartUp:0,
+08-23 23:40:47.209  3252  3252 I C05C01/oam_hisi/OAM: [oam_work_timedebug:330]app_oam main_thread:loop 332987,wait 75742381ms,work 15300ms
+08-23 23:40:47.210  3252  3252 I C05C01/oam_hisi/OAM: [oam_work_timedebug:333]app_oam memdump_thread:loop 410,wait 69416704ms,work 0ms
+08-23 23:40:47.210  2619  4811 I C01560/wifi_manager_service/StaStateMachine: SignalPoll,bssid:08:bf:**:**:**:c4,ssid:con******GHz,networkId:185,band:2,freq:5260,rssi:-31,noise:-78,chload:70,snr:37,ulDelay:1,txLinkSpeed:24019,rxLinkSpeed:22685,txBytes:156629368,rxBytes:2755071837,txFailed:0,txPackets:782941,rxPackets:5001581,wifiCategory:2, wifiLinkType:0,GetWifiStandard:6,rxmax:2401,txmax:2401,connState:4,detState:10,lastSignal:4,chloadSelf:4,c0Rssi:-31,c1Rssi:-128
+08-23 23:40:47.210  2619  4811 I C01560/wifi_manager_service/WifiEnhanceInfoRequestor: GetSignalExtInfo signalInfo.ext is invalid
+08-23 23:40:47.377  1393  9567 I C01DA1/parent_control_service/Service: UpdateByCurrentMills inTime_= 1787499632337, currentMills = 1787499647377
+08-23 23:40:47.378  1393  9567 I C01DA1/parent_control_service/Service: UpdateByCurrentMills inTime_= 1787499632337, currentMills = 1787499647377
+08-23 23:40:47.378  1393  9567 I C01DA1/parent_control_service/Service: AppTimer::UpdateAllTimeInfoByCurrentMills totalFlags = 1, timeInfoMap_ size = 4, appFlagMap_ size = 1
+08-23 23:40:47.378  1393  9567 I C01DA1/parent_control_service/Service: UpdateByCurrentMills inTime_= 1787499632337, currentMills = 1787499647377
+08-23 23:40:47.378  1393  9567 I C01DA1/parent_control_service/Service: UpdateByCurrentMills inTime_= 1787499632337, currentMills = 1787499647377
+08-23 23:40:47.378  1393  9567 I C01DA1/parent_control_service/UsageHelper: UsageHelper::AddTotalUsage: totalTime=15040, foregroundTime = 15040, backgroudTime = 0
+08-23 23:40:47.384  1393  9567 I C01DA1/parent_control_service/UsageHelper: UsageHelper::AddSingleUsage: bundleName=**********immich, foregroundTime=15040, backgroundTime = 0 
+08-23 23:40:47.385  1393  9567 I C01DA1/parent_control_service/Service: RefreshAppUsageData: **********immich, t:9065646, f:0,0,0,0,0,0,0,1512601,1610550,0,0,0,0,0,0,0,0,0,0,0,0,125137,3381014,2436344, b:0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+08-23 23:40:47.391  1393  9567 I C01DA1/parent_control_service/Service: PublicRdbHelper()
+08-23 23:40:47.391  1393  9567 W C01650/parent_control_service/RdbStoreManager: IsConfigInvalidChanged:no bundleName
+08-23 23:40:47.391  1393  9567 E C01650/parent_control_service/SilentProxy: IsSupportSilentFromService:GetRdbService failed, err is 27394049.
+08-23 23:40:47.398  1393  9567 I C01650/parent_control_service/ConnectionPool: Create:code:0 app[:] area[el2] cfg[0,0,0,0,5,0,0]pub***.db:<DB,0xa05d5,45056,100660><DWR,0xa05e5,12288,100660><SHM,0xa06ab,32768,100660><WAL,0xa06a9,0,100660>, pathSize:45
+08-23 23:40:47.400  1393  9567 I C01650/parent_control_service/RdbStoreImpl: HandleSchemaDDL:db:pub***.db exe DDL schema<0->5>
+08-23 23:40:47.403  1393  9567 I C01DA1/parent_control_service/Service: AddGuardStrategyUsage bundleName:**********immich
+08-23 23:40:47.415  1393  9567 I C01DA1/parent_control_service/Service: GetForegroundBundleNames **********immich is visible, need to be checked.
+08-23 23:40:47.415  1393  9567 I C01DA1/parent_control_service/Service: AppTimer::RefreshRunningAppFlags timeInfoMap_ size = 4, appFlagMap_ size = 1
+08-23 23:40:47.873  1125  1326 W C01C42/time_service/TimeService: uid:1096 id:1619803204 wk:0
+08-23 23:40:47.873  1125  1326 W C01C42/time_service/TimeService: bat:1 id:1619803204 we:75916811
+08-23 23:40:47.873  1125  1326 W C01C42/time_service/TimeService: t3 75911835
+08-23 23:40:47.897  1125  1326 W C01C42/time_service/TimeService: t3 75914835
+08-23 23:40:48.003  1393  9700 I C01DA1/parent_control_service/Service: ~PublicRdbHelper()
+08-23 23:40:48.080   959  1818 I C015B5/netmanager/NetMgrEnhanced: QOE: DumpData# DNS:0,0,0 WifiId:0,2,2,126,66,24019,22685,2,1,0,0,-31,-78,37,70,1, Flag2:[1,1,1,1],[18227,127,125,18908],[-31,-31,-31,-31,-31,-31,-31,-31,-31,-31],4,11,2,5,4, UID:1051 ChId:2 Tcp:0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0 UID:0 ChId:2 Tcp:0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0 UID:20020259 ChId:2 Tcp:0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0 Mov:528
+08-23 23:40:48.080   959  1818 I C015B5/netmanager/NetMgrEnhanced: QOE: AdaBoostPredict# Ada,index:2,NisPsSlow:0,NProba:315,rssi:-40,noise:-78,chload:70,uldelay:1,rtt:0
+08-23 23:40:48.080   959  1818 I C015B5/netmanager/NetMgrEnhanced: QOE: AdaBoostPredict# Ada_app,index:2,NisPsSlow:0,NProba:315,rssi:-40,noise:-78,chload:70,uldelay:1,rtt:0
+08-23 23:40:48.081   959  1818 I C015B5/netmanager/NetMgrEnhanced: QOE: networkQoeChanged:20020259,0,4,0,0,315,0,0,1,2,2,2,4,0,0,315,0,-31,4,0,0,2401900,2268500,11,10,0,0,0,[2,-78,70,1]
+08-23 23:40:48.225  2619 41821 I C01560/wifi_manager_service/StaStateMachine: SignalPoll,bssid:08:bf:**:**:**:c4,ssid:con******GHz,networkId:185,band:2,freq:5260,rssi:-31,noise:-78,chload:70,snr:39,ulDelay:1,txLinkSpeed:24019,rxLinkSpeed:22685,txBytes:156629368,rxBytes:2755071951,txFailed:0,txPackets:782941,rxPackets:5001583,wifiCategory:2, wifiLinkType:0,GetWifiStandard:6,rxmax:2401,txmax:2401,connState:4,detState:10,lastSignal:4,chloadSelf:4,c0Rssi:-31,c1Rssi:-128
+08-23 23:40:48.225  2619 41821 I C01560/wifi_manager_service/WifiEnhanceInfoRequestor: GetSignalExtInfo signalInfo.ext is invalid
+08-23 23:40:48.478  1440 43808 I C02986/powermgr/DisplayPowerBrightness: PrintCurrentLuxLog, lux=[28.8/348, 28.8/351, 28.8/351, 32.8/350, 32.9/351, 29.0|75912415], slux=16.0, blux=0.0, oLux=16.0, bTh=54.0, bTh2=59.6, sbTh=136.0, dTh=4.2, dTh2=-1.9, bt=1200, dt=1500, pxs=0, sz=30, bl=71, scene=DefaultMode, als=1, als1=0, color=0, pxa=0, locked=0, dl=62.2
+08-23 23:40:48.546 45290 45299 I C02925/bms_behavior/bms_behavior: [WaitConditionStatus]: runState = 1, cvStatus = 1 
+08-23 23:40:48.546 45290 45299 E C02925/bms_behavior/bms_file: [BmsFileReadBuffer]: file /sys/class/hw_power/charger/direct_charger_sc4/direct_charge_succ is invalid
+08-23 23:40:48.548 45290 45299 E C02925/bms_behavior/bms_file: [BmsFileReadBuffer]: file /sys/class/hw_power/charger/direct_charger_sc4/direct_charge_succ is invalid
+08-23 23:40:48.552 45290 45299 E C02925/bms_behavior/bms_file: [BmsFileReadBuffer]: file /sys/class/hw_power/charger/direct_charger_sc4/direct_charge_succ is invalid
+08-23 23:40:48.553 26178  9702 I C01CEE/hmos_fusion_manager/HMOS_FUSHION: [StartCheckSaIdleLoopTask:797]StartCheckSaIdleLoopTask in
+08-23 23:40:48.557 45290 45299 E C02925/bms_behavior/bms_file: [BmsFileReadBuffer]: file /sys/class/hw_power/charger/direct_charger_sc4/direct_charge_succ is invalid
+08-23 23:40:48.574 45290 45299 E C02925/bms_behavior/bms_file: [BmsFileReadBuffer]: file /sys/class/hw_power/charger/direct_charger_sc4/direct_charge_succ is invalid
+08-23 23:40:48.586 45290 45299 E C02925/bms_behavior/bms_file: [BmsFileReadBuffer]: file /sys/class/hw_power/charger/direct_charger_sc4/direct_charge_succ is invalid
+08-23 23:40:48.594 45290 45299 E C02925/bms_behavior/bms_file: [BmsFileReadBuffer]: file /sys/class/hw_power/coul/coul_data/rbatt is invalid
+08-23 23:40:48.598 45290 45299 E C02925/bms_behavior/bms_file: [BmsFileReadBuffer]: file /sys/class/hw_power/bat_heating/heat_up is invalid
+08-23 23:40:48.602 45290 45297 I C02925/bms_behavior/bms_behavior: [WaitConditionStatus]: runState = 1, cvStatus = 1 
+08-23 23:40:48.602 45290 45297 E C02925/bms_behavior/bms_file: [BmsFileReadBuffer]: file /sys/class/hw_power/charger/direct_charger_sc4/direct_charge_succ is invalid
+08-23 23:40:48.604 45290 45297 E C02925/bms_behavior/bms_file: [BmsFileReadBuffer]: file /sys/class/hw_power/charger/direct_charger_sc4/direct_charge_succ is invalid
+08-23 23:40:48.604 45290 45299 E C02925/bms_behavior/bms_file: [BmsFileReadBuffer]: file /sys/class/hw_power/charger/direct_charger_sc4/direct_charge_succ is invalid
+08-23 23:40:48.606 45290 45297 E C02925/bms_behavior/bms_file: [BmsFileReadBuffer]: file /sys/class/hw_power/charger/direct_charger_sc4/direct_charge_succ is invalid
+08-23 23:40:48.610 45290 45297 E C02925/bms_behavior/bms_file: [BmsFileReadBuffer]: file /sys/class/hw_power/charger/direct_charger_sc4/direct_charge_succ is invalid
+08-23 23:40:48.615 45290 45299 E C02925/bms_behavior/bms_file: [BmsFileReadBuffer]: file /sys/class/hw_power/charger/direct_charger_sc4/direct_charge_succ is invalid
+08-23 23:40:48.617 45290 45299 E C02925/bms_behavior/bms_file: [BmsFileReadBuffer]: file /sys/class/hw_power/charger/direct_charger_sc4/direct_charge_succ is invalid
+08-23 23:40:48.625 45290 45299 I C02925/bms_behavior/bms_behavior: [Monitor]: monitor interval count 1275, name: Battery
+08-23 23:40:48.629 45290 45297 E C02925/bms_behavior/bms_file: [BmsFileReadBuffer]: file /sys/class/hw_power/charger/direct_charger_sc4/direct_charge_succ is invalid
+08-23 23:40:48.640 45290 45297 E C02925/bms_behavior/bms_file: [BmsFileReadBuffer]: file /sys/class/hw_power/charger/direct_charger_sc4/direct_charge_succ is invalid
+08-23 23:40:48.650 45290 45297 E C02925/bms_behavior/bms_file: [BmsFileReadBuffer]: file /sys/class/hw_power/coul/coul_data/rbatt is invalid
+08-23 23:40:48.653 45290 45297 E C02925/bms_behavior/bms_file: [BmsFileReadBuffer]: file /sys/class/hw_power/bat_heating/heat_up is invalid
+08-23 23:40:48.677 45290 45297 E C02925/bms_behavior/bms_file: [BmsFileReadBuffer]: file /sys/class/hw_power/charger/direct_charger_sc4/direct_charge_succ is invalid
+08-23 23:40:48.688 45290 45297 E C02925/bms_behavior/bms_file: [BmsFileReadBuffer]: file /sys/class/hw_power/charger/direct_charger_sc4/direct_charge_succ is invalid
+08-23 23:40:48.690 45290 45297 E C02925/bms_behavior/bms_file: [BmsFileReadBuffer]: file /sys/class/hw_power/charger/direct_charger_sc4/direct_charge_succ is invalid
+08-23 23:40:48.694 45290 45297 I C02925/bms_behavior/bms_behavior: [Monitor]: monitor interval count 1270, name: battery_gauge
+08-23 23:40:48.853 16107  5616 E C01651/.medialibrary.medialibrarydata/shared_block: Alloc: SharedBlock is full: requested allocation 156 bytes, free space 143 bytes, block size 2097152 bytes
+08-23 23:40:48.853 16107  5616 I C01651/.medialibrary.medialibrarydata/shared_block: AllocRow: Alloc the row failed, so back out the new row accounting from allocRowoffset 8520
+08-23 23:40:48.853 16107  5616 E C01650/.medialibrary.medialibrarydata/RdbResultSetBridge: WriteBlock:SharedBlock is full.
+08-23 23:40:49.077   716  2831 W C02B8B/audio_server/DfxMsgManager: [CheckReportDfxMsg]dfx report reach maximum size
+08-23 23:40:49.105   916  9375 I C01735/resource_schedule_service/LOWPOWER_MANAGER: [CheckPeriodical:661] no need to update anco data
+08-23 23:40:49.120   959  1818 I C015B5/netmanager/NetMgrEnhanced: QOE: DumpData# DNS:0,0,0 WifiId:0,2,2,114,0,24019,22685,2,0,0,0,-31,-78,39,70,1, Flag2:[1,1,1,1],[18227,127,125,18908],[-31,-31,-31,-31,-31,-128,-31,-31,-31,-31],4,11,2,5,4, UID:1051 ChId:2 Tcp:0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0 UID:0 ChId:2 Tcp:0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0 UID:20020259 ChId:2 Tcp:0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0 Mov:528
+08-23 23:40:49.120   959  1818 I C015B5/netmanager/NetMgrEnhanced: QOE: AdaBoostPredict# Ada,index:2,NisPsSlow:0,NProba:315,rssi:-40,noise:-78,chload:70,uldelay:1,rtt:0
+08-23 23:40:49.120   959  1818 I C015B5/netmanager/NetMgrEnhanced: QOE: AdaBoostPredict# Ada_app,index:2,NisPsSlow:0,NProba:315,rssi:-40,noise:-78,chload:70,uldelay:1,rtt:0
+08-23 23:40:49.121   959  1818 I C015B5/netmanager/NetMgrEnhanced: QOE: networkQoeChanged:20020259,0,4,0,0,315,0,0,1,2,2,2,4,0,0,315,0,-31,4,0,0,2401900,2268500,11,10,0,0,0,[2,-78,70,1]
+08-23 23:40:49.136  1832 45740 I C02D13/hdcd/HDC_LOG: [FetchCommand:1142] FetchCommand channelId:0 command:5000
+08-23 23:40:49.136  1832 45740 I C02D13/hdcd/HDC_LOG: [FetchCommand:1163] recv heartbeat count is 927 for session 295******063(L:10)
+08-23 23:40:49.240  2619 44140 I C01560/wifi_manager_service/StaStateMachine: SignalPoll,bssid:08:bf:**:**:**:c4,ssid:con******GHz,networkId:185,band:2,freq:5260,rssi:-31,noise:-78,chload:70,snr:39,ulDelay:1,txLinkSpeed:24019,rxLinkSpeed:22685,txBytes:156629368,rxBytes:2755073580,txFailed:0,txPackets:782941,rxPackets:5001593,wifiCategory:2, wifiLinkType:0,GetWifiStandard:6,rxmax:2401,txmax:2401,connState:4,detState:10,lastSignal:4,chloadSelf:4,c0Rssi:-31,c1Rssi:-128
+08-23 23:40:49.242  2619 44140 I C01560/wifi_manager_service/WifiEnhanceInfoRequestor: GetSignalExtInfo signalInfo.ext is invalid
+08-23 23:40:49.262  1509  1928 I C01406/render_service/skia: RSSurfaceRenderNodeDrawable::OnDraw name:immich0, the number of total processedNodes: 17
+08-23 23:40:49.514  1595  2201 I C02930/batterycare_service/BCS/Base/Work: [8355][PostEvent:65]: NightChargeAi: 2026-08-23 23:40:49/Inner_UpdateEvent
+08-23 23:40:49.785 45290 45298 I C02925/bms_behavior/bms_behavior: [WaitConditionStatus]: runState = 1, cvStatus = 1 
+08-23 23:40:49.786 45290 45298 E C02925/bms_behavior/bms_file: [BmsFileReadBuffer]: file /sys/class/hw_power/charger/direct_charger_sc4/direct_charge_succ is invalid
+08-23 23:40:49.789 45290 45298 E C02925/bms_behavior/bms_file: [BmsFileReadBuffer]: file /sys/class/hw_power/charger/direct_charger_sc4/direct_charge_succ is invalid
+08-23 23:40:49.792 45290 45298 E C02925/bms_behavior/bms_file: [BmsFileReadBuffer]: file /sys/class/hw_power/charger/direct_charger_sc4/direct_charge_succ is invalid
+08-23 23:40:49.796 45290 45298 E C02925/bms_behavior/bms_file: [BmsFileReadBuffer]: file /sys/class/hw_power/charger/direct_charger_sc4/direct_charge_succ is invalid
+08-23 23:40:49.813 45290 45298 E C02925/bms_behavior/bms_file: [BmsFileReadBuffer]: file /sys/class/hw_power/charger/direct_charger_sc4/direct_charge_succ is invalid
+08-23 23:40:49.825 45290 45298 E C02925/bms_behavior/bms_file: [BmsFileReadBuffer]: file /sys/class/hw_power/charger/direct_charger_sc4/direct_charge_succ is invalid
+08-23 23:40:49.833 45290 45298 E C02925/bms_behavior/bms_file: [BmsFileReadBuffer]: file /sys/class/hw_power/coul/coul_data/rbatt is invalid
+08-23 23:40:49.837 45290 45298 E C02925/bms_behavior/bms_file: [BmsFileReadBuffer]: file /sys/class/hw_power/bat_heating/heat_up is invalid
+08-23 23:40:49.840  2619  4811 I C01560/wifi_manager_service/IpQosMonitor: IPv6 deltaTcpTxPkts = 0, deltaTcpRxPkts = 0
+08-23 23:40:49.863 45290 45298 E C02925/bms_behavior/bms_file: [BmsFileReadBuffer]: file /sys/class/hw_power/charger/direct_charger_sc4/direct_charge_succ is invalid
+08-23 23:40:49.875 45290 45298 E C02925/bms_behavior/bms_file: [BmsFileReadBuffer]: file /sys/class/hw_power/charger/direct_charger_sc4/direct_charge_succ is invalid
+08-23 23:40:49.877 45290 45298 E C02925/bms_behavior/bms_file: [BmsFileReadBuffer]: file /sys/class/hw_power/charger/direct_charger_sc4/direct_charge_succ is invalid
+08-23 23:40:49.883 45290 45298 I C02925/bms_behavior/bms_behavior: [Monitor]: monitor interval count 1270, name: battery_gauge_aux
+08-23 23:40:50.160   959  1818 I C015B5/netmanager/NetMgrEnhanced: QOE: DumpData# DNS:0,0,0 WifiId:0,2,2,1629,0,24019,22685,10,0,0,0,-31,-78,39,70,1, Flag2:[1,1,1,1],[18227,127,125,18908],[-31,-31,-31,-31,-31,-31,-31,-31,-31,-31],4,11,2,5,4, UID:1051 ChId:2 Tcp:0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0 UID:0 ChId:2 Tcp:0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0 UID:20020259 ChId:2 Tcp:0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0 Mov:528
+08-23 23:40:50.160   959  1818 I C015B5/netmanager/NetMgrEnhanced: QOE: AdaBoostPredict# Ada,index:2,NisPsSlow:0,NProba:315,rssi:-40,noise:-78,chload:70,uldelay:1,rtt:0
+08-23 23:40:50.160   959  1818 I C015B5/netmanager/NetMgrEnhanced: QOE: AdaBoostPredict# Ada_app,index:2,NisPsSlow:0,NProba:315,rssi:-40,noise:-78,chload:70,uldelay:1,rtt:0
+08-23 23:40:50.161   959  1818 I C015B5/netmanager/NetMgrEnhanced: QOE: networkQoeChanged:20020259,0,4,0,0,315,0,0,1,2,2,2,4,0,0,315,0,-31,4,0,0,2401900,2268500,11,10,0,12,0,[2,-78,70,1]
+08-23 23:40:50.257  2619 41821 I C01560/wifi_manager_service/StaStateMachine: SignalPoll,bssid:08:bf:**:**:**:c4,ssid:con******GHz,networkId:185,band:2,freq:5260,rssi:-31,noise:-78,chload:70,snr:37,ulDelay:1,txLinkSpeed:24019,rxLinkSpeed:22685,txBytes:156629368,rxBytes:2755073967,txFailed:0,txPackets:782941,rxPackets:5001596,wifiCategory:2, wifiLinkType:0,GetWifiStandard:6,rxmax:2401,txmax:2401,connState:4,detState:10,lastSignal:4,chloadSelf:4,c0Rssi:-31,c1Rssi:-128
+08-23 23:40:50.257  2619 41821 I C01560/wifi_manager_service/WifiEnhanceInfoRequestor: GetSignalExtInfo signalInfo.ext is invalid
+08-23 23:40:50.547   593 20731 I C02D10/hiview/CpuCollector: CalculateProcessCpuStatInfos: startTime=1787499640537, endTime=1787499650547, startBootTime=75904476, endBootTime=75914486, period=10010, isNeedUpdate=1
+08-23 23:40:50.580  1440 43807 I C02986/powermgr/DisplayPowerBrightness: PrintCurrentLuxLog, lux=[28.9/351, 28.8/349, 32.9/351, 32.9/351, 32.9/350, 32.8|75914518], slux=16.0, blux=0.0, oLux=16.0, bTh=54.0, bTh2=59.6, sbTh=136.0, dTh=4.2, dTh2=-1.9, bt=1200, dt=1500, pxs=0, sz=30, bl=71, scene=DefaultMode, als=1, als1=0, color=0, pxa=0, locked=0, dl=62.2
+08-23 23:40:50.650   593  2806 I C02D15/hiview/XPower: [task_87]#add epoll fd: 124 [timer:257:waiter]
+08-23 23:40:50.654   593  8317 I C02D15/hiview/XPower: [task_73]#ddr param data_alloc: 240
+08-23 23:40:50.654   593  2806 I C02D15/hiview/XPower: [task_86]#Npu GetFrequencyData energy is zero
+08-23 23:40:50.655   593  6943 E C02D15/hiview/XPower: [task_117]#Failed to find accounter, id: 13
+08-23 23:40:50.655   593  9570 I C02D15/hiview/XPower: [task_124]#WIFI request chipset data:909009519 result:0
+08-23 23:40:50.658   593  8317 I C02D15/hiview/XPower: [task_73]#dpm param data_alloc: 9320
+08-23 23:40:50.669   593  9569 I C02D15/hiview/XPower: [task_124]#WIFI request chipset data:909009520 result:0
+08-23 23:40:50.674   593  6074 I C02D15/hiview/XPower: [task_124]#WIFI request chipset data:909009599 result:0
+08-23 23:40:50.676   593  2806 I C02D15/hiview/XPower: [task_124]#delta value:0 0;33 0;20 0;318 0;3409 0;588407 668;0 0;
+08-23 23:40:50.676   593  2806 I C02D15/hiview/XPower: [task_124]#delta value:171875 8;173218 1;239844 641;6795 18;455 0;
+08-23 23:40:50.676   593  2806 I C02D15/hiview/XPower: [task_124]#delta value:13599000 39266;1323958 67310;62787223 200570;10066908 20926;
+08-23 23:40:50.676   593  2806 I C02D15/hiview/XPower: [task_124]#delta value:76455901 241179;0 0;0 0;0 0;0 0;
+08-23 23:40:50.676   593  2806 I C02D15/hiview/XPower: [task_124]#delta value:55877127 241179;20570281 0;
+08-23 23:40:50.676   593  2806 I C02D15/hiview/XPower: [task_124]#delta value:108 0;0 0;0 0;0 0;0 0;8912 0;0 0;0 0;0 0;0 0;11199 0;0 0;0 0;12442174 24400;0 0;160 0;0 0;0 0;12310164 20019;0 0;
+08-23 23:40:50.676   593  2806 I C02D15/hiview/XPower: [task_124]#delta value:60253 228;
+08-23 23:40:50.676   593  2806 I C02D15/hiview/XPower: [task_124]#delta value:1045469 486;
+08-23 23:40:50.679   593  2622 I C02D19/hiview/CHR_SERVICE: SendRequest:serial=223 slot=0 scene=901
+08-23 23:40:50.679   593  2622 I C02D19/hiview/CHR_SERVICE: [HmiClient][chr_client]SendRequest: [159,159,159,159,35,16,0,0,12,0,0,0,223,0,0,0,0,0,0,0,133,3,0,0]
+08-23 23:40:50.680  1145  5531 E C02520/hmi_host/hmi_service: [ProcessSceneQuery:1336] there is no cnf and ind msgs, sceneId: 901, modemId: 0, clientId:33555025
+08-23 23:40:50.680   593 55840 I C02D19/hiview/CHR_SERVICE: [chr_client]OnCtrlMsgRecv: msgLen=28 [159,159,159,159,36,16,0,0,16,0,0,0,223,0,0,0,0,0,0,0,133,3,0,0,3,0,0,0]
+08-23 23:40:50.680   593  2622 W C02D19/hiview/CHR_SERVICE: HandleConfirmMessage: request is not handled. sn=223, modemId=0,scene=901 result=3
+08-23 23:40:50.681   593  2622 W C02D15/hiview/XPower: [task_0]#simCnt 0 invalid
+08-23 23:40:50.685   593  9571 E C02D15/hiview/XPower: [task_64]#Failed to find package for uid:20020251
+08-23 23:40:50.773   593  9568 I C02D15/hiview/XPower: [task_64]#remove epoll fd: 124
+08-23 23:40:50.774   593  9570 I C02D15/hiview/XPower: [task_84]#io polling interval time arrive, should watch io.
+08-23 23:40:50.803  3252  3252 E C05C01/oam_hisi/OAM: [oam_bfg_log_recv:1064]read len error -1
+08-23 23:40:50.803   899  8634 W C01700/resource_schedule_executor/RSS: [a92abb1482bd321 0 0]DeliverResource, WARNING :libexec_common_plugin.z.so plugin cost time(27 ms) over 10 ms!
+08-23 23:40:50.810   593  9570 E C02D15/hiview/XPower: [task_84]#Process pid: 45289, writeBytes is invalid in map pls check.
+08-23 23:40:50.810   593  9570 E C02D15/hiview/XPower: [task_84]#GetWriteBytesResult Failed, bms_heating.
+08-23 23:40:50.810   593  9570 E C02D15/hiview/XPower: [task_84]#FetchWriteBytesResult Failed, can not check io.
+08-23 23:40:50.810   593  9570 E C02D15/hiview/XPower: [task_84]#Process pid: 1592, writeBytes is invalid in map pls check.
+08-23 23:40:50.810   593  9570 E C02D15/hiview/XPower: [task_84]#GetWriteBytesResult Failed, bootanimation.
+08-23 23:40:50.810   593  9570 E C02D15/hiview/XPower: [task_84]#FetchWriteBytesResult Failed, can not check io.
+08-23 23:40:50.811   593  9570 E C02D15/hiview/XPower: [task_84]#Process pid: 712, writeBytes is invalid in map pls check.
+08-23 23:40:50.811   593  9570 E C02D15/hiview/XPower: [task_84]#GetWriteBytesResult Failed, check_module_update.
+08-23 23:40:50.811   593  9570 E C02D15/hiview/XPower: [task_84]#FetchWriteBytesResult Failed, can not check io.
+08-23 23:40:50.812   593  9570 E C02D15/hiview/XPower: [task_84]#Process pid: 61177, writeBytes is invalid in map pls check.
+08-23 23:40:50.812   593  9570 E C02D15/hiview/XPower: [task_84]#GetWriteBytesResult Failed, cloudinterfaceauth.
+08-23 23:40:50.812   593  9570 E C02D15/hiview/XPower: [task_84]#FetchWriteBytesResult Failed, can not check io.
+08-23 23:40:50.815   593  9570 E C02D15/hiview/XPower: [task_84]#Process pid: 15740, writeBytes is invalid in map pls check.
+08-23 23:40:50.815   593  9570 E C02D15/hiview/XPower: [task_84]#GetWriteBytesResult Failed, com.huawei.hms.adsservice.
+08-23 23:40:50.815   593  9570 E C02D15/hiview/XPower: [task_84]#FetchWriteBytesResult Failed, can not check io.
+08-23 23:40:50.815   593  9570 E C02D15/hiview/XPower: [task_84]#Process pid: 3441, writeBytes is invalid in map pls check.
+08-23 23:40:50.815   593  9570 E C02D15/hiview/XPower: [task_84]#GetWriteBytesResult Failed, com.huawei.hms.pafservice:0.
+08-23 23:40:50.815   593  9570 E C02D15/hiview/XPower: [task_84]#FetchWriteBytesResult Failed, can not check io.
+08-23 23:40:50.817  1832 45740 I C02D13/hdcd/HDC_LOG: [SendHeartbeatMsg:1519] send heartbeat count is 928 and messages count is 7318 for session 295******063(L:10)
+08-23 23:40:50.821   593  9570 E C02D15/hiview/XPower: [task_84]#Process pid: 933, writeBytes is invalid in map pls check.
+08-23 23:40:50.821   593  9570 E C02D15/hiview/XPower: [task_84]#GetWriteBytesResult Failed, ddr_inspect.
+08-23 23:40:50.821   593  9570 E C02D15/hiview/XPower: [task_84]#FetchWriteBytesResult Failed, can not check io.
+08-23 23:40:50.823   593  9570 E C02D15/hiview/XPower: [task_84]#Process pid: 562, writeBytes is invalid in map pls check.
+08-23 23:40:50.823   593  9570 E C02D15/hiview/XPower: [task_84]#GetWriteBytesResult Failed, dsmm_init.
+08-23 23:40:50.823   593  9570 E C02D15/hiview/XPower: [task_84]#FetchWriteBytesResult Failed, can not check io.
+08-23 23:40:50.824   593  2806 I C02D15/hiview/XPower: [task_57]#CheckCpuHeavyLoadAnomaly mConditionType = frontground, start = 1787499350652, end = 1787499650650
+08-23 23:40:50.824   593  9570 E C02D15/hiview/XPower: [task_84]#Process pid: 15403, writeBytes is invalid in map pls check.
+08-23 23:40:50.824   593  9570 E C02D15/hiview/XPower: [task_84]#GetWriteBytesResult Failed, file_migrate_ability.
+08-23 23:40:50.824   593  9570 E C02D15/hiview/XPower: [task_84]#FetchWriteBytesResult Failed, can not check io.
+08-23 23:40:50.825   593  9570 E C02D15/hiview/XPower: [task_84]#Process pid: 9120, writeBytes is invalid in map pls check.
+08-23 23:40:50.825   593  9570 E C02D15/hiview/XPower: [task_84]#GetWriteBytesResult Failed, fingerprint_auth_host.
+08-23 23:40:50.825   593  9570 E C02D15/hiview/XPower: [task_84]#FetchWriteBytesResult Failed, can not check io.
+08-23 23:40:50.827   593  9570 E C02D15/hiview/XPower: [task_84]#Process pid: 596, writeBytes is invalid in map pls check.
+08-23 23:40:50.827   593  9570 E C02D15/hiview/XPower: [task_84]#GetWriteBytesResult Failed, hilogDomainOn.
+08-23 23:40:50.827   593  9570 E C02D15/hiview/XPower: [task_84]#FetchWriteBytesResult Failed, can not check io.
+08-23 23:40:50.827   593  9570 E C02D15/hiview/XPower: [task_84]#Process pid: 592, writeBytes is invalid in map pls check.
+08-23 23:40:50.827   593  9570 E C02D15/hiview/XPower: [task_84]#GetWriteBytesResult Failed, hilogPidOn.
+08-23 23:40:50.827   593  9570 E C02D15/hiview/XPower: [task_84]#FetchWriteBytesResult Failed, can not check io.
+08-23 23:40:50.827   593  9570 E C02D15/hiview/XPower: [task_84]#Process pid: 1256, writeBytes is invalid in map pls check.
+08-23 23:40:50.827   593  9570 E C02D15/hiview/XPower: [task_84]#GetWriteBytesResult Failed, hilogcat.
+08-23 23:40:50.827   593  9570 E C02D15/hiview/XPower: [task_84]#FetchWriteBytesResult Failed, can not check io.
+08-23 23:40:50.829   593  9570 E C02D15/hiview/XPower: [task_84]#Process pid: 4924, writeBytes is invalid in map pls check.
+08-23 23:40:50.829   593  9570 E C02D15/hiview/XPower: [task_84]#GetWriteBytesResult Failed, hwnffearly.
+08-23 23:40:50.829   593  9570 E C02D15/hiview/XPower: [task_84]#FetchWriteBytesResult Failed, can not check io.
+08-23 23:40:50.830   593  9570 E C02D15/hiview/XPower: [task_84]#Process pid: 1142, writeBytes is invalid in map pls check.
+08-23 23:40:50.830   593  9570 E C02D15/hiview/XPower: [task_84]#GetWriteBytesResult Failed, interactRpmb.
+08-23 23:40:50.830   593  9570 E C02D15/hiview/XPower: [task_84]#FetchWriteBytesResult Failed, can not check io.
+08-23 23:40:50.830   593  9570 E C02D15/hiview/XPower: [task_84]#Process pid: 580, writeBytes is invalid in map pls check.
+08-23 23:40:50.831   593  9570 E C02D15/hiview/XPower: [task_84]#GetWriteBytesResult Failed, key_enable.
+08-23 23:40:50.831   593  9570 E C02D15/hiview/XPower: [task_84]#FetchWriteBytesResult Failed, can not check io.
+08-23 23:40:50.831   593  9570 E C02D15/hiview/XPower: [task_84]#Process pid: 948, writeBytes is invalid in map pls check.
+08-23 23:40:50.831   593  9570 E C02D15/hiview/XPower: [task_84]#GetWriteBytesResult Failed, light_sensor.
+08-23 23:40:50.831   593  9570 E C02D15/hiview/XPower: [task_84]#FetchWriteBytesResult Failed, can not check io.
+08-23 23:40:50.840   593  9570 E C02D15/hiview/XPower: [task_84]#Process pid: 936, writeBytes is invalid in map pls check.
+08-23 23:40:50.840   593  9570 E C02D15/hiview/XPower: [task_84]#GetWriteBytesResult Failed, start_connectivity_ohos.
+08-23 23:40:50.840   593  9570 E C02D15/hiview/XPower: [task_84]#FetchWriteBytesResult Failed, can not check io.
+08-23 23:40:50.840   593  9570 E C02D15/hiview/XPower: [task_84]#Process pid: 1147, writeBytes is invalid in map pls check.
+08-23 23:40:50.840   593  9570 E C02D15/hiview/XPower: [task_84]#GetWriteBytesResult Failed, stopkmsglogcat.
+08-23 23:40:50.840   593  9570 E C02D15/hiview/XPower: [task_84]#FetchWriteBytesResult Failed, can not check io.
+08-23 23:40:50.840   593  9570 E C02D15/hiview/XPower: [task_84]#Process pid: 9076, writeBytes is invalid in map pls check.
+08-23 23:40:50.840   593  9570 E C02D15/hiview/XPower: [task_84]#GetWriteBytesResult Failed, storage_info.
+08-23 23:40:50.841   593  9570 E C02D15/hiview/XPower: [task_84]#FetchWriteBytesResult Failed, can not check io.
+08-23 23:40:50.843   593  9570 E C02D15/hiview/XPower: [task_84]#Process pid: 45288, writeBytes is invalid in map pls check.
+08-23 23:40:50.843   593  9570 E C02D15/hiview/XPower: [task_84]#GetWriteBytesResult Failed, usb_port.
+08-23 23:40:50.843   593  9570 E C02D15/hiview/XPower: [task_84]#FetchWriteBytesResult Failed, can not check io.
+08-23 23:40:50.843   593  9570 E C02D15/hiview/XPower: [task_84]#Process pid: 1347, writeBytes is invalid in map pls check.
+08-23 23:40:50.843   593  9570 E C02D15/hiview/XPower: [task_84]#GetWriteBytesResult Failed, usb_port_mode.
+08-23 23:40:50.843   593  9570 E C02D15/hiview/XPower: [task_84]#FetchWriteBytesResult Failed, can not check io.
+08-23 23:40:50.846   593  9570 E C02D15/hiview/XPower: [task_84]#Process pid: 1376, writeBytes is invalid in map pls check.
+08-23 23:40:50.846   593  9570 E C02D15/hiview/XPower: [task_84]#GetWriteBytesResult Failed, write_updater.
+08-23 23:40:50.846   593  9570 E C02D15/hiview/XPower: [task_84]#FetchWriteBytesResult Failed, can not check io.
+08-23 23:40:50.897  1125  1326 W C01C42/time_service/TimeService: t3 75916811
+08-23 23:40:50.940  2933  2933 I A02112/com.ohos.FusionSearch/[FusionSearch]100_3.6.1.301.020: TimeWheelManager, start process taskId:364 taskName:releaseSearch
+08-23 23:40:50.940  2933  2933 I A02112/com.ohos.FusionSearch/[FusionSearch]100_3.6.1.301.020: [SearchCaller], pollingReleaseSearch invoke
+08-23 23:40:50.940  2933  2933 I A02112/com.ohos.FusionSearch/[FusionSearch]100_3.6.1.301.020: TimeWheelManager, cancel taskId:368 success.
+08-23 23:40:50.941  2933  2933 I A02112/com.ohos.FusionSearch/[FusionSearch]100_3.6.1.301.020: TimeWheelManager, success add taskId:369 to wheelType:MINUTE window:3.total taskCount:5
+08-23 23:40:50.941  2933  2933 I A02112/com.ohos.FusionSearch/[FusionSearch]100_3.6.1.301.020: TimeWheelManager, register taskName:EfficiencyResourcesUtil_resetEfficiencyResourceLatter success taskId:369!
+08-23 23:40:50.941  2933  2933 I A02112/com.ohos.FusionSearch/[FusionSearch]100_3.6.1.301.020: TimeWheelManager, end process taskId:364 taskName:releaseSearch 
+08-23 23:40:51.039   593  2806 E C02D15/hiview/XPower: [task_57]#GetProcessQuotaName failed pid:7525, processName:com.dgh18.immich
+08-23 23:40:51.039   593  2806 I C02D15/hiview/XPower: [task_57]#CheckCpuHeavyLoadAnomaly mConditionType = background, start = 1787499350652, end = 1787499650650
+08-23 23:40:51.040   593 20731 I C02D15/hiview/XPower: [task_208733]#QueryActiveOsAccountIds userId[0]:100
+08-23 23:40:51.046   593 20731 E C02D10/hiview/UDeviceCli: GetThreadCount: ioctl IOCTRL_COLLECT_PROC_THREAD_COUNT ret=-1
+08-23 23:40:51.046   593 20731 E C02D10/hiview/UDeviceCli: FetchThreadCpuData: ioctl GetThreadCount error
+08-23 23:40:51.092   593  8317 I C02D15/hiview/XPower: [task_57]#CheckCpuHeavyLoadAnomaly mConditionType = efficiency, start = 1787499350652, end = 1787499650650
+08-23 23:40:51.200   959  1818 I C015B5/netmanager/NetMgrEnhanced: QOE: DumpData# DNS:0,0,0 WifiId:0,2,2,387,0,24019,22685,3,0,0,0,-31,-78,37,70,1, Flag2:[1,1,1,1],[18227,127,125,18908],[-31,-31,-31,-31,-31,-31,-31,-31,-31,-31],4,11,2,5,4, UID:1051 ChId:2 Tcp:0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0 UID:0 ChId:2 Tcp:0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0 UID:20020259 ChId:2 Tcp:0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0 Mov:528
+08-23 23:40:51.200   959  1818 I C015B5/netmanager/NetMgrEnhanced: QOE: AdaBoostPredict# Ada,index:2,NisPsSlow:0,NProba:315,rssi:-40,noise:-78,chload:70,uldelay:1,rtt:0
+08-23 23:40:51.200   959  1818 I C015B5/netmanager/NetMgrEnhanced: QOE: AdaBoostPredict# Ada_app,index:2,NisPsSlow:0,NProba:315,rssi:-40,noise:-78,chload:70,uldelay:1,rtt:0
+08-23 23:40:51.200   959  1818 I C015B5/netmanager/NetMgrEnhanced: QOE: networkQoeChanged:20020259,0,4,0,0,315,0,0,1,2,2,2,4,0,0,315,0,-31,4,0,0,2401900,2268500,11,10,0,3,0,[2,-78,70,1]
+08-23 23:40:51.271  2619 59872 I C01560/wifi_manager_service/StaStateMachine: SignalPoll,bssid:08:bf:**:**:**:c4,ssid:con******GHz,networkId:185,band:2,freq:5260,rssi:-31,noise:-78,chload:70,snr:39,ulDelay:1,txLinkSpeed:24019,rxLinkSpeed:22685,txBytes:156629368,rxBytes:2755074306,txFailed:0,txPackets:782941,rxPackets:5001598,wifiCategory:2, wifiLinkType:0,GetWifiStandard:6,rxmax:2401,txmax:2401,connState:4,detState:10,lastSignal:4,chloadSelf:4,c0Rssi:-31,c1Rssi:-128
+08-23 23:40:51.272  2619 59872 I C01560/wifi_manager_service/WifiEnhanceInfoRequestor: GetSignalExtInfo signalInfo.ext is invalid
+08-23 23:40:51.470  1832 45740 I C02D13/hdcd/HDC_LOG: [FetchCommand:1142] FetchCommand channelId:1972194141 command:1001
+08-23 23:40:51.470  1832 45740 I C02D13/hdcd/HDC_LOG: [DispatchTaskData:1650] New HTaskInfo cid:1972194141 sid:295******063(L:10) command:1001
+08-23 23:40:51.470  1832 45740 I C02D13/hdcd/HDC_LOG: [AdminTask:886] AdminTask add task type:0 cid:1972194141 sid:295******063(L:10) mapsize:1
+08-23 23:40:51.470  1832 45740 I C02D13/hdcd/HDC_LOG: [HdcTaskBase:34] HdcTaskBase type:0 cid:1972194141 sid:295******063(L:10)
+08-23 23:40:51.470  1832 45740 I C02D13/hdcd/HDC_LOG: [CommandDispatch:414] Unity CommandDispatch command:1001 cid:1972194141 sid:295******063(L:10)
+08-23 23:40:51.470  1832 45740 W C02D13/hdcd/HDC_LOG: [GetDevItem:114] GetDevItem false key:persist.hdc.root
+08-23 23:40:51.471  1832  9705 I C02D13/hdcd/HDC_LOG: [Popen:225] Popen pipe fds[pipeRead]:17 fds[pipeWrite]:67, mode 0
+08-23 23:40:51.479  1832 45740 I C02D13/hdcd/HDC_LOG: [ExecuteCommand:286] ExecuteCommand cmd:hil****** -x(L:8) fd:17 pid:9706
+08-23 23:40:51.479  1832 45740 I C02D13/hdcd/HDC_LOG: [CommandDispatch:486] Unity CommandDispatch command:1001 finish cid:1972194141 sid:295******063(L:10)
+08-23 23:40:51.504  9706  9706 W C02C02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [9706 2000 2000] failed
+08-23 23:40:51.505  9706  9706 W C02C02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [9706 2000 2000] failed
+08-23 23:40:51.505  9706  9706 W C02C02/PARAM: SystemReadParam failed!name is:persist.init.debug.loglevel,err:1002
+08-23 23:40:51.507  9706  9706 W C02C02/PARAM: Selinux check name const.logsystem.versiontype in u:object_r:versiontype_param:s0 [9706 2000 2000] failed
+08-23 23:40:51.507  9706  9706 W C02C02/PARAM: SystemReadParam failed!name is:const.logsystem.versiontype,err:1002
+08-23 23:40:51.508  9706  9706 W C02C02/PARAM: Selinux check name musl.log.enable in u:object_r:musl_param:s0 [9706 2000 2000] failed
+08-23 23:40:51.508  9706  9706 E C02C02/PARAM: Forbid to read parameter musl.log.enable
+08-23 23:40:51.508  9706  9706 E C02C02/PARAM: Forbid to access parameter musl.log.enable
+08-23 23:40:51.508  9706  9706 W C02C02/PARAM: Selinux check name musl.log.level in u:object_r:musl_param:s0 [9706 2000 2000] failed
+08-23 23:40:51.508  9706  9706 E C02C02/PARAM: Forbid to read parameter musl.log.level
+08-23 23:40:51.508  9706  9706 E C02C02/PARAM: Forbid to access parameter musl.log.level
+08-23 23:40:51.508  9706  9706 W C02C02/PARAM: Selinux check name musl.ld.debug.dlopen in u:object_r:musl_param:s0 [9706 2000 2000] failed
+08-23 23:40:51.508  9706  9706 E C02C02/PARAM: Forbid to read parameter musl.ld.debug.dlopen
+08-23 23:40:51.508  9706  9706 E C02C02/PARAM: Forbid to access parameter musl.ld.debug.dlopen
+08-23 23:40:51.509  9706  9706 W C02C02/PARAM: Selinux check name musl.ld.debug.dlclose in u:object_r:musl_param:s0 [9706 2000 2000] failed
+08-23 23:40:51.509  9706  9706 E C02C02/PARAM: Forbid to read parameter musl.ld.debug.dlclose
+08-23 23:40:51.509  9706  9706 E C02C02/PARAM: Forbid to access parameter musl.ld.debug.dlclose
+08-23 23:40:51.509  9706  9706 W C02C02/PARAM: Selinux check name debug.hitrace.tags.enableflags in u:object_r:hitrace_param:s0 [9706 2000 2000] failed
+08-23 23:40:51.509  9706  9706 E C02C02/PARAM: Forbid to read parameter debug.hitrace.tags.enableflags
+08-23 23:40:51.509  9706  9706 E C02C02/PARAM: Forbid to access parameter debug.hitrace.tags.enableflags
+08-23 23:40:51.521  9706  9706 W C02C02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [9706 2000 2000] failed
+08-23 23:40:51.521  9706  9706 W C02C02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [9706 2000 2000] failed
+08-23 23:40:51.521  9706  9706 W C02C02/PARAM: SystemReadParam failed!name is:persist.init.debug.loglevel,err:1002
+08-23 23:40:51.523  9706  9706 W C02C02/PARAM: Selinux check name const.logsystem.versiontype in u:object_r:versiontype_param:s0 [9706 2000 2000] failed
+08-23 23:40:51.523  9706  9706 W C02C02/PARAM: SystemReadParam failed!name is:const.logsystem.versiontype,err:1002
+08-23 23:40:51.524  9706  9706 W C02C02/PARAM: Selinux check name musl.log.enable in u:object_r:musl_param:s0 [9706 2000 2000] failed
+08-23 23:40:51.524  9706  9706 E C02C02/PARAM: Forbid to read parameter musl.log.enable
+08-23 23:40:51.524  9706  9706 E C02C02/PARAM: Forbid to access parameter musl.log.enable
+08-23 23:40:51.524  9706  9706 W C02C02/PARAM: Selinux check name musl.log.level in u:object_r:musl_param:s0 [9706 2000 2000] failed
+08-23 23:40:51.524  9706  9706 E C02C02/PARAM: Forbid to read parameter musl.log.level
+08-23 23:40:51.524  9706  9706 E C02C02/PARAM: Forbid to access parameter musl.log.level
+08-23 23:40:51.524  9706  9706 W C02C02/PARAM: Selinux check name musl.ld.debug.dlopen in u:object_r:musl_param:s0 [9706 2000 2000] failed
+08-23 23:40:51.524  9706  9706 E C02C02/PARAM: Forbid to read parameter musl.ld.debug.dlopen
+08-23 23:40:51.524  9706  9706 E C02C02/PARAM: Forbid to access parameter musl.ld.debug.dlopen
+08-23 23:40:51.524  9706  9706 W C02C02/PARAM: Selinux check name musl.ld.debug.dlclose in u:object_r:musl_param:s0 [9706 2000 2000] failed
+08-23 23:40:51.524  9706  9706 E C02C02/PARAM: Forbid to read parameter musl.ld.debug.dlclose
+08-23 23:40:51.524  9706  9706 E C02C02/PARAM: Forbid to access parameter musl.ld.debug.dlclose
+08-23 23:40:51.524  9706  9706 W C02C02/PARAM: Selinux check name debug.hitrace.tags.enableflags in u:object_r:hitrace_param:s0 [9706 2000 2000] failed
+08-23 23:40:51.524  9706  9706 E C02C02/PARAM: Forbid to read parameter debug.hitrace.tags.enableflags
+08-23 23:40:51.524  9706  9706 E C02C02/PARAM: Forbid to access parameter debug.hitrace.tags.enableflags
