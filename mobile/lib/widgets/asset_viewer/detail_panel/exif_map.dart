@@ -79,6 +79,14 @@ class ExifMap extends StatelessWidget {
       unawaited(launchUrl(uri));
     }
 
+    void showDiagSnack(String label) {
+      try {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(label), duration: const Duration(milliseconds: 800)));
+      } catch (_) {}
+    }
+
     Future<void> openMapPage() async {
       // Release-visible diagnostics: dPrint is kDebugMode-gated.
       // ignore: avoid_print
@@ -109,10 +117,15 @@ class ExifMap extends StatelessWidget {
           assetMarkerRemoteId: markerId,
           assetThumbhash: markerAssetThumbhash,
           onReverseGeocoded: onReverseGeocoded,
-          // OHOS: the native map click never reaches onMapClick when the
-          // inline detail sheet's vertical-drag recognizer is above the
-          // platform view, so taps are handled by a Flutter-side layer below.
-          onTap: defaultTargetPlatform == TargetPlatform.ohos ? null : (tapPosition, latLong) => openExternally(),
+          // OHOS keeps the native onMapClick path alive: the platform view
+          // consumes touches natively (zoom buttons prove it), so the channel
+          // callback is the primary navigation trigger.
+          onTap: defaultTargetPlatform == TargetPlatform.ohos
+              ? (tapPosition, latLong) {
+                  showDiagSnack('native map click');
+                  openMapPage();
+                }
+              : (tapPosition, latLong) => openExternally(),
           onCreated: onMapCreated,
         );
 
@@ -120,14 +133,12 @@ class ExifMap extends StatelessWidget {
           return mapThumbnail;
         }
 
+        // Fallback for hosts where the platform view never delivers
+        // onMapClick; DuplicateGuard on the route absorbs double-fire.
         return GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTap: () {
-            try {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('map tap -> opening map page'), duration: Duration(milliseconds: 800)),
-              );
-            } catch (_) {}
+            showDiagSnack('flutter tap');
             openMapPage();
           },
           child: mapThumbnail,
