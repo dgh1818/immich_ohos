@@ -68,9 +68,31 @@ class ExifMap extends StatelessWidget {
       );
     }
 
+    Future<void> openExternally() async {
+      Uri? uri = await createCoordinatesUri();
+
+      if (uri == null) {
+        return;
+      }
+
+      dPrint(() => 'Opening Map Uri: $uri');
+      unawaited(launchUrl(uri));
+    }
+
+    Future<void> openMapPage() async {
+      dPrint(() => 'ExifMap: pushing DriftMapRoute (ohos)');
+      await context.pushRoute<LatLng?>(
+        DriftMapRoute(
+          initialLocation: LatLng(exifInfo.latitude ?? 0, exifInfo.longitude ?? 0),
+          initialAssetId: markerId,
+          initialAssetThumbhash: markerAssetThumbhash,
+        ),
+      );
+    }
+
     return LayoutBuilder(
       builder: (context, constraints) {
-        return MapThumbnail(
+        final mapThumbnail = MapThumbnail(
           centre: LatLng(exifInfo.latitude ?? 0, exifInfo.longitude ?? 0),
           height: 150,
           width: constraints.maxWidth,
@@ -78,29 +100,18 @@ class ExifMap extends StatelessWidget {
           assetMarkerRemoteId: markerId,
           assetThumbhash: markerAssetThumbhash,
           onReverseGeocoded: onReverseGeocoded,
-          onTap: (tapPosition, latLong) async {
-            if (defaultTargetPlatform == TargetPlatform.ohos) {
-              await context.pushRoute<LatLng?>(
-                DriftMapRoute(
-                  initialLocation: LatLng(exifInfo.latitude ?? 0, exifInfo.longitude ?? 0),
-                  initialAssetId: markerId,
-                  initialAssetThumbhash: markerAssetThumbhash,
-                ),
-              );
-              return;
-            }
-
-            Uri? uri = await createCoordinatesUri();
-
-            if (uri == null) {
-              return;
-            }
-
-            dPrint(() => 'Opening Map Uri: $uri');
-            unawaited(launchUrl(uri));
-          },
+          // OHOS: the native map click never reaches onMapClick when the
+          // inline detail sheet's vertical-drag recognizer is above the
+          // platform view, so taps are handled by a Flutter-side layer below.
+          onTap: defaultTargetPlatform == TargetPlatform.ohos ? null : (tapPosition, latLong) => openExternally(),
           onCreated: onMapCreated,
         );
+
+        if (defaultTargetPlatform != TargetPlatform.ohos) {
+          return mapThumbnail;
+        }
+
+        return GestureDetector(behavior: HitTestBehavior.opaque, onTap: openMapPage, child: mapThumbnail);
       },
     );
   }
