@@ -79,32 +79,15 @@ class ExifMap extends StatelessWidget {
       unawaited(launchUrl(uri));
     }
 
-    void showDiagSnack(String label) {
-      try {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(label), duration: const Duration(milliseconds: 800)));
-      } catch (_) {}
-    }
-
-    Future<void> openMapPage() async {
-      // Release-visible diagnostics: dPrint is kDebugMode-gated.
-      // ignore: avoid_print
-      print('ExifMap: tap received, pushing DriftMapRoute');
-      try {
-        await context.pushRoute<LatLng?>(
-          DriftMapRoute(
-            initialLocation: LatLng(exifInfo.latitude ?? 0, exifInfo.longitude ?? 0),
-            initialAssetId: markerId,
-            initialAssetThumbhash: markerAssetThumbhash,
-          ),
-        );
-        // ignore: avoid_print
-        print('ExifMap: DriftMapRoute completed');
-      } catch (e) {
-        // ignore: avoid_print
-        print('ExifMap: pushRoute failed: $e');
-      }
+    Future<void> openMapPage() {
+      dPrint(() => 'ExifMap: pushing DriftMapRoute (ohos)');
+      return context.pushRoute<LatLng?>(
+        DriftMapRoute(
+          initialLocation: LatLng(exifInfo.latitude ?? 0, exifInfo.longitude ?? 0),
+          initialAssetId: markerId,
+          initialAssetThumbhash: markerAssetThumbhash,
+        ),
+      );
     }
 
     return LayoutBuilder(
@@ -121,10 +104,7 @@ class ExifMap extends StatelessWidget {
           // consumes touches natively (zoom buttons prove it), so the channel
           // callback is the primary navigation trigger.
           onTap: defaultTargetPlatform == TargetPlatform.ohos
-              ? (tapPosition, latLong) {
-                  showDiagSnack('native map click');
-                  openMapPage();
-                }
+              ? (tapPosition, latLong) => openMapPage()
               : (tapPosition, latLong) => openExternally(),
           onCreated: onMapCreated,
         );
@@ -135,14 +115,7 @@ class ExifMap extends StatelessWidget {
 
         // Fallback for hosts where the platform view never delivers
         // onMapClick; DuplicateGuard on the route absorbs double-fire.
-        return GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: () {
-            showDiagSnack('flutter tap');
-            openMapPage();
-          },
-          child: mapThumbnail,
-        );
+        return GestureDetector(behavior: HitTestBehavior.opaque, onTap: openMapPage, child: mapThumbnail);
       },
     );
   }
