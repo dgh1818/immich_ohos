@@ -80,14 +80,23 @@ class ExifMap extends StatelessWidget {
     }
 
     Future<void> openMapPage() async {
-      dPrint(() => 'ExifMap: pushing DriftMapRoute (ohos)');
-      await context.pushRoute<LatLng?>(
-        DriftMapRoute(
-          initialLocation: LatLng(exifInfo.latitude ?? 0, exifInfo.longitude ?? 0),
-          initialAssetId: markerId,
-          initialAssetThumbhash: markerAssetThumbhash,
-        ),
-      );
+      // Release-visible diagnostics: dPrint is kDebugMode-gated.
+      // ignore: avoid_print
+      print('ExifMap: tap received, pushing DriftMapRoute');
+      try {
+        await context.pushRoute<LatLng?>(
+          DriftMapRoute(
+            initialLocation: LatLng(exifInfo.latitude ?? 0, exifInfo.longitude ?? 0),
+            initialAssetId: markerId,
+            initialAssetThumbhash: markerAssetThumbhash,
+          ),
+        );
+        // ignore: avoid_print
+        print('ExifMap: DriftMapRoute completed');
+      } catch (e) {
+        // ignore: avoid_print
+        print('ExifMap: pushRoute failed: $e');
+      }
     }
 
     return LayoutBuilder(
@@ -111,7 +120,18 @@ class ExifMap extends StatelessWidget {
           return mapThumbnail;
         }
 
-        return GestureDetector(behavior: HitTestBehavior.opaque, onTap: openMapPage, child: mapThumbnail);
+        return GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () {
+            try {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('map tap -> opening map page'), duration: Duration(milliseconds: 800)),
+              );
+            } catch (_) {}
+            openMapPage();
+          },
+          child: mapThumbnail,
+        );
       },
     );
   }
