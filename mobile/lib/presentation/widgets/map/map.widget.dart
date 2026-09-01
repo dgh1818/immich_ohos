@@ -16,6 +16,7 @@ import 'package:immich_mobile/presentation/widgets/bottom_sheet/map_bottom_sheet
 import 'package:immich_mobile/presentation/widgets/map/map.state.dart';
 import 'package:immich_mobile/presentation/widgets/map/map_utils.dart';
 import 'package:immich_mobile/providers/routes.provider.dart';
+import 'package:immich_mobile/routing/router.dart';
 import 'package:immich_mobile/utils/async_mutex.dart';
 import 'package:immich_mobile/utils/debounce.dart';
 import 'package:immich_mobile/widgets/common/immich_toast.dart';
@@ -219,10 +220,19 @@ class _DriftMapState extends ConsumerState<DriftMap> {
       return;
     }
 
-    // When the AssetViewer is open, the DriftMap route stays alive in the background.
-    // If we continue to update bounds, the map-scoped timeline service gets recreated and the previous one disposed,
-    // which can invalidate the TimelineService instance that was passed into AssetViewerRoute (causing "loading forever").
-    if (ref.read(isAssetViewerOpenProvider)) {
+    // When the AssetViewer is open on top of this map, the DriftMap route stays
+    // alive in the background. If we continue to update bounds, the map-scoped
+    // timeline service gets recreated and the previous one disposed, which can
+    // invalidate the TimelineService instance that was passed into
+    // AssetViewerRoute (causing "loading forever").
+    // Only skip while the viewer is the top-most route: opening the map from an
+    // asset's EXIF panel pushes DriftMapRoute above the already-open viewer, and
+    // there the map is the live surface and must keep loading (upstream never
+    // hits this because its EXIF map opens a web page instead of this route).
+    final topRouteName = ref.read(appRouterProvider).stackData.isEmpty
+        ? null
+        : ref.read(appRouterProvider).stackData.last.name;
+    if (topRouteName == AssetViewerRoute.name) {
       return;
     }
 
