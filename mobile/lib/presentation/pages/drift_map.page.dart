@@ -1,5 +1,3 @@
-import 'dart:ui' as ui;
-
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -13,6 +11,7 @@ import 'package:immich_mobile/providers/infrastructure/asset.provider.dart';
 import 'package:immich_mobile/providers/infrastructure/timeline.provider.dart';
 import 'package:immich_mobile/providers/user.provider.dart';
 import 'package:immich_mobile/utils/debounce.dart';
+import 'package:immich_mobile/utils/viewer_hdr.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 
 @RoutePage()
@@ -21,12 +20,7 @@ class DriftMapPage extends ConsumerStatefulWidget {
   final String? initialAssetId;
   final String? initialAssetThumbhash;
 
-  const DriftMapPage({
-    super.key,
-    this.initialLocation,
-    this.initialAssetId,
-    this.initialAssetThumbhash,
-  });
+  const DriftMapPage({super.key, this.initialLocation, this.initialAssetId, this.initialAssetThumbhash});
 
   @override
   ConsumerState<DriftMapPage> createState() => _DriftMapPageState();
@@ -46,6 +40,11 @@ class _DriftMapPageState extends ConsumerState<DriftMapPage> {
   @override
   void initState() {
     super.initState();
+    // This page is commonly pushed on top of an open AssetViewer (EXIF panel
+    // tap).  The viewer leaves the engine in HDR output mode, which brightens
+    // and washes out the map; drop to full SDR while the map is open.  HDR is
+    // restored by the viewer's RouteAware.didPopNext when this route pops.
+    ViewerHdr.resetModes();
     final initialLocation = widget.initialLocation;
     if (initialLocation != null && widget.initialAssetId != null) {
       _pinnedAsset = DriftMapSelectedAsset(
@@ -155,8 +154,6 @@ class _DriftMapPageState extends ConsumerState<DriftMapPage> {
 
   @override
   Widget build(BuildContext context) {
-    ui.SetHdr.setHdrMode(hdr: 0, is_image: true);
-
     return Scaffold(
       extendBodyBehindAppBar: true,
       body: context.isMobile
@@ -177,8 +174,9 @@ class _DriftMapPageState extends ConsumerState<DriftMapPage> {
                             ? ref.watch(timelineUsersProvider).valueOrNull ?? [user.id]
                             : [user.id];
 
-                        final timelineService =
-                            ref.watch(timelineFactoryProvider).map(users, ref.watch(mapStateProvider).toOptions());
+                        final timelineService = ref
+                            .watch(timelineFactoryProvider)
+                            .map(users, ref.watch(mapStateProvider).toOptions());
                         ref.onDispose(timelineService.dispose);
                         return timelineService;
                       }),

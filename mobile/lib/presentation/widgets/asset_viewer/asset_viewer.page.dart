@@ -168,6 +168,7 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
     }
 
     _routeAware.onPop = _onRoutePop;
+    _routeAware.onPopNext = _onRoutePopNext;
     routeObserver.subscribe(_routeAware, route);
     _subscribedRoute = route;
   }
@@ -381,6 +382,20 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
   void _onRoutePop() {
     ViewerHdr.resetModes();
     unawaited(restoreEdgeToEdge());
+  }
+
+  // A route pushed above the viewer (e.g. the EXIF map page) was popped and
+  // this viewer is visible again.  The covering page may have forced the
+  // engine to SDR, so re-assert HDR for the current asset.
+  void _onRoutePopNext() {
+    if (!_canUseRef) {
+      return;
+    }
+
+    final asset = ref.read(assetViewerProvider).currentAsset;
+    if (asset != null) {
+      _syncHdrForAsset(asset);
+    }
   }
 
   void _removeImageListener() {
@@ -625,10 +640,17 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
 
 class _AssetViewerRouteAware extends RouteAware {
   VoidCallback? onPop;
+  VoidCallback? onPopNext;
 
   @override
   void didPop() {
     onPop?.call();
     super.didPop();
+  }
+
+  @override
+  void didPopNext() {
+    onPopNext?.call();
+    super.didPopNext();
   }
 }
