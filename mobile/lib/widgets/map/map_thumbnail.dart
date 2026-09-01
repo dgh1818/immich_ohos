@@ -107,6 +107,12 @@ class MapThumbnail extends HookConsumerWidget {
     }
 
     Future<void> onStyleLoaded() async {
+      // The native map has already rendered its first style frame at this
+      // point.  Do not keep the loading veil over the map while optional
+      // marker positioning or reverse geocoding waits on another async
+      // operation; those operations must not determine map visibility.
+      styleLoaded.value = true;
+
       try {
         if (defaultTargetPlatform == TargetPlatform.ohos) {
           if (assetMarkerRemoteId != null) {
@@ -129,8 +135,6 @@ class MapThumbnail extends HookConsumerWidget {
         // We do not have a way to check if the controller is disposed for now
         // https://github.com/maplibre/flutter-maplibre-gl/issues/192
       }
-
-      styleLoaded.value = true;
     }
 
     return MapThemeOverride(
@@ -178,6 +182,12 @@ class MapThumbnail extends HookConsumerWidget {
                     point: value,
                     assetRemoteId: assetMarkerRemoteId!,
                     assetThumbhash: assetThumbhash!,
+                    // The marker's own gesture detector otherwise wins the
+                    // arena over the platform view / wrapper tap and swallows
+                    // the tap (the pin sits on the map centre).
+                    onTap: onTap == null
+                        ? null
+                        : () => onTap!(Point<double>(value.x.toDouble(), value.y.toDouble()), centre),
                   );
                 },
               ),
