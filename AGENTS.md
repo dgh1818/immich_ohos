@@ -24,6 +24,12 @@
 
 - 引擎(WSL `~/engine_3.44.9`)一律用仓库自带的 `./ohos -t release` 构建,不得手工拼 ninja/out 目录或另写构建命令。构建产物同步进 `mobile/ohos/har/flutter.har` 后再构建 HAP;装机前必须确认源码 mtime 早于 HAP 构建时间,禁止把旧构建当新版安装。
 
+## OHOS 应用版本号与装机
+
+- OHOS 安装版本的唯一源头是 `mobile/pubspec.yaml` 的 `version: x.y.z+<versionCode>`;只修改这里,再由 `fvm flutter build hap` 自动同步到 `mobile/ohos/AppScope/app.json5` 和最终 HAP 的 `pack.info`,不要把 AppScope 单独作为长期版本源修改。
+- 装机前必须检查最终 HAP 内 `pack.info` 的 `version.code` 与目标设备已安装包的 `versionCode`;必须单调递增,否则 HarmonyOS 会报 `install version downgrade`。需要保留应用数据时不得先卸载,应提高 `mobile/pubspec.yaml` 的 build number 后重新构建并使用 `hdc -t <serial> install -r`。
+- `versionName` 可保持上游版本号,但 OHOS build number 必须高于目标设备已有版本;改版本号后必须重新构建 HAP,不能把旧 HAP 当作新版本安装。
+
 ## Merging Upstream Tags (OHOS)
 
 - 上游 merge 可能**在无任何冲突标记的情况下**覆盖掉 OHOS 本地修复(上游代码"看起来正常"就被接受)。merge 是否干净不代表安全,以下文件每次 merge 后必须人工 diff,禁止只看冲突标记。
