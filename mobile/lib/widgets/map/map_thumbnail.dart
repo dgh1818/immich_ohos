@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:immich_mobile/extensions/asyncvalue_extensions.dart';
 import 'package:immich_mobile/extensions/build_context_extensions.dart';
 import 'package:immich_mobile/extensions/maplibrecontroller_extensions.dart';
@@ -19,7 +20,7 @@ final exifLocationTextProvider = StateProvider<String>((ref) => " ");
 /// User can provide either a [assetMarkerRemoteId] to display the asset's thumbnail or set
 /// [showMarkerPin] to true which would display a marker pin instead. If both are provided,
 /// [assetMarkerRemoteId] will take precedence
-class MapThumbnail extends HookWidget {
+class MapThumbnail extends HookConsumerWidget {
   final Function(Point<double>, LatLng)? onTap;
   final LatLng centre;
   final String? assetMarkerRemoteId;
@@ -52,7 +53,7 @@ class MapThumbnail extends HookWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final controller = useRef<MapLibreMapController?>(null);
     final styleLoaded = useState(false);
     final position = useValueNotifier<Point<num>?>(null);

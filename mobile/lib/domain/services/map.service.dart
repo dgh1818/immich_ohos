@@ -9,7 +9,7 @@ typedef MapQuery = ({MapMarkerSource markerSource});
 class MapFactory {
   final MapRepository _mapRepository;
 
-  const MapFactory({required DriftMapRepository mapRepository}) : _mapRepository = mapRepository;
+  const MapFactory({required MapRepository mapRepository}) : _mapRepository = mapRepository;
 
   MapService remote(List<String> ownerIds, TimelineMapOptions options) =>
       MapService(_mapRepository.remote(ownerIds, options));

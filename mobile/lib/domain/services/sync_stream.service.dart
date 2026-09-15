@@ -45,10 +45,10 @@ class SyncStreamService {
   SyncStreamService({
     required SyncApiRepository syncApiRepository,
     required SyncStreamRepository syncStreamRepository,
-    required DriftLocalAssetRepository localAssetRepository,
-    required DriftTrashedLocalAssetRepository trashedLocalAssetRepository,
+    required LocalAssetRepository localAssetRepository,
+    required TrashedLocalAssetRepository trashedLocalAssetRepository,
     required AssetMediaRepository assetMediaRepository,
-    required IPermissionRepository permissionRepository,
+    required DevicePermissionRepository permissionRepository,
     required SyncMigrationRepository syncMigrationRepository,
     required ApiService api,
     Completer<void>? cancellation,

@@ -30,7 +30,7 @@ class ViewIntentAssetResolver {
   static final Logger _logger = Logger('ViewIntentAssetResolver');
 
   const ViewIntentAssetResolver({
-    required DriftLocalAssetRepository localAssetRepository,
+    required LocalAssetRepository localAssetRepository,
     required TimelineFactory timelineFactory,
   }) : _localAssetRepository = localAssetRepository,
        _timelineFactory = timelineFactory;

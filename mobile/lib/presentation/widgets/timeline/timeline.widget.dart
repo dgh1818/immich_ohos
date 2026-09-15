@@ -26,6 +26,7 @@ import 'package:immich_mobile/providers/infrastructure/readonly_mode.provider.da
 import 'package:immich_mobile/providers/infrastructure/settings.provider.dart';
 import 'package:immich_mobile/providers/infrastructure/timeline.provider.dart';
 import 'package:immich_mobile/providers/timeline/multiselect.provider.dart';
+import 'package:immich_mobile/utils/debounce.dart';
 import 'package:immich_mobile/routing/app_navigation_observer.dart';
 import 'package:immich_mobile/widgets/common/immich_sliver_app_bar.dart';
 import 'package:immich_mobile/widgets/common/mesmerizing_sliver_app_bar.dart';
@@ -47,6 +48,8 @@ class Timeline extends ConsumerWidget {
     this.readOnly = false,
     this.persistentBottomBar = false,
     this.loadingWidget,
+    this.onScrollAssetChanged,
+    this.tilesPerRowOverride,
   });
 
   final Widget? topSliverWidget;
@@ -62,10 +65,13 @@ class Timeline extends ConsumerWidget {
   final bool readOnly;
   final bool persistentBottomBar;
   final Widget? loadingWidget;
+  final ValueChanged<BaseAsset?>? onScrollAssetChanged;
+  final int? tilesPerRowOverride;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final columnCount = ref.watch(appConfigProvider.select((config) => config.timeline.tilesPerRow));
+    final int columnCount =
+        tilesPerRowOverride ?? ref.watch(appConfigProvider.select((config) => config.timeline.tilesPerRow)) ?? 4;
     return LayoutBuilder(
       builder: (_, constraints) {
         return ProviderScope(
@@ -95,6 +101,9 @@ class Timeline extends ConsumerWidget {
             snapToMonth: snapToMonth,
             maxWidth: constraints.maxWidth,
             loadingWidget: loadingWidget,
+            onScrollAssetChanged: onScrollAssetChanged,
+            columnCount: columnCount,
+            allowColumnResize: tilesPerRowOverride == null,
           ),
         );
       },
@@ -125,6 +134,9 @@ class _SliverTimeline extends ConsumerStatefulWidget {
     this.snapToMonth = true,
     this.maxWidth,
     this.loadingWidget,
+    this.onScrollAssetChanged,
+    required this.columnCount,
+    this.allowColumnResize = true,
   });
 
   final Widget? topSliverWidget;
@@ -137,6 +149,9 @@ class _SliverTimeline extends ConsumerStatefulWidget {
   final bool snapToMonth;
   final double? maxWidth;
   final Widget? loadingWidget;
+  final ValueChanged<BaseAsset?>? onScrollAssetChanged;
+  final int columnCount;
+  final bool allowColumnResize;
 
   @override
   ConsumerState createState() => _SliverTimelineState();
@@ -145,6 +160,9 @@ class _SliverTimeline extends ConsumerStatefulWidget {
 class _SliverTimelineState extends ConsumerState<_SliverTimeline> with WidgetsBindingObserver {
   late final ScrollController _scrollController;
   StreamSubscription? _eventSubscription;
+  late final Debouncer _scrollAssetDebouncer;
+  List<Segment>? _segmentsCache;
+  int? _lastScrollAssetIndex;
 
   // Drag selection state
   bool _dragging = false;
@@ -162,10 +180,14 @@ class _SliverTimelineState extends ConsumerState<_SliverTimeline> with WidgetsBi
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _scrollController = ScrollController(onAttach: _restoreAssetPosition);
+    _scrollAssetDebouncer = Debouncer(
+      interval: const Duration(milliseconds: 150),
+      maxWaitTime: const Duration(milliseconds: 400),
+    );
+    _scrollController.addListener(_onScroll);
     _eventSubscription = EventStream.shared.listen(_onEvent);
 
-    final currentTilesPerRow = ref.read(appConfigProvider.select((config) => config.timeline.tilesPerRow));
-    _perRow = currentTilesPerRow;
+    _perRow = widget.columnCount;
     _scaleFactor = 7.0 - _perRow;
     _baseScaleFactor = _scaleFactor;
 
@@ -244,6 +266,64 @@ class _SliverTimelineState extends ConsumerState<_SliverTimeline> with WidgetsBi
     EventStream.shared.emit(MultiSelectToggleEvent(isEnabled));
   }
 
+  void _onScroll() {
+    if (widget.onScrollAssetChanged == null) {
+      return;
+    }
+    _scrollAssetDebouncer.run(_emitScrollAsset);
+  }
+
+  Future<void> _emitScrollAsset() async {
+    if (!mounted || widget.onScrollAssetChanged == null) {
+      return;
+    }
+
+    final segments = _segmentsCache;
+    if (segments == null || segments.isEmpty || !_scrollController.hasClients) {
+      return;
+    }
+
+    final timelineService = ref.read(timelineServiceProvider);
+    final totalAssets = timelineService.totalAssets;
+    if (totalAssets == 0) {
+      if (_lastScrollAssetIndex != null) {
+        _lastScrollAssetIndex = null;
+        widget.onScrollAssetChanged?.call(null);
+      }
+      return;
+    }
+
+    final segment = segments.findByOffset(_scrollController.offset);
+    if (segment == null) {
+      return;
+    }
+
+    final rowIndex = segment.getMinChildIndexForScrollOffset(_scrollController.offset);
+    final columnCount = ref.read(timelineArgsProvider).columnCount;
+    int assetIndex;
+    if (rowIndex <= segment.firstIndex) {
+      assetIndex = segment.firstAssetIndex;
+    } else {
+      final rowIndexInSegment = rowIndex - (segment.firstIndex + 1);
+      assetIndex = segment.firstAssetIndex + (rowIndexInSegment * columnCount);
+    }
+
+    if (assetIndex < 0) {
+      assetIndex = 0;
+    } else if (assetIndex >= totalAssets) {
+      assetIndex = totalAssets - 1;
+    }
+    if (_lastScrollAssetIndex == assetIndex) {
+      return;
+    }
+    _lastScrollAssetIndex = assetIndex;
+
+    final asset = await timelineService.getAssetAsync(assetIndex);
+    if (mounted) {
+      widget.onScrollAssetChanged?.call(asset);
+    }
+  }
+
   int? _getCurrentAssetIndex(List<Segment> segments) {
     final currentOffset = _scrollController.offset.clamp(0.0, _scrollController.position.maxScrollExtent);
     final segment = segments.findByOffset(currentOffset) ?? segments.lastOrNull;
@@ -265,8 +345,10 @@ class _SliverTimelineState extends ConsumerState<_SliverTimeline> with WidgetsBi
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     unawaited(_eventSubscription?.cancel());
+    _scrollAssetDebouncer.dispose();
     super.dispose();
   }
 
@@ -432,6 +514,7 @@ class _SliverTimelineState extends ConsumerState<_SliverTimeline> with WidgetsBi
             body: asyncSegments.widgetWhen(
               onLoading: widget.loadingWidget != null ? () => widget.loadingWidget! : null,
               onData: (segments) {
+                _segmentsCache = segments;
                 final childCount = (segments.lastOrNull?.lastIndex ?? -1) + 1;
                 final double appBarExpandedHeight = widget.appBar != null && widget.appBar is MesmerizingSliverAppBar
                     ? 200
@@ -497,6 +580,9 @@ class _SliverTimelineState extends ConsumerState<_SliverTimeline> with WidgetsBi
                         };
 
                         scale.onUpdate = (details) {
+                          if (!widget.allowColumnResize) {
+                            return;
+                          }
                           final newScaleFactor = math.max(math.min(5.0, _baseScaleFactor * details.scale), 1.0);
                           final newPerRow = 7 - newScaleFactor.toInt();
 

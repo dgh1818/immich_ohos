@@ -517,7 +517,7 @@ export class MessagesImplBase extends NativeSyncApiOhos {
         break;
       }
 
-      const hr = new HashResult();
+      const hr = new HashResult(assetIds[i]);
       hr.setAssetId(assetIds[i]);
 
       const b64 = (await executors[i]) ?? '';
@@ -766,7 +766,7 @@ export class MessagesImplBase extends NativeSyncApiOhos {
       const isCloud: boolean = false;
       const assetCount = entry.count ?? 0;
 
-      let album = new PlatformAlbum(path, name, updatedAt, isCloud, assetCount)
+      let album = new PlatformAlbum(path, name, isCloud, assetCount, updatedAt)
       albums.push(album);
     }
 
@@ -787,7 +787,7 @@ export class MessagesImplBase extends NativeSyncApiOhos {
       const isCloud: boolean = false;
       const assetCount = entry.count ?? 0;
 
-      let album = new PlatformAlbum(path, name, updatedAt, isCloud, assetCount)
+      let album = new PlatformAlbum(path, name, isCloud, assetCount, updatedAt)
       albums.push(album);
     }
 
@@ -808,7 +808,7 @@ export class MessagesImplBase extends NativeSyncApiOhos {
       const isCloud: boolean = false;
       const assetCount = entry.count ?? 0;
 
-      let album = new PlatformAlbum(path, name, updatedAt, isCloud, assetCount)
+      let album = new PlatformAlbum(path, name, isCloud, assetCount, updatedAt)
       albums.push(album);
     }
 
@@ -846,7 +846,7 @@ export class MessagesImplBase extends NativeSyncApiOhos {
         }
         const lastSlash = lpath.lastIndexOf('/');
         const name = lastSlash >= 0 && lastSlash + 1 < lpath.length ? lpath.substring(lastSlash + 1) : lpath;
-        const extraAlbum = new PlatformAlbum(lpath, name, -1, false, assetCount);
+        const extraAlbum = new PlatformAlbum(lpath, name, false, assetCount, -1);
         albums.push(extraAlbum);
       }
     }
@@ -1252,17 +1252,17 @@ export class MessagesImplBase extends NativeSyncApiOhos {
           info.id,
           info.name ?? "",
           info.mediaType,
+          info.duration ?? 0,
+          info.orientation ?? 0,
+          info.isFavorite,
+          info.playbackStyle,
           info.createdAt ?? 0,
           info.modifiedAt ?? 0,
           info.width ?? 0,
           info.height ?? 0,
-          info.duration ?? 0,
-          info.orientation ?? 0,
-          info.isFavorite,
           -1,
           199.9,
           199.9,
-          info.playbackStyle,
         );
         assetResult.push(asset);
       }

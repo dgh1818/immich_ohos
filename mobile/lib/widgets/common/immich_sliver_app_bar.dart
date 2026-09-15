@@ -69,15 +69,15 @@ class ImmichSliverAppBar extends ConsumerWidget {
               title ??
               (defaultTargetPlatform == TargetPlatform.ohos ? const SizedBox.shrink() : const _ImmichLogoWithText()),
           actions: [
-            const _SyncStatusIndicator(),
+            const SyncStatusIndicator(),
             if (isCasting && !isReadonlyModeEnabled)
               IconButton(
                 onPressed: () => showDialog(context: context, builder: (context) => const CastDialog()),
                 icon: Icon(isCasting ? Icons.cast_connected_rounded : Icons.cast_rounded),
               ),
             ...?actions,
-            if (showUploadButton && !isReadonlyModeEnabled) const _BackupIndicator(),
-            const _ProfileIndicator(),
+            if (showUploadButton && !isReadonlyModeEnabled) const BackupIndicator(),
+            const ProfileIndicator(),
             const SizedBox(width: 8),
           ],
         ),
@@ -100,8 +100,8 @@ class _ImmichLogoWithText extends StatelessWidget {
   );
 }
 
-class _ProfileIndicator extends ConsumerWidget {
-  const _ProfileIndicator();
+class ProfileIndicator extends ConsumerWidget {
+  const ProfileIndicator({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -174,8 +174,8 @@ class _ProfileIndicator extends ConsumerWidget {
 
 const double _kBadgeWidgetSize = 30.0;
 
-class _BackupIndicator extends ConsumerWidget {
-  const _BackupIndicator();
+class BackupIndicator extends ConsumerWidget {
+  const BackupIndicator({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -282,14 +282,14 @@ class _BadgeLabel extends StatelessWidget {
   }
 }
 
-class _SyncStatusIndicator extends ConsumerStatefulWidget {
-  const _SyncStatusIndicator();
+class SyncStatusIndicator extends ConsumerStatefulWidget {
+  const SyncStatusIndicator({super.key});
 
   @override
-  ConsumerState<_SyncStatusIndicator> createState() => _SyncStatusIndicatorState();
+  ConsumerState<SyncStatusIndicator> createState() => _SyncStatusIndicatorState();
 }
 
-class _SyncStatusIndicatorState extends ConsumerState<_SyncStatusIndicator> with TickerProviderStateMixin {
+class _SyncStatusIndicatorState extends ConsumerState<SyncStatusIndicator> with TickerProviderStateMixin {
   late AnimationController _rotationController;
   late AnimationController _dismissalController;
   late Animation<double> _rotationAnimation;

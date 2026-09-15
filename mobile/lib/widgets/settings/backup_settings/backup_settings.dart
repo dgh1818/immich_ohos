@@ -25,7 +25,7 @@ class BackupSettings extends ConsumerWidget {
   const BackupSettings({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return SettingsSubPageScaffold(
       settings: [
         SettingGroupTitle(title: context.t.network_requirements, icon: Icons.cell_tower),

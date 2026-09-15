@@ -177,8 +177,7 @@ class RemoteFullImageProvider extends CancellableImageProvider<RemoteFullImagePr
         key.assetId,
         type: AssetMediaSize.preview,
         thumbhash: key.thumbhash,
-          edited: key.edited,
-          aiHdr: key.aiHdr,
+        edited: key.edited,
       ),
     );
     yield* loadRequest(previewRequest, decode, isFinal: false);

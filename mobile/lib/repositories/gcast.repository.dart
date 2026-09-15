@@ -1,68 +1,67 @@
-import 'package:cast/device.dart';
-import 'package:cast/discovery_service.dart';
-import 'package:cast/session.dart';
-import 'package:cast/session_manager.dart';
+import 'dart:async';
+
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:huawei_cast/huawei_cast.dart';
 
 final gCastRepositoryProvider = Provider((_) {
   return GCastRepository();
 });
 
 class GCastRepository {
-  CastSession? _castSession;
+  final HuaweiCast _huaweiCast = HuaweiCast();
+  late final StreamSubscription<HuaweiCastStatus> _statusSubscription;
 
   void Function(CastSessionState)? onCastStatus;
   void Function(Map<String, dynamic>)? onCastMessage;
 
-  Map<String, dynamic>? _receiverStatus;
-
-  GCastRepository();
-
-  Future<void> connect(CastDevice device) async {
-    _castSession = await CastSessionManager().startSession(device);
-
-    _castSession?.stateStream.listen((state) {
-      onCastStatus?.call(state);
-    });
-
-    _castSession?.messageStream.listen((message) {
-      onCastMessage?.call(message);
-      if (message['type'] == 'RECEIVER_STATUS') {
-        _receiverStatus = message;
-      }
-    });
-
-    // open the default receiver
-    sendMessage(CastSession.kNamespaceReceiver, {'type': 'LAUNCH', 'appId': 'CC1AD845'});
+  GCastRepository() {
+    _statusSubscription = _huaweiCast.statusStream.listen(_handleCastStatus);
   }
+
+  String get receiverName => _huaweiCast.receiverName;
+
+  void _handleCastStatus(HuaweiCastStatus status) {
+    onCastStatus?.call(status.state);
+    onCastMessage?.call({
+      'type': 'RECEIVER_STATUS',
+      'status': status.state == CastSessionState.connected ? {'receiverName': status.receiverName} : null,
+    });
+  }
+
+  Future<void> connect(String assetId) async {
+    await _huaweiCast.startCast(assetId);
+  }
+
+  Future<void> loadMedia(String assetId) async {
+    await _huaweiCast.startCast(assetId);
+  }
+
+  FutureOr<dynamic> setMetadata(
+    String contentUrl,
+    String mediaImage,
+    String title,
+    int duration, {
+    AVSessionType sessionType = AVSessionType.video,
+  }) => _huaweiCast.setMetadata(contentUrl, mediaImage, title, duration, sessionType: sessionType);
+
+  FutureOr<dynamic> setCurrentPosition(int position, bool isPlaying) =>
+      _huaweiCast.setCurrentPosition(position, isPlaying);
+
+  FutureOr<dynamic> clearSession() => _huaweiCast.clearSession();
+
+  FutureOr<dynamic> play() => _huaweiCast.play();
+
+  FutureOr<dynamic> pause() => _huaweiCast.pause();
+
+  FutureOr<dynamic> seekTo(int position) => _huaweiCast.seekTo(position);
 
   Future<void> disconnect() async {
-    final sessionID = getSessionId();
-
-    sendMessage(CastSession.kNamespaceReceiver, {'type': "STOP", "sessionId": sessionID});
-
-    // wait 500ms to ensure the stop command is processed
-    await Future.delayed(const Duration(milliseconds: 500));
-
-    await _castSession?.close();
+    await _huaweiCast.stopCast();
   }
 
-  String? getSessionId() {
-    if (_receiverStatus == null) {
-      return null;
-    }
-    return _receiverStatus!['status']['applications'][0]['sessionId'];
-  }
+  FutureOr<dynamic> stopCast() => _huaweiCast.stopCast();
 
-  void sendMessage(String namespace, Map<String, dynamic> message) {
-    if (_castSession == null) {
-      throw Exception("Cast session is not established");
-    }
-
-    _castSession!.sendMessage(namespace, message);
-  }
-
-  Future<List<CastDevice>> listDestinations() async {
-    return await CastDiscoveryService().search(timeout: const Duration(seconds: 3));
+  void dispose() {
+    _statusSubscription.cancel();
   }
 }

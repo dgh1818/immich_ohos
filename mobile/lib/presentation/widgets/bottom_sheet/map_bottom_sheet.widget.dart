@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:immich_mobile/domain/models/asset/base_asset.model.dart';
 import 'package:immich_mobile/domain/models/events.model.dart';
 import 'package:immich_mobile/domain/models/map.model.dart';
 import 'package:immich_mobile/domain/utils/event_stream.dart';
@@ -16,8 +17,9 @@ import 'package:immich_mobile/providers/user.provider.dart';
 
 class MapBottomSheet extends StatelessWidget {
   final Key? sheetKey;
+  final ValueChanged<BaseAsset?>? onScrollAssetChanged;
 
-  const MapBottomSheet({super.key, this.sheetKey});
+  const MapBottomSheet({super.key, this.sheetKey, this.onScrollAssetChanged});
 
   @override
   Widget build(BuildContext context) {
@@ -29,15 +31,20 @@ class MapBottomSheet extends StatelessWidget {
       resizeOnScroll: false,
       actions: const [],
       backgroundColor: context.themeData.colorScheme.surface,
-      slivers: const [
-        SliverFillRemaining(hasScrollBody: false, child: SizedBox(height: 0, child: _ScopedMapTimeline())),
+      slivers: [
+        SliverFillRemaining(
+          hasScrollBody: false,
+          child: SizedBox(height: 0, child: _ScopedMapTimeline(onScrollAssetChanged: onScrollAssetChanged)),
+        ),
       ],
     );
   }
 }
 
 class _ScopedMapTimeline extends StatelessWidget {
-  const _ScopedMapTimeline();
+  final ValueChanged<BaseAsset?>? onScrollAssetChanged;
+
+  const _ScopedMapTimeline({this.onScrollAssetChanged});
 
   @override
   Widget build(BuildContext context) {
@@ -70,11 +77,16 @@ class _ScopedMapTimeline extends StatelessWidget {
           return timelineService;
         }),
       ],
-      child: const Column(
+      child: Column(
         children: [
           _MapAssetCount(),
           Expanded(
-            child: Timeline(appBar: null, bottomSheet: GeneralBottomSheet(minChildSize: 0.23), withScrubber: false),
+            child: Timeline(
+              appBar: null,
+              bottomSheet: GeneralBottomSheet(minChildSize: 0.23),
+              withScrubber: false,
+              onScrollAssetChanged: onScrollAssetChanged,
+            ),
           ),
         ],
       ),

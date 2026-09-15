@@ -43,7 +43,7 @@ class TimelineFactory {
   final SettingsRepository _settingsRepository;
 
   const TimelineFactory({
-    required DriftTimelineRepository timelineRepository,
+    required TimelineRepository timelineRepository,
     required SettingsRepository settingsRepository,
   }) : _timelineRepository = timelineRepository,
        _settingsRepository = settingsRepository;

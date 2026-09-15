@@ -47,7 +47,7 @@ function wrapError(error: Error): Array<Object> {
 export class ViewIntentPayload {
   private path?: string;
 
-  public setPath(path:string):void {
+  public setPath(path:string | undefined):void {
     this.path = path;
   }
 
@@ -55,19 +55,19 @@ export class ViewIntentPayload {
     return this.path;
   }
 
-  private mimeType?: string;
+  private mimeType: string;
 
   public setMimeType(mimeType:string):void {
     this.mimeType = mimeType;
   }
 
-  getMimeType(): string | undefined{
+  getMimeType(): string{
     return this.mimeType;
   }
 
   private localAssetId?: string;
 
-  public setLocalAssetId(localAssetId:string):void {
+  public setLocalAssetId(localAssetId:string | undefined):void {
     this.localAssetId = localAssetId;
   }
 
@@ -75,35 +75,25 @@ export class ViewIntentPayload {
     return this.localAssetId;
   }
 
-  constructor(path?: string, mimeType?: string, localAssetId?: string) {
-    this.path = path;
+  constructor(mimeType: string, path?: string, localAssetId?: string) {
     this.mimeType = mimeType;
+    this.path = path;
     this.localAssetId = localAssetId;
   }
 
-  toList(): Object[] {
-    let arr: Object[] = new Array();
-    if(this.path !==undefined){
-      arr.push(this.path);
-    }
-    if(this.mimeType !==undefined){
-      arr.push(this.mimeType);
-    }
-    if(this.localAssetId !==undefined){
-      arr.push(this.localAssetId);
-    }
+  toList(): (Object | null)[] {
+    let arr: (Object | null)[] = [];
+    arr.push(this.path !== undefined ? this.path : null);
+    arr.push(this.mimeType !== undefined ? this.mimeType : null);
+    arr.push(this.localAssetId !== undefined ? this.localAssetId : null);
     return arr;
   }
 
-  static fromList(arr: Object[]): ViewIntentPayload {
-    let pigeonResult: ViewIntentPayload = new ViewIntentPayload();
-    let path: Object = arr[0];
-    pigeonResult.setPath(path as string);
-    let mimeType: Object = arr[1];
-    pigeonResult.setMimeType(mimeType as string);
-    let localAssetId: Object = arr[2];
-    pigeonResult.setLocalAssetId(localAssetId as string);
-    return pigeonResult;
+  static fromList(arr: (Object | null)[]): ViewIntentPayload {
+    let path: string | undefined = arr[0] != null ? arr[0] as string : undefined;
+    let mimeType: string = arr[1] as string;
+    let localAssetId: string | undefined = arr[2] != null ? arr[2] as string : undefined;
+    return new ViewIntentPayload(mimeType, path, localAssetId);
   }
 }
 
@@ -122,7 +112,7 @@ export class PigeonCodec extends StandardMessageCodec {
   readValueOfType(type: number,  buffer: ByteBuffer): ESObject {
     switch (type) {
       case this.getByte(129):
-        return ViewIntentPayload.fromList(super.readValue(buffer) as Object[]);
+        return ViewIntentPayload.fromList(super.readValue(buffer) as (Object | null)[]);
       default:
         return super.readValueOfType(type, buffer);
     }

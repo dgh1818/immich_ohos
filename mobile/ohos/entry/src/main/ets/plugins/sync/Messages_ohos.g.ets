@@ -64,19 +64,19 @@ export class PlatformAssetPlaybackStyleEnum {
 
 /* Generated class from Pigeon that represents data sent in messages.*/
 export class HashResult {
-  private assetId?: string;
+  private assetId: string;
 
   public setAssetId(assetId:string):void {
     this.assetId = assetId;
   }
 
-  getAssetId(): string | undefined{
+  getAssetId(): string{
     return this.assetId;
   }
 
   private error?: string;
 
-  public setError(error:string):void {
+  public setError(error:string | undefined):void {
     this.error = error;
   }
 
@@ -86,7 +86,7 @@ export class HashResult {
 
   private hash?: string;
 
-  public setHash(hash:string):void {
+  public setHash(hash:string | undefined):void {
     this.hash = hash;
   }
 
@@ -94,73 +94,63 @@ export class HashResult {
     return this.hash;
   }
 
-  constructor(assetId?: string, error?: string, hash?: string) {
+  constructor(assetId: string, error?: string, hash?: string) {
     this.assetId = assetId;
     this.error = error;
     this.hash = hash;
   }
 
-  toList(): Object[] {
-    let arr: Object[] = new Array();
-    if(this.assetId !==undefined){
-      arr.push(this.assetId);
-    }
-    if(this.error !==undefined){
-      arr.push(this.error);
-    }
-    if(this.hash !==undefined){
-      arr.push(this.hash);
-    }
+  toList(): (Object | null)[] {
+    let arr: (Object | null)[] = [];
+    arr.push(this.assetId !== undefined ? this.assetId : null);
+    arr.push(this.error !== undefined ? this.error : null);
+    arr.push(this.hash !== undefined ? this.hash : null);
     return arr;
   }
 
-  static fromList(arr: Object[]): HashResult {
-    let pigeonResult: HashResult = new HashResult();
-    let assetId: Object = arr[0];
-    pigeonResult.setAssetId(assetId as string);
-    let error: Object = arr[1];
-    pigeonResult.setError(error as string);
-    let hash: Object = arr[2];
-    pigeonResult.setHash(hash as string);
-    return pigeonResult;
+  static fromList(arr: (Object | null)[]): HashResult {
+    let assetId: string = arr[0] as string;
+    let error: string | undefined = arr[1] != null ? arr[1] as string : undefined;
+    let hash: string | undefined = arr[2] != null ? arr[2] as string : undefined;
+    return new HashResult(assetId, error, hash);
   }
 }
 
 /* Generated class from Pigeon that represents data sent in messages.*/
 export class PlatformAsset {
-  private id?: string;
+  private id: string;
 
   public setId(id:string):void {
     this.id = id;
   }
 
-  getId(): string | undefined{
+  getId(): string{
     return this.id;
   }
 
-  private name?: string;
+  private name: string;
 
   public setName(name:string):void {
     this.name = name;
   }
 
-  getName(): string | undefined{
+  getName(): string{
     return this.name;
   }
 
-  private type?: number;
+  private type: number;
 
   public setType(type:number):void {
     this.type = type;
   }
 
-  getType(): number | undefined{
+  getType(): number{
     return this.type;
   }
 
   private createdAt?: number;
 
-  public setCreatedAt(createdAt:number):void {
+  public setCreatedAt(createdAt:number | undefined):void {
     this.createdAt = createdAt;
   }
 
@@ -170,7 +160,7 @@ export class PlatformAsset {
 
   private updatedAt?: number;
 
-  public setUpdatedAt(updatedAt:number):void {
+  public setUpdatedAt(updatedAt:number | undefined):void {
     this.updatedAt = updatedAt;
   }
 
@@ -180,7 +170,7 @@ export class PlatformAsset {
 
   private width?: number;
 
-  public setWidth(width:number):void {
+  public setWidth(width:number | undefined):void {
     this.width = width;
   }
 
@@ -190,7 +180,7 @@ export class PlatformAsset {
 
   private height?: number;
 
-  public setHeight(height:number):void {
+  public setHeight(height:number | undefined):void {
     this.height = height;
   }
 
@@ -198,39 +188,39 @@ export class PlatformAsset {
     return this.height;
   }
 
-  private durationMs?: number;
+  private durationMs: number;
 
   public setDurationMs(durationMs:number):void {
     this.durationMs = durationMs;
   }
 
-  getDurationMs(): number | undefined{
+  getDurationMs(): number{
     return this.durationMs;
   }
 
-  private orientation?: number;
+  private orientation: number;
 
   public setOrientation(orientation:number):void {
     this.orientation = orientation;
   }
 
-  getOrientation(): number | undefined{
+  getOrientation(): number{
     return this.orientation;
   }
 
-  private isFavorite?: boolean;
+  private isFavorite: boolean;
 
   public setIsFavorite(isFavorite:boolean):void {
     this.isFavorite = isFavorite;
   }
 
-  getIsFavorite(): boolean | undefined{
+  getIsFavorite(): boolean{
     return this.isFavorite;
   }
 
   private adjustmentTime?: number;
 
-  public setAdjustmentTime(adjustmentTime:number):void {
+  public setAdjustmentTime(adjustmentTime:number | undefined):void {
     this.adjustmentTime = adjustmentTime;
   }
 
@@ -240,7 +230,7 @@ export class PlatformAsset {
 
   private latitude?: number;
 
-  public setLatitude(latitude:number):void {
+  public setLatitude(latitude:number | undefined):void {
     this.latitude = latitude;
   }
 
@@ -250,7 +240,7 @@ export class PlatformAsset {
 
   private longitude?: number;
 
-  public setLongitude(longitude:number):void {
+  public setLongitude(longitude:number | undefined):void {
     this.longitude = longitude;
   }
 
@@ -258,140 +248,103 @@ export class PlatformAsset {
     return this.longitude;
   }
 
-  private playbackStyle?: PlatformAssetPlaybackStyle;
+  private playbackStyle: PlatformAssetPlaybackStyle;
 
   public setPlaybackStyle(playbackStyle:PlatformAssetPlaybackStyle):void {
     this.playbackStyle = playbackStyle;
   }
 
-  getPlaybackStyle(): PlatformAssetPlaybackStyle | undefined{
+  getPlaybackStyle(): PlatformAssetPlaybackStyle{
     return this.playbackStyle;
   }
 
-  constructor(id?: string, name?: string, type?: number, createdAt?: number, updatedAt?: number, width?: number, height?: number, durationMs?: number, orientation?: number, isFavorite?: boolean, adjustmentTime?: number, latitude?: number, longitude?: number, playbackStyle?: PlatformAssetPlaybackStyle) {
+  constructor(id: string, name: string, type: number, durationMs: number, orientation: number, isFavorite: boolean, playbackStyle: PlatformAssetPlaybackStyle, createdAt?: number, updatedAt?: number, width?: number, height?: number, adjustmentTime?: number, latitude?: number, longitude?: number) {
     this.id = id;
     this.name = name;
     this.type = type;
+    this.durationMs = durationMs;
+    this.orientation = orientation;
+    this.isFavorite = isFavorite;
+    this.playbackStyle = playbackStyle;
     this.createdAt = createdAt;
     this.updatedAt = updatedAt;
     this.width = width;
     this.height = height;
-    this.durationMs = durationMs;
-    this.orientation = orientation;
-    this.isFavorite = isFavorite;
     this.adjustmentTime = adjustmentTime;
     this.latitude = latitude;
     this.longitude = longitude;
-    this.playbackStyle = playbackStyle;
   }
 
-  toList(): Object[] {
-    let arr: Object[] = new Array();
-    if(this.id !==undefined){
-      arr.push(this.id);
-    }
-    if(this.name !==undefined){
-      arr.push(this.name);
-    }
-    if(this.type !==undefined){
-      arr.push(this.type);
-    }
-    if(this.createdAt !==undefined){
-      arr.push(this.createdAt);
-    }
-    if(this.updatedAt !==undefined){
-      arr.push(this.updatedAt);
-    }
-    if(this.width !==undefined){
-      arr.push(this.width);
-    }
-    if(this.height !==undefined){
-      arr.push(this.height);
-    }
-    if(this.durationMs !==undefined){
-      arr.push(this.durationMs);
-    }
-    if(this.orientation !==undefined){
-      arr.push(this.orientation);
-    }
-    if(this.isFavorite !==undefined){
-      arr.push(this.isFavorite);
-    }
-    if(this.adjustmentTime !==undefined){
-      arr.push(this.adjustmentTime);
-    }
-    if(this.latitude !==undefined){
-      arr.push(this.latitude);
-    }
-    if(this.longitude !==undefined){
-      arr.push(this.longitude);
-    }
-    if(this.playbackStyle !==undefined){
+  toList(): (Object | null)[] {
+    let arr: (Object | null)[] = [];
+    arr.push(this.id !== undefined ? this.id : null);
+    arr.push(this.name !== undefined ? this.name : null);
+    arr.push(this.type !== undefined ? this.type : null);
+    arr.push(this.createdAt !== undefined ? this.createdAt : null);
+    arr.push(this.updatedAt !== undefined ? this.updatedAt : null);
+    arr.push(this.width !== undefined ? this.width : null);
+    arr.push(this.height !== undefined ? this.height : null);
+    arr.push(this.durationMs !== undefined ? this.durationMs : null);
+    arr.push(this.orientation !== undefined ? this.orientation : null);
+    arr.push(this.isFavorite !== undefined ? this.isFavorite : null);
+    arr.push(this.adjustmentTime !== undefined ? this.adjustmentTime : null);
+    arr.push(this.latitude !== undefined ? this.latitude : null);
+    arr.push(this.longitude !== undefined ? this.longitude : null);
+    if (this.playbackStyle !== undefined) {
       const playbackStyleStr = PlatformAssetPlaybackStyle[this.playbackStyle as number];
       arr.push(new PlatformAssetPlaybackStyleEnum(playbackStyleStr));
+    } else {
+      arr.push(null);
     }
     return arr;
   }
 
-  static fromList(arr: Object[]): PlatformAsset {
-    let pigeonResult: PlatformAsset = new PlatformAsset();
-    let id: Object = arr[0];
-    pigeonResult.setId(id as string);
-    let name: Object = arr[1];
-    pigeonResult.setName(name as string);
-    let type: Object = arr[2];
-    pigeonResult.setType(type as number);
-    let createdAt: Object = arr[3];
-    pigeonResult.setCreatedAt(createdAt as number);
-    let updatedAt: Object = arr[4];
-    pigeonResult.setUpdatedAt(updatedAt as number);
-    let width: Object = arr[5];
-    pigeonResult.setWidth(width as number);
-    let height: Object = arr[6];
-    pigeonResult.setHeight(height as number);
-    let durationMs: Object = arr[7];
-    pigeonResult.setDurationMs(durationMs as number);
-    let orientation: Object = arr[8];
-    pigeonResult.setOrientation(orientation as number);
-    let isFavorite: Object = arr[9];
-    pigeonResult.setIsFavorite(isFavorite as boolean);
-    let adjustmentTime: Object = arr[10];
-    pigeonResult.setAdjustmentTime(adjustmentTime as number);
-    let latitude: Object = arr[11];
-    pigeonResult.setLatitude(latitude as number);
-    let longitude: Object = arr[12];
-    pigeonResult.setLongitude(longitude as number);
-    const playbackStyleStr: string = arr[13]! as string;
-    pigeonResult.setPlaybackStyle(PlatformAssetPlaybackStyle[playbackStyleStr]);
-    return pigeonResult;
+  static fromList(arr: (Object | null)[]): PlatformAsset {
+    let id: string = arr[0] as string;
+    let name: string = arr[1] as string;
+    let type: number = arr[2] as number;
+    let createdAt: number | undefined = arr[3] != null ? arr[3] as number : undefined;
+    let updatedAt: number | undefined = arr[4] != null ? arr[4] as number : undefined;
+    let width: number | undefined = arr[5] != null ? arr[5] as number : undefined;
+    let height: number | undefined = arr[6] != null ? arr[6] as number : undefined;
+    let durationMs: number = arr[7] as number;
+    let orientation: number = arr[8] as number;
+    let isFavorite: boolean = arr[9] as boolean;
+    let adjustmentTime: number | undefined = arr[10] != null ? arr[10] as number : undefined;
+    let latitude: number | undefined = arr[11] != null ? arr[11] as number : undefined;
+    let longitude: number | undefined = arr[12] != null ? arr[12] as number : undefined;
+    let playbackStyleRaw: Object | null = arr[13];
+    const playbackStyleStr: string = playbackStyleRaw as string;
+    let playbackStyle: PlatformAssetPlaybackStyle = PlatformAssetPlaybackStyle[playbackStyleStr];
+    return new PlatformAsset(id, name, type, durationMs, orientation, isFavorite, playbackStyle, createdAt, updatedAt, width, height, adjustmentTime, latitude, longitude);
   }
 }
 
 /* Generated class from Pigeon that represents data sent in messages.*/
 export class PlatformAlbum {
-  private id?: string;
+  private id: string;
 
   public setId(id:string):void {
     this.id = id;
   }
 
-  getId(): string | undefined{
+  getId(): string{
     return this.id;
   }
 
-  private name?: string;
+  private name: string;
 
   public setName(name:string):void {
     this.name = name;
   }
 
-  getName(): string | undefined{
+  getName(): string{
     return this.name;
   }
 
   private updatedAt?: number;
 
-  public setUpdatedAt(updatedAt:number):void {
+  public setUpdatedAt(updatedAt:number | undefined):void {
     this.updatedAt = updatedAt;
   }
 
@@ -399,85 +352,69 @@ export class PlatformAlbum {
     return this.updatedAt;
   }
 
-  private isCloud?: boolean;
+  private isCloud: boolean;
 
   public setIsCloud(isCloud:boolean):void {
     this.isCloud = isCloud;
   }
 
-  getIsCloud(): boolean | undefined{
+  getIsCloud(): boolean{
     return this.isCloud;
   }
 
-  private assetCount?: number;
+  private assetCount: number;
 
   public setAssetCount(assetCount:number):void {
     this.assetCount = assetCount;
   }
 
-  getAssetCount(): number | undefined{
+  getAssetCount(): number{
     return this.assetCount;
   }
 
-  constructor(id?: string, name?: string, updatedAt?: number, isCloud?: boolean, assetCount?: number) {
+  constructor(id: string, name: string, isCloud: boolean, assetCount: number, updatedAt?: number) {
     this.id = id;
     this.name = name;
-    this.updatedAt = updatedAt;
     this.isCloud = isCloud;
     this.assetCount = assetCount;
+    this.updatedAt = updatedAt;
   }
 
-  toList(): Object[] {
-    let arr: Object[] = new Array();
-    if(this.id !==undefined){
-      arr.push(this.id);
-    }
-    if(this.name !==undefined){
-      arr.push(this.name);
-    }
-    if(this.updatedAt !==undefined){
-      arr.push(this.updatedAt);
-    }
-    if(this.isCloud !==undefined){
-      arr.push(this.isCloud);
-    }
-    if(this.assetCount !==undefined){
-      arr.push(this.assetCount);
-    }
+  toList(): (Object | null)[] {
+    let arr: (Object | null)[] = [];
+    arr.push(this.id !== undefined ? this.id : null);
+    arr.push(this.name !== undefined ? this.name : null);
+    arr.push(this.updatedAt !== undefined ? this.updatedAt : null);
+    arr.push(this.isCloud !== undefined ? this.isCloud : null);
+    arr.push(this.assetCount !== undefined ? this.assetCount : null);
     return arr;
   }
 
-  static fromList(arr: Object[]): PlatformAlbum {
-    let pigeonResult: PlatformAlbum = new PlatformAlbum();
-    let id: Object = arr[0];
-    pigeonResult.setId(id as string);
-    let name: Object = arr[1];
-    pigeonResult.setName(name as string);
-    let updatedAt: Object = arr[2];
-    pigeonResult.setUpdatedAt(updatedAt as number);
-    let isCloud: Object = arr[3];
-    pigeonResult.setIsCloud(isCloud as boolean);
-    let assetCount: Object = arr[4];
-    pigeonResult.setAssetCount(assetCount as number);
-    return pigeonResult;
+  static fromList(arr: (Object | null)[]): PlatformAlbum {
+    let id: string = arr[0] as string;
+    let name: string = arr[1] as string;
+    let updatedAt: number | undefined = arr[2] != null ? arr[2] as number : undefined;
+    let isCloud: boolean = arr[3] as boolean;
+    let assetCount: number = arr[4] as number;
+    return new PlatformAlbum(id, name, isCloud, assetCount, updatedAt);
   }
 }
 
 /* Generated class from Pigeon that represents data sent in messages.*/
 export class CloudIdResult {
-  private assetId?: string;
+  private assetId: string;
 
   public setAssetId(assetId:string):void {
     this.assetId = assetId;
   }
 
-  getAssetId(): string | undefined{
+  getAssetId(): string{
     return this.assetId;
   }
 
   private error?: string;
 
-  public setError(error:string):void {
+  public setError(error:string | undefined):void {
     this.error = error;
   }
 
@@ -487,7 +424,7 @@ export class CloudIdResult {
 
   private cloudId?: string;
 
-  public setCloudId(cloudId:string):void {
+  public setCloudId(cloudId:string | undefined):void {
     this.cloudId = cloudId;
   }
 
@@ -495,115 +432,92 @@ export class CloudIdResult {
     return this.cloudId;
   }
 
-  constructor(assetId?: string, error?: string, cloudId?: string) {
+  constructor(assetId: string, error?: string, cloudId?: string) {
     this.assetId = assetId;
     this.error = error;
     this.cloudId = cloudId;
   }
 
-  toList(): Object[] {
-    let arr: Object[] = new Array();
-    if(this.assetId !==undefined){
-      arr.push(this.assetId);
-    }
-    if(this.error !==undefined){
-      arr.push(this.error);
-    }
-    if(this.cloudId !==undefined){
-      arr.push(this.cloudId);
-    }
+  toList(): (Object | null)[] {
+    let arr: (Object | null)[] = [];
+    arr.push(this.assetId !== undefined ? this.assetId : null);
+    arr.push(this.error !== undefined ? this.error : null);
+    arr.push(this.cloudId !== undefined ? this.cloudId : null);
     return arr;
   }
 
-  static fromList(arr: Object[]): CloudIdResult {
-    let pigeonResult: CloudIdResult = new CloudIdResult();
-    let assetId: Object = arr[0];
-    pigeonResult.setAssetId(assetId as string);
-    let error: Object = arr[1];
-    pigeonResult.setError(error as string);
-    let cloudId: Object = arr[2];
-    pigeonResult.setCloudId(cloudId as string);
-    return pigeonResult;
+  static fromList(arr: (Object | null)[]): CloudIdResult {
+    let assetId: string = arr[0] as string;
+    let error: string | undefined = arr[1] != null ? arr[1] as string : undefined;
+    let cloudId: string | undefined = arr[2] != null ? arr[2] as string : undefined;
+    return new CloudIdResult(assetId, error, cloudId);
   }
 }
 
 /* Generated class from Pigeon that represents data sent in messages.*/
 export class SyncDelta {
-  private hasChanges?: boolean;
+  private hasChanges: boolean;
 
   public setHasChanges(hasChanges:boolean):void {
     this.hasChanges = hasChanges;
   }
 
-  getHasChanges(): boolean | undefined{
+  getHasChanges(): boolean{
     return this.hasChanges;
   }
 
-  private updates?: Array<PlatformAsset>;
+  private updates: Array<PlatformAsset>;
 
   public setUpdates(updates:Array<PlatformAsset>):void {
     this.updates = updates;
   }
 
-  getUpdates(): Array<PlatformAsset> | undefined{
+  getUpdates(): Array<PlatformAsset>{
     return this.updates;
   }
 
-  private deletes?: Array<string>;
+  private deletes: Array<string>;
 
   public setDeletes(deletes:Array<string>):void {
     this.deletes = deletes;
   }
 
-  getDeletes(): Array<string> | undefined{
+  getDeletes(): Array<string>{
     return this.deletes;
   }
 
-  private assetAlbums?: Map<string, Array<string>>;
+  private assetAlbums: Map<string, Array<string>>;
 
   public setAssetAlbums(assetAlbums:Map<string, Array<string>>):void {
     this.assetAlbums = assetAlbums;
   }
 
-  getAssetAlbums(): Map<string, Array<string>> | undefined{
+  getAssetAlbums(): Map<string, Array<string>>{
     return this.assetAlbums;
   }
 
-  constructor(hasChanges?: boolean, updates?: Array<PlatformAsset>, deletes?: Array<string>, assetAlbums?: Map<string, Array<string>>) {
+  constructor(hasChanges: boolean, updates: Array<PlatformAsset>, deletes: Array<string>, assetAlbums: Map<string, Array<string>>) {
     this.hasChanges = hasChanges;
     this.updates = updates;
     this.deletes = deletes;
     this.assetAlbums = assetAlbums;
   }
 
-  toList(): Object[] {
-    let arr: Object[] = new Array();
-    if(this.hasChanges !==undefined){
-      arr.push(this.hasChanges);
-    }
-    if(this.updates !==undefined){
-      arr.push(this.updates);
-    }
-    if(this.deletes !==undefined){
-      arr.push(this.deletes);
-    }
-    if(this.assetAlbums !==undefined){
-      arr.push(this.assetAlbums);
-    }
+  toList(): (Object | null)[] {
+    let arr: (Object | null)[] = [];
+    arr.push(this.hasChanges !== undefined ? this.hasChanges : null);
+    arr.push(this.updates !== undefined ? this.updates : null);
+    arr.push(this.deletes !== undefined ? this.deletes : null);
+    arr.push(this.assetAlbums !== undefined ? this.assetAlbums : null);
     return arr;
   }
 
-  static fromList(arr: Object[]): SyncDelta {
-    let pigeonResult: SyncDelta = new SyncDelta();
-    let hasChanges: Object = arr[0];
-    pigeonResult.setHasChanges(hasChanges as boolean);
-    let updates: Object = arr[1];
-    pigeonResult.setUpdates(updates as Array<PlatformAsset>);
-    let deletes: Object = arr[2];
-    pigeonResult.setDeletes(deletes as Array<string>);
-    let assetAlbums: Object = arr[3];
-    pigeonResult.setAssetAlbums(assetAlbums as Map<string, Array<string>>);
-    return pigeonResult;
+  static fromList(arr: (Object | null)[]): SyncDelta {
+    let hasChanges: boolean = arr[0] as boolean;
+    let updates: Array<PlatformAsset> = arr[1] as Array<PlatformAsset>;
+    let deletes: Array<string> = arr[2] as Array<string>;
+    let assetAlbums: Map<string, Array<string>> = arr[3] as Map<string, Array<string>>;
+    return new SyncDelta(hasChanges, updates, deletes, assetAlbums);
   }
 }
 
@@ -626,15 +540,15 @@ export class PigeonCodec extends StandardMessageCodec {
         return value == null ? null : PlatformAssetPlaybackStyle[value as number];
       }
       case this.getByte(130):
-        return HashResult.fromList(super.readValue(buffer) as Object[]);
+        return HashResult.fromList(super.readValue(buffer) as (Object | null)[]);
       case this.getByte(131):
-        return PlatformAsset.fromList(super.readValue(buffer) as Object[]);
+        return PlatformAsset.fromList(super.readValue(buffer) as (Object | null)[]);
       case this.getByte(132):
-        return PlatformAlbum.fromList(super.readValue(buffer) as Object[]);
+        return PlatformAlbum.fromList(super.readValue(buffer) as (Object | null)[]);
       case this.getByte(133):
-        return CloudIdResult.fromList(super.readValue(buffer) as Object[]);
+        return CloudIdResult.fromList(super.readValue(buffer) as (Object | null)[]);
       case this.getByte(134):
-        return SyncDelta.fromList(super.readValue(buffer) as Object[]);
+        return SyncDelta.fromList(super.readValue(buffer) as (Object | null)[]);
       default:
         return super.readValueOfType(type, buffer);
     }
