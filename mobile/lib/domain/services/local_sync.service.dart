@@ -21,32 +21,26 @@ import 'package:logging/logging.dart';
 const String _kSyncCancelledCode = "SYNC_CANCELLED";
 
 class LocalSyncService {
-  final DriftLocalAlbumRepository _localAlbumRepository;
+  final LocalAlbumRepository _localAlbumRepository;
   // ignore: unused_field
-  final DriftLocalAssetRepository _localAssetRepository;
+  final LocalAssetRepository _localAssetRepository;
   final NativeSyncApiOhos _nativeSyncApi;
-  final DriftTrashedLocalAssetRepository _trashedLocalAssetRepository;
+  final TrashedLocalAssetRepository _trashedLocalAssetRepository;
   final AssetMediaRepository _assetMediaRepository;
-  final IPermissionRepository _permissionRepository;
+  final DevicePermissionRepository _permissionRepository;
   final Completer<void>? _cancellation;
   final Logger _log = Logger("DeviceSyncService");
 
   LocalSyncService({
-    required DriftLocalAlbumRepository localAlbumRepository,
-    required DriftLocalAssetRepository localAssetRepository,
-    required DriftTrashedLocalAssetRepository trashedLocalAssetRepository,
-    required AssetMediaRepository assetMediaRepository,
-    required IPermissionRepository permissionRepository,
+    required this._localAlbumRepository,
+    required this._localAssetRepository,
     required NativeSyncApiOhos nativeSyncApi,
-    Completer<void>? cancellation,
-  }) : _localAlbumRepository = localAlbumRepository,
-       _localAssetRepository = localAssetRepository,
-       _trashedLocalAssetRepository = trashedLocalAssetRepository,
-       _assetMediaRepository = assetMediaRepository,
-       _permissionRepository = permissionRepository,
-       _nativeSyncApi = nativeSyncApi,
-       _cancellation = cancellation {
-    _cancellation?.future.then((_) => _nativeSyncApi.cancelSync().onError(_log.warning));
+    required this._trashedLocalAssetRepository,
+    required this._assetMediaRepository,
+    required this._permissionRepository,
+    this._cancellation,
+  }) : _nativeSyncApi = nativeSyncApi {
+    unawaited(_cancellation?.future.then((_) => _nativeSyncApi.cancelSync().onError(_log.warning)));
   }
 
   bool get _isCancelled => _cancellation?.isCompleted ?? false;
@@ -70,12 +64,12 @@ class LocalSyncService {
 
       if (full || await _nativeSyncApi.shouldFullSync()) {
         _log.fine("Full sync request from ${full ? "user" : "native"}");
-        return fullSync();
+        return await fullSync();
       }
 
       if (CurrentPlatform.isOhos) {
         _log.fine("OHOS media change delta sync is not supported. Falling back to full sync");
-        return fullSync();
+        return await fullSync();
       }
 
       final delta = await _nativeSyncApi.getMediaChanges();
@@ -110,7 +104,7 @@ class LocalSyncService {
         }
       }
 
-      if (defaultTargetPlatform == TargetPlatform.ohos) {
+      if (CurrentPlatform.isOhos) {
         for (final album in dbAlbums) {
           if (_isCancelled) {
             _log.warning("Local sync cancelled. Stopped processing OHOS albums.");
@@ -208,7 +202,7 @@ class LocalSyncService {
     _log.fine("Removing device album ${a.name}");
     try {
       // Asset deletion is handled in the repository
-      await _localAlbumRepository.delete(a.id);
+      await _localAlbumRepository.deleteAlbum(a.id);
     } catch (e, s) {
       _log.warning("Error while removing device album", e, s);
     }
@@ -223,14 +217,11 @@ class LocalSyncService {
       _log.fine("Syncing device album ${dbAlbum.name}");
 
       if (_albumsEqual(deviceAlbum, dbAlbum)) {
-        if (!await _shouldRefreshOhosZeroDurationVideos(dbAlbum)) {
-          _log.fine("Device album ${dbAlbum.name} has not changed. Skipping sync.");
-          return false;
-        }
-        _log.fine("Device album ${dbAlbum.name} has zero-duration OHOS videos. Refreshing asset metadata.");
-      } else {
-        _log.fine("Device album ${dbAlbum.name} has changed. Syncing...");
+        _log.fine("Device album ${dbAlbum.name} has not changed. Skipping sync.");
+        return false;
       }
+
+      _log.fine("Device album ${dbAlbum.name} has changed. Syncing...");
 
       // Faster path - only new assets added
       if (await checkAddition(dbAlbum, deviceAlbum)) {
@@ -244,13 +235,6 @@ class LocalSyncService {
       _log.warning("Error while diff device album", e, s);
     }
     return true;
-  }
-
-  Future<bool> _shouldRefreshOhosZeroDurationVideos(LocalAlbum dbAlbum) {
-    if (!CurrentPlatform.isOhos || dbAlbum.assetCount == 0) {
-      return Future.value(false);
-    }
-    return _localAlbumRepository.hasZeroDurationVideos(dbAlbum.id);
   }
 
   @visibleForTesting

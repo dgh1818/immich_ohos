@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:immich_mobile/mixins/error_logger.mixin.dart';
 import 'package:immich_mobile/models/map/map_marker.model.dart';
@@ -13,7 +15,7 @@ class MapService with ErrorLoggerMixin {
 
   MapService(this._apiService) {
     if (defaultTargetPlatform != TargetPlatform.ohos) {
-      _setMapUserAgentHeader();
+      unawaited(_setMapUserAgentHeader());
     }
   }
 

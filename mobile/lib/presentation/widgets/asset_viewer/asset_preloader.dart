@@ -17,7 +17,8 @@ class AssetPreloader {
 
   AssetPreloader({required this.timelineService, required this.mounted});
 
-  void preload(int index, Size size) {
+  /// Preloads adjacent images with the current thumbnail size.
+  void preload(int index, Size size, {Size? thumbnailSize}) {
     unawaited(timelineService.preloadAssets(index));
     _timer?.cancel();
     _timer = Timer(Durations.medium4, () async {
@@ -44,16 +45,21 @@ class AssetPreloader {
       }
       _prevStream?.removeListener(_dummyListener);
       _nextStream?.removeListener(_dummyListener);
-      _prevStream = prev != null ? _resolveImage(prev, size) : null;
-      _nextStream = next != null ? _resolveImage(next, size) : null;
+      _prevStream = prev != null ? _resolveImage(prev, size, thumbnailSize) : null;
+      _nextStream = next != null ? _resolveImage(next, size, thumbnailSize) : null;
     });
   }
 
-  ImageStream _resolveImage(BaseAsset asset, Size size) {
+  ImageStream _resolveImage(BaseAsset asset, Size size, Size? thumbnailSize) {
     // Warm exactly the provider key the asset page resolves: same class, size
     // and aiHdr flag, or the swipe shows a spinner followed by an SDR flash
     // on the viewer's HDR surface.
-    final provider = getFullImageProvider(asset, size: size, aiHdr: false);
+    final provider = getFullImageProvider(
+      asset,
+      size: size,
+      remoteThumbnailSize: thumbnailSize,
+      aiHdr: false,
+    );
     return provider.resolve(ImageConfiguration.empty)..addListener(_dummyListener);
   }
 

@@ -67,7 +67,7 @@ class CastNotifier extends StateNotifier<CastManagerState> {
   }
 
   void loadMedia(RemoteAsset asset, bool reload) {
-    _gCastService.loadMedia(asset, reload);
+    unawaited(_gCastService.loadMedia(asset, reload));
   }
 
   Future<void> connect(CastDestinationType type, dynamic device) async {
@@ -76,7 +76,6 @@ class CastNotifier extends StateNotifier<CastManagerState> {
     switch (type) {
       case CastDestinationType.googleCast:
         await _gCastService.connect(device);
-        break;
     }
   }
 

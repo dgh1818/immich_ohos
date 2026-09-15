@@ -10,20 +10,26 @@ class FakeImmichServer {
   final (int, int, int) version;
 
   final Completer<SyncStream> _streamOpened = Completer<SyncStream>();
-  final Completer<void> _assetUploadReceived = Completer<void>();
+  final List<SyncStream> _streamOpens = [];
+  final Map<int, Completer<SyncStream>> _openWaiters = {};
 
   int ackRequests = 0;
-  int assetUploadRequests = 0;
-  String? lastAssetUploadBody;
-  String? lastAssetUploadContentType;
 
   String get endpoint => 'http://${_server.address.host}:${_server.port}/api';
 
   /// Resolves when the sync isolate opens `POST /sync/stream`.
   Future<SyncStream> get streamOpened => _streamOpened.future;
 
-  /// Resolves when the fake server receives `POST /assets`.
-  Future<void> get assetUploadReceived => _assetUploadReceived.future;
+  /// How many `/sync/stream` requests have opened so far.
+  int get streamOpenCount => _streamOpens.length;
+
+  /// Resolves when the [n]-th (1-indexed) `/sync/stream` opens.
+  Future<SyncStream> streamOpenedNth(int n) {
+    if (_streamOpens.length >= n) {
+      return Future.value(_streamOpens[n - 1]);
+    }
+    return (_openWaiters[n] ??= Completer<SyncStream>()).future;
+  }
 
   static Future<FakeImmichServer> start({(int, int, int) version = (3, 0, 0)}) async {
     final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
@@ -57,9 +63,6 @@ class FakeImmichServer {
     if (method == 'POST' && path == '/api/sync/stream') {
       return _openSyncStream(request);
     }
-    if (method == 'POST' && path == '/api/assets') {
-      return _handleAssetUpload(request);
-    }
     return _respondEmpty(request, status: HttpStatus.notFound);
   }
 
@@ -73,9 +76,12 @@ class FakeImmichServer {
       ..bufferOutput = false;
     // Flush headers so the client's send() resolves and enters its read loop.
     await request.response.flush();
+    final stream = SyncStream._(request.response);
+    _streamOpens.add(stream);
     if (!_streamOpened.isCompleted) {
-      _streamOpened.complete(SyncStream._(request.response));
+      _streamOpened.complete(stream);
     }
+    _openWaiters.remove(_streamOpens.length)?.complete(stream);
   }
 
   Future<void> _respondJson(HttpRequest request, Object body) async {
@@ -87,27 +93,6 @@ class FakeImmichServer {
     await request.response.close();
   }
 
-  Future<void> _handleAssetUpload(HttpRequest request) async {
-    assetUploadRequests++;
-    lastAssetUploadContentType = request.headers.contentType?.toString();
-
-    final bytes = <int>[];
-    await for (final chunk in request) {
-      bytes.addAll(chunk);
-    }
-    lastAssetUploadBody = utf8.decode(bytes, allowMalformed: true);
-
-    if (!_assetUploadReceived.isCompleted) {
-      _assetUploadReceived.complete();
-    }
-
-    request.response
-      ..statusCode = HttpStatus.created
-      ..headers.contentType = ContentType.json
-      ..write(jsonEncode({'id': 'fake-upload-$assetUploadRequests'}));
-    await request.response.close();
-  }
-
   Future<void> _respondEmpty(HttpRequest request, {int status = HttpStatus.ok}) async {
     await request.drain<void>();
     request.response.statusCode = status;
@@ -115,8 +100,8 @@ class FakeImmichServer {
   }
 
   Future<void> close() async {
-    if (_streamOpened.isCompleted) {
-      await (await _streamOpened.future).close();
+    for (final stream in _streamOpens) {
+      await stream.close();
     }
     await _server.close(force: true);
   }

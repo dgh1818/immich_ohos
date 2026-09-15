@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:ui' as ui;
 
@@ -25,7 +26,7 @@ mixin CancellableImageProviderMixin<T extends Object> on CancellableImageProvide
 
   ImageInfo? getInitialImage(CancellableImageProvider provider) {
     final completer = CancelableCompleter<ImageInfo?>(onCancel: provider.cancel);
-    final cachedStream = provider.resolve(const ImageConfiguration());
+    final cachedStream = provider.resolve(ImageConfiguration.empty);
     ImageInfo? cachedImage;
     final listener = ImageStreamListener((image, synchronousCall) {
       if (synchronousCall) {
@@ -43,10 +44,12 @@ mixin CancellableImageProviderMixin<T extends Object> on CancellableImageProvide
       return cachedImage;
     }
 
-    completer.operation.valueOrCancellation().whenComplete(() {
-      cachedStream.removeListener(listener);
-      cachedOperation = null;
-    });
+    unawaited(
+      completer.operation.valueOrCancellation().whenComplete(() {
+        cachedStream.removeListener(listener);
+        cachedOperation = null;
+      }),
+    );
     cachedOperation = completer.operation;
     return null;
   }
@@ -138,7 +141,7 @@ mixin CancellableImageProviderMixin<T extends Object> on CancellableImageProvide
     final operation = cachedOperation;
     if (operation != null) {
       cachedOperation = null;
-      operation.cancel();
+      unawaited(operation.cancel());
     }
 
     if (hasActiveWork) {
@@ -147,8 +150,8 @@ mixin CancellableImageProviderMixin<T extends Object> on CancellableImageProvide
   }
 }
 
-/// OHOS AI HDR: wraps a decode callback so decodes run through the engine's
-/// SDR -> BT.2020 HLG conversion (falls back to SDR when unsupported).
+/// OHOS AI HDR: wrap Flutter's decoder so encoded images can be converted from
+/// SDR into an HDR-capable HLG surface when the engine supports it.
 ImageDecoderCallback aiHdrDecodeCallback(ImageDecoderCallback decode) {
   return (ui.ImmutableBuffer buffer, {ui.TargetImageSizeCallback? getTargetSize}) async {
     final descriptor = await ui.ImageDescriptor.encoded(buffer);
@@ -166,6 +169,7 @@ ImageProvider getFullImageProvider(
   Size size = const Size(1080, 1920),
   bool edited = true,
   String? localFilePath,
+  Size? remoteThumbnailSize,
   bool aiHdr = false,
 }) {
   // Create new provider and cache it
@@ -179,6 +183,9 @@ ImageProvider getFullImageProvider(
       size: size,
       assetType: asset.type,
       isAnimated: asset.isAnimatedImage,
+      width: asset.width,
+      height: asset.height,
+      checksum: asset.checksum,
       aiHdr: aiHdr,
     );
   } else {
@@ -199,23 +206,32 @@ ImageProvider getFullImageProvider(
       assetType: asset.type,
       isAnimated: asset.isAnimatedImage,
       edited: edited,
-      // TODO(ai-hdr): gate by Setting.imageAiHdr in Phase 2.
-      aiHdr: true,
+      thumbnailSize: remoteThumbnailSize,
+      aiHdr: aiHdr,
     );
   }
 
   return provider;
 }
 
-ImageProvider? getThumbnailImageProvider(BaseAsset asset, {Size size = kThumbnailResolution, bool edited = true}) {
+ImageProvider? getThumbnailImageProvider(
+  BaseAsset asset, {
+  Size size = kThumbnailResolution,
+
+  /// Physical size to decode for remote thumbnails, or null for the source size.
+  Size? remoteSize,
+  bool edited = true,
+}) {
   if (_shouldUseLocalAsset(asset)) {
     final id = asset is LocalAsset ? asset.id : (asset as RemoteAsset).localId!;
-    return LocalThumbProvider(id: id, size: size, assetType: asset.type);
+    return LocalThumbProvider(id: id, size: size, assetType: asset.type, checksum: asset.checksum);
   }
 
   final assetId = asset is RemoteAsset ? asset.id : (asset as LocalAsset).remoteId;
   final thumbhash = asset is RemoteAsset ? asset.thumbHash ?? "" : "";
-  return assetId != null ? RemoteImageProvider.thumbnail(assetId: assetId, thumbhash: thumbhash, edited: edited) : null;
+  return assetId != null
+      ? RemoteImageProvider.thumbnail(assetId: assetId, thumbhash: thumbhash, edited: edited, decodeSize: remoteSize)
+      : null;
 }
 
 bool _shouldUseLocalAsset(BaseAsset asset) =>

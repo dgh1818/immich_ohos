@@ -77,7 +77,7 @@ class _NativeVideoViewerState extends ConsumerState<NativeVideoViewer> with Widg
     if (!widget.isCurrent) {
       _loadTimer?.cancel();
       unawaited(_castNotifier.clearPreparedPlaybackSessionIfCurrent());
-      _notifier.pause();
+      unawaited(_notifier.pause());
       return;
     }
 
@@ -97,7 +97,7 @@ class _NativeVideoViewerState extends ConsumerState<NativeVideoViewer> with Widg
   }
 
   @override
-  void didChangeAppLifecycleState(AppLifecycleState state) async {
+  Future<void> didChangeAppLifecycleState(AppLifecycleState state) async {
     switch (state) {
       case AppLifecycleState.resumed:
         if (_shouldPlayOnForeground && widget.isCurrent) {
@@ -137,11 +137,12 @@ class _NativeVideoViewerState extends ConsumerState<NativeVideoViewer> with Widg
       final localFilePath = widget.localFilePath;
       if (localFilePath != null) {
         final file = File(localFilePath);
+        // ignore: avoid_slow_async_io
         if (!await file.exists()) {
           throw Exception('No file found for the video');
         }
 
-        return VideoSource.init(
+        return await VideoSource.init(
           path: CurrentPlatform.isAndroid ? file.uri.toString() : file.path,
           type: VideoSourceType.file,
         );
@@ -168,7 +169,7 @@ class _NativeVideoViewerState extends ConsumerState<NativeVideoViewer> with Widg
 
         // Pass a file:// URI so Android's Uri.parse doesn't
         // interpret characters like '#' as fragment identifiers.
-        return VideoSource.init(
+        return await VideoSource.init(
           path: CurrentPlatform.isAndroid ? file.uri.toString() : file.path,
           type: VideoSourceType.file,
         );
@@ -177,13 +178,17 @@ class _NativeVideoViewerState extends ConsumerState<NativeVideoViewer> with Widg
       final remoteId = (videoAsset as RemoteAsset).id;
 
       final serverEndpoint = Store.get(StoreKey.serverEndpoint);
+      if (!context.mounted) {
+        return null;
+      }
+
       final isOriginalVideo = ref.read(appConfigProvider).viewer.loadOriginalVideo;
       final String postfixUrl = isOriginalVideo ? 'original' : 'video/playback';
       final String videoUrl = videoAsset.livePhotoVideoId != null
           ? '$serverEndpoint/assets/${videoAsset.livePhotoVideoId}/$postfixUrl'
           : '$serverEndpoint/assets/$remoteId/$postfixUrl';
 
-      return VideoSource.init(
+      return await VideoSource.init(
         path: videoUrl,
         type: VideoSourceType.network,
         headers: ApiService.getAuthenticatedRequestHeaders(videoUrl),
@@ -194,7 +199,44 @@ class _NativeVideoViewerState extends ConsumerState<NativeVideoViewer> with Widg
     }
   }
 
-  void _onPlaybackReady() async {
+  Future<LocalAsset?> _localPlaybackAsset(BaseAsset baseAsset) async {
+    if (!baseAsset.hasLocal) {
+      return null;
+    }
+
+    LocalAsset? localAsset;
+
+    if (baseAsset is LocalAsset) {
+      localAsset = baseAsset;
+    } else {
+      final localId = (baseAsset as RemoteAsset).localId;
+      localAsset = localId != null ? await ref.read(assetServiceProvider).getLocalAsset(localId) : null;
+    }
+
+    if (localAsset == null) {
+      _log.severe(
+        'Invariant violation: asset ${baseAsset.name} (${baseAsset.localId}) is marked `hasLocal` but local asset could not be retrieved',
+      );
+
+      return null;
+    }
+
+    // Clients (local) may not correctly recognize a given asset as a motion photo. This allows for a scenario where both remote and local
+    // have the same asset (hash), but only the remote properly recognizes it as a motion asset
+    // If this scenario occurs, fall back to using the remote asset
+    if (baseAsset.isMotionPhoto && !localAsset.isMotionPhoto) {
+      // Platform mismatch for motion photo, use remote instead
+      _log.warning(
+        'Mismatched local and remote motion states on ${baseAsset.name} (${baseAsset.localId}), local = ${localAsset.isMotionPhoto}, remote = ${baseAsset.isMotionPhoto}',
+      );
+
+      return null;
+    }
+
+    return localAsset;
+  }
+
+  Future<void> _onPlaybackReady() async {
     if (!_canUseRef || !widget.isCurrent) {
       return;
     }
@@ -267,7 +309,7 @@ class _NativeVideoViewerState extends ConsumerState<NativeVideoViewer> with Widg
     _controller?.onPlaybackEnded.removeListener(_onPlaybackEnded);
   }
 
-  void _loadVideo() async {
+  Future<void> _loadVideo() async {
     final nc = _controller;
     if (nc == null || nc.videoSource != null || !_canUseRef) {
       return;
@@ -303,7 +345,7 @@ class _NativeVideoViewerState extends ConsumerState<NativeVideoViewer> with Widg
 
     if (widget.isCurrent) {
       _castNotifier.setCurrentPlaybackAsset(widget.asset);
-      _loadVideo();
+      unawaited(_loadVideo());
     }
   }
 

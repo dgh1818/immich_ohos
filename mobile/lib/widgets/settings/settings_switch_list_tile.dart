@@ -44,7 +44,7 @@ class SettingsSwitchListTile extends StatelessWidget {
       onChanged: enabled ? onSwitchChanged : null,
       activeThumbColor: enabled ? context.primaryColor : context.themeData.disabledColor,
       dense: true,
-      secondary: icon != null ? Icon(icon!, color: valueNotifier.value ? context.primaryColor : null) : null,
+      secondary: icon != null ? Icon(icon, color: valueNotifier.value ? context.primaryColor : null) : null,
       title: Text(
         title,
         style:

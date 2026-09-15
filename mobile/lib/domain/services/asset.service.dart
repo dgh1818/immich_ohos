@@ -2,28 +2,34 @@ import 'package:immich_mobile/domain/models/album/local_album.model.dart';
 import 'package:immich_mobile/domain/models/asset/base_asset.model.dart';
 import 'package:immich_mobile/domain/models/asset_edit.model.dart';
 import 'package:immich_mobile/domain/models/exif.model.dart';
+import 'package:immich_mobile/domain/models/store.model.dart';
+import 'package:immich_mobile/entities/store.entity.dart';
+import 'package:immich_mobile/extensions/platform_extensions.dart';
 import 'package:immich_mobile/infrastructure/repositories/local_asset.repository.dart';
 import 'package:immich_mobile/infrastructure/repositories/remote_asset.repository.dart';
 import 'package:immich_mobile/infrastructure/repositories/remote_exif.repository.dart';
+import 'package:immich_mobile/infrastructure/repositories/trashed_local_asset.repository.dart';
 import 'package:immich_mobile/repositories/asset_api.repository.dart';
+import 'package:immich_mobile/repositories/asset_media.repository.dart';
 import 'package:immich_mobile/utils/option.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 
 class AssetService {
   final RemoteAssetRepository _remoteRepository;
   final RemoteExifRepository _exifRepository;
-  final DriftLocalAssetRepository _localRepository;
+  final LocalAssetRepository _localRepository;
   final AssetApiRepository _apiRepository;
+  final AssetMediaRepository _mediaRepository;
+  final TrashedLocalAssetRepository _trashedLocalRepository;
 
   const AssetService({
-    required RemoteAssetRepository remoteRepository,
-    required RemoteExifRepository exifRepository,
-    required DriftLocalAssetRepository localRepository,
-    required AssetApiRepository apiRepository,
-  }) : _remoteRepository = remoteRepository,
-       _exifRepository = exifRepository,
-       _localRepository = localRepository,
-       _apiRepository = apiRepository;
+    required this._remoteRepository,
+    required this._exifRepository,
+    required this._localRepository,
+    required this._apiRepository,
+    required this._mediaRepository,
+    required this._trashedLocalRepository,
+  });
 
   Future<BaseAsset?> getAsset(BaseAsset asset) {
     final id = asset is LocalAsset ? asset.id : (asset as RemoteAsset).id;
@@ -39,8 +45,8 @@ class AssetService {
     return _localRepository.getByChecksum(checksum);
   }
 
-  Future<RemoteAsset?> getRemoteAssetByChecksum(String checksum) {
-    return _remoteRepository.getByChecksum(checksum);
+  Future<List<RemoteAsset>> getAllRemoteAssetDebugByChecksum(String checksum) {
+    return _remoteRepository.getAllDebugForChecksum(checksum);
   }
 
   Future<RemoteAsset?> getRemoteAsset(String id) {
@@ -130,13 +136,13 @@ class AssetService {
       location: location,
       dateTimeOriginal: dateTime,
     );
-    await _remoteRepository.update(
+    await _remoteRepository.updateAssets(
       remoteIds,
       isFavorite: isFavorite,
       visibility: visibility,
       createdAt: parsedDateTime,
     );
-    await _exifRepository.update(
+    await _exifRepository.updateExif(
       remoteIds,
       location: location,
       dateTimeOriginal: parsedDateTime,
@@ -159,7 +165,7 @@ class AssetService {
     }
 
     await _apiRepository.delete(remoteIds, true);
-    await _remoteRepository.delete(remoteIds);
+    await _remoteRepository.deleteAssets(remoteIds);
   }
 
   Future<void> applyEdits(String remoteId, List<AssetEdit> edits) async {
@@ -170,17 +176,25 @@ class AssetService {
     }
   }
 
-  // TODO(shenlong): remove after action migration
-  Future<LocalAsset?> getLocalAsset(String id) {
-    return _localRepository.get(id);
-  }
-
-  Future<void> updateFavorite(List<String> remoteIds, bool isFavorite) async {
-    if (remoteIds.isEmpty) {
-      return;
+  Future<int> deleteLocal(List<String> localIds, {bool trash = true}) async {
+    if (localIds.isEmpty) {
+      return 0;
     }
 
-    await _apiRepository.updateFavorite(remoteIds, isFavorite);
-    await _remoteRepository.updateFavorite(remoteIds, isFavorite);
+    final deletedIds = await _mediaRepository.deleteAll(localIds, trash: trash);
+    if (deletedIds.isEmpty) {
+      return 0;
+    }
+
+    if (trash && CurrentPlatform.isAndroid && Store.get(StoreKey.manageLocalMediaAndroid, false)) {
+      await _trashedLocalRepository.applyTrashedAssets(deletedIds);
+    } else {
+      await _localRepository.deleteAssets(deletedIds);
+    }
+    return deletedIds.length;
+  }
+
+  Future<LocalAsset?> getLocalAsset(String id) {
+    return _localRepository.get(id);
   }
 }

@@ -35,7 +35,7 @@ import {
   IIntegrityUntrackedFilesJob,
 } from 'src/types';
 import { ImmichFileResponse } from 'src/utils/file';
-import { handlePromiseError } from 'src/utils/misc';
+import { batched, handlePromiseError } from 'src/utils/misc';
 
 /**
  * Untracked Files:
@@ -190,7 +190,10 @@ export class IntegrityService extends BaseService {
     } else if (fileAssetId) {
       await this.assetRepository.deleteFiles([{ id: fileAssetId }]);
     } else {
-      await this.storageRepository.unlink(path);
+      const trackedPaths = await this.integrityRepository.getTrackedPaths([path]);
+      if (trackedPaths.length === 0) {
+        await this.storageRepository.unlink(path);
+      }
       await this.integrityRepository.deleteById(id);
     }
   }
@@ -201,7 +204,7 @@ export class IntegrityService extends BaseService {
     const reports = this.integrityRepository.streamIntegrityReportsWithAssetChecksum(IntegrityReport.UntrackedFile);
 
     let total = 0;
-    for await (const batchReports of chunk(reports, JOBS_LIBRARY_PAGINATION_SIZE)) {
+    for await (const batchReports of batched(reports, JOBS_LIBRARY_PAGINATION_SIZE)) {
       await this.jobRepository.queue({
         name: JobName.IntegrityUntrackedFilesRefresh,
         data: {
@@ -311,8 +314,17 @@ export class IntegrityService extends BaseService {
   async handleUntrackedRefresh({ items }: IIntegrityPathWithReportJob): Promise<JobStatus> {
     this.logger.log(`Processing batch of ${items.length} reports to check if they are out of date.`);
 
+    const tracked =
+      items.length > 0 ? await this.integrityRepository.getTrackedPaths(items.map(({ path }) => path)) : [];
+    const trackedPaths = new Set(tracked.map(({ path }) => path));
+
     const results = await Promise.all(
       items.map(async ({ reportId, path }) => {
+        // The path was untracked when the report was written; an asset may reference it now.
+        if (trackedPaths.has(path)) {
+          return reportId;
+        }
+
         try {
           await this.storageRepository.stat(path);
           return;
@@ -338,7 +350,7 @@ export class IntegrityService extends BaseService {
     const reports = this.integrityRepository.streamIntegrityReportsWithAssetChecksum(IntegrityReport.MissingFile);
 
     let total = 0;
-    for await (const batchReports of chunk(reports, JOBS_LIBRARY_PAGINATION_SIZE)) {
+    for await (const batchReports of batched(reports, JOBS_LIBRARY_PAGINATION_SIZE)) {
       await this.jobRepository.queue({
         name: JobName.IntegrityMissingFilesRefresh,
         data: {
@@ -365,7 +377,7 @@ export class IntegrityService extends BaseService {
     const assetPaths = this.integrityRepository.streamAssetPathsForMissingFiles();
 
     let total = 0;
-    for await (const batchPaths of chunk(assetPaths, JOBS_LIBRARY_PAGINATION_SIZE)) {
+    for await (const batchPaths of batched(assetPaths, JOBS_LIBRARY_PAGINATION_SIZE)) {
       await this.jobRepository.queue({
         name: JobName.IntegrityMissingFiles,
         data: {
@@ -450,7 +462,7 @@ export class IntegrityService extends BaseService {
     const reports = this.integrityRepository.streamIntegrityReportsWithAssetChecksum(IntegrityReport.ChecksumFail);
 
     let total = 0;
-    for await (const batchReports of chunk(reports, JOBS_LIBRARY_PAGINATION_SIZE)) {
+    for await (const batchReports of batched(reports, JOBS_LIBRARY_PAGINATION_SIZE)) {
       await this.jobRepository.queue({
         name: JobName.IntegrityChecksumFilesRefresh,
         data: {
@@ -656,7 +668,7 @@ export class IntegrityService extends BaseService {
 
     for (const property of properties) {
       const reports = this.integrityRepository.streamIntegrityReportsByProperty(property, type);
-      for await (const batch of chunk(reports, JOBS_LIBRARY_PAGINATION_SIZE)) {
+      for await (const batch of batched(reports, JOBS_LIBRARY_PAGINATION_SIZE)) {
         await this.jobRepository.queue({
           name: JobName.IntegrityDeleteReports,
           data: {
@@ -697,27 +709,17 @@ export class IntegrityService extends BaseService {
     }
 
     if (byPath.length > 0) {
-      await Promise.all(byPath.map(({ path }) => this.storageRepository.unlink(path).catch(() => void 0)));
+      const tracked = await this.integrityRepository.getTrackedPaths(byPath.map(({ path }) => path));
+      const trackedPaths = new Set(tracked.map(({ path }) => path));
+      await Promise.all(
+        byPath
+          .filter(({ path }) => !trackedPaths.has(path))
+          .map(({ path }) => this.storageRepository.unlink(path).catch(() => void 0)),
+      );
       await this.integrityRepository.deleteByIds(byPath.map(({ id }) => id));
     }
 
     this.logger.log(`Deleted ${reports.length} reports.`);
     return JobStatus.Success;
-  }
-}
-
-async function* chunk<T>(generator: AsyncIterableIterator<T>, n: number) {
-  let chunk: T[] = [];
-  for await (const item of generator) {
-    chunk.push(item);
-
-    if (chunk.length === n) {
-      yield chunk;
-      chunk = [];
-    }
-  }
-
-  if (chunk.length > 0) {
-    yield chunk;
   }
 }

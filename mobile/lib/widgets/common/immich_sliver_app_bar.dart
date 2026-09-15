@@ -1,23 +1,24 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:auto_route/auto_route.dart';
-import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:immich_mobile/extensions/build_context_extensions.dart';
-import 'package:immich_mobile/models/cast/cast_manager_state.dart';
+import 'package:immich_mobile/generated/translations.g.dart';
 import 'package:immich_mobile/models/server_info/server_info.model.dart';
-import 'package:immich_mobile/providers/backup/drift_backup.provider.dart';
+import 'package:immich_mobile/providers/backup/backup.provider.dart';
 import 'package:immich_mobile/providers/cast.provider.dart';
-import 'package:immich_mobile/providers/infrastructure/settings.provider.dart';
 import 'package:immich_mobile/providers/infrastructure/readonly_mode.provider.dart';
+import 'package:immich_mobile/providers/infrastructure/settings.provider.dart';
 import 'package:immich_mobile/providers/server_info.provider.dart';
 import 'package:immich_mobile/providers/sync_status.provider.dart';
 import 'package:immich_mobile/providers/timeline/multiselect.provider.dart';
 import 'package:immich_mobile/providers/user.provider.dart';
 import 'package:immich_mobile/routing/router.dart';
+import 'package:immich_mobile/widgets/asset_viewer/cast_dialog.dart';
 import 'package:immich_mobile/widgets/common/app_bar_dialog/app_bar_dialog.dart';
 import 'package:immich_mobile/widgets/common/user_circle_avatar.dart';
 
@@ -53,30 +54,31 @@ class ImmichSliverAppBar extends ConsumerWidget {
         duration: Durations.medium1,
         opacity: isMultiSelectEnabled ? 0 : 1,
         sliver: SliverAppBar(
-          backgroundColor: Colors.transparent,
+          backgroundColor: context.colorScheme.surface,
+          surfaceTintColor: context.colorScheme.surfaceTint,
           elevation: 0,
           scrolledUnderElevation: 1.0,
           floating: floating,
           pinned: pinned,
           snap: snap,
           expandedHeight: expandedHeight,
-          shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(5))),
+          shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(bottom: Radius.circular(5))),
           automaticallyImplyLeading: false,
           centerTitle: false,
           title:
               title ??
               (defaultTargetPlatform == TargetPlatform.ohos ? const SizedBox.shrink() : const _ImmichLogoWithText()),
           actions: [
+            const _SyncStatusIndicator(),
             if (isCasting && !isReadonlyModeEnabled)
-              Padding(
-                padding: const EdgeInsets.only(right: 12),
-                child: IconButton(
-                  onPressed: () => ref.read(castProvider.notifier).connect(CastDestinationType.googleCast, null),
-                  icon: Icon(isCasting ? Icons.cast_connected_rounded : Icons.cast_rounded),
-                ),
+              IconButton(
+                onPressed: () => showDialog(context: context, builder: (context) => const CastDialog()),
+                icon: Icon(isCasting ? Icons.cast_connected_rounded : Icons.cast_rounded),
               ),
-            if (actions != null)
-              ...actions!.map((action) => Padding(padding: const EdgeInsets.only(right: 16), child: action)),
+            ...?actions,
+            if (showUploadButton && !isReadonlyModeEnabled) const _BackupIndicator(),
+            const _ProfileIndicator(),
+            const SizedBox(width: 8),
           ],
         ),
       ),
@@ -98,8 +100,8 @@ class _ImmichLogoWithText extends StatelessWidget {
   );
 }
 
-class ProfileIndicator extends ConsumerWidget {
-  const ProfileIndicator({super.key});
+class _ProfileIndicator extends ConsumerWidget {
+  const _ProfileIndicator();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -113,14 +115,14 @@ class ProfileIndicator extends ConsumerWidget {
     final isIpad = defaultTargetPlatform == TargetPlatform.iOS && !context.isMobile;
 
     void toggleReadonlyMode() {
-      final isReadonlyModeEnabled = ref.watch(readonlyModeProvider);
+      final isReadonlyModeEnabled = ref.read(readonlyModeProvider);
       ref.read(readonlyModeProvider.notifier).toggleReadonlyMode();
 
       context.scaffoldMessenger.showSnackBar(
         SnackBar(
           duration: const Duration(seconds: 2),
           content: Text(
-            (isReadonlyModeEnabled ? "readonly_mode_disabled" : "readonly_mode_enabled").tr(),
+            isReadonlyModeEnabled ? context.t.readonly_mode_disabled : context.t.readonly_mode_enabled,
             style: context.textTheme.bodyLarge?.copyWith(color: context.primaryColor),
           ),
         ),
@@ -143,7 +145,7 @@ class ProfileIndicator extends ConsumerWidget {
                 ? context.colorScheme.error
                 : context.primaryColor,
             size: widgetSize / 2 - 3,
-            semanticLabel: 'new_version_available'.tr(),
+            semanticLabel: context.t.new_version_available,
           ),
         ),
         backgroundColor: Colors.transparent,
@@ -153,7 +155,7 @@ class ProfileIndicator extends ConsumerWidget {
         child: user == null
             ? const Icon(Icons.face_outlined, size: widgetSize)
             : Semantics(
-                label: "logged_in_as".tr(namedArgs: {"user": user.name}),
+                label: context.t.logged_in_as(user: user.name),
                 child: AbsorbPointer(
                   child: Builder(
                     builder: (context) => UserCircleAvatar(
@@ -172,15 +174,23 @@ class ProfileIndicator extends ConsumerWidget {
 
 const double _kBadgeWidgetSize = 30.0;
 
-class BackupIndicator extends ConsumerWidget {
-  const BackupIndicator({super.key});
+class _BackupIndicator extends ConsumerWidget {
+  const _BackupIndicator();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final indicatorIcon = getBackupBadgeIcon(context, ref);
+    final backupEnabled = ref.watch(appConfigProvider.select((c) => c.backup.enabled));
+    final hasError = ref.watch(backupProvider.select((state) => state.error != BackupError.none));
+    final isUploading = ref.watch(backupProvider.select((state) => state.uploadItems.isNotEmpty));
+    final indicatorIcon = _getBackupBadgeIcon(
+      context,
+      backupEnabled: backupEnabled,
+      hasError: hasError,
+      isUploading: isUploading,
+    );
 
     return IconButton(
-      onPressed: () => context.pushRoute(const DriftBackupRoute()),
+      onPressed: () => context.pushRoute(const BackupRoute()),
       icon: Badge(
         label: indicatorIcon,
         backgroundColor: Colors.transparent,
@@ -192,16 +202,23 @@ class BackupIndicator extends ConsumerWidget {
     );
   }
 
-  Widget? getBackupBadgeIcon(BuildContext context, WidgetRef ref) {
-    final backupEnabled = ref.watch(appConfigProvider.select((c) => c.backup.enabled));
-    final hasError = ref.watch(driftBackupProvider.select((state) => state.error != BackupError.none));
+  Widget? _getBackupBadgeIcon(
+    BuildContext context, {
+    required bool backupEnabled,
+    required bool hasError,
+    required bool isUploading,
+  }) {
     final isDarkTheme = context.isDarkTheme;
     final iconColor = isDarkTheme ? Colors.white : Colors.black;
-    final isUploading = ref.watch(driftBackupProvider.select((state) => state.uploadItems.isNotEmpty));
 
     if (!backupEnabled) {
       return _BadgeLabel(
-        Icon(Icons.cloud_off_rounded, size: 9, color: iconColor, semanticLabel: 'backup_controller_page_backup'.tr()),
+        Icon(
+          Icons.cloud_off_rounded,
+          size: 9,
+          color: iconColor,
+          semanticLabel: context.t.backup_controller_page_backup,
+        ),
       );
     }
 
@@ -211,7 +228,7 @@ class BackupIndicator extends ConsumerWidget {
           Icons.warning_rounded,
           size: 12,
           color: context.colorScheme.error,
-          semanticLabel: 'backup_controller_page_backup'.tr(),
+          semanticLabel: context.t.backup_controller_page_backup,
         ),
         backgroundColor: context.colorScheme.errorContainer,
       );
@@ -229,7 +246,7 @@ class BackupIndicator extends ConsumerWidget {
               strokeWidth: 2,
               strokeCap: StrokeCap.round,
               valueColor: AlwaysStoppedAnimation<Color>(iconColor),
-              semanticsLabel: 'backup_controller_page_backup'.tr(),
+              semanticsLabel: context.t.backup_controller_page_backup,
             ),
           ),
         ),
@@ -237,7 +254,7 @@ class BackupIndicator extends ConsumerWidget {
     }
 
     return _BadgeLabel(
-      Icon(Icons.check_outlined, size: 9, color: iconColor, semanticLabel: 'backup_controller_page_backup'.tr()),
+      Icon(Icons.check_outlined, size: 9, color: iconColor, semanticLabel: context.t.backup_controller_page_backup),
     );
   }
 }
@@ -265,14 +282,14 @@ class _BadgeLabel extends StatelessWidget {
   }
 }
 
-class SyncStatusIndicator extends ConsumerStatefulWidget {
-  const SyncStatusIndicator({super.key});
+class _SyncStatusIndicator extends ConsumerStatefulWidget {
+  const _SyncStatusIndicator();
 
   @override
-  ConsumerState<SyncStatusIndicator> createState() => _SyncStatusIndicatorState();
+  ConsumerState<_SyncStatusIndicator> createState() => _SyncStatusIndicatorState();
 }
 
-class _SyncStatusIndicatorState extends ConsumerState<SyncStatusIndicator> with TickerProviderStateMixin {
+class _SyncStatusIndicatorState extends ConsumerState<_SyncStatusIndicator> with TickerProviderStateMixin {
   late AnimationController _rotationController;
   late AnimationController _dismissalController;
   late Animation<double> _rotationAnimation;
@@ -305,13 +322,13 @@ class _SyncStatusIndicatorState extends ConsumerState<SyncStatusIndicator> with 
     // Control animations based on sync status
     if (isSyncing) {
       if (!_rotationController.isAnimating) {
-        _rotationController.repeat();
+        unawaited(_rotationController.repeat());
       }
       _dismissalController.reset();
     } else {
       _rotationController.stop();
       if (_dismissalController.status == AnimationStatus.dismissed) {
-        _dismissalController.forward();
+        unawaited(_dismissalController.forward());
       }
     }
 

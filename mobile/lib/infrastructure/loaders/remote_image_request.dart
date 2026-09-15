@@ -3,7 +3,10 @@ part of 'image_request.dart';
 class RemoteImageRequest extends ImageRequest {
   final String uri;
 
-  RemoteImageRequest({required this.uri, bool aiHdr = false}) {
+  /// Physical size to decode, or null for the source size.
+  final ui.Size? decodeSize;
+
+  RemoteImageRequest({required this.uri, this.decodeSize, bool aiHdr = false}) {
     this.aiHdr = aiHdr;
   }
 
@@ -13,20 +16,31 @@ class RemoteImageRequest extends ImageRequest {
       return null;
     }
 
-    // AI HDR needs the encoded bytes so the engine can convert SDR -> HLG.
-    final info = await remoteImageApi.requestImage(uri, requestId: requestId, preferEncoded: aiHdr);
+    final info = await remoteImageApi.requestImage(
+      uri,
+      requestId: requestId,
+      // AI HDR needs encoded bytes so the engine can perform the SDR -> HLG
+      // conversion on the client.
+      preferEncoded: aiHdr,
+      width: decodeSize?.width.ceil(),
+      height: decodeSize?.height.ceil(),
+    );
+    // Android falls back to encoded data if native decoding fails, so check for both shapes of the response.
     final frame = switch (info) {
-      {'pointer': int pointer, 'length': int length} => await _fromEncodedPlatformImage(pointer, length, aiHdr: aiHdr),
+      {'pointer': final int pointer, 'length': final int length} => await _fromEncodedPlatformImage(
+        pointer,
+        length,
+        decodeSize: decodeSize,
+        aiHdr: aiHdr,
+      ),
       {
-        'pointer': int pointer,
-        'width': int width,
-        'height': int height,
-        'rowBytes': int rowBytes,
-        'isHdr': bool isHdr,
+        'pointer': final int pointer,
+        'width': final int width,
+        'height': final int height,
+        'rowBytes': final int rowBytes,
+        'isHdr': final bool isHdr,
       } =>
         await _fromDecodedPlatformImage(pointer, width, height, rowBytes, isHdr),
-      {'pointer': int pointer, 'width': int width, 'height': int height, 'rowBytes': int rowBytes} =>
-        await _fromDecodedPlatformImage(pointer, width, height, rowBytes),
       _ => null,
     };
     return frame == null ? null : ImageInfo(image: frame.image, scale: scale);
@@ -38,13 +52,20 @@ class RemoteImageRequest extends ImageRequest {
       return null;
     }
 
-    final info = await remoteImageApi.requestImage(uri, requestId: requestId, preferEncoded: true);
+    final info = await remoteImageApi.requestImage(
+      uri,
+      requestId: requestId,
+      preferEncoded: true,
+      width: null,
+      height: null,
+    );
     if (info == null) {
       return null;
     }
 
     final (codec, _) =
-        await _codecFromEncodedPlatformImage(info['pointer']! as int, info['length']! as int) ?? (null, null);
+        await _codecFromEncodedPlatformImage(info['pointer']! as int, info['length']! as int, aiHdr: aiHdr) ??
+        (null, null);
     return codec;
   }
 

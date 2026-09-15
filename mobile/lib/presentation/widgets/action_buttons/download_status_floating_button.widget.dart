@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -35,7 +37,7 @@ class DownloadStatusFloatingButton extends ConsumerWidget {
                     : context.colorScheme.surfaceBright,
                 elevation: 2,
                 onPressed: () {
-                  context.pushRoute(const DownloadInfoRoute());
+                  unawaited(context.pushRoute(const DownloadInfoRoute()));
                 },
                 child: Stack(
                 alignment: AlignmentDirectional.center,
@@ -59,7 +61,7 @@ class DownloadStatusFloatingButton extends ConsumerWidget {
                     ),
                 ],
               ),
-            ),
+              ),
             ),
           )
         : const SizedBox.shrink();

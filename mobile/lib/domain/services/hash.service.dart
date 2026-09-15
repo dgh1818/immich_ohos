@@ -1,62 +1,47 @@
 import 'dart:async';
+import 'dart:io';
 
+import 'package:background_downloader/background_downloader.dart';
 import 'package:flutter/services.dart';
 import 'package:immich_mobile/constants/constants.dart';
 import 'package:immich_mobile/domain/models/album/local_album.model.dart';
 import 'package:immich_mobile/domain/models/asset/base_asset.model.dart';
 import 'package:immich_mobile/extensions/platform_extensions.dart';
+import 'package:immich_mobile/entities/store.entity.dart';
 import 'package:immich_mobile/infrastructure/repositories/local_album.repository.dart';
 import 'package:immich_mobile/infrastructure/repositories/local_asset.repository.dart';
 import 'package:immich_mobile/infrastructure/repositories/trashed_local_asset.repository.dart';
-import 'package:logging/logging.dart';
-import 'package:immich_mobile/domain/models/store.model.dart';
-import 'package:immich_mobile/entities/store.entity.dart';
-import 'package:background_downloader/background_downloader.dart';
-
-import 'dart:io';
-
-import 'package:wakelock_plus/wakelock_plus.dart';
 import 'package:immich_mobile/platform/native_sync_api_ohos.g.dart';
+import 'package:immich_mobile/domain/models/store.model.dart';
+import 'package:logging/logging.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 
 const String _kHashCancelledCode = "HASH_CANCELLED";
 
 class HashService {
   final int _batchSize;
-  final DriftLocalAlbumRepository _localAlbumRepository;
-  final DriftLocalAssetRepository _localAssetRepository;
+  final LocalAlbumRepository _localAlbumRepository;
+  final LocalAssetRepository _localAssetRepository;
+  final TrashedLocalAssetRepository _trashedLocalAssetRepository;
   final NativeSyncApiOhos _nativeSyncApi;
-  final DriftTrashedLocalAssetRepository _trashedLocalAssetRepository;
   final bool Function()? _cancelChecker;
   final Completer<void>? _cancellation;
   final _log = Logger('HashService');
 
   HashService({
-    required DriftLocalAlbumRepository localAlbumRepository,
-    required DriftLocalAssetRepository localAssetRepository,
+    required this._localAlbumRepository,
+    required this._localAssetRepository,
+    required this._trashedLocalAssetRepository,
     required NativeSyncApiOhos nativeSyncApi,
-    required DriftTrashedLocalAssetRepository trashedLocalAssetRepository,
     bool Function()? cancelChecker,
-    Completer<void>? cancellation,
+    this._cancellation,
     int? batchSize,
-  }) : _localAlbumRepository = localAlbumRepository,
-       _localAssetRepository = localAssetRepository,
-       _nativeSyncApi = nativeSyncApi,
-       _trashedLocalAssetRepository = trashedLocalAssetRepository,
+  }) : _nativeSyncApi = nativeSyncApi,
        _cancelChecker = cancelChecker,
-       _cancellation = cancellation,
        _batchSize = batchSize ?? kBatchHashFileLimit {
-    final cancellation = _cancellation;
-    if (cancellation != null) {
-      unawaited(
-        cancellation.future.then((_) async {
-          try {
-            await _nativeSyncApi.cancelHashing();
-          } catch (error, stackTrace) {
-            _log.warning("Failed to cancel native hashing", error, stackTrace);
-          }
-        }),
-      );
-    }
+    // Stop the in-flight native hash call promptly on cancellation; the loops
+    // below also observe [isCancelled] to bail between batches.
+    unawaited(_cancellation?.future.then((_) => _nativeSyncApi.cancelHashing().onError(_log.warning)));
   }
 
   bool get isCancelled => (_cancelChecker?.call() ?? false) || (_cancellation?.isCompleted ?? false);
@@ -67,10 +52,7 @@ class HashService {
   Future<void> hashAssets() async {
     _startedBackgroundTransfer = false;
     _log.info("Starting hashing of assets");
-
-    //hash资产时避免息屏
     unawaited(WakelockPlus.enable());
-
     final Stopwatch stopwatch = Stopwatch()..start();
     try {
       // Migrate hashes from cloud ID to local ID so we don't have to re-hash them
@@ -86,20 +68,16 @@ class HashService {
         }
 
         final assetsToHash = await _localAlbumRepository.getAssetsToHash(album.id);
-
-        //开启后台保活
         if (assetsToHash.isNotEmpty && !_startedBackgroundTransfer && Platform.isOhos) {
           try {
             await _nativeSyncApi.startBackgroundTransfer();
             _startedBackgroundTransfer = true;
           } catch (_) {
-            // ignore start failures
+            // Keep hashing if the OHOS long-running task cannot be started.
           }
         }
-
         toHashCount = assetsToHash.length;
         hashedCount = 0;
-
         if (assetsToHash.isNotEmpty) {
           await _hashAssets(album, assetsToHash);
         }
@@ -112,25 +90,25 @@ class HashService {
           await _hashAssets(pseudoAlbum, trashedToHash, isTrashed: true);
         }
       }
-    } on PlatformException catch (e) {
+    } on PlatformException catch (e, s) {
       if (e.code == _kHashCancelledCode) {
         _log.warning("Hashing cancelled by platform");
         return;
       }
+      _log.severe("Native hashing failed: ${e.code}", e, s);
     } catch (e, s) {
       _log.severe("Error during hashing", e, s);
     } finally {
       unawaited(WakelockPlus.disable());
       stopwatch.stop();
       _log.info("Hashing took - ${stopwatch.elapsedMilliseconds}ms");
-
       if (_startedBackgroundTransfer && Platform.isOhos) {
         final backupEnabled = Store.get(StoreKey.enableBackup, false);
         if (!backupEnabled) {
           try {
             await _nativeSyncApi.stopBackgroundTransfer();
           } catch (_) {
-            // ignore stop failures
+            // Ignore cleanup failures on OHOS.
           }
         } else {
           unawaited(() async {
@@ -142,13 +120,12 @@ class HashService {
                 await _nativeSyncApi.stopBackgroundTransfer();
               }
             } catch (_) {
-              // ignore stop failures
+              // Ignore cleanup failures on OHOS.
             }
           }());
         }
       }
     }
-
   }
 
   /// Processes a list of [LocalAsset]s, storing their hash and updating the assets in the DB
@@ -199,25 +176,20 @@ class HashService {
 
       final hashResult = hashResults[i];
       final asset = toHash[hashResult.assetId];
-      //因hash过程中可能忽略云端资产，所以hash结果可能为空
       if (hashResult.hash != null && hashResult.hash!.isNotEmpty) {
         hashed[hashResult.assetId] = hashResult.hash!;
       } else {
-        final asset = toHash[hashResult.assetId];
         _log.warning(
           "Failed to hash asset with id: ${hashResult.assetId}, name: ${asset?.name}, createdAt: ${asset?.createdAt}, from album: ${album.name}. Error: ${hashResult.error ?? "unknown"}",
         );
       }
-
       hashedCount++;
-      //更新后台保活通知进度
       if (Platform.isOhos && toHashCount > 0) {
         final progress = (hashedCount.toDouble() / toHashCount.toDouble()) * 100;
-        final name = asset?.name ?? "";
         try {
-          await _nativeSyncApi.updateBackgroundTransferProgress(progress, "正在Hash ${album.name}", name);
+          await _nativeSyncApi.updateBackgroundTransferProgress(progress, "正在Hash ${album.name}", asset?.name ?? "");
         } catch (_) {
-          // ignore progress failures
+          // Ignore progress failures on OHOS.
         }
       }
     }

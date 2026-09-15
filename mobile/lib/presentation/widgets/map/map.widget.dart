@@ -11,7 +11,8 @@ import 'package:immich_mobile/domain/models/events.model.dart';
 import 'package:immich_mobile/domain/utils/event_stream.dart';
 import 'package:immich_mobile/extensions/asyncvalue_extensions.dart';
 import 'package:immich_mobile/extensions/build_context_extensions.dart';
-import 'package:immich_mobile/extensions/translate_extensions.dart';
+import 'package:immich_mobile/generated/translations.g.dart';
+import 'package:immich_mobile/presentation/widgets/bottom_sheet/base_bottom_sheet.widget.dart';
 import 'package:immich_mobile/presentation/widgets/bottom_sheet/map_bottom_sheet.widget.dart';
 import 'package:immich_mobile/presentation/widgets/map/map.state.dart';
 import 'package:immich_mobile/presentation/widgets/map/map_utils.dart';
@@ -70,10 +71,13 @@ class DriftMap extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<DriftMap> createState() => _DriftMapState();
+  ConsumerState<DriftMap> createState() => _MapViewState();
 }
 
-class _DriftMapState extends ConsumerState<DriftMap> {
+/// Compatibility alias for callers using the upstream map widget name.
+typedef MapView = DriftMap;
+
+class _MapViewState extends ConsumerState<MapView> {
   MapLibreMapController? mapController;
   final _reloadMutex = AsyncMutex();
   final _debouncer = Debouncer(interval: const Duration(milliseconds: 500), maxWaitTime: const Duration(seconds: 2));
@@ -106,7 +110,7 @@ class _DriftMapState extends ConsumerState<DriftMap> {
     bottomSheetOffset.dispose();
     _pinnedMarker.dispose();
     _selectedMarker.dispose();
-    _eventSubscription?.cancel();
+    unawaited(_eventSubscription?.cancel());
     widget.selectedAssetListenable?.removeListener(_onSelectedAssetChanged);
     super.dispose();
   }
@@ -428,7 +432,7 @@ class _DriftMapState extends ConsumerState<DriftMap> {
           context: context,
           gravity: ToastGravity.BOTTOM,
           toastType: ToastType.error,
-          msg: "map_cannot_get_user_location".t(context: context),
+          msg: context.t.map_cannot_get_user_location,
         );
       }
       return;

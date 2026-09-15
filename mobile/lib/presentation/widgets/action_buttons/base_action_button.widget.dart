@@ -1,10 +1,9 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:immich_mobile/extensions/build_context_extensions.dart';
 
-class BaseActionButton extends ConsumerWidget {
+class BaseActionButton extends StatelessWidget {
   const BaseActionButton({
     super.key,
     required this.label,
@@ -41,7 +40,7 @@ class BaseActionButton extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final miniWidth = minWidth ?? (context.isMobile ? context.width / 4.5 : 75.0);
     final iconTheme = IconTheme.of(context);
     final iconSize = iconTheme.size ?? 24.0;
@@ -92,7 +91,7 @@ class BaseActionButton extends ConsumerWidget {
             const SizedBox(height: 8),
             Text(
               label,
-              style: const TextStyle(fontSize: 14.0, fontWeight: FontWeight.w400),
+              style: const TextStyle(fontSize: 14.0, fontWeight: FontWeight.w500),
               maxLines: 3,
               textAlign: TextAlign.center,
               softWrap: true,

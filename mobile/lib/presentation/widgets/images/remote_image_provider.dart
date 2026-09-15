@@ -15,12 +15,16 @@ class RemoteImageProvider extends CancellableImageProvider<RemoteImageProvider>
   final bool edited;
   final bool aiHdr;
 
-  RemoteImageProvider({required this.url, this.edited = true, this.aiHdr = false});
+  /// Physical size to decode, or null for the source size.
+  final Size? decodeSize;
+
+  RemoteImageProvider({required this.url, this.edited = true, this.decodeSize, this.aiHdr = false});
 
   RemoteImageProvider.thumbnail({
     required String assetId,
     required String thumbhash,
     this.edited = true,
+    this.decodeSize,
     this.aiHdr = false,
   }) : url = getThumbnailUrlForRemoteId(assetId, thumbhash: thumbhash, edited: edited);
 
@@ -43,7 +47,7 @@ class RemoteImageProvider extends CancellableImageProvider<RemoteImageProvider>
 
   Stream<ImageInfo> _codec(RemoteImageProvider key, ImageDecoderCallback decode) {
     final effectiveDecode = key.aiHdr ? aiHdrDecodeCallback(decode) : decode;
-    final request = this.request = RemoteImageRequest(uri: key.url, aiHdr: key.aiHdr);
+    final request = this.request = RemoteImageRequest(uri: key.url, decodeSize: key.decodeSize, aiHdr: key.aiHdr);
     return loadRequest(request, effectiveDecode, isFinal: true);
   }
 
@@ -53,13 +57,13 @@ class RemoteImageProvider extends CancellableImageProvider<RemoteImageProvider>
       return true;
     }
     if (other is RemoteImageProvider) {
-      return url == other.url && edited == other.edited && aiHdr == other.aiHdr;
+      return url == other.url && edited == other.edited && decodeSize == other.decodeSize && aiHdr == other.aiHdr;
     }
     return false;
   }
 
   @override
-  int get hashCode => url.hashCode ^ edited.hashCode ^ aiHdr.hashCode;
+  int get hashCode => Object.hash(url, edited, decodeSize, aiHdr);
 }
 
 class RemoteFullImageProvider extends CancellableImageProvider<RemoteFullImageProvider>
@@ -71,12 +75,16 @@ class RemoteFullImageProvider extends CancellableImageProvider<RemoteFullImagePr
   final bool edited;
   final bool aiHdr;
 
+  /// Physical size of the thumbnail shown before the preview.
+  final Size? thumbnailSize;
+
   RemoteFullImageProvider({
     required this.assetId,
     required this.thumbhash,
     required this.assetType,
     required this.isAnimated,
     this.edited = true,
+    this.thumbnailSize,
     this.aiHdr = false,
   });
 
@@ -93,7 +101,7 @@ class RemoteFullImageProvider extends CancellableImageProvider<RemoteFullImagePr
         stream: _animatedCodec(key, effectiveDecode),
         scale: 1.0,
         initialImage: getInitialImage(
-          RemoteImageProvider.thumbnail(assetId: key.assetId, thumbhash: key.thumbhash, aiHdr: false),
+          RemoteImageProvider.thumbnail(assetId: key.assetId, thumbhash: key.thumbhash, decodeSize: key.thumbnailSize),
         ),
         informationCollector: () => <DiagnosticsNode>[
           DiagnosticsProperty<ImageProvider>('Image provider', this),
@@ -104,32 +112,16 @@ class RemoteFullImageProvider extends CancellableImageProvider<RemoteFullImagePr
       );
     }
 
-    ImageInfo? initialImage;
-    final loadOriginal = key.assetType == AssetType.image && SettingsRepository.instance.appConfig.image.loadOriginal;
-    if (loadOriginal) {
-      final originalProvider = RemoteImageProvider(url: getOriginalUrlForRemoteId(key.assetId, edited: key.edited));
-      final originalStatus = PaintingBinding.instance.imageCache.statusForKey(originalProvider);
-      if (!originalStatus.pending && (originalStatus.keepAlive || originalStatus.live)) {
-        initialImage = getInitialImage(originalProvider);
-      }
-    }
-    if (initialImage != null) {
-      isFinished = true;
-    }
-    initialImage ??= getInitialImage(
-      // SDR placeholder (OHOS AI HDR): it is shown while the surface is still
-      // SDR — the surface flips to HLG only when the preview tier arrives.
-      RemoteImageProvider.thumbnail(
-        assetId: key.assetId,
-        thumbhash: key.thumbhash,
-        edited: key.edited,
-        aiHdr: false,
-      ),
-    );
-
     return OneFramePlaceholderImageStreamCompleter(
-      initialImage != null && isFinished ? const Stream<ImageInfo>.empty() : _codec(key, effectiveDecode),
-      initialImage: initialImage,
+      _codec(key, effectiveDecode),
+      initialImage: getInitialImage(
+        RemoteImageProvider.thumbnail(
+          assetId: key.assetId,
+          thumbhash: key.thumbhash,
+          edited: key.edited,
+          decodeSize: key.thumbnailSize,
+        ),
+      ),
       informationCollector: () => <DiagnosticsNode>[
         DiagnosticsProperty<ImageProvider>('Image provider', this),
         DiagnosticsProperty<String>('Asset Id', key.assetId),
@@ -185,7 +177,8 @@ class RemoteFullImageProvider extends CancellableImageProvider<RemoteFullImagePr
         key.assetId,
         type: AssetMediaSize.preview,
         thumbhash: key.thumbhash,
-        edited: key.edited,
+          edited: key.edited,
+          aiHdr: key.aiHdr,
       ),
     );
     yield* loadRequest(previewRequest, decode, isFinal: false);
@@ -197,6 +190,7 @@ class RemoteFullImageProvider extends CancellableImageProvider<RemoteFullImagePr
     // always try original for animated, since previews don't support animation
     final originalRequest = request = RemoteImageRequest(
       uri: getOriginalUrlForRemoteId(key.assetId, edited: key.edited),
+      aiHdr: key.aiHdr,
     );
     final codec = await loadCodecRequest(originalRequest, isFinal: true);
     if (codec == null) {
@@ -217,12 +211,13 @@ class RemoteFullImageProvider extends CancellableImageProvider<RemoteFullImagePr
       return assetId == other.assetId &&
           thumbhash == other.thumbhash &&
           isAnimated == other.isAnimated &&
-          edited == other.edited;
+          edited == other.edited &&
+          aiHdr == other.aiHdr;
     }
 
     return false;
   }
 
   @override
-  int get hashCode => assetId.hashCode ^ thumbhash.hashCode ^ isAnimated.hashCode ^ edited.hashCode ^ aiHdr.hashCode;
+  int get hashCode => Object.hash(assetId, thumbhash, isAnimated, edited, aiHdr);
 }

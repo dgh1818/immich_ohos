@@ -9,6 +9,7 @@ import semver from 'semver';
 import {
   EXTENSION_NAMES,
   POSTGRES_VERSION_RANGE,
+  serverVersion,
   VECTOR_EXTENSIONS,
   VECTOR_INDEX_TABLES,
   VECTOR_VERSION_RANGE,
@@ -239,12 +240,21 @@ export class DatabaseRepository {
         SET DATA TYPE vector(${sql.raw(String(dimSize))})`.execute(tx);
       await sql.raw(vectorIndexQuery({ vectorExtension, table, indexName, lists })).execute(tx);
     });
-    try {
-      await sql`VACUUM ANALYZE ${sql.raw(table)}`.execute(this.db);
-    } catch (error: any) {
-      this.logger.warn(`Failed to vacuum table '${table}'. The DB will temporarily use more disk space: ${error}`);
-    }
     this.logger.log(`Reindexed ${indexName}`);
+    void this.vacuum({ table }).catch((error) => this.logger.warn(`Failed to vacuum ${table}: ${error}`));
+  }
+
+  async vacuum({ analyze = false, table }: { analyze?: boolean; table?: keyof DB } = {}): Promise<void> {
+    try {
+      await sql`VACUUM ${sql.raw(analyze ? 'ANALYZE' : '')} ${sql.raw(table ?? '')}`.execute(this.db);
+    } catch (error) {
+      this.logger.warn(`Failed to vacuum ${table || 'database'}: ${error}`);
+      this.logger.warn('If using Docker, consider increasing shm_size for the database.');
+    }
+  }
+
+  reindex(table: keyof DB, { concurrently = false } = {}): Promise<unknown> {
+    return sql`REINDEX TABLE ${sql.raw(concurrently ? 'CONCURRENTLY' : '')} ${sql.raw(table)}`.execute(this.db);
   }
 
   private async getDatabaseName(): Promise<string> {
@@ -365,16 +375,16 @@ export class DatabaseRepository {
     return count;
   }
 
-  async runMigrations(): Promise<void> {
+  async runMigrations(): Promise<number> {
     this.logger.log('Running migrations');
 
     await this.fixExternalLibraryChecksumMigrationOrder();
 
     const migrator = this.createMigrator();
 
-    const { error, results } = await migrator.migrateToLatest();
+    const { error, results = [] } = await migrator.migrateToLatest();
 
-    for (const result of results ?? []) {
+    for (const result of results) {
       if (result.status === 'Success') {
         this.logger.log(`Migration "${result.migrationName}" succeeded`);
       } else if (result.status === 'Error') {
@@ -384,10 +394,22 @@ export class DatabaseRepository {
 
     if (error) {
       this.logger.error(`Migrations failed: ${error}`);
+
+      const missing =
+        error instanceof Error ? error.message.match(/previously executed migration (.+) is missing/u) : null;
+      if (missing) {
+        throw new Error(
+          `Migration "${missing[1]}" was already applied to this database but is not in this version of Immich (${serverVersion}). ` +
+            `This usually means the database was migrated by a newer version. Downgrades are not supported.`,
+          { cause: error },
+        );
+      }
+
       throw error;
     }
 
     this.logger.log('Finished running migrations');
+    return results.length;
   }
 
   private async fixExternalLibraryChecksumMigrationOrder(): Promise<void> {
@@ -491,35 +513,6 @@ export class DatabaseRepository {
 
   private async releaseLock(lock: DatabaseLock, connection: Kysely<DB>): Promise<void> {
     await sql`SELECT pg_advisory_unlock(${lock})`.execute(connection);
-  }
-
-  async revertLastMigration(): Promise<string | undefined> {
-    this.logger.debug('Reverting last migration');
-
-    const migrator = this.createMigrator();
-    const { error, results } = await migrator.migrateDown();
-
-    for (const result of results ?? []) {
-      if (result.status === 'Success') {
-        this.logger.log(`Reverted migration "${result.migrationName}"`);
-      } else if (result.status === 'Error') {
-        this.logger.warn(`Failed to revert migration "${result.migrationName}"`);
-      }
-    }
-
-    if (error) {
-      this.logger.error(`Failed to revert migrations: ${error}`);
-      throw error;
-    }
-
-    const reverted = results?.find((result) => result.direction === 'Down' && result.status === 'Success');
-    if (!reverted) {
-      this.logger.debug('No migrations to revert');
-      return undefined;
-    }
-
-    this.logger.debug('Finished reverting migration');
-    return reverted.migrationName;
   }
 
   private createMigrator(): Migrator {

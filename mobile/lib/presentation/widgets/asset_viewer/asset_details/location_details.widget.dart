@@ -1,15 +1,16 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
-import 'package:immich_mobile/constants/enums.dart';
 import 'package:immich_mobile/domain/models/asset/base_asset.model.dart';
 import 'package:immich_mobile/domain/models/exif.model.dart';
 import 'package:immich_mobile/extensions/build_context_extensions.dart';
 import 'package:immich_mobile/extensions/theme_extensions.dart';
-import 'package:immich_mobile/extensions/translate_extensions.dart';
+import 'package:immich_mobile/generated/translations.g.dart';
+import 'package:immich_mobile/presentation/actions/edit_location.action.dart';
 import 'package:immich_mobile/presentation/widgets/asset_viewer/sheet_tile.widget.dart';
-import 'package:immich_mobile/providers/asset_viewer/asset_viewer.provider.dart';
-import 'package:immich_mobile/providers/infrastructure/action.provider.dart';
 import 'package:immich_mobile/widgets/asset_viewer/detail_panel/exif_map.dart';
+import 'package:maplibre_gl/maplibre_gl.dart';
 
 class LocationDetails extends ConsumerStatefulWidget {
   final BaseAsset asset;
@@ -22,7 +23,7 @@ class LocationDetails extends ConsumerStatefulWidget {
 }
 
 class _LocationDetailsState extends ConsumerState<LocationDetails> {
-  String reverseText = '';
+  MapLibreMapController? _mapController;
 
   String? _getLocationName(ExifInfo? exifInfo) {
     if (exifInfo == null) {
@@ -38,22 +39,19 @@ class _LocationDetailsState extends ConsumerState<LocationDetails> {
     return null;
   }
 
-  void _onReverseGeocoded(String text) {
-    setState(() {
-      reverseText = text.trim();
-    });
+  void _onMapCreated(MapLibreMapController controller) {
+    _mapController = controller;
   }
 
   @override
   void didUpdateWidget(LocationDetails oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.exifInfo != oldWidget.exifInfo) {
-      reverseText = '';
+      final exif = widget.exifInfo;
+      if (exif != null && exif.hasCoordinates) {
+        unawaited(_mapController?.moveCamera(CameraUpdate.newLatLng(LatLng(exif.latitude!, exif.longitude!))));
+      }
     }
-  }
-
-  void editLocation() async {
-    await ref.read(actionProvider.notifier).editLocation(ActionSource.viewer, context);
   }
 
   @override
@@ -61,14 +59,14 @@ class _LocationDetailsState extends ConsumerState<LocationDetails> {
     final asset = widget.asset;
     final exifInfo = widget.exifInfo;
     final hasCoordinates = exifInfo?.hasCoordinates ?? false;
-    final showingDetails = ref.watch(assetViewerProvider.select((s) => s.showingDetails));
 
     // Guard local assets
     if (asset is! RemoteAsset) {
       return const SizedBox.shrink();
     }
 
-    final locationName = reverseText.isNotEmpty ? reverseText : _getLocationName(exifInfo);
+    final editLocation = const EditLocationAction(source: .viewer).create(context, ref);
+    final locationName = _getLocationName(exifInfo);
     final coordinates = "${exifInfo?.latitude?.toStringAsFixed(4)}, ${exifInfo?.longitude?.toStringAsFixed(4)}";
 
     return Padding(
@@ -77,10 +75,10 @@ class _LocationDetailsState extends ConsumerState<LocationDetails> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SheetTile(
-            title: 'location'.t(context: context),
+            title: context.t.location,
             titleStyle: context.textTheme.labelLarge?.copyWith(color: context.colorScheme.onSurfaceSecondary),
-            trailing: hasCoordinates ? const Icon(Icons.edit_location_alt, size: 20) : null,
-            onTap: editLocation,
+            trailing: hasCoordinates && editLocation != null ? const Icon(Icons.edit_location_alt, size: 20) : null,
+            onTap: editLocation?.onAction,
           ),
           if (hasCoordinates)
             Padding(
@@ -88,14 +86,12 @@ class _LocationDetailsState extends ConsumerState<LocationDetails> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  if (showingDetails)
-                    ExifMap(
-                      key: ValueKey('${asset.id}:${exifInfo!.latitude}:${exifInfo.longitude}'),
-                      exifInfo: exifInfo,
-                      markerId: asset.id,
-                      markerAssetThumbhash: asset.thumbHash,
-                      onReverseGeocoded: _onReverseGeocoded,
-                    ),
+                  ExifMap(
+                    exifInfo: exifInfo!,
+                    markerId: asset.id,
+                    markerAssetThumbhash: asset.thumbHash,
+                    onMapCreated: _onMapCreated,
+                  ),
                   const SizedBox(height: 16),
                   if (locationName != null)
                     Padding(
@@ -111,13 +107,13 @@ class _LocationDetailsState extends ConsumerState<LocationDetails> {
             ),
           if (!hasCoordinates)
             SheetTile(
-              title: "add_a_location".t(context: context),
+              title: context.t.add_a_location,
               titleStyle: context.textTheme.bodyMedium?.copyWith(
                 fontWeight: FontWeight.w600,
                 color: context.primaryColor,
               ),
               leading: const Icon(Icons.location_off),
-              onTap: editLocation,
+              onTap: editLocation?.onAction,
             ),
         ],
       ),

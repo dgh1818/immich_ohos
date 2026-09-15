@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:immich_mobile/domain/models/setting.model.dart';
-import 'package:immich_mobile/extensions/translate_extensions.dart';
+import 'package:immich_mobile/generated/translations.g.dart';
 import 'package:immich_mobile/providers/app_settings.provider.dart';
 import 'package:immich_mobile/providers/infrastructure/setting.provider.dart' as store_settings;
 import 'package:immich_mobile/providers/infrastructure/settings.provider.dart';
@@ -16,9 +16,9 @@ class ImageViewerQualitySetting extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isOriginal = useState(ref.read(appConfigProvider).image.loadOriginal);
-    useValueChanged<bool, void>(isOriginal.value, (_, __) {
-      ref.read(settingsProvider).write(.imageLoadOriginal, isOriginal.value);
+    final isOriginal = useState(ref.watch(appConfigProvider).image.loadOriginal);
+    useValueChanged<bool, void>(isOriginal.value, (_, _) {
+      unawaited(ref.read(settingsProvider).write(.imageLoadOriginal, isOriginal.value));
     });
     final imageHdr = useState(ref.read(store_settings.settingsProvider.notifier).get(Setting.imageHdr));
     useValueChanged<bool, void>(imageHdr.value, (_, __) {
@@ -29,14 +29,14 @@ class ImageViewerQualitySetting extends HookConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SettingGroupTitle(
-          title: "photos".t(context: context),
+          title: context.t.photos,
           icon: Icons.image_outlined,
-          subtitle: "setting_image_viewer_help".t(context: context),
+          subtitle: context.t.setting_image_viewer_help,
         ),
         SettingsSwitchListTile(
           valueNotifier: isOriginal,
-          title: "setting_image_viewer_original_title".t(context: context),
-          subtitle: "setting_image_viewer_original_subtitle".t(context: context),
+          title: context.t.setting_image_viewer_original_title,
+          subtitle: context.t.setting_image_viewer_original_subtitle,
           onChanged: (_) => ref.invalidate(appSettingsServiceProvider),
         ),
         SettingsSwitchListTile(valueNotifier: imageHdr, title: "图片 HDR", subtitle: "在支持 HDR 的设备上以 HDR 方式显示图片"),

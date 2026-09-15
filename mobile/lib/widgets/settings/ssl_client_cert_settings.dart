@@ -1,13 +1,13 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:immich_mobile/domain/models/store.model.dart';
 import 'package:immich_mobile/entities/store.entity.dart';
 import 'package:immich_mobile/extensions/build_context_extensions.dart';
 import 'package:immich_mobile/extensions/theme_extensions.dart';
+import 'package:immich_mobile/generated/translations.g.dart';
 import 'package:immich_mobile/platform/network_api.g.dart';
 import 'package:immich_mobile/providers/infrastructure/platform.provider.dart';
 import 'package:logging/logging.dart';
@@ -47,12 +47,15 @@ class _SslClientCertSettingsState extends State<SslClientCertSettings> {
       contentPadding: const EdgeInsets.symmetric(horizontal: 20),
       horizontalTitleGap: 20,
       isThreeLine: true,
-      title: Text("client_cert_title".tr(), style: context.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w500)),
+      title: Text(
+        context.t.client_cert_title,
+        style: context.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w500),
+      ),
       subtitle: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            "client_cert_subtitle".tr(),
+            context.t.client_cert_subtitle,
             style: context.textTheme.bodyMedium?.copyWith(color: context.colorScheme.onSurfaceSecondary),
           ),
           const SizedBox(height: 6),
@@ -61,8 +64,8 @@ class _SslClientCertSettingsState extends State<SslClientCertSettings> {
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              ElevatedButton(onPressed: importCert, child: Text("client_cert_import".tr())),
-              ElevatedButton(onPressed: !isCertExist ? null : removeCert, child: Text("remove".tr())),
+              ElevatedButton(onPressed: importCert, child: Text(context.t.client_cert_import)),
+              ElevatedButton(onPressed: !isCertExist ? null : removeCert, child: Text(context.t.remove)),
             ],
           ),
         ],
@@ -82,10 +85,10 @@ class _SslClientCertSettingsState extends State<SslClientCertSettings> {
   Future<void> importCert() async {
     try {
       final styling = ClientCertPrompt(
-        title: "client_cert_password_title".tr(),
-        message: "client_cert_password_message".tr(),
-        cancel: "cancel".tr(),
-        confirm: "confirm".tr(),
+        title: context.t.client_cert_password_title,
+        message: context.t.client_cert_password_message,
+        cancel: context.t.cancel,
+        confirm: context.t.confirm,
       );
       final cert = await networkApi.selectCertificate(styling);
 
@@ -109,13 +112,13 @@ class _SslClientCertSettingsState extends State<SslClientCertSettings> {
       await Store.delete(StoreKey.sslClientCertData);
       await Store.delete(StoreKey.sslClientPasswd);
       setState(() => isCertExist = true);
-      showMessage("client_cert_import_success_msg".tr());
+      showMessage(StaticTranslations.instance.client_cert_import_success_msg);
     } catch (e) {
       if (_isCancellation(e)) {
         return;
       }
       _log.severe("Error importing client cert", e);
-      showMessage("client_cert_invalid_msg".tr());
+      showMessage(StaticTranslations.instance.client_cert_invalid_msg);
     }
   }
 
@@ -125,13 +128,13 @@ class _SslClientCertSettingsState extends State<SslClientCertSettings> {
       await Store.delete(StoreKey.sslClientCertData);
       await Store.delete(StoreKey.sslClientPasswd);
       setState(() => isCertExist = false);
-      showMessage("client_cert_remove_msg".tr());
+      showMessage(StaticTranslations.instance.client_cert_remove_msg);
     } catch (e) {
       if (_isCancellation(e)) {
         return;
       }
       _log.severe("Error removing client cert", e);
-      showMessage("client_cert_invalid_msg".tr());
+      showMessage(StaticTranslations.instance.client_cert_invalid_msg);
     }
   }
 

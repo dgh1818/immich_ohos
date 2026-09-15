@@ -4,8 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:immich_mobile/domain/models/setting.model.dart';
-import 'package:immich_mobile/extensions/translate_extensions.dart';
 import 'package:immich_mobile/providers/infrastructure/setting.provider.dart' as store_settings;
+import 'package:immich_mobile/generated/translations.g.dart';
 import 'package:immich_mobile/providers/infrastructure/settings.provider.dart';
 import 'package:immich_mobile/widgets/settings/setting_group_title.dart';
 import 'package:immich_mobile/widgets/settings/settings_switch_list_tile.dart';
@@ -15,19 +15,19 @@ class VideoViewerSettings extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final viewer = ref.read(appConfigProvider).viewer;
+    final viewer = ref.watch(appConfigProvider).viewer;
     final useAutoPlayVideo = useState(viewer.autoPlayVideo);
     final useLoopVideo = useState(viewer.loopVideo);
     final useOriginalVideo = useState(viewer.loadOriginalVideo);
 
-    useValueChanged<bool, void>(useAutoPlayVideo.value, (_, __) {
-      ref.read(settingsProvider).write(.viewerAutoPlayVideo, useAutoPlayVideo.value);
+    useValueChanged<bool, void>(useAutoPlayVideo.value, (_, _) {
+      unawaited(ref.read(settingsProvider).write(.viewerAutoPlayVideo, useAutoPlayVideo.value));
     });
-    useValueChanged<bool, void>(useLoopVideo.value, (_, __) {
-      ref.read(settingsProvider).write(.viewerLoopVideo, useLoopVideo.value);
+    useValueChanged<bool, void>(useLoopVideo.value, (_, _) {
+      unawaited(ref.read(settingsProvider).write(.viewerLoopVideo, useLoopVideo.value));
     });
-    useValueChanged<bool, void>(useOriginalVideo.value, (_, __) {
-      ref.read(settingsProvider).write(.viewerLoadOriginalVideo, useOriginalVideo.value);
+    useValueChanged<bool, void>(useOriginalVideo.value, (_, _) {
+      unawaited(ref.read(settingsProvider).write(.viewerLoadOriginalVideo, useOriginalVideo.value));
     });
     final useVideoHdr = useState(ref.read(store_settings.settingsProvider.notifier).get(Setting.videoHdr));
     useValueChanged<bool, void>(useVideoHdr.value, (_, __) {
@@ -37,24 +37,21 @@ class VideoViewerSettings extends HookConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SettingGroupTitle(
-          title: "videos".t(context: context),
-          icon: Icons.video_camera_back_outlined,
-        ),
+        SettingGroupTitle(title: context.t.videos, icon: Icons.video_camera_back_outlined),
         SettingsSwitchListTile(
           valueNotifier: useAutoPlayVideo,
-          title: "setting_video_viewer_auto_play_title".t(context: context),
-          subtitle: "setting_video_viewer_auto_play_subtitle".t(context: context),
+          title: context.t.setting_video_viewer_auto_play_title,
+          subtitle: context.t.setting_video_viewer_auto_play_subtitle,
         ),
         SettingsSwitchListTile(
           valueNotifier: useLoopVideo,
-          title: "setting_video_viewer_looping_title".t(context: context),
-          subtitle: "loop_videos_description".t(context: context),
+          title: context.t.setting_video_viewer_looping_title,
+          subtitle: context.t.loop_videos_description,
         ),
         SettingsSwitchListTile(
           valueNotifier: useOriginalVideo,
-          title: "setting_video_viewer_original_video_title".t(context: context),
-          subtitle: "setting_video_viewer_original_video_subtitle".t(context: context),
+          title: context.t.setting_video_viewer_original_video_title,
+          subtitle: context.t.setting_video_viewer_original_video_subtitle,
         ),
         SettingsSwitchListTile(valueNotifier: useVideoHdr, title: "视频 HDR", subtitle: "在支持 HDR 的设备上以 HDR 方式播放视频"),
       ],

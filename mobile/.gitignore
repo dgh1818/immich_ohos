@@ -31,6 +31,16 @@
 .pub-cache/
 .pub/
 /build/
+lib/**/*.drift.dart
+lib/**/*.steps.dart
+lib/**/*.freezed.dart
+lib/routing/router.gr.dart
+test/drift/main/generated/
+
+# Pigeon related
+/lib/platform/*.g.dart
+/ios/**/*.g.swift
+/android/**/*.g.kt
 
 # Web related
 lib/generated_plugin_registrant.dart
@@ -61,3 +71,5 @@ lib/generated/
 # FVM Version
 .fvm/
 .vscode/mcp.json
+# Flutter widget previews cache
+.widget_preview/

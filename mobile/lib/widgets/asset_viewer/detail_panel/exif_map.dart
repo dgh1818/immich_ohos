@@ -44,7 +44,7 @@ class ExifMap extends StatelessWidget {
       const zoomLevel = 16;
 
       if (Platform.isAndroid) {
-        Uri uri = Uri(
+        final Uri uri = Uri(
           scheme: 'geo',
           host: '$latitude,$longitude',
           queryParameters: {'z': '$zoomLevel', 'q': '$latitude,$longitude'},
@@ -53,8 +53,8 @@ class ExifMap extends StatelessWidget {
           return uri;
         }
       } else if (Platform.isIOS) {
-        var params = {'ll': '$latitude,$longitude', 'q': '$latitude,$longitude', 'z': '$zoomLevel'};
-        Uri uri = Uri.https('maps.apple.com', '/', params);
+        final params = {'ll': '$latitude,$longitude', 'q': '$latitude,$longitude', 'z': '$zoomLevel'};
+        final Uri uri = Uri.https('maps.apple.com', '/', params);
         if (await canLaunchUrl(uri)) {
           return uri;
         }
@@ -80,9 +80,9 @@ class ExifMap extends StatelessWidget {
     }
 
     Future<void> openMapPage() {
-      dPrint(() => 'ExifMap: pushing DriftMapRoute (ohos)');
+      dPrint(() => 'ExifMap: pushing MapRoute (ohos)');
       return context.pushRoute<LatLng?>(
-        DriftMapRoute(
+        MapRoute(
           initialLocation: LatLng(exifInfo.latitude ?? 0, exifInfo.longitude ?? 0),
           initialAssetId: markerId,
           initialAssetThumbhash: markerAssetThumbhash,

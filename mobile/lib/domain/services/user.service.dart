@@ -4,17 +4,17 @@ import 'dart:typed_data';
 import 'package:immich_mobile/domain/models/store.model.dart';
 import 'package:immich_mobile/domain/models/user.model.dart';
 import 'package:immich_mobile/domain/services/store.service.dart';
+import 'package:immich_mobile/infrastructure/repositories/user.repository.dart';
 import 'package:immich_mobile/infrastructure/repositories/user_api.repository.dart';
 import 'package:logging/logging.dart';
 
 class UserService {
   final Logger _log = Logger("UserService");
   final UserApiRepository _userApiRepository;
+  final UserRepository _userRepository;
   final StoreService _storeService;
 
-  UserService({required UserApiRepository userApiRepository, required StoreService storeService})
-    : _userApiRepository = userApiRepository,
-      _storeService = storeService;
+  UserService({required this._userApiRepository, required this._userRepository, required this._storeService});
 
   UserDto getMyUser() {
     return _storeService.get(StoreKey.currentUser);
@@ -48,4 +48,6 @@ class UserService {
       return null;
     }
   }
+
+  Stream<User?> watch(String id) => _userRepository.watch(id);
 }

@@ -4,13 +4,13 @@ import 'dart:io';
 
 import 'package:background_downloader/background_downloader.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:http/http.dart';
 import 'package:immich_mobile/constants/constants.dart';
 import 'package:immich_mobile/domain/models/store.model.dart';
 import 'package:immich_mobile/entities/store.entity.dart';
 import 'package:immich_mobile/infrastructure/repositories/network.repository.dart';
 import 'package:immich_mobile/services/api.service.dart';
 import 'package:logging/logging.dart';
-import 'package:http/http.dart';
 import 'package:immich_mobile/utils/debug_print.dart';
 import 'package:ohos_http/ohos_http.dart';
 
@@ -102,53 +102,55 @@ class UploadRepository {
     required Completer<void>? cancelToken,
     void Function(int bytes, int totalBytes)? onProgress,
     required String logContext,
+    Client? httpClient,
   }) async {
     final String savedEndpoint = Store.get(StoreKey.serverEndpoint);
     final Uri uploadUri = Uri.parse('$savedEndpoint/assets');
 
-    try {
-      final StreamedResponse response;
+    ProgressMultipartRequest buildRequest() {
+      final request = ProgressMultipartRequest(
+        'POST',
+        uploadUri,
+        abortTrigger: cancelToken?.future,
+        onProgress: onProgress,
+      );
+      request.fields.addAll(fields);
+      request.files.add(MultipartFile("assetData", file.openRead(), file.lengthSync(), filename: originalFileName));
+      return request;
+    }
 
-      if (Platform.isOhos) {
-        // Use native multipart upload that passes filePath directly to OHOS
-        // NetworkKit, avoiding loading entire file into memory.
-        final ohosRequest = OhosMultipartRequest('POST', uploadUri);
-        ohosRequest.headers.addAll(ApiService.getAuthenticatedRequestHeaders(uploadUri.toString()));
-        ohosRequest.fields.addAll(fields);
-        ohosRequest.files.add(
-          OhosMultipartFile(
-            field: 'assetData',
-            filePath: file.path,
-            filename: originalFileName,
-            contentType: 'application/octet-stream',
-          ),
-        );
-        ohosRequest.onProgress = onProgress;
-        ohosRequest.abortTrigger = cancelToken?.future;
-
-        response = await NetworkRepository.client.send(ohosRequest);
-      } else {
-        final baseRequest = ProgressMultipartRequest(
-          'POST',
-          uploadUri,
-          abortTrigger: cancelToken?.future,
-          onProgress: onProgress,
-        );
-
-        final fileStream = file.openRead();
-        final assetRawUploadData = MultipartFile(
-          "assetData",
-          fileStream,
-          file.lengthSync(),
+    OhosMultipartRequest buildOhosRequest() {
+      final request = OhosMultipartRequest('POST', uploadUri);
+      request.headers.addAll(ApiService.getAuthenticatedRequestHeaders(uploadUri.toString()));
+      request.fields.addAll(fields);
+      request.files.add(
+        OhosMultipartFile(
+          field: 'assetData',
+          filePath: file.path,
           filename: originalFileName,
-        );
+          contentType: 'application/octet-stream',
+        ),
+      );
+      request.onProgress = onProgress;
+      request.abortTrigger = cancelToken?.future;
+      return request;
+    }
 
-        baseRequest.fields.addAll(fields);
-        baseRequest.files.add(assetRawUploadData);
-
-        response = await NetworkRepository.client.send(baseRequest);
+    try {
+      final client = httpClient ?? NetworkRepository.client;
+      StreamedResponse response;
+      try {
+        response = Platform.isOhos
+            ? await NetworkRepository.client.send(buildOhosRequest())
+            : await client.send(buildRequest());
+      } on RequestAbortedException {
+        rethrow;
+      } on ClientException catch (error) {
+        logger.warning("Upload $logContext failed before a response, resending once: $error");
+        response = Platform.isOhos
+            ? await NetworkRepository.client.send(buildOhosRequest())
+            : await client.send(buildRequest());
       }
-
       final responseBodyString = await response.stream.bytesToString();
 
       if (![200, 201].contains(response.statusCode)) {
@@ -181,7 +183,7 @@ class UploadRepository {
       logger.warning("Upload $logContext was cancelled");
       return UploadResult.cancelled();
     } catch (error, stackTrace) {
-      logger.warning("Error uploading $logContext: ${error.toString()}: $stackTrace");
+      logger.warning("Error uploading $logContext: $error: $stackTrace");
       return UploadResult.error(errorMessage: error.toString());
     }
   }
