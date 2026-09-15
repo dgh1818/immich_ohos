@@ -77,8 +77,8 @@ export interface Result<T> {
 }
 /* Generated abstract class from Pigeon that represents a handler of messages from Flutter.*/
 export abstract class RemoteImageApiOhos {
-
-  abstract requestImage(url: string , requestId: number , preferEncoded: boolean , result: Result<Map<string, Object>>): void;
+  /* Width and height are the physical decode size, or null for the source size.*/
+  abstract requestImage(url: string , requestId: number , preferEncoded: boolean , width: number , height: number , result: Result<Map<string, Object>>): void;
 
   abstract cancelRequest(requestId: number ): void;
 
@@ -111,7 +111,7 @@ export abstract class RemoteImageApiOhos {
               }
               let resultCallback: Result<Map<string, Object>> = new ResultImp();
 
-              api!.requestImage(args[0] as string, args[1] as number, args[2] as boolean, resultCallback);
+              api!.requestImage(args[0] as string, args[1] as number, args[2] as boolean, args[3] as number, args[4] as number, resultCallback);
             } });
       } else {
         channel.setMessageHandler(null);

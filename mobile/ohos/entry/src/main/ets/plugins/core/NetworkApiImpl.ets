@@ -52,7 +52,7 @@ export class NetworkApiImpl extends NetworkApi {
       }
       const password = clientData.getPassword() ?? '';
       console.info(`[NetworkApiImpl] addCertificate: PKCS12 size=${data.length} hasPassword=${password.length > 0}`);
-      const bytes = new Uint8Array(data);
+      const bytes = data;
 
       let trustAnchors: Array<cert.X509TrustAnchor> = [];
       let trustAnchorError = '';

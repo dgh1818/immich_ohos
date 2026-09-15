@@ -53,6 +53,8 @@ export class RemoteImagesImpl extends RemoteImageApiOhos {
     url: string,
     requestId: number,
     preferEncoded: boolean,
+    _width: number,
+    _height: number,
     result: Result<Map<string, Object>>
   ) {
     const request = http.createHttp();
