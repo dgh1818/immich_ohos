@@ -147,11 +147,26 @@ mixin CancellableImageProviderMixin<T extends Object> on CancellableImageProvide
   }
 }
 
+/// OHOS AI HDR: wraps a decode callback so decodes run through the engine's
+/// SDR -> BT.2020 HLG conversion (falls back to SDR when unsupported).
+ImageDecoderCallback aiHdrDecodeCallback(ImageDecoderCallback decode) {
+  return (ui.ImmutableBuffer buffer, {ui.TargetImageSizeCallback? getTargetSize}) async {
+    final descriptor = await ui.ImageDescriptor.encoded(buffer);
+    final targetSize = getTargetSize?.call(descriptor.width, descriptor.height);
+    return descriptor.instantiateCodecWithDynamicRange(
+      targetWidth: targetSize?.width,
+      targetHeight: targetSize?.height,
+      dynamicRangePolicy: ui.ImageDynamicRangePolicy.aiHdrAuto,
+    );
+  };
+}
+
 ImageProvider getFullImageProvider(
   BaseAsset asset, {
   Size size = const Size(1080, 1920),
   bool edited = true,
   String? localFilePath,
+  bool aiHdr = false,
 }) {
   // Create new provider and cache it
   final ImageProvider provider;
@@ -159,7 +174,13 @@ ImageProvider getFullImageProvider(
     provider = FileImage(File(localFilePath));
   } else if (_shouldUseLocalAsset(asset)) {
     final id = asset is LocalAsset ? asset.id : (asset as RemoteAsset).localId!;
-    provider = LocalFullImageProvider(id: id, size: size, assetType: asset.type, isAnimated: asset.isAnimatedImage);
+    provider = LocalFullImageProvider(
+      id: id,
+      size: size,
+      assetType: asset.type,
+      isAnimated: asset.isAnimatedImage,
+      aiHdr: aiHdr,
+    );
   } else {
     final String assetId;
     final String thumbhash;
@@ -178,6 +199,8 @@ ImageProvider getFullImageProvider(
       assetType: asset.type,
       isAnimated: asset.isAnimatedImage,
       edited: edited,
+      // TODO(ai-hdr): gate by Setting.imageAiHdr in Phase 2.
+      aiHdr: true,
     );
   }
 

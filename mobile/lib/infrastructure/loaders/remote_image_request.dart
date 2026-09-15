@@ -3,7 +3,9 @@ part of 'image_request.dart';
 class RemoteImageRequest extends ImageRequest {
   final String uri;
 
-  RemoteImageRequest({required this.uri});
+  RemoteImageRequest({required this.uri, bool aiHdr = false}) {
+    this.aiHdr = aiHdr;
+  }
 
   @override
   Future<ImageInfo?> load(ImageDecoderCallback decode, {double scale = 1.0}) async {
@@ -11,9 +13,10 @@ class RemoteImageRequest extends ImageRequest {
       return null;
     }
 
-    final info = await remoteImageApi.requestImage(uri, requestId: requestId, preferEncoded: false);
+    // AI HDR needs the encoded bytes so the engine can convert SDR -> HLG.
+    final info = await remoteImageApi.requestImage(uri, requestId: requestId, preferEncoded: aiHdr);
     final frame = switch (info) {
-      {'pointer': int pointer, 'length': int length} => await _fromEncodedPlatformImage(pointer, length),
+      {'pointer': int pointer, 'length': int length} => await _fromEncodedPlatformImage(pointer, length, aiHdr: aiHdr),
       {
         'pointer': int pointer,
         'width': int width,

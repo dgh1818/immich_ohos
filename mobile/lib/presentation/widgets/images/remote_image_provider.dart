@@ -13,11 +13,16 @@ class RemoteImageProvider extends CancellableImageProvider<RemoteImageProvider>
     with CancellableImageProviderMixin<RemoteImageProvider> {
   final String url;
   final bool edited;
+  final bool aiHdr;
 
-  RemoteImageProvider({required this.url, this.edited = true});
+  RemoteImageProvider({required this.url, this.edited = true, this.aiHdr = false});
 
-  RemoteImageProvider.thumbnail({required String assetId, required String thumbhash, this.edited = true})
-    : url = getThumbnailUrlForRemoteId(assetId, thumbhash: thumbhash, edited: edited);
+  RemoteImageProvider.thumbnail({
+    required String assetId,
+    required String thumbhash,
+    this.edited = true,
+    this.aiHdr = false,
+  }) : url = getThumbnailUrlForRemoteId(assetId, thumbhash: thumbhash, edited: edited);
 
   @override
   Future<RemoteImageProvider> obtainKey(ImageConfiguration configuration) {
@@ -37,8 +42,9 @@ class RemoteImageProvider extends CancellableImageProvider<RemoteImageProvider>
   }
 
   Stream<ImageInfo> _codec(RemoteImageProvider key, ImageDecoderCallback decode) {
-    final request = this.request = RemoteImageRequest(uri: key.url);
-    return loadRequest(request, decode, isFinal: true);
+    final effectiveDecode = key.aiHdr ? aiHdrDecodeCallback(decode) : decode;
+    final request = this.request = RemoteImageRequest(uri: key.url, aiHdr: key.aiHdr);
+    return loadRequest(request, effectiveDecode, isFinal: true);
   }
 
   @override
@@ -47,13 +53,13 @@ class RemoteImageProvider extends CancellableImageProvider<RemoteImageProvider>
       return true;
     }
     if (other is RemoteImageProvider) {
-      return url == other.url && edited == other.edited;
+      return url == other.url && edited == other.edited && aiHdr == other.aiHdr;
     }
     return false;
   }
 
   @override
-  int get hashCode => url.hashCode ^ edited.hashCode;
+  int get hashCode => url.hashCode ^ edited.hashCode ^ aiHdr.hashCode;
 }
 
 class RemoteFullImageProvider extends CancellableImageProvider<RemoteFullImageProvider>
@@ -63,6 +69,7 @@ class RemoteFullImageProvider extends CancellableImageProvider<RemoteFullImagePr
   final AssetType assetType;
   final bool isAnimated;
   final bool edited;
+  final bool aiHdr;
 
   RemoteFullImageProvider({
     required this.assetId,
@@ -70,6 +77,7 @@ class RemoteFullImageProvider extends CancellableImageProvider<RemoteFullImagePr
     required this.assetType,
     required this.isAnimated,
     this.edited = true,
+    this.aiHdr = false,
   });
 
   @override
@@ -79,11 +87,14 @@ class RemoteFullImageProvider extends CancellableImageProvider<RemoteFullImagePr
 
   @override
   ImageStreamCompleter loadImage(RemoteFullImageProvider key, ImageDecoderCallback decode) {
+    final effectiveDecode = key.aiHdr ? aiHdrDecodeCallback(decode) : decode;
     if (key.isAnimated) {
       return AnimatedImageStreamCompleter(
-        stream: _animatedCodec(key, decode),
+        stream: _animatedCodec(key, effectiveDecode),
         scale: 1.0,
-        initialImage: getInitialImage(RemoteImageProvider.thumbnail(assetId: key.assetId, thumbhash: key.thumbhash)),
+        initialImage: getInitialImage(
+          RemoteImageProvider.thumbnail(assetId: key.assetId, thumbhash: key.thumbhash, aiHdr: false),
+        ),
         informationCollector: () => <DiagnosticsNode>[
           DiagnosticsProperty<ImageProvider>('Image provider', this),
           DiagnosticsProperty<String>('Asset Id', key.assetId),
@@ -106,11 +117,18 @@ class RemoteFullImageProvider extends CancellableImageProvider<RemoteFullImagePr
       isFinished = true;
     }
     initialImage ??= getInitialImage(
-      RemoteImageProvider.thumbnail(assetId: key.assetId, thumbhash: key.thumbhash, edited: key.edited),
+      // SDR placeholder (OHOS AI HDR): it is shown while the surface is still
+      // SDR — the surface flips to HLG only when the preview tier arrives.
+      RemoteImageProvider.thumbnail(
+        assetId: key.assetId,
+        thumbhash: key.thumbhash,
+        edited: key.edited,
+        aiHdr: false,
+      ),
     );
 
     return OneFramePlaceholderImageStreamCompleter(
-      initialImage != null && isFinished ? const Stream<ImageInfo>.empty() : _codec(key, decode),
+      initialImage != null && isFinished ? const Stream<ImageInfo>.empty() : _codec(key, effectiveDecode),
       initialImage: initialImage,
       informationCollector: () => <DiagnosticsNode>[
         DiagnosticsProperty<ImageProvider>('Image provider', this),
@@ -135,6 +153,7 @@ class RemoteFullImageProvider extends CancellableImageProvider<RemoteFullImagePr
         thumbhash: key.thumbhash,
         edited: key.edited,
       ),
+      aiHdr: key.aiHdr,
     );
     final loadOriginal = assetType == AssetType.image && SettingsRepository.instance.appConfig.image.loadOriginal;
     yield* loadRequest(previewRequest, decode, isFinal: !loadOriginal);
@@ -149,6 +168,7 @@ class RemoteFullImageProvider extends CancellableImageProvider<RemoteFullImagePr
 
     final originalRequest = request = RemoteImageRequest(
       uri: getOriginalUrlForRemoteId(key.assetId, edited: key.edited),
+      aiHdr: key.aiHdr,
     );
     yield* loadRequest(originalRequest, decode, isFinal: true);
   }
@@ -204,5 +224,5 @@ class RemoteFullImageProvider extends CancellableImageProvider<RemoteFullImagePr
   }
 
   @override
-  int get hashCode => assetId.hashCode ^ thumbhash.hashCode ^ isAnimated.hashCode ^ edited.hashCode;
+  int get hashCode => assetId.hashCode ^ thumbhash.hashCode ^ isAnimated.hashCode ^ edited.hashCode ^ aiHdr.hashCode;
 }

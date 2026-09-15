@@ -112,6 +112,8 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
   ImageStreamListener? _imageListener;
 
   final Map<String, int> _assetHdrModeCache = {};
+  // True once the engine HDR surface was flipped on for this viewer session.
+  bool _engineHdrOn = false;
 
   int _hdrToken = 0;
   bool _isDisposing = false;
@@ -187,6 +189,7 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
     _removeImageListener();
     _motionVideoNotifier.playing = false;
     ViewerHdr.resetModes();
+    _engineHdrOn = false;
 
     unawaited(restoreEdgeToEdge());
 
@@ -413,7 +416,9 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
 
   ImageProvider _getHdrImageProvider(BaseAsset asset) {
     final useLocalAsset = asset.hasLocal && (!asset.hasRemote || !AppSetting.get(Setting.preferRemoteImage));
-    return getFullImageProvider(asset, size: useLocalAsset ? const Size(-1, -1) : const Size(1080, 1920));
+    // TODO(ai-hdr): Phase 2 gates this by Setting.imageAiHdr; forced on for
+    // the current device verification.
+    return getFullImageProvider(asset, size: useLocalAsset ? const Size(-1, -1) : const Size(1080, 1920), aiHdr: false);
   }
 
   void _watchImageHdr(BaseAsset asset, ImageProvider provider, {required bool resetToSdrIfNoSyncImage}) {
@@ -438,11 +443,26 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
         gotSyncImage = true;
       }
 
+      // Ignore the small placeholder tier: flipping the surface (or even the
+      // image mode) on it re-enables HLG while the hero still draws SDR
+      // frames — the white flash on entry.  Only preview-sized content
+      // decides the HDR mode and the surface flip.
+      if (info.image.width < 800) {
+        return;
+      }
+
       final hdr = ViewerHdr.imageModeFromColorSpace(info.image.colorSpace);
 
       _assetHdrModeCache[asset.heroTag] = hdr;
 
       ViewerHdr.applyImageMode(enabled: _isImageHdrEnabled, hdr: hdr);
+      // The engine HDR surface is only flipped when HLG content actually
+      // exists; enabling it eagerly at viewer entry rendered SDR frames
+      // into the HLG-encoded swapchain (blinding flash on open).
+      if (hdr == 1 && !_engineHdrOn) {
+        _engineHdrOn = true;
+        ViewerHdr.enableEngine(imageEnabled: true, videoEnabled: _isVideoHdrEnabled);
+      }
     }, onError: (_, __) {});
 
     stream.addListener(_imageListener!);
@@ -456,9 +476,13 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
   }
 
   void _syncHdrForAsset(BaseAsset asset) {
-    ViewerHdr.enableEngine(imageEnabled: _isImageHdrEnabled, videoEnabled: _isVideoHdrEnabled);
-
+    // OHOS AI HDR decoupling: the generator decodes HLG purely from the
+    // request policy (policy 1), so the surface must NOT be enabled here —
+    // an early HLG surface renders the SDR hero/transition frames white (the
+    // 2D pipeline does not map sRGB into HLG).  The surface flips in the
+    // image listener below, exactly when HLG content is ready.
     if (!asset.isImage) {
+      ViewerHdr.enableEngine(imageEnabled: false, videoEnabled: _isVideoHdrEnabled);
       _hdrToken++;
       _removeImageListener();
 

@@ -325,7 +325,12 @@ class _NativeVideoViewerState extends ConsumerState<NativeVideoViewer> with Widg
         IgnorePointer(
           child: Stack(
             children: [
-              if (!_isVideoReady || widget.asset.isMotionPhoto || isCasting) Center(child: widget.image),
+              // SizedBox.expand gives the placeholder tight full-screen
+              // constraints: in loose Center constraints the Image renders at
+              // its intrinsic size, and a video's server preview is only
+              // 1080p, so it would not fill the screen.
+              if (!_isVideoReady || widget.asset.isMotionPhoto || isCasting)
+                Center(child: SizedBox.expand(child: widget.image)),
               if (!isCasting) ...[
                 Visibility.maintain(
                   visible: _isVideoReady,

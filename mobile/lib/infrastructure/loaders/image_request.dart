@@ -22,6 +22,12 @@ abstract class ImageRequest {
 
   ImageRequest();
 
+  // OHOS fork (AI HDR): when true, encoded-byte loads decode through the
+  // engine's SDR -> HLG conversion.  Raw-pixel loads ignore it for now
+  // (SDR fallback; the conversion needs the OHOS generator, raw descriptors
+  // do not have one).
+  bool aiHdr = false;
+
   Future<ImageInfo?> load(ImageDecoderCallback decode, {double scale = 1.0});
 
   Future<ui.Codec?> loadCodec();
@@ -36,7 +42,9 @@ abstract class ImageRequest {
 
   void _onCancelled();
 
-  Future<(ui.Codec, ui.ImageDescriptor)?> _codecFromEncodedPlatformImage(int address, int length) async {
+  Future<(ui.Codec, ui.ImageDescriptor)?> _codecFromEncodedPlatformImage(
+      int address, int length,
+      {bool aiHdr = false}) async {
     final pointer = Pointer<Uint8>.fromAddress(address);
     if (_isCancelled) {
       malloc.free(pointer);
@@ -62,7 +70,14 @@ abstract class ImageRequest {
       return null;
     }
 
-    final codec = await descriptor.instantiateCodec();
+    final ui.Codec codec;
+    if (aiHdr) {
+      codec = await descriptor.instantiateCodecWithDynamicRange(
+        dynamicRangePolicy: ui.ImageDynamicRangePolicy.aiHdrAuto,
+      );
+    } else {
+      codec = await descriptor.instantiateCodec();
+    }
     if (_isCancelled) {
       descriptor.dispose();
       codec.dispose();
@@ -72,8 +87,8 @@ abstract class ImageRequest {
     return (codec, descriptor);
   }
 
-  Future<ui.FrameInfo?> _fromEncodedPlatformImage(int address, int length) async {
-    final result = await _codecFromEncodedPlatformImage(address, length);
+  Future<ui.FrameInfo?> _fromEncodedPlatformImage(int address, int length, {bool aiHdr = false}) async {
+    final result = await _codecFromEncodedPlatformImage(address, length, aiHdr: aiHdr);
     if (result == null) {
       return null;
     }
@@ -96,7 +111,13 @@ abstract class ImageRequest {
     return frame;
   }
 
-  Future<ui.FrameInfo?> _fromDecodedPlatformImage(int address, int width, int height, int rowBytes, [bool isHdr = false]) async {
+  Future<ui.FrameInfo?> _fromDecodedPlatformImage(
+    int address,
+    int width,
+    int height,
+    int rowBytes, [
+    bool isHdr = false,
+  ]) async {
     final pointer = Pointer<Uint8>.fromAddress(address);
     if (_isCancelled) {
       malloc.free(pointer);

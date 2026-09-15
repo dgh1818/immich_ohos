@@ -364,7 +364,9 @@ class _AssetPageState extends ConsumerState<AssetPage> {
     required String? localFilePath,
   }) {
     final size = context.sizeData;
-    final imageProvider = getFullImageProvider(asset, size: size, localFilePath: localFilePath);
+    // TODO(ai-hdr): Phase 2 gates this by Setting.imageAiHdr; forced on for
+    // the current device verification.
+    final imageProvider = getFullImageProvider(asset, size: size, localFilePath: localFilePath, aiHdr: false);
 
     if (asset.isImage && !isPlayingMotionVideo) {
       return PhotoView(

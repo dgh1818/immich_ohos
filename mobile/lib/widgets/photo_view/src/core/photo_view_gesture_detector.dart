@@ -155,6 +155,7 @@ class PhotoViewGestureRecognizer extends ScaleGestureRecognizer {
 
   @override
   void handleEvent(PointerEvent event) {
+    var shouldAcceptMultiTouch = false;
     if (validateAxis != null && !disableScaleGestures) {
       bool didChangeConfiguration = false;
       if (event is PointerMoveEvent) {
@@ -164,6 +165,7 @@ class PhotoViewGestureRecognizer extends ScaleGestureRecognizer {
       } else if (event is PointerDownEvent) {
         _pointerLocations[event.pointer] = event.position;
         didChangeConfiguration = true;
+        shouldAcceptMultiTouch = _pointerLocations.length > 1;
       } else if (event is PointerUpEvent || event is PointerCancelEvent) {
         _pointerLocations.remove(event.pointer);
         didChangeConfiguration = true;
@@ -180,6 +182,9 @@ class PhotoViewGestureRecognizer extends ScaleGestureRecognizer {
       _decideIfWeAcceptEvent(event);
     }
     super.handleEvent(event);
+    if (shouldAcceptMultiTouch) {
+      resolve(GestureDisposition.accepted);
+    }
   }
 
   void _updateDistances() {

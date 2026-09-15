@@ -59,8 +59,15 @@ class LocalFullImageProvider extends CancellableImageProvider<LocalFullImageProv
   final Size size;
   final AssetType assetType;
   final bool isAnimated;
+  final bool aiHdr;
 
-  LocalFullImageProvider({required this.id, required this.assetType, required this.size, required this.isAnimated});
+  LocalFullImageProvider({
+    required this.id,
+    required this.assetType,
+    required this.size,
+    required this.isAnimated,
+    this.aiHdr = false,
+  });
 
   @override
   Future<LocalFullImageProvider> obtainKey(ImageConfiguration configuration) {
@@ -69,6 +76,7 @@ class LocalFullImageProvider extends CancellableImageProvider<LocalFullImageProv
 
   @override
   ImageStreamCompleter loadImage(LocalFullImageProvider key, ImageDecoderCallback decode) {
+    final effectiveDecode = key.aiHdr ? aiHdrDecodeCallback(decode) : decode;
     if (key.isAnimated) {
       return AnimatedImageStreamCompleter(
         stream: _animatedCodec(key, decode),
@@ -85,7 +93,7 @@ class LocalFullImageProvider extends CancellableImageProvider<LocalFullImageProv
     }
 
     return OneFramePlaceholderImageStreamCompleter(
-      _codec(key, decode),
+      _codec(key, effectiveDecode),
       initialImage: getInitialImage(LocalThumbProvider(id: key.id, assetType: key.assetType)),
       informationCollector: () => <DiagnosticsNode>[
         DiagnosticsProperty<ImageProvider>('Image provider', this),
@@ -169,5 +177,5 @@ class LocalFullImageProvider extends CancellableImageProvider<LocalFullImageProv
   }
 
   @override
-  int get hashCode => id.hashCode ^ size.hashCode ^ isAnimated.hashCode;
+  int get hashCode => id.hashCode ^ size.hashCode ^ isAnimated.hashCode ^ aiHdr.hashCode;
 }
