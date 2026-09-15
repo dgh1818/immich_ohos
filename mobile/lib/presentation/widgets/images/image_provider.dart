@@ -150,16 +150,19 @@ mixin CancellableImageProviderMixin<T extends Object> on CancellableImageProvide
   }
 }
 
-/// OHOS AI HDR: wrap Flutter's decoder so encoded images can be converted from
-/// SDR into an HDR-capable HLG surface when the engine supports it.
-ImageDecoderCallback aiHdrDecodeCallback(ImageDecoderCallback decode) {
+/// OHOS dynamic-range decoding: keep the source range or apply the requested
+/// conversion policy to encoded image data.
+ImageDecoderCallback dynamicRangeDecodeCallback(
+  ImageDecoderCallback decode,
+  ui.ImageDynamicRangePolicy dynamicRangePolicy,
+) {
   return (ui.ImmutableBuffer buffer, {ui.TargetImageSizeCallback? getTargetSize}) async {
     final descriptor = await ui.ImageDescriptor.encoded(buffer);
     final targetSize = getTargetSize?.call(descriptor.width, descriptor.height);
     return descriptor.instantiateCodecWithDynamicRange(
       targetWidth: targetSize?.width,
       targetHeight: targetSize?.height,
-      dynamicRangePolicy: ui.ImageDynamicRangePolicy.aiHdrAuto,
+      dynamicRangePolicy: dynamicRangePolicy,
     );
   };
 }
@@ -170,7 +173,7 @@ ImageProvider getFullImageProvider(
   bool edited = true,
   String? localFilePath,
   Size? remoteThumbnailSize,
-  bool aiHdr = false,
+  ui.ImageDynamicRangePolicy? dynamicRangePolicy,
 }) {
   // Create new provider and cache it
   final ImageProvider provider;
@@ -186,7 +189,7 @@ ImageProvider getFullImageProvider(
       width: asset.width,
       height: asset.height,
       checksum: asset.checksum,
-      aiHdr: aiHdr,
+      dynamicRangePolicy: dynamicRangePolicy,
     );
   } else {
     final String assetId;
@@ -207,7 +210,7 @@ ImageProvider getFullImageProvider(
       isAnimated: asset.isAnimatedImage,
       edited: edited,
       thumbnailSize: remoteThumbnailSize,
-      aiHdr: aiHdr,
+      dynamicRangePolicy: dynamicRangePolicy,
     );
   }
 

@@ -57,7 +57,7 @@ class _NativeVideoViewerState extends ConsumerState<NativeVideoViewer> with Widg
   @override
   void initState() {
     super.initState();
-    _notifier = ref.read(videoPlayerProvider(widget.asset.heroTag).notifier);
+    _notifier = ref.read(videoPlayerProvider(widget.asset.id).notifier);
     _castNotifier = ref.read(castProvider.notifier);
     WidgetsBinding.instance.addObserver(this);
     _videoSource = _createSource();
@@ -120,7 +120,7 @@ class _NativeVideoViewerState extends ConsumerState<NativeVideoViewer> with Widg
     if (!_canUseRef || !widget.isCurrent) {
       return;
     }
-    unawaited(_castNotifier.syncPlaybackState(ref.read(videoPlayerProvider(widget.asset.heroTag))));
+    unawaited(_castNotifier.syncPlaybackState(ref.read(videoPlayerProvider(widget.asset.id))));
   }
 
   Future<VideoSource?> _createSource() async {
@@ -325,7 +325,13 @@ class _NativeVideoViewerState extends ConsumerState<NativeVideoViewer> with Widg
     final localNotifier = _notifier;
 
     await localNotifier.load(source);
+    if (!_canUseRef || !widget.isCurrent || _controller != nc) {
+      return;
+    }
     await localNotifier.setLoop(!widget.asset.isMotionPhoto && loopVideo);
+    if (!_canUseRef || !widget.isCurrent || _controller != nc) {
+      return;
+    }
     await localNotifier.setVolume(1);
   }
 
@@ -352,7 +358,7 @@ class _NativeVideoViewerState extends ConsumerState<NativeVideoViewer> with Widg
   @override
   Widget build(BuildContext context) {
     final isCasting = ref.watch(castProvider.select((c) => c.isCasting));
-    final status = ref.watch(videoPlayerProvider(widget.asset.heroTag).select((v) => v.status));
+    final status = ref.watch(videoPlayerProvider(widget.asset.id).select((v) => v.status));
     final videoInfo = _controller?.videoInfo;
     final width = widget.asset.width;
     final height = widget.asset.height;

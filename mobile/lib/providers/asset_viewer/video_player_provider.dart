@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:immich_mobile/extensions/platform_extensions.dart';
 import 'package:logging/logging.dart';
 import 'package:native_video_player/native_video_player.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
@@ -40,6 +41,7 @@ class VideoPlayerNotifier extends StateNotifier<VideoPlayerState> {
   NativeVideoPlayerController? _controller;
   Timer? _bufferingTimer;
   Timer? _seekTimer;
+  Future<void>? _pendingSeek;
   VideoPlaybackStatus? _holdStatus;
 
   @override
@@ -97,12 +99,16 @@ class VideoPlayerNotifier extends StateNotifier<VideoPlayerState> {
 
   Future<void> _flushSeek() async {
     final timer = _seekTimer;
-    if (timer == null || !timer.isActive) {
-      return;
+    if (timer?.isActive ?? false) {
+      timer!.cancel();
+      _seekTimer = null;
+      await _dispatchSeek();
     }
 
-    timer.cancel();
-    await _controller?.seekTo(state.position.inMilliseconds);
+    final pendingSeek = _pendingSeek;
+    if (pendingSeek != null) {
+      await pendingSeek;
+    }
   }
 
   void seekTo(Duration position) {
@@ -112,13 +118,31 @@ class VideoPlayerNotifier extends StateNotifier<VideoPlayerState> {
 
     state = state.copyWith(position: position);
 
-    if (_seekTimer?.isActive ?? false) {
+    _seekTimer?.cancel();
+
+    _seekTimer = Timer(const Duration(milliseconds: 150), () {
+      _seekTimer = null;
+      unawaited(_dispatchSeek());
+    });
+  }
+
+  Future<void> _dispatchSeek() async {
+    final controller = _controller;
+    if (controller == null) {
       return;
     }
 
-    _seekTimer = Timer(const Duration(milliseconds: 150), () {
-      unawaited(_controller?.seekTo(state.position.inMilliseconds));
-    });
+    final pendingSeek = controller.seekTo(state.position.inMilliseconds);
+    _pendingSeek = pendingSeek;
+    try {
+      await pendingSeek;
+    } catch (e) {
+      _log.severe('Error seeking video: $e');
+    } finally {
+      if (identical(_pendingSeek, pendingSeek)) {
+        _pendingSeek = null;
+      }
+    }
   }
 
   void toggle() {
@@ -159,6 +183,7 @@ class VideoPlayerNotifier extends StateNotifier<VideoPlayerState> {
   void reset() {
     _bufferingTimer?.cancel();
     _seekTimer?.cancel();
+    _seekTimer = null;
     _holdStatus = null;
     WakelockPlus.disable();
     state = _defaultState;
@@ -260,8 +285,8 @@ class VideoPlayerNotifier extends StateNotifier<VideoPlayerState> {
 
   void _startBufferingTimer() {
     _bufferingTimer?.cancel();
-    _bufferingTimer = Timer(const Duration(seconds: 1), () {
-      if (mounted && state.status != VideoPlaybackStatus.completed) {
+    _bufferingTimer = Timer(Duration(seconds: CurrentPlatform.isOhos ? 3 : 1), () {
+      if (mounted && state.status == VideoPlaybackStatus.playing) {
         state = state.copyWith(status: VideoPlaybackStatus.buffering);
       }
     });

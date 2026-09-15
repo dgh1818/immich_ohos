@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
@@ -15,8 +16,8 @@ import 'package:immich_mobile/domain/utils/event_stream.dart';
 import 'package:immich_mobile/extensions/build_context_extensions.dart';
 import 'package:immich_mobile/extensions/platform_extensions.dart';
 import 'package:immich_mobile/extensions/scroll_extensions.dart';
-import 'package:immich_mobile/main.dart';
 import 'package:immich_mobile/generated/translations.g.dart';
+import 'package:immich_mobile/main.dart';
 import 'package:immich_mobile/presentation/widgets/action_buttons/download_status_floating_button.widget.dart';
 import 'package:immich_mobile/presentation/widgets/asset_viewer/asset_page.widget.dart';
 import 'package:immich_mobile/presentation/widgets/asset_viewer/asset_preloader.dart';
@@ -31,8 +32,8 @@ import 'package:immich_mobile/providers/cast.provider.dart';
 import 'package:immich_mobile/providers/infrastructure/current_album.provider.dart';
 import 'package:immich_mobile/providers/infrastructure/setting.provider.dart' as store_settings;
 import 'package:immich_mobile/providers/infrastructure/timeline.provider.dart';
-import 'package:immich_mobile/utils/viewer_hdr.dart';
 import 'package:immich_mobile/utils/system_ui.utils.dart';
+import 'package:immich_mobile/utils/viewer_hdr.dart';
 import 'package:immich_mobile/widgets/photo_view/photo_view.dart';
 
 @RoutePage()
@@ -226,6 +227,7 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
       widget.initialIndex,
       context.sizeData,
       thumbnailSize: ref.read(assetViewerProvider).thumbnailSize,
+      dynamicRangePolicy: _isImageHdrEnabled ? ui.ImageDynamicRangePolicy.preserve : null,
     );
     _handleCasting();
   }
@@ -249,12 +251,14 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
     }
 
     ref.read(isPlayingMotionVideoProvider.notifier).playing = false;
-    ref.read(assetViewerProvider.notifier).setAsset(
-      asset,
-      thumbnailSize: ref.read(assetViewerProvider).thumbnailSize,
-    );
+    ref.read(assetViewerProvider.notifier).setAsset(asset, thumbnailSize: ref.read(assetViewerProvider).thumbnailSize);
     _syncHdrForAsset(asset);
-    _preloader.preload(index, context.sizeData, thumbnailSize: ref.read(assetViewerProvider).thumbnailSize);
+    _preloader.preload(
+      index,
+      context.sizeData,
+      thumbnailSize: ref.read(assetViewerProvider).thumbnailSize,
+      dynamicRangePolicy: _isImageHdrEnabled ? ui.ImageDynamicRangePolicy.preserve : null,
+    );
     _handleCasting();
     _stackChildrenKeepAlive?.close();
     _stackChildrenKeepAlive = ref.read(stackChildrenNotifier(asset).notifier).ref.keepAlive();
@@ -421,9 +425,11 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
 
   ImageProvider _getHdrImageProvider(BaseAsset asset) {
     final useLocalAsset = asset.hasLocal && (!asset.hasRemote || !AppSetting.get(Setting.preferRemoteImage));
-    // TODO(ai-hdr): Phase 2 gates this by Setting.imageAiHdr; forced on for
-    // the current device verification.
-    return getFullImageProvider(asset, size: useLocalAsset ? const Size(-1, -1) : const Size(1080, 1920), aiHdr: false);
+    return getFullImageProvider(
+      asset,
+      size: useLocalAsset ? const Size(-1, -1) : const Size(1080, 1920),
+      dynamicRangePolicy: ui.ImageDynamicRangePolicy.preserve,
+    );
   }
 
   void _watchImageHdr(BaseAsset asset, ImageProvider provider, {required bool resetToSdrIfNoSyncImage}) {
@@ -461,12 +467,11 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
       _assetHdrModeCache[asset.heroTag] = hdr;
 
       ViewerHdr.applyImageMode(enabled: _isImageHdrEnabled, hdr: hdr);
-      // The engine HDR surface is only flipped when HLG content actually
-      // exists; enabling it eagerly at viewer entry rendered SDR frames
-      // into the HLG-encoded swapchain (blinding flash on open).
+      // The engine surface is enabled at viewer entry when the image HDR
+      // setting is on; this callback only selects the decoded image mode.
       if (hdr == 1 && !_engineHdrOn) {
         _engineHdrOn = true;
-        ViewerHdr.enableEngine(imageEnabled: true, videoEnabled: _isVideoHdrEnabled);
+        ViewerHdr.enableEngine(imageEnabled: _isImageHdrEnabled, videoEnabled: false);
       }
     }, onError: (_, __) {});
 
@@ -481,13 +486,9 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
   }
 
   void _syncHdrForAsset(BaseAsset asset) {
-    // OHOS AI HDR decoupling: the generator decodes HLG purely from the
-    // request policy (policy 1), so the surface must NOT be enabled here —
-    // an early HLG surface renders the SDR hero/transition frames white (the
-    // 2D pipeline does not map sRGB into HLG).  The surface flips in the
-    // image listener below, exactly when HLG content is ready.
     if (!asset.isImage) {
       ViewerHdr.enableEngine(imageEnabled: false, videoEnabled: _isVideoHdrEnabled);
+      _engineHdrOn = false;
       _hdrToken++;
       _removeImageListener();
 
@@ -495,6 +496,13 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
       ViewerHdr.applyVideoMode(enabled: _isVideoHdrEnabled);
       return;
     }
+
+    // Entering the image viewer must honor the image HDR setting immediately.
+    // The decoded image listener still selects the actual image mode (SDR or
+    // HLG); otherwise every original HDR image enters with enableHdr=0 and
+    // only becomes bright when motion-video playback takes over.
+    ViewerHdr.enableEngine(imageEnabled: _isImageHdrEnabled, videoEnabled: false);
+    _engineHdrOn = _isImageHdrEnabled;
 
     if (!_isImageHdrEnabled) {
       _hdrToken++;
@@ -532,7 +540,7 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
     }
 
     ref.read(isPlayingMotionVideoProvider.notifier).playing = false;
-    unawaited(ref.read(videoPlayerProvider(asset!.heroTag).notifier).pause());
+    unawaited(ref.read(videoPlayerProvider(asset!.id).notifier).pause());
     if (restoreControls && !ref.read(assetViewerProvider).showingDetails) {
       ref.read(assetViewerProvider.notifier).setControls(true);
     }

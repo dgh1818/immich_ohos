@@ -69,16 +69,12 @@ class ImmichSliverAppBar extends ConsumerWidget {
               title ??
               (defaultTargetPlatform == TargetPlatform.ohos ? const SizedBox.shrink() : const _ImmichLogoWithText()),
           actions: [
-            const SyncStatusIndicator(),
             if (isCasting && !isReadonlyModeEnabled)
               IconButton(
                 onPressed: () => showDialog(context: context, builder: (context) => const CastDialog()),
                 icon: Icon(isCasting ? Icons.cast_connected_rounded : Icons.cast_rounded),
               ),
             ...?actions,
-            if (showUploadButton && !isReadonlyModeEnabled) const BackupIndicator(),
-            const ProfileIndicator(),
-            const SizedBox(width: 8),
           ],
         ),
       ),

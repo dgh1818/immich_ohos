@@ -96,7 +96,7 @@ class _Map extends StatelessWidget {
                 child: MapThumbnail(
                   onTap: (_, _) => context.pushRoute(MapRoute(initialLocation: currentLocation)),
                   zoom: 8,
-                  centre: currentLocation ?? const LatLng(21.44950, -157.91959),
+                  centre: currentLocation ?? const LatLng(31.171944, 121.549722),
                   showAttribution: false,
                   themeMode: context.isDarkTheme ? ThemeMode.dark : ThemeMode.light,
                 ),
@@ -111,6 +111,10 @@ class _PlaceList extends ConsumerWidget {
   const _PlaceList({required this.search});
 
   final ValueNotifier<String?> search;
+
+  bool containsChinese(String value) {
+    return value.runes.any((rune) => rune >= 0x4E00 && rune <= 0x9FFF);
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -134,14 +138,20 @@ class _PlaceList extends ConsumerWidget {
         ),
       ),
       data: (places) {
-        final List<(String, String)> filtered;
-        if (search.value != null) {
-          filtered = places.where((place) {
-            return place.$1.toLowerCase().contains(search.value!.toLowerCase());
-          }).toList();
-        } else {
-          filtered = places;
-        }
+        final filtered = search.value == null
+            ? places.toList()
+            : places
+                .where((place) => place.$1.toLowerCase().contains(search.value!.toLowerCase()))
+                .toList();
+
+        filtered.sort((a, b) {
+          final hasChineseA = containsChinese(a.$1);
+          final hasChineseB = containsChinese(b.$1);
+
+          if (hasChineseA && !hasChineseB) return -1;
+          if (!hasChineseA && hasChineseB) return 1;
+          return a.$1.compareTo(b.$1);
+        });
 
         return SliverList.builder(
           itemCount: filtered.length,

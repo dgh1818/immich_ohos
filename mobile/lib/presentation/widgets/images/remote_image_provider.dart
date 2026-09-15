@@ -1,3 +1,5 @@
+import 'dart:ui' as ui;
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/painting.dart';
 import 'package:immich_mobile/domain/models/asset/base_asset.model.dart';
@@ -13,19 +15,19 @@ class RemoteImageProvider extends CancellableImageProvider<RemoteImageProvider>
     with CancellableImageProviderMixin<RemoteImageProvider> {
   final String url;
   final bool edited;
-  final bool aiHdr;
+  final ui.ImageDynamicRangePolicy? dynamicRangePolicy;
 
   /// Physical size to decode, or null for the source size.
   final Size? decodeSize;
 
-  RemoteImageProvider({required this.url, this.edited = true, this.decodeSize, this.aiHdr = false});
+  RemoteImageProvider({required this.url, this.edited = true, this.decodeSize, this.dynamicRangePolicy});
 
   RemoteImageProvider.thumbnail({
     required String assetId,
     required String thumbhash,
     this.edited = true,
     this.decodeSize,
-    this.aiHdr = false,
+    this.dynamicRangePolicy,
   }) : url = getThumbnailUrlForRemoteId(assetId, thumbhash: thumbhash, edited: edited);
 
   @override
@@ -46,8 +48,14 @@ class RemoteImageProvider extends CancellableImageProvider<RemoteImageProvider>
   }
 
   Stream<ImageInfo> _codec(RemoteImageProvider key, ImageDecoderCallback decode) {
-    final effectiveDecode = key.aiHdr ? aiHdrDecodeCallback(decode) : decode;
-    final request = this.request = RemoteImageRequest(uri: key.url, decodeSize: key.decodeSize, aiHdr: key.aiHdr);
+    final effectiveDecode = key.dynamicRangePolicy == null
+        ? decode
+        : dynamicRangeDecodeCallback(decode, key.dynamicRangePolicy!);
+    final request = this.request = RemoteImageRequest(
+      uri: key.url,
+      decodeSize: key.decodeSize,
+      dynamicRangePolicy: key.dynamicRangePolicy,
+    );
     return loadRequest(request, effectiveDecode, isFinal: true);
   }
 
@@ -57,13 +65,16 @@ class RemoteImageProvider extends CancellableImageProvider<RemoteImageProvider>
       return true;
     }
     if (other is RemoteImageProvider) {
-      return url == other.url && edited == other.edited && decodeSize == other.decodeSize && aiHdr == other.aiHdr;
+      return url == other.url &&
+          edited == other.edited &&
+          decodeSize == other.decodeSize &&
+          dynamicRangePolicy == other.dynamicRangePolicy;
     }
     return false;
   }
 
   @override
-  int get hashCode => Object.hash(url, edited, decodeSize, aiHdr);
+  int get hashCode => Object.hash(url, edited, decodeSize, dynamicRangePolicy);
 }
 
 class RemoteFullImageProvider extends CancellableImageProvider<RemoteFullImageProvider>
@@ -73,7 +84,7 @@ class RemoteFullImageProvider extends CancellableImageProvider<RemoteFullImagePr
   final AssetType assetType;
   final bool isAnimated;
   final bool edited;
-  final bool aiHdr;
+  final ui.ImageDynamicRangePolicy? dynamicRangePolicy;
 
   /// Physical size of the thumbnail shown before the preview.
   final Size? thumbnailSize;
@@ -85,7 +96,7 @@ class RemoteFullImageProvider extends CancellableImageProvider<RemoteFullImagePr
     required this.isAnimated,
     this.edited = true,
     this.thumbnailSize,
-    this.aiHdr = false,
+    this.dynamicRangePolicy,
   });
 
   @override
@@ -95,7 +106,9 @@ class RemoteFullImageProvider extends CancellableImageProvider<RemoteFullImagePr
 
   @override
   ImageStreamCompleter loadImage(RemoteFullImageProvider key, ImageDecoderCallback decode) {
-    final effectiveDecode = key.aiHdr ? aiHdrDecodeCallback(decode) : decode;
+    final effectiveDecode = key.dynamicRangePolicy == null
+        ? decode
+        : dynamicRangeDecodeCallback(decode, key.dynamicRangePolicy!);
     if (key.isAnimated) {
       return AnimatedImageStreamCompleter(
         stream: _animatedCodec(key, effectiveDecode),
@@ -145,7 +158,7 @@ class RemoteFullImageProvider extends CancellableImageProvider<RemoteFullImagePr
         thumbhash: key.thumbhash,
         edited: key.edited,
       ),
-      aiHdr: key.aiHdr,
+      dynamicRangePolicy: key.dynamicRangePolicy,
     );
     final loadOriginal = assetType == AssetType.image && SettingsRepository.instance.appConfig.image.loadOriginal;
     yield* loadRequest(previewRequest, decode, isFinal: !loadOriginal);
@@ -160,7 +173,7 @@ class RemoteFullImageProvider extends CancellableImageProvider<RemoteFullImagePr
 
     final originalRequest = request = RemoteImageRequest(
       uri: getOriginalUrlForRemoteId(key.assetId, edited: key.edited),
-      aiHdr: key.aiHdr,
+      dynamicRangePolicy: key.dynamicRangePolicy,
     );
     yield* loadRequest(originalRequest, decode, isFinal: true);
   }
@@ -189,7 +202,7 @@ class RemoteFullImageProvider extends CancellableImageProvider<RemoteFullImagePr
     // always try original for animated, since previews don't support animation
     final originalRequest = request = RemoteImageRequest(
       uri: getOriginalUrlForRemoteId(key.assetId, edited: key.edited),
-      aiHdr: key.aiHdr,
+      dynamicRangePolicy: key.dynamicRangePolicy,
     );
     final codec = await loadCodecRequest(originalRequest, isFinal: true);
     if (codec == null) {
@@ -211,12 +224,12 @@ class RemoteFullImageProvider extends CancellableImageProvider<RemoteFullImagePr
           thumbhash == other.thumbhash &&
           isAnimated == other.isAnimated &&
           edited == other.edited &&
-          aiHdr == other.aiHdr;
+          dynamicRangePolicy == other.dynamicRangePolicy;
     }
 
     return false;
   }
 
   @override
-  int get hashCode => Object.hash(assetId, thumbhash, isAnimated, edited, aiHdr);
+  int get hashCode => Object.hash(assetId, thumbhash, isAnimated, edited, dynamicRangePolicy);
 }

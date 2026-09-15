@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:immich_mobile/domain/models/asset/base_asset.model.dart';
@@ -18,7 +19,7 @@ class AssetPreloader {
   AssetPreloader({required this.timelineService, required this.mounted});
 
   /// Preloads adjacent images with the current thumbnail size.
-  void preload(int index, Size size, {Size? thumbnailSize}) {
+  void preload(int index, Size size, {Size? thumbnailSize, ui.ImageDynamicRangePolicy? dynamicRangePolicy}) {
     unawaited(timelineService.preloadAssets(index));
     _timer?.cancel();
     _timer = Timer(Durations.medium4, () async {
@@ -45,20 +46,24 @@ class AssetPreloader {
       }
       _prevStream?.removeListener(_dummyListener);
       _nextStream?.removeListener(_dummyListener);
-      _prevStream = prev != null ? _resolveImage(prev, size, thumbnailSize) : null;
-      _nextStream = next != null ? _resolveImage(next, size, thumbnailSize) : null;
+      _prevStream = prev != null ? _resolveImage(prev, size, thumbnailSize, dynamicRangePolicy) : null;
+      _nextStream = next != null ? _resolveImage(next, size, thumbnailSize, dynamicRangePolicy) : null;
     });
   }
 
-  ImageStream _resolveImage(BaseAsset asset, Size size, Size? thumbnailSize) {
-    // Warm exactly the provider key the asset page resolves: same class, size
-    // and aiHdr flag, or the swipe shows a spinner followed by an SDR flash
-    // on the viewer's HDR surface.
+  ImageStream _resolveImage(
+    BaseAsset asset,
+    Size size,
+    Size? thumbnailSize,
+    ui.ImageDynamicRangePolicy? dynamicRangePolicy,
+  ) {
+    // Warm exactly the provider key the asset page resolves, including the
+    // source-preserving dynamic-range policy used by the visible image.
     final provider = getFullImageProvider(
       asset,
       size: size,
       remoteThumbnailSize: thumbnailSize,
-      aiHdr: false,
+      dynamicRangePolicy: dynamicRangePolicy,
     );
     return provider.resolve(ImageConfiguration.empty)..addListener(_dummyListener);
   }

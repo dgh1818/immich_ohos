@@ -59,11 +59,11 @@ class CastNotifier extends StateNotifier<CastManagerState> {
   }
 
   VideoPlayerNotifier? _currentVideoPlayer() {
-    final heroTag = _ref.read(assetViewerProvider).currentAsset?.heroTag;
-    if (heroTag == null) {
+    final assetId = _ref.read(assetViewerProvider).currentAsset?.id;
+    if (assetId == null) {
       return null;
     }
-    return _ref.read(videoPlayerProvider(heroTag).notifier);
+    return _ref.read(videoPlayerProvider(assetId).notifier);
   }
 
   void loadMedia(RemoteAsset asset, bool reload) {

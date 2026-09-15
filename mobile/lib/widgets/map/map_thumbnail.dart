@@ -48,7 +48,7 @@ class MapThumbnail extends HookConsumerWidget {
     this.themeMode,
     this.showAttribution = true,
     this.onCreated,
-    this.isZoomControlsEnabled = true,
+    this.isZoomControlsEnabled = false,
     this.onReverseGeocoded,
   });
 

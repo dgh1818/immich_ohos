@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
@@ -70,7 +71,7 @@ class LocalFullImageProvider extends CancellableImageProvider<LocalFullImageProv
   final int? width;
   final int? height;
   final String? checksum;
-  final bool aiHdr;
+  final ui.ImageDynamicRangePolicy? dynamicRangePolicy;
 
   LocalFullImageProvider({
     required this.id,
@@ -80,7 +81,7 @@ class LocalFullImageProvider extends CancellableImageProvider<LocalFullImageProv
     this.width,
     this.height,
     this.checksum,
-    this.aiHdr = false,
+    this.dynamicRangePolicy,
   });
 
   Size _previewTarget(double dpr, bool previewIsFinal) =>
@@ -109,7 +110,9 @@ class LocalFullImageProvider extends CancellableImageProvider<LocalFullImageProv
 
   @override
   ImageStreamCompleter loadImage(LocalFullImageProvider key, ImageDecoderCallback decode) {
-    final effectiveDecode = key.aiHdr ? aiHdrDecodeCallback(decode) : decode;
+    final effectiveDecode = key.dynamicRangePolicy == null
+        ? decode
+        : dynamicRangeDecodeCallback(decode, key.dynamicRangePolicy!);
     if (key.isAnimated) {
       return AnimatedImageStreamCompleter(
         stream: _animatedCodec(key, effectiveDecode),
@@ -210,11 +213,11 @@ class LocalFullImageProvider extends CancellableImageProvider<LocalFullImageProv
           width == other.width &&
           height == other.height &&
           checksum == other.checksum &&
-          aiHdr == other.aiHdr;
+          dynamicRangePolicy == other.dynamicRangePolicy;
     }
     return false;
   }
 
   @override
-  int get hashCode => Object.hash(id, size, isAnimated, width, height, checksum, aiHdr);
+  int get hashCode => Object.hash(id, size, isAnimated, width, height, checksum, dynamicRangePolicy);
 }

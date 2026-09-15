@@ -6,8 +6,8 @@ class RemoteImageRequest extends ImageRequest {
   /// Physical size to decode, or null for the source size.
   final ui.Size? decodeSize;
 
-  RemoteImageRequest({required this.uri, this.decodeSize, bool aiHdr = false}) {
-    this.aiHdr = aiHdr;
+  RemoteImageRequest({required this.uri, this.decodeSize, ui.ImageDynamicRangePolicy? dynamicRangePolicy}) {
+    this.dynamicRangePolicy = dynamicRangePolicy;
   }
 
   @override
@@ -20,8 +20,9 @@ class RemoteImageRequest extends ImageRequest {
       uri,
       requestId: requestId,
       // AI HDR needs encoded bytes so the engine can perform the SDR -> HLG
-      // conversion on the client.
-      preferEncoded: aiHdr,
+      // conversion on the client. Native decoded responses are preferable for
+      // the source-preserving path because they carry their isHdr metadata.
+      preferEncoded: dynamicRangePolicy?.name == 'aiHdrAuto',
       width: decodeSize?.width.ceil(),
       height: decodeSize?.height.ceil(),
     );
@@ -31,7 +32,7 @@ class RemoteImageRequest extends ImageRequest {
         pointer,
         length,
         decodeSize: decodeSize,
-        aiHdr: aiHdr,
+        dynamicRangePolicy: dynamicRangePolicy,
       ),
       {
         'pointer': final int pointer,
@@ -64,7 +65,11 @@ class RemoteImageRequest extends ImageRequest {
     }
 
     final (codec, _) =
-        await _codecFromEncodedPlatformImage(info['pointer']! as int, info['length']! as int, aiHdr: aiHdr) ??
+        await _codecFromEncodedPlatformImage(
+          info['pointer']! as int,
+          info['length']! as int,
+          dynamicRangePolicy: dynamicRangePolicy,
+        ) ??
         (null, null);
     return codec;
   }

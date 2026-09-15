@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/gestures.dart' show Drag, kTouchSlop;
@@ -7,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:immich_mobile/domain/models/asset/base_asset.model.dart';
 import 'package:immich_mobile/domain/models/events.model.dart';
+import 'package:immich_mobile/domain/models/setting.model.dart';
 import 'package:immich_mobile/domain/services/timeline.service.dart';
 import 'package:immich_mobile/domain/utils/event_stream.dart';
 import 'package:immich_mobile/extensions/build_context_extensions.dart';
@@ -20,6 +22,7 @@ import 'package:immich_mobile/presentation/widgets/images/image_provider.dart';
 import 'package:immich_mobile/presentation/widgets/images/thumbnail.widget.dart';
 import 'package:immich_mobile/providers/asset_viewer/asset_viewer.provider.dart';
 import 'package:immich_mobile/providers/asset_viewer/is_motion_video_playing.provider.dart';
+import 'package:immich_mobile/providers/infrastructure/setting.provider.dart' as store_settings;
 import 'package:immich_mobile/providers/infrastructure/settings.provider.dart';
 import 'package:immich_mobile/providers/infrastructure/timeline.provider.dart';
 import 'package:immich_mobile/providers/view_intent/view_intent_file_path.provider.dart';
@@ -363,16 +366,15 @@ class _AssetPageState extends ConsumerState<AssetPage> {
     required bool isPlayingMotionVideo,
     required String? localFilePath,
     required Size? remoteThumbnailSize,
+    required bool imageHdrEnabled,
   }) {
     final size = context.sizeData;
-    // TODO(ai-hdr): Phase 2 gates this by Setting.imageAiHdr; forced on for
-    // the current device verification.
     final imageProvider = getFullImageProvider(
       asset,
       size: size,
       localFilePath: localFilePath,
       remoteThumbnailSize: remoteThumbnailSize,
-      aiHdr: false,
+      dynamicRangePolicy: asset.isImage && imageHdrEnabled ? ui.ImageDynamicRangePolicy.preserve : null,
     );
 
     if (asset.isImage && !isPlayingMotionVideo) {
@@ -441,6 +443,9 @@ class _AssetPageState extends ConsumerState<AssetPage> {
     _showingDetails = ref.watch(assetViewerProvider.select((s) => s.showingDetails));
     final stackIndex = ref.watch(assetViewerProvider.select((s) => s.stackIndex));
     final isPlayingMotionVideo = ref.watch(isPlayingMotionVideoProvider);
+    final imageHdrEnabled = ref.watch(
+      store_settings.settingsProvider.select((settings) => settings.get(Setting.imageHdr)),
+    );
     final timelineOrigin = ref.watch(timelineServiceProvider).origin;
     final showingOcr = ref.watch(assetViewerProvider.select((s) => s.showingOcr));
 
@@ -495,6 +500,7 @@ class _AssetPageState extends ConsumerState<AssetPage> {
                     isPlayingMotionVideo: isPlayingMotionVideo,
                     localFilePath: viewIntentFilePath,
                     remoteThumbnailSize: thumbnailSize,
+                    imageHdrEnabled: imageHdrEnabled,
                   ),
                 ),
                 if (showingOcr && displayAsset.width != null && displayAsset.height != null)

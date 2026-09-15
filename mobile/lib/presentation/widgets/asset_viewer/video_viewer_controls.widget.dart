@@ -21,11 +21,11 @@ class VideoViewerControls extends HookConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final asset = ref.watch(assetViewerProvider.select((s) => s.currentAsset));
-    final heroTag = asset?.heroTag;
+    final assetId = asset?.id;
     final assetIsVideo = asset?.isVideo ?? false;
     final assetViewerNotifier = ref.read(assetViewerProvider.notifier);
     final castNotifier = ref.read(castProvider.notifier);
-    final videoNotifier = heroTag == null ? null : ref.read(videoPlayerProvider(heroTag).notifier);
+    final videoNotifier = assetId == null ? null : ref.read(videoPlayerProvider(assetId).notifier);
 
     bool showControls = ref.watch(assetViewerProvider.select((s) => s.showingControls));
     final showingDetails = ref.watch(assetViewerProvider.select((s) => s.showingDetails));
@@ -33,7 +33,7 @@ class VideoViewerControls extends HookConsumerWidget {
       showControls = false;
     }
 
-    final playback = heroTag == null ? null : ref.watch(videoPlayerProvider(heroTag));
+    final playback = assetId == null ? null : ref.watch(videoPlayerProvider(assetId));
     final state = playback?.status ?? VideoPlaybackStatus.paused;
     final cast = ref.watch(castProvider);
 
@@ -48,7 +48,7 @@ class VideoViewerControls extends HookConsumerWidget {
       final currentAsset = ref.read(assetViewerProvider).currentAsset;
       final currentState = currentAsset == null
           ? VideoPlaybackStatus.paused
-          : ref.read(videoPlayerProvider(currentAsset.heroTag)).status;
+          : ref.read(videoPlayerProvider(currentAsset.id)).status;
 
       if (currentState != VideoPlaybackStatus.paused && currentState != VideoPlaybackStatus.completed && assetIsVideo) {
         ref.read(assetViewerProvider.notifier).setControls(false);
@@ -75,8 +75,8 @@ class VideoViewerControls extends HookConsumerWidget {
       showControlsAndStartHideTimer();
     }
 
-    if (heroTag != null) {
-      ref.listen(videoPlayerProvider(heroTag).select((v) => v.position), (_, __) {
+    if (assetId != null) {
+      ref.listen(videoPlayerProvider(assetId).select((v) => v.position), (_, __) {
         if (!context.mounted) {
           return;
         }
@@ -96,7 +96,7 @@ class VideoViewerControls extends HookConsumerWidget {
           return;
         }
 
-        final notifier = ref.read(videoPlayerProvider(currentAsset.heroTag).notifier);
+        final notifier = ref.read(videoPlayerProvider(currentAsset.id).notifier);
         switch (event.method) {
           case 'play':
             unawaited(notifier.play());

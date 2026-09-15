@@ -23,10 +23,11 @@ abstract class ImageRequest {
 
   ImageRequest();
 
-  // OHOS fork (AI HDR): encoded-byte loads can be decoded through the
-  // engine's SDR -> HLG conversion. Raw-pixel loads keep their native pixel
-  // format and use the HDR descriptor only when the native side marks it.
-  bool aiHdr = false;
+  // OHOS fork: an encoded request may explicitly preserve the source dynamic
+  // range or request the SDR -> HLG AI HDR conversion. Raw-pixel loads keep
+  // their native pixel format and use the HDR descriptor only when the native
+  // side marks it.
+  ui.ImageDynamicRangePolicy? dynamicRangePolicy;
 
   Future<ImageInfo?> load(ImageDecoderCallback decode, {double scale = 1.0});
 
@@ -46,7 +47,7 @@ abstract class ImageRequest {
     int address,
     int length, {
     ui.Size? decodeSize,
-    bool aiHdr = false,
+    ui.ImageDynamicRangePolicy? dynamicRangePolicy,
   }) async {
     final pointer = Pointer<Uint8>.fromAddress(address);
     if (_isCancelled) {
@@ -74,13 +75,13 @@ abstract class ImageRequest {
     }
 
     final target = _targetSize(descriptor.width, descriptor.height, decodeSize);
-    final codec = aiHdr
-        ? await descriptor.instantiateCodecWithDynamicRange(
-            dynamicRangePolicy: ui.ImageDynamicRangePolicy.aiHdrAuto,
+    final codec = dynamicRangePolicy == null
+        ? await descriptor.instantiateCodec(targetWidth: target?.$1, targetHeight: target?.$2)
+        : await descriptor.instantiateCodecWithDynamicRange(
+            dynamicRangePolicy: dynamicRangePolicy,
             targetWidth: target?.$1,
             targetHeight: target?.$2,
-          )
-        : await descriptor.instantiateCodec(targetWidth: target?.$1, targetHeight: target?.$2);
+          );
     if (_isCancelled) {
       descriptor.dispose();
       codec.dispose();
@@ -94,9 +95,14 @@ abstract class ImageRequest {
     int address,
     int length, {
     ui.Size? decodeSize,
-    bool aiHdr = false,
+    ui.ImageDynamicRangePolicy? dynamicRangePolicy,
   }) async {
-    final result = await _codecFromEncodedPlatformImage(address, length, decodeSize: decodeSize, aiHdr: aiHdr);
+    final result = await _codecFromEncodedPlatformImage(
+      address,
+      length,
+      decodeSize: decodeSize,
+      dynamicRangePolicy: dynamicRangePolicy,
+    );
     if (result == null) {
       return null;
     }

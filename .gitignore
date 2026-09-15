@@ -19,6 +19,10 @@ mobile/ios/build
 
 device-test/
 
+# Local HDR/device-test screenshots
+**/aihdr_*.png
+**/tablet_final.png
+
 packages/**/build
 mobile/android/fastlane/report.xml
 mobile/ios/fastlane/report.xml

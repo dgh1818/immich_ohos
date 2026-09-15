@@ -1,4 +1,5 @@
 import 'package:auto_route/auto_route.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:immich_mobile/domain/models/user.model.dart';
@@ -27,15 +28,18 @@ class LibraryPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      body: CustomScrollView(
-        slivers: [
-          ImmichSliverAppBar(snap: false, floating: false, pinned: true, showUploadButton: false),
-          _ActionButtonGrid(),
-          _CollectionCards(),
-          _QuickAccessButtonList(),
-        ],
-      ),
+    final content = CustomScrollView(
+      slivers: [
+        if (defaultTargetPlatform != TargetPlatform.ohos)
+          const ImmichSliverAppBar(snap: false, floating: false, pinned: true, showUploadButton: false),
+        const _ActionButtonGrid(),
+        const _CollectionCards(),
+        const _QuickAccessButtonList(),
+      ],
+    );
+
+    return Scaffold(
+      body: defaultTargetPlatform == TargetPlatform.ohos ? SafeArea(top: true, bottom: false, child: content) : content,
     );
   }
 }
@@ -241,7 +245,7 @@ class _PlacesCollectionCard extends StatelessWidget {
                   child: IgnorePointer(
                     child: MapThumbnail(
                       zoom: 8,
-                      centre: const LatLng(21.44950, -157.91959),
+                      centre: const LatLng(31.171944, 121.549722),
                       showAttribution: false,
                       themeMode: context.isDarkTheme ? ThemeMode.dark : ThemeMode.light,
                     ),
@@ -426,7 +430,7 @@ class _QuickAccessButtonList extends ConsumerWidget {
     final partners = partnerSharedWithAsync.valueOrNull ?? [];
 
     return SliverPadding(
-      padding: const EdgeInsets.only(left: 16, top: 12, right: 16, bottom: 32),
+      padding: const EdgeInsets.only(left: 16, top: 12, right: 16, bottom: 96),
       sliver: SliverToBoxAdapter(
         child: DecoratedBox(
           decoration: BoxDecoration(
