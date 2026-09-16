@@ -7,6 +7,7 @@ import 'package:flutter/gestures.dart' show Drag, kTouchSlop;
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:immich_mobile/domain/models/asset/base_asset.model.dart';
+import 'package:immich_mobile/domain/services/setting.service.dart';
 import 'package:immich_mobile/domain/models/events.model.dart';
 import 'package:immich_mobile/domain/models/setting.model.dart';
 import 'package:immich_mobile/domain/services/timeline.service.dart';
@@ -374,7 +375,11 @@ class _AssetPageState extends ConsumerState<AssetPage> {
       size: size,
       localFilePath: localFilePath,
       remoteThumbnailSize: remoteThumbnailSize,
-      dynamicRangePolicy: asset.isImage && imageHdrEnabled ? ui.ImageDynamicRangePolicy.preserve : null,
+      dynamicRangePolicy: asset.isImage
+          ? (AppSetting.get(Setting.aiHdr)
+                ? ui.ImageDynamicRangePolicy.aiHdrAuto
+                : (imageHdrEnabled ? ui.ImageDynamicRangePolicy.preserve : null))
+          : null,
     );
 
     if (asset.isImage && !isPlayingMotionVideo) {

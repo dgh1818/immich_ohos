@@ -120,6 +120,16 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
 
   bool get _isImageHdrEnabled => AppSetting.get(Setting.imageHdr);
   bool get _isVideoHdrEnabled => AppSetting.get(Setting.videoHdr);
+
+  // AI HDR is a superset of preserve: the engine decodes native HDR content
+  // as deterministic HLG and converts SDR via VPE (falling back to SDR on
+  // devices where the conversion is unavailable).
+  ui.ImageDynamicRangePolicy? _resolveDynamicRangePolicy() {
+    if (AppSetting.get(Setting.aiHdr)) {
+      return ui.ImageDynamicRangePolicy.aiHdrAuto;
+    }
+    return _isImageHdrEnabled ? ui.ImageDynamicRangePolicy.preserve : null;
+  }
   bool get _canUseRef => mounted && !_isDisposing;
 
   void _onTapNavigate(int direction) {
@@ -227,7 +237,7 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
       widget.initialIndex,
       context.sizeData,
       thumbnailSize: ref.read(assetViewerProvider).thumbnailSize,
-      dynamicRangePolicy: _isImageHdrEnabled ? ui.ImageDynamicRangePolicy.preserve : null,
+      dynamicRangePolicy: _resolveDynamicRangePolicy(),
     );
     _handleCasting();
   }
@@ -257,7 +267,7 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
       index,
       context.sizeData,
       thumbnailSize: ref.read(assetViewerProvider).thumbnailSize,
-      dynamicRangePolicy: _isImageHdrEnabled ? ui.ImageDynamicRangePolicy.preserve : null,
+      dynamicRangePolicy: _resolveDynamicRangePolicy(),
     );
     _handleCasting();
     _stackChildrenKeepAlive?.close();
@@ -428,7 +438,7 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
     return getFullImageProvider(
       asset,
       size: useLocalAsset ? const Size(-1, -1) : const Size(1080, 1920),
-      dynamicRangePolicy: ui.ImageDynamicRangePolicy.preserve,
+      dynamicRangePolicy: _resolveDynamicRangePolicy(),
     );
   }
 

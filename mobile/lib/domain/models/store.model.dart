@@ -100,6 +100,7 @@ enum StoreKey<T> {
   imageHdr<bool>._(1014),
   videoHdr<bool>._(1015),
   ohosLocalAssetOrientationBackfill<bool>._(1016),
+  aiHdr<bool>._(1017),
 
   // Legacy keys that have been migrated to the new metadata store
   legacyBackupRequireCharging<bool>._(7),

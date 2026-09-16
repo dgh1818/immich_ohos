@@ -24,6 +24,10 @@ class ImageViewerQualitySetting extends HookConsumerWidget {
     useValueChanged<bool, void>(imageHdr.value, (_, __) {
       unawaited(ref.read(store_settings.settingsProvider.notifier).set(Setting.imageHdr, imageHdr.value));
     });
+    final aiHdr = useState(ref.read(store_settings.settingsProvider.notifier).get(Setting.aiHdr));
+    useValueChanged<bool, void>(aiHdr.value, (_, __) {
+      unawaited(ref.read(store_settings.settingsProvider.notifier).set(Setting.aiHdr, aiHdr.value));
+    });
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -40,6 +44,7 @@ class ImageViewerQualitySetting extends HookConsumerWidget {
           onChanged: (_) => ref.invalidate(appSettingsServiceProvider),
         ),
         SettingsSwitchListTile(valueNotifier: imageHdr, title: "图片 HDR", subtitle: "在支持 HDR 的设备上以 HDR 方式显示图片"),
+        SettingsSwitchListTile(valueNotifier: aiHdr, title: "图片 AI HDR", subtitle: "将 SDR 照片经 VPE 转换为 HLG 显示"),
       ],
     );
   }

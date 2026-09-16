@@ -9,6 +9,7 @@ enum Setting<T> {
   autoPlayVideo<bool>(StoreKey.autoPlayVideo, true),
   imageHdr<bool>(StoreKey.imageHdr, true),
   videoHdr<bool>(StoreKey.videoHdr, true),
+  aiHdr<bool>(StoreKey.aiHdr, true),
   preferRemoteImage<bool>(StoreKey.preferRemoteImage, true),
   advancedTroubleshooting<bool>(StoreKey.advancedTroubleshooting, false),
   enableBackup<bool>(StoreKey.enableBackup, false);
