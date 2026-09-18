@@ -4,3 +4,9 @@
 [submodule "mobile/third_party/jni"]
 	path = mobile/third_party/jni
 	url = https://github.com/dgh1818/immich_ohos_jni.git
+[submodule "mobile/flutter_photo_manager"]
+	path = mobile/flutter_photo_manager
+	url = https://github.com/dgh1818/flutter_photo_manager.git
+[submodule "mobile/photo_manager_image_provider"]
+	path = mobile/photo_manager_image_provider
+	url = https://github.com/dgh1818/photo_manager_image_provider.git
