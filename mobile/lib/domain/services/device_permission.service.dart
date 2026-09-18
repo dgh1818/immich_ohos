@@ -18,6 +18,10 @@ class DevicePermissionService {
       return handler(.photos);
     }
 
+    if (CurrentPlatform.isOhos) {
+      return handler(.photos);
+    }
+
     final sdkVersion = await _permissionRepository.getAndroidSdkVersion();
     const maxExternalStorageSdk = 32; // READ/WRITE_EXTERNAL_STORAGE - Android 12.1
     final status = sdkVersion <= maxExternalStorageSdk ? await handler(.storage) : await _photosAndVideos(handler);
