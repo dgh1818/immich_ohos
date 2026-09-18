@@ -49,11 +49,13 @@
 
 ### P1(merge 后抽查)
 
+- `mobile/lib/domain/services/device_permission.service.dart`:`_gallery()` 里 OHOS 必须保留独立早退分支 `if (CurrentPlatform.isOhos) return handler(.photos);`(与 iOS 分支平行,2026-09-18 修复)。上游 #30477(随 `acb8809b19` merge v3.2.1 进来)把守卫从旧的 `Platform.isAndroid` 反转成"非 iOS 全走 Android 路径",OHOS 上 `getAndroidSdkVersion()` 会硬调 `androidInfo`,而 OHOS fork 的 device_info_plus 返回 OHOS 形状数据,`AndroidBuildVersion._fromMap` 必抛 `type 'Null' is not a subtype of type 'String'`;登录成功后 `requestGalleryPermission()` 在 `TabShellRoute` 跳转前抛异常,表现为"退出登录后无法登录"。同文件守卫若再被上游改写,对照重构前 `gallery_permission.provider.dart` 的 OHOS 行为(非 Android → 直接 `Permission.photos`)
 - `mobile/ohos/.../plugins/connectivity/ConnectivityApiImpl.ets`:`isUnmetered` 必须包含 `bearerTypes.includes(BEARER_WIFI)` 判定。OHOS 系统只给 VPN/穿戴分布式网络报 `NET_CAPABILITY_NOT_METERED`,WiFi 默认网络不报(caps 实测 `[12,15,16]`);只信 caps 会导致 WiFi 下永远被判计费 → 不开"蜂窝备份"就不上传
 
 - `mobile/pubspec.yaml` 的 `photo_manager` git ref:必须指向 fork(`dgh1818/flutter_photo_manager`)中含 `68089cb`(OHOS `deleteAssets` 单次上限 300 的分片修复,在 `PhotoAssetHandler.ets` 的 deleteWithIds/moveToTrash)或之后的提交,不得换回 pub.dev 版;immich 侧 `asset_media.repository.dart` 的 `deleteAll()` 保持上游原样(分片在插件 native 层)
 - `mobile/lib/repositories/upload.repository.dart`:`Platform.isOhos` 的 `OhosMultipartRequest`(filePath 直传)分支是否保留
 - `mobile/pubspec.yaml` + `mobile/ohos/oh-package.json5`:`background_downloader` 等 OHOS override(`../../package_flutter/...` 与 `file:./har/*.har`)是否被升级冲掉
+- `.github/workflows/docker.yml` + `.gitmodules` + `dgh1818/devtools`(服务端 Docker 构建,2026-09-18 恢复:`77c9deff83`+`105d46b027`)。merge 后必查:①两处 `uses:` 必须指向 `dgh1818/devtools/.github/workflows/multi-runner-build.yml@<与上游同步过的 SHA>`——上游 v4.0.0 起 `tags` 输入 required 且已删除 `dockerhub-push`,server 必须传 `tags: *tag-rules`;若 merge 后残留旧接口参数(传 `dockerhub-push` 给新接口或给旧接口传 `tags`),release 必 `startup_failure` 且 job 不创建(v3.2.1 merge 实际发生,后被误禁用掩盖)。②`DOCKERHUB_NAMESPACE: docker.io/dgh18`(上游硬编码 `altran1502`,勿带回)。③ML 三件套(retag_ml/machine-learning/success-check-ml)`if: ${{ false }}`。④mirror job `needs: [pre-job, server]` 且 matrix 只留 `image: [immich-server]`(ML 被 skip 会连带 skip mirror,ML 镜像不存在也不能进 matrix)。⑤`mobile/flutter_photo_manager`、`mobile/photo_manager_image_provider`、`mobile/third_party/jni` 是 gitlink 登记,**新增 gitlink 必须同步补 `.gitmodules` 条目**,否则 CI checkout v7 直接 `fatal: No url found for submodule path` 双平台构建全灭。devtools 本地 clone 在 `F:\devtools_dgh1818`,与 immich-app/devtools main 保持零差异(同步:`git merge upstream/main`,multi-runner-build.yml 冲突一律取上游);Docker Hub 推送由 mirror job 完成(用 `DOCKERHUB_USERNAME/TOKEN` secrets,已配);`PUSH_O_MATIC_*` 无需配置,create-workflow-token 对空 inputs 有 fallback
 
 ### 冲突解决原则
 
