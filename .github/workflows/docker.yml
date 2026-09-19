@@ -206,9 +206,9 @@ jobs:
     # OHOS: machine-learning is disabled above, so it cannot be in needs
     # (a skipped need would skip this job too) or in the matrix.
     needs: [pre-job, server]
-    # OHOS: also allow manual dispatch so prerelease builds can be mirrored to
-    # Docker Hub on demand (all fork releases are prereleases).
-    if: ${{ (github.event_name == 'release' && github.event.release.prerelease == false) || github.event_name == 'workflow_dispatch' }}
+    # OHOS: all fork releases are prereleases, so mirror every release (not
+    # just formal ones) plus manual dispatch to keep Docker Hub current.
+    if: ${{ github.event_name == 'release' || github.event_name == 'workflow_dispatch' }}
     permissions:
       packages: read
     runs-on: ubuntu-latest
