@@ -3,9 +3,8 @@ import 'package:immich_mobile/generated/translations.g.dart';
 import 'package:immich_mobile/utils/semver.dart';
 
 enum FeatureHighlight {
-  ohosBackgroundBackup(platform: [.ohos]),
-  ohosWifiBackup(platform: [.ohos]),
-  ohosBulkDelete(platform: [.ohos]),
+  ohosUpdatesFork(platform: [.ohos]),
+  ohosUpdatesUpstream(platform: [.ohos]),
   shareQuality(image: 'assets/feature_message/share_quality.webp'),
   slideshow(image: 'assets/feature_message/slideshow.webp'),
   recentlyAdded(image: 'assets/feature_message/recently_added.webp'),
@@ -22,9 +21,8 @@ enum FeatureHighlight {
   bool get isVisibleOnCurrentPlatform => platform.contains(defaultTargetPlatform);
 
   String title(Translations t) => switch (this) {
-    FeatureHighlight.ohosBackgroundBackup => t.ohos_fix_background_backup_title,
-    FeatureHighlight.ohosWifiBackup => t.ohos_fix_wifi_backup_title,
-    FeatureHighlight.ohosBulkDelete => t.ohos_fix_bulk_delete_title,
+    FeatureHighlight.ohosUpdatesFork => t.ohos_updates_fork_title,
+    FeatureHighlight.ohosUpdatesUpstream => t.ohos_updates_upstream_title,
     FeatureHighlight.shareQuality => t.share_quality_title,
     FeatureHighlight.slideshow => t.slideshow_title,
     FeatureHighlight.recentlyAdded => t.recently_added_title,
@@ -34,9 +32,8 @@ enum FeatureHighlight {
   };
 
   String body(Translations t) => switch (this) {
-    FeatureHighlight.ohosBackgroundBackup => t.ohos_fix_background_backup_body,
-    FeatureHighlight.ohosWifiBackup => t.ohos_fix_wifi_backup_body,
-    FeatureHighlight.ohosBulkDelete => t.ohos_fix_bulk_delete_body,
+    FeatureHighlight.ohosUpdatesFork => t.ohos_updates_fork_body,
+    FeatureHighlight.ohosUpdatesUpstream => t.ohos_updates_upstream_body,
     FeatureHighlight.shareQuality => t.share_quality_body,
     FeatureHighlight.slideshow => t.slideshow_body,
     FeatureHighlight.recentlyAdded => t.recently_added_body,
@@ -48,7 +45,7 @@ enum FeatureHighlight {
 
 /// The release this batch of highlights was authored for. Content-defined:
 /// bump it only when publishing a new batch, never from the running app version.
-const featureMessageRelease = SemVer(major: 3, minor: 1, patch: 0);
+const featureMessageRelease = SemVer(major: 3, minor: 2, patch: 1);
 
 /// Highlights relevant to the current platform.
 List<FeatureHighlight> get visibleFeatureMessageHighlights =>
