@@ -10,8 +10,8 @@
           "keyAlias": "dgh18",
           "keyPassword": "0000001BC68E9FE73E4A9250BB4AD71EA4D336CACAB704B351FCF566AEE6746A60AD427D98EFA5DFE973AB",
           "signAlg": "SHA256withECDSA",
-          "profile": "F:/immich_sign/April_debugDebug.p7b",
-          "certpath": "F:/immich_sign/immich_20260408.cer"
+          "profile": "F:/immich_sign/immich_testRelease.p7b",
+          "certpath": "F:/immich_sign/immich_release.cer"
         }
       }
     ],
