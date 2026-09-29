@@ -167,8 +167,11 @@ class AssetMediaRepository {
       taskId: taskId,
       url: url,
       headers: ApiService.getRequestHeaders(),
-      filename: displayName,
-      directory: taskId,
+      // OHOS share paths must remain flat for the native share layer. Keep a
+      // unique staging name here; _resolveShareFiles restores the original
+      // display name after the download completes.
+      filename: CurrentPlatform.isOhos ? '$taskId-$displayName' : displayName,
+      directory: CurrentPlatform.isOhos ? '' : taskId,
       baseDirectory: BaseDirectory.temporary,
       group: kShareDownloadGroup,
       updates: Updates.statusAndProgress,
@@ -400,7 +403,7 @@ class AssetMediaRepository {
     } catch (e, s) {
       _log.warning("Failed to prepare files for sharing", e, s);
       await cleanupTempFiles(tempFiles);
-      return 0;
+      rethrow;
     }
     if (_isCancelled(cancelCompleter) || !context.mounted) {
       await cleanupTempFiles(tempFiles);
