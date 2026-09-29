@@ -132,7 +132,9 @@ class DownloadService {
       return false;
     }
 
-    final title = imageRecord.task.filename;
+    // photo_manager.saveLivePhoto expects the title without an extension.
+    // The media provider derives the image extension from imageFile itself.
+    final title = p.basenameWithoutExtension(imageRecord.task.filename);
     final imageFilePath = await imageRecord.task.filePath();
     final videoFilePath = await videoRecord.task.filePath();
     var actualVideoPath = videoFilePath;
@@ -180,6 +182,12 @@ class DownloadService {
         return result != null;
       }
 
+      _log.info(
+        "Saving live photo id=$livePhotosId title=$title; "
+        "${await _fileDebugInfo('image', imageFilePath)}, "
+        "${await _fileDebugInfo('downloadedVideo', videoFilePath)}, "
+        "${await _fileDebugInfo('actualVideo', actualVideoPath)}",
+      );
       final result = await _fileMediaRepository.saveLivePhoto(
         image: File(imageFilePath),
         video: File(actualVideoPath),
