@@ -1,5 +1,4 @@
 import { FlutterEngine, Log } from '@ohos/flutter_ohos';
-import IntegrationTestPlugin from 'integration_test';
 import WakelockPlugin from 'wakelock_plus';
 import PackageInfoPlugin from 'package_info_plus';
 import UrlLauncherPlugin from 'url_launcher_ohos';
@@ -38,7 +37,6 @@ export class GeneratedPluginRegistrant {
 
   static registerWith(flutterEngine: FlutterEngine) {
     try {
-      flutterEngine.getPlugins()?.add(new IntegrationTestPlugin());
       flutterEngine.getPlugins()?.add(new WakelockPlugin());
       flutterEngine.getPlugins()?.add(new PackageInfoPlugin());
       flutterEngine.getPlugins()?.add(new UrlLauncherPlugin());

@@ -41,7 +41,6 @@
     "wakelock_plus": "file:./har/wakelock_plus.har",
     "receive_sharing_intent": "file:./har/receive_sharing_intent.har",
     "native_video_player": "file:./har/native_video_player.har",
-    "ohos_http": "file:./har/ohos_http.har",
-    "integration_test": "file:./har/integration_test.har"
+    "ohos_http": "file:./har/ohos_http.har"
   }
 }
