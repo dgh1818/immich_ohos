@@ -14,8 +14,6 @@ import 'package:logging/logging.dart';
 
 final log = Logger('ThumbnailWidget');
 
-enum ThumbhashMode { enabled, disabled, only }
-
 class Thumbnail extends StatefulWidget {
   final ImageProvider? imageProvider;
   final ImageProvider? thumbhashProvider;

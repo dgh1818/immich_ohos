@@ -6,9 +6,15 @@ class LocalImageRequest extends ImageRequest {
   final int height;
   final AssetType assetType;
 
-  LocalImageRequest({required this.localId, required ui.Size size, required this.assetType})
-    : width = size.width.toInt(),
-      height = size.height.toInt();
+  LocalImageRequest({
+    required this.localId,
+    required ui.Size size,
+    required this.assetType,
+    ui.ImageDynamicRangePolicy? dynamicRangePolicy,
+  }) : width = size.width.toInt(),
+       height = size.height.toInt() {
+    this.dynamicRangePolicy = dynamicRangePolicy;
+  }
 
   @override
   Future<ImageInfo?> load(ImageDecoderCallback decode, {double scale = 1.0}) async {

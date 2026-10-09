@@ -58,6 +58,13 @@ class BackgroundWorkerReply implements Reply<void> {
   }
 }
 
+class BackgroundWorkerUploadReply implements Reply<boolean> {
+  reply(needsRetry: boolean): void {
+    // onAndroidUpload returns whether Flutter needs the native worker to retry.
+    BackgroundWorker.backgroundWorkerBgHostApiImpl?.complete(needsRetry === false);
+  }
+}
+
 class BackgroundWorker extends WorkSchedulerExtensionAbility {
   private ctx: Context = this.context.getApplicationContext();
   /// The Flutter loader that loads the native Flutter library and resources.
@@ -204,7 +211,7 @@ class BackgroundWorkerBgHostApiImpl extends BackgroundWorkerBgHostApi {
    */
   override onInitialized() {
     try {
-      BackgroundWorker.flutterApi!.onAndroidUpload(20, new BackgroundWorkerReply(true));
+      BackgroundWorker.flutterApi!.onAndroidUpload(20, new BackgroundWorkerUploadReply());
     } catch (e) {
       this.handleHostResult(false);
     }

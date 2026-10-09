@@ -2,7 +2,7 @@ name: immich_mobile
 description: Immich - selfhosted backup media file on mobile phone
 
 publish_to: 'none'
-version: 3.2.1+320010005
+version: 3.3.1+320010006
 
 environment:
   sdk: '>=3.12.0 <4.0.0'
@@ -11,7 +11,8 @@ environment:
 
 dependencies:
   async: ^2.13.1
-  auto_route: ^11.1.0
+  # 固定为 v3.3.1 锁定的版本；11.2.0 引入的 Material/Cupertino 包与 Flutter 3.44.9 OHOS 枚举不兼容。
+  auto_route: 11.1.0
   background_downloader: ^9.5.6
   cast: ^2.1.0
   collection: ^1.19.1
@@ -184,6 +185,10 @@ dependency_overrides:
       url: https://gitcode.com/dgh18/fluttertpc_geolocator.git
       path: 'geolocator'
       ref: master
+  geolocator_platform_interface:
+    git:
+      url: https://gitcode.com/openharmony-sig/fluttertpc_geolocator.git
+      path: geolocator_platform_interface
   flutter_udid:
     git:
       url: https://gitcode.com/dgh18/fluttertpc_flutter_udid.git
@@ -216,6 +221,7 @@ dependency_overrides:
   photo_manager:
     git:
       url: https://github.com/dgh1818/flutter_photo_manager.git
+      ref: 68089cb23816e185cf9c0ee777cb930fdfeb9961
   coordtransform_dart:
     git:
       url: https://github.com/dgh1818/coordtransform_dart.git
@@ -236,7 +242,11 @@ dependency_overrides:
   uuid: ^4.4.2
 
   wakelock_plus_platform_interface: 1.2.1
-  analyzer: 10.0.1
+  analyzer: 10.2.0
+  dart_style: 3.1.7
+  build_runner: 2.15.1
+  drift: 2.34.0
+  drift_dev: 2.34.0
   jni:
     path: ./third_party/jni
 
@@ -257,7 +267,7 @@ dev_dependencies:
     sdk: flutter
   mocktail: ^1.0.5
   # Type safe platform code
-  pigeon: ^26.3.4
+  pigeon: ^27.3.0
 
 hooks:
   user_defines:

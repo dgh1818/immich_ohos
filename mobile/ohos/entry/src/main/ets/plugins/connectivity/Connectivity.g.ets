@@ -1,6 +1,20 @@
+/*
+* Copyright (C) 2024 Huawei Device Co., Ltd.
+* Licensed under the Apache License, Version 2.0 (the "License");
+* you may not use this file except in compliance with the License.
+* You may obtain a copy of the License at
+*
+*     http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing, software
+* distributed under the License is distributed on an "AS IS" BASIS,
+* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+* See the License for the specific language governing permissions and
+* limitations under the License.
+*/
 import StandardMessageCodec from '@ohos/flutter_ohos/src/main/ets/plugin/common/StandardMessageCodec';
 import BasicMessageChannel, { Reply } from '@ohos/flutter_ohos/src/main/ets/plugin/common/BasicMessageChannel';
-import { BinaryMessenger,TaskQueue } from '@ohos/flutter_ohos/src/main/ets/plugin/common/BinaryMessenger';
+import { BinaryMessenger } from '@ohos/flutter_ohos/src/main/ets/plugin/common/BinaryMessenger';
 import MessageCodec from '@ohos/flutter_ohos/src/main/ets/plugin/common/MessageCodec';
 import { ByteBuffer } from '@ohos/flutter_ohos/src/main/ets/util/ByteBuffer';
 
@@ -19,8 +33,7 @@ export class FlutterError implements Error {
   /** The error stack. */
   public stack?: string;
 
-  constructor(code: string, name: string,  message: string, stack?: string) 
-  {
+  constructor(code: string, name: string, message: string, stack?: string) {
     this.code = code;
     this.name = name;
     this.message = message;
@@ -28,8 +41,8 @@ export class FlutterError implements Error {
   }
 }
 
-function wrapError(error: Error): Array<Object> {
-  let errorList: Array<Object> = new Array<Object>(3);
+function wrapError(error: Error): Array<Object | null> {
+  let errorList: Array<Object | null> = new Array<Object | null>(3);
   if (error instanceof FlutterError) {
     let err: FlutterError = error as FlutterError;
     errorList[0] = err.code;
@@ -54,14 +67,14 @@ export enum NetworkCapability {
 /* Generated enum Companion class from Pigeon that represents data sent 
    in messages.Do not delete otherwise enum type data transfer will be failed*/
 export class NetworkCapabilityEnum {
-  index: string|null = null;
-	constructor(index: string){
+  index: string | null = null;
+  constructor(index: string) {
     this.index = index;
   }
 }
 
 export class PigeonCodec extends StandardMessageCodec {
-  static readonly INSTANCE: PigeonCodec  = new PigeonCodec();
+  static readonly INSTANCE: PigeonCodec = new PigeonCodec();
 
   getByte(n: number): number {
     let byteArray = new Uint8Array(1);
@@ -72,10 +85,10 @@ export class PigeonCodec extends StandardMessageCodec {
     super();
   }
 
-  readValueOfType(type: number,  buffer: ByteBuffer): ESObject {
+  readValueOfType(type: number, buffer: ByteBuffer): ESObject {
     switch (type) {
       case this.getByte(129): {
-        let value: Object= super.readValue(buffer);
+        let value: Object = super.readValue(buffer);
         return value == null ? null : NetworkCapability[value as number];
       }
       default:
@@ -83,7 +96,7 @@ export class PigeonCodec extends StandardMessageCodec {
     }
   }
 
-  writeValue(stream: ByteBuffer , value: ESObject): ESObject{
+  writeValue(stream: ByteBuffer, value: ESObject): ESObject {
     if (value instanceof NetworkCapabilityEnum) {
       stream.writeUint8(this.getByte(129));
       this.writeValue(stream, value == null ? null : NetworkCapability[value.index as string]);
@@ -98,25 +111,25 @@ export abstract class ConnectivityApi {
 
   abstract getCapabilities(): Array<NetworkCapability>;
   /** The codec used by ConnectivityApi. */
-  static getCodec(): MessageCodec<Object>{
+  static getCodec(): MessageCodec<Object> {
     return PigeonCodec.INSTANCE;
   }
   /*Sets up an instance of `ConnectivityApi` to handle messages through the `binaryMessenger`.*/
-  static setup(binaryMessenger: BinaryMessenger, api: ConnectivityApi | null): void {
+  static setup(binaryMessenger: BinaryMessenger, api: ConnectivityApi | null, messageChannelSuffix: string = ''): void {
+    const separatedMessageChannelSuffix: string = messageChannelSuffix !== '' ? '.' + messageChannelSuffix : '';
     {
       let channel: BasicMessageChannel<Object> =
           new BasicMessageChannel(
-              binaryMessenger, "dev.flutter.pigeon.immich_mobile.ConnectivityApi.getCapabilities", ConnectivityApi.getCodec());
+              binaryMessenger, 'dev.flutter.pigeon.immich_mobile.ConnectivityApi.getCapabilities' + separatedMessageChannelSuffix, ConnectivityApi.getCodec());
       if (api != null) {
         channel.setMessageHandler({
-            onMessage(message: Object ,reply: Reply<Object> ) {
-              let res: Array<Object> = [];
+            onMessage(message: Object, reply: Reply<Object>) {
+              let res: Array<Object | null> = [];
               try {
                 let output: Array<NetworkCapability> = api!.getCapabilities();
                 res.push(output);
-              }
- catch (error) {
-                let wrappedError: Array<Object> = wrapError(error);
+              } catch (error) {
+                let wrappedError: Array<Object | null> = wrapError(error);
                 res = wrappedError;
               }
               reply.reply(res);

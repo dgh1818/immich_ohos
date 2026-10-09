@@ -251,21 +251,18 @@ class ScrubberState extends ConsumerState<Scrubber> with TickerProviderStateMixi
   }
 
   void _onScrubberDateChanged(DateTime date) {
-    if (_currentScrubberDate != date) {
-      // Date changed, immediately set scrubbing to true
-      _currentScrubberDate = date;
-      ref.read(timelineStateProvider.notifier).setScrubbing(true);
-
-      // Initialize debouncer if needed
-      _scrubberDebouncer ??= Debouncer(interval: const Duration(milliseconds: 50));
-
-      // Debounce setting scrubbing to false
-      _scrubberDebouncer!.run(() {
-        if (_currentScrubberDate == date) {
-          ref.read(timelineStateProvider.notifier).setScrubbing(false);
-        }
-      });
+    if (_currentScrubberDate == date) {
+      return;
     }
+
+    _currentScrubberDate = date;
+    ref.read(timelineStateProvider.notifier).setScrubbing(true);
+    _scrubberDebouncer ??= Debouncer(interval: const Duration(milliseconds: 50));
+    _scrubberDebouncer!.run(() {
+      if (_currentScrubberDate == date) {
+        ref.read(timelineStateProvider.notifier).setScrubbing(false);
+      }
+    });
   }
 
   void _onDragStart(DragStartDetails _) {
@@ -298,8 +295,6 @@ class ScrubberState extends ConsumerState<Scrubber> with TickerProviderStateMixi
       if (_lastLabel != label) {
         ref.read(hapticFeedbackProvider.notifier).selectionClick();
         _lastLabel = label;
-
-        // Notify timeline state of the new scrubber date position
         if (_monthCount >= kMinMonthsToEnableScrubberSnap) {
           _onScrubberDateChanged(nearestMonthSegment.date);
         }
@@ -413,8 +408,6 @@ class ScrubberState extends ConsumerState<Scrubber> with TickerProviderStateMixi
     });
 
     ref.read(timelineStateProvider.notifier).setScrubbing(false);
-
-    // Reset scrubber tracking when drag ends
     _currentScrubberDate = null;
     _scrubberDebouncer?.dispose();
     _scrubberDebouncer = null;

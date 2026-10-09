@@ -7,7 +7,6 @@ import 'package:flutter/gestures.dart' show Drag, kTouchSlop;
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:immich_mobile/domain/models/asset/base_asset.model.dart';
-import 'package:immich_mobile/domain/services/setting.service.dart';
 import 'package:immich_mobile/domain/models/events.model.dart';
 import 'package:immich_mobile/domain/models/setting.model.dart';
 import 'package:immich_mobile/domain/services/timeline.service.dart';
@@ -20,6 +19,7 @@ import 'package:immich_mobile/presentation/widgets/asset_viewer/asset_stack.widg
 import 'package:immich_mobile/presentation/widgets/asset_viewer/ocr_overlay.widget.dart';
 import 'package:immich_mobile/presentation/widgets/asset_viewer/video_viewer.widget.dart';
 import 'package:immich_mobile/presentation/widgets/images/image_provider.dart';
+import 'package:immich_mobile/presentation/widgets/images/progressive_image.widget.dart';
 import 'package:immich_mobile/presentation/widgets/images/thumbnail.widget.dart';
 import 'package:immich_mobile/providers/asset_viewer/asset_viewer.provider.dart';
 import 'package:immich_mobile/providers/asset_viewer/is_motion_video_playing.provider.dart';
@@ -55,9 +55,13 @@ class _AssetPageState extends ConsumerState<AssetPage> {
   bool _showingDetails = false;
   bool _isZoomed = false;
   bool _isDisposing = false;
+  // Frozen during dismiss drag + settle to prevent widget tree swap mid-animation.
+  bool _wasMotionPlayingAtDismiss = false;
+  bool _isDismissAnimating = false;
 
   final _scrollController = SnapScrollController();
   double _snapOffset = 0.0;
+  static const double _maxScaleMultiplier = 20.0;
 
   DragStartDetails? _dragStart;
   _DragIntent _dragIntent = _DragIntent.none;
@@ -178,6 +182,9 @@ class _AssetPageState extends ConsumerState<AssetPage> {
         > 0 => _DragIntent.dismiss,
         _ => _DragIntent.none,
       };
+      if (_dragIntent == _DragIntent.dismiss) {
+        _wasMotionPlayingAtDismiss = ref.read(isPlayingMotionVideoProvider);
+      }
     }
 
     switch (_dragIntent) {
@@ -222,12 +229,22 @@ class _AssetPageState extends ConsumerState<AssetPage> {
           unawaited(context.maybePop());
           return;
         }
-        _viewController?.animateMultiple(
-          position: _initialPhotoViewState.position,
-          scale: _viewController?.initialScale ?? _initialPhotoViewState.scale,
-          rotation: _initialPhotoViewState.rotation,
-        );
         _viewer.setOpacity(1.0);
+        _isDismissAnimating = true;
+        unawaited(
+          _viewController
+              ?.animateMultiple(
+                position: _initialPhotoViewState.position,
+                scale: _viewController?.initialScale ?? _initialPhotoViewState.scale,
+                rotation: _initialPhotoViewState.rotation,
+              )
+              .whenComplete(() {
+                if (!mounted) {
+                  return;
+                }
+                setState(() => _isDismissAnimating = false);
+              }),
+        );
     }
   }
 
@@ -368,6 +385,7 @@ class _AssetPageState extends ConsumerState<AssetPage> {
     required String? localFilePath,
     required Size? remoteThumbnailSize,
     required bool imageHdrEnabled,
+    required bool aiHdrEnabled,
   }) {
     final size = context.sizeData;
     final imageProvider = getFullImageProvider(
@@ -376,36 +394,40 @@ class _AssetPageState extends ConsumerState<AssetPage> {
       localFilePath: localFilePath,
       remoteThumbnailSize: remoteThumbnailSize,
       dynamicRangePolicy: asset.isImage
-          ? (AppSetting.get(Setting.aiHdr)
+          ? (aiHdrEnabled
                 ? ui.ImageDynamicRangePolicy.aiHdrAuto
                 : (imageHdrEnabled ? ui.ImageDynamicRangePolicy.preserve : null))
           : null,
     );
 
     if (asset.isImage && !isPlayingMotionVideo) {
-      return PhotoView(
-        key: Key(asset.heroTag),
-        index: widget.index,
-        imageProvider: imageProvider,
-        heroAttributes: heroAttributes,
-        loadingBuilder: (context, progress, index) => const Center(child: ImmichLoadingIndicator()),
-        gaplessPlayback: true,
-        filterQuality: FilterQuality.high,
-        tightMode: true,
-        enablePanAlways: true,
-        disableScaleGestures: _showingDetails,
-        scaleStateChangedCallback: _onScaleStateChanged,
-        onPageBuild: _onPageBuild,
-        onDragStart: _onDragStart,
-        onDragUpdate: _onDragUpdate,
-        onDragEnd: _onDragEnd,
-        onDragCancel: _onDragCancel,
-        onTapUp: _onTapUp,
-        onLongPressStart: asset.isMotionPhoto ? _onLongPress : null,
-        errorBuilder: (_, _, _) => SizedBox(
-          width: size.width,
-          height: size.height,
-          child: Thumbnail.fromAsset(asset: asset, fit: BoxFit.contain),
+      return ProgressiveImage(
+        provider: imageProvider,
+        builder: (context, provider) => PhotoView(
+          key: Key(asset.heroTag),
+          index: widget.index,
+          imageProvider: provider,
+          heroAttributes: heroAttributes,
+          loadingBuilder: (context, progress, index) => const Center(child: ImmichLoadingIndicator()),
+          gaplessPlayback: true,
+          filterQuality: FilterQuality.high,
+          tightMode: true,
+          enablePanAlways: true,
+          maxScale: PhotoViewComputedScale.contained * _maxScaleMultiplier,
+          disableScaleGestures: _showingDetails,
+          scaleStateChangedCallback: _onScaleStateChanged,
+          onPageBuild: _onPageBuild,
+          onDragStart: _onDragStart,
+          onDragUpdate: _onDragUpdate,
+          onDragEnd: _onDragEnd,
+          onDragCancel: _onDragCancel,
+          onTapUp: _onTapUp,
+          onLongPressStart: asset.isMotionPhoto ? _onLongPress : null,
+          errorBuilder: (_, _, _) => SizedBox(
+            width: size.width,
+            height: size.height,
+            child: Thumbnail.fromAsset(asset: asset, fit: BoxFit.contain),
+          ),
         ),
       );
     }
@@ -426,6 +448,7 @@ class _AssetPageState extends ConsumerState<AssetPage> {
       basePosition: Alignment.center,
       disableScaleGestures: _showingDetails,
       minScale: PhotoViewComputedScale.contained,
+      maxScale: PhotoViewComputedScale.contained * _maxScaleMultiplier,
       initialScale: PhotoViewComputedScale.contained,
       tightMode: true,
       onPageBuild: _onPageBuild,
@@ -447,10 +470,15 @@ class _AssetPageState extends ConsumerState<AssetPage> {
     );
     _showingDetails = ref.watch(assetViewerProvider.select((s) => s.showingDetails));
     final stackIndex = ref.watch(assetViewerProvider.select((s) => s.stackIndex));
-    final isPlayingMotionVideo = ref.watch(isPlayingMotionVideoProvider);
+    final liveMotionPlaying = ref.watch(isPlayingMotionVideoProvider);
+    // Preserve the playback status while dismissing to prevent switching views mid-animation.
+    final isPlayingMotionVideo = (_dragIntent == _DragIntent.dismiss || _isDismissAnimating)
+        ? _wasMotionPlayingAtDismiss
+        : liveMotionPlaying;
     final imageHdrEnabled = ref.watch(
       store_settings.settingsProvider.select((settings) => settings.get(Setting.imageHdr)),
     );
+    final aiHdrEnabled = ref.watch(store_settings.settingsProvider.select((settings) => settings.get(Setting.aiHdr)));
     final timelineOrigin = ref.watch(timelineServiceProvider).origin;
     final showingOcr = ref.watch(assetViewerProvider.select((s) => s.showingOcr));
 
@@ -506,6 +534,7 @@ class _AssetPageState extends ConsumerState<AssetPage> {
                     localFilePath: viewIntentFilePath,
                     remoteThumbnailSize: thumbnailSize,
                     imageHdrEnabled: imageHdrEnabled,
+                    aiHdrEnabled: aiHdrEnabled,
                   ),
                 ),
                 if (showingOcr && displayAsset.width != null && displayAsset.height != null)
@@ -530,7 +559,9 @@ class _AssetPageState extends ConsumerState<AssetPage> {
                         child: AnimatedOpacity(
                           opacity: _showingDetails ? 1.0 : 0.0,
                           duration: Durations.short2,
-                          child: AssetDetails(asset: displayAsset, minHeight: viewportHeight - snapTarget),
+                          child: _showingDetails
+                              ? AssetDetails(asset: displayAsset, minHeight: viewportHeight - snapTarget)
+                              : SizedBox(height: viewportHeight - snapTarget),
                         ),
                       ),
                     ],

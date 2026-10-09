@@ -1,23 +1,23 @@
 import { Injectable } from '@nestjs/common';
 import {
-  ExpressionBuilder,
-  Insertable,
-  Kysely,
-  NotNull,
-  Selectable,
-  SelectQueryBuilder,
-  ShallowDehydrateObject,
-  sql,
-  SqlBool,
-  Updateable,
+  type ExpressionBuilder,
+  type Insertable,
+  type Kysely,
+  type NotNull,
+  type SelectQueryBuilder,
+  type Selectable,
+  type ShallowDehydrateObject,
   UpdateResult,
+  type Updateable,
+  sql,
+  type SqlBool,
 } from 'kysely';
 import { jsonArrayFrom } from 'kysely/helpers/postgres';
-import { isEmpty, isUndefined, omitBy } from 'lodash';
+import { isEmpty, isUndefined, omitBy } from 'lodash-es';
 import { InjectKysely } from 'nestjs-kysely';
-import { LockableProperty, Stack } from 'src/database';
-import { Chunked, ChunkedArray, DummyValue, GenerateSql } from 'src/decorators';
-import { AuthDto } from 'src/dtos/auth.dto';
+import type { AuthDto } from 'src/dtos/auth.dto.js';
+import { LockableProperty, Stack } from 'src/database.js';
+import { Chunked, ChunkedArray, DummyValue, GenerateSql } from 'src/decorators.js';
 import {
   AssetFileType,
   AssetOrder,
@@ -27,14 +27,14 @@ import {
   AssetVisibility,
   CalendarHeatmapType,
   ChecksumAlgorithm,
-} from 'src/enum';
-import { DB } from 'src/schema';
-import { AssetAudioTable, AssetKeyframeTable, AssetVideoTable } from 'src/schema/tables/asset-av.table';
-import { AssetExifTable } from 'src/schema/tables/asset-exif.table';
-import { AssetFileTable } from 'src/schema/tables/asset-file.table';
-import { AssetJobStatusTable } from 'src/schema/tables/asset-job-status.table';
-import { AssetMetadataTable } from 'src/schema/tables/asset-metadata.table';
-import { AssetTable } from 'src/schema/tables/asset.table';
+} from 'src/enum.js';
+import { DB } from 'src/schema/index.js';
+import { AssetAudioTable, AssetKeyframeTable, AssetVideoTable } from 'src/schema/tables/asset-av.table.js';
+import { AssetExifTable } from 'src/schema/tables/asset-exif.table.js';
+import { AssetFileTable } from 'src/schema/tables/asset-file.table.js';
+import { AssetJobStatusTable } from 'src/schema/tables/asset-job-status.table.js';
+import { AssetMetadataTable } from 'src/schema/tables/asset-metadata.table.js';
+import { AssetTable } from 'src/schema/tables/asset.table.js';
 import {
   anyUuid,
   asUuid,
@@ -55,8 +55,8 @@ import {
   withSmartSearch,
   withTagId,
   withTags,
-} from 'src/utils/database';
-import { globToPostgresRegex } from 'src/utils/misc';
+} from 'src/utils/database.js';
+import { globToPostgresRegex } from 'src/utils/misc.js';
 
 export type AssetStats = Record<AssetType, number>;
 
@@ -1219,7 +1219,7 @@ export class AssetRepository {
       .where((eb) =>
         eb.or([
           eb.not(eb.or(paths.map((path) => eb('originalPath', 'like', path)))),
-          eb.or(exclusions.map((pattern) => eb('originalPath', '~', pattern))),
+          eb.or(exclusions.map((pattern) => eb('originalPath', '~*', pattern))),
         ]),
       )
       .executeTakeFirstOrThrow();

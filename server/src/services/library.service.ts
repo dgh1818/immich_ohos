@@ -4,19 +4,21 @@ import { R_OK } from 'node:constants';
 import { Stats } from 'node:fs';
 import path, { isAbsolute, parse } from 'node:path';
 import picomatch from 'picomatch';
-import { JOBS_LIBRARY_PAGINATION_SIZE } from 'src/constants';
-import { StorageCore } from 'src/cores/storage.core';
-import { OnEvent, OnJob } from 'src/decorators';
+import type { ArgOf } from 'src/repositories/event.repository.js';
+import type { JobOf } from 'src/types.js';
+import { JOBS_LIBRARY_PAGINATION_SIZE } from 'src/constants.js';
+import { StorageCore } from 'src/cores/storage.core.js';
+import { OnEvent, OnJob } from 'src/decorators.js';
 import {
   CreateLibraryDto,
   LibraryResponseDto,
   LibraryStatsResponseDto,
-  mapLibrary,
   UpdateLibraryDto,
   ValidateLibraryDto,
   ValidateLibraryImportPathResponseDto,
   ValidateLibraryResponseDto,
-} from 'src/dtos/library.dto';
+  mapLibrary,
+} from 'src/dtos/library.dto.js';
 import {
   AssetStatus,
   AssetType,
@@ -28,15 +30,14 @@ import {
   JobStatus,
   QueueName,
   SystemMetadataKey,
-} from 'src/enum';
-import { ArgOf } from 'src/repositories/event.repository';
-import { AssetSyncResult } from 'src/repositories/library.repository';
-import { AssetTable } from 'src/schema/tables/asset.table';
-import { BaseService } from 'src/services/base.service';
-import { ExternalLibraryChecksumBackfillState, ExternalLibraryPathChecksumBackfillState, JobOf } from 'src/types';
-import { isAssetChecksumConstraint } from 'src/utils/database';
-import { mimeTypes } from 'src/utils/mime-types';
-import { batched, findOrFail, handlePromiseError } from 'src/utils/misc';
+} from 'src/enum.js';
+import { AssetSyncResult } from 'src/repositories/library.repository.js';
+import { AssetTable } from 'src/schema/tables/asset.table.js';
+import { BaseService } from 'src/services/base.service.js';
+import { ExternalLibraryChecksumBackfillState, ExternalLibraryPathChecksumBackfillState } from 'src/types.js';
+import { isAssetChecksumConstraint } from 'src/utils/database.js';
+import { mimeTypes } from 'src/utils/mime-types.js';
+import { batched, findOrFail, handlePromiseError } from 'src/utils/misc.js';
 
 const EXTERNAL_LIBRARY_IMAGE_HASH_BATCH_SIZE = 100;
 const EXTERNAL_LIBRARY_HASH_RETRY_ATTEMPTS = 3;
@@ -96,12 +97,6 @@ export class LibraryService extends BaseService {
       start: library.scan.enabled,
     });
 
-    if (library.watch.enabled !== this.watchLibraries) {
-      // Watch configuration changed, update accordingly
-      this.watchLibraries = library.watch.enabled;
-      await (this.watchLibraries ? this.watchAll() : this.unwatchAll());
-    }
-
     // Detect useContentHash toggle change and trigger backfill
     if (library.useContentHash !== oldConfig.library.useContentHash) {
       if (library.useContentHash) {
@@ -130,6 +125,11 @@ export class LibraryService extends BaseService {
         });
         await this.jobRepository.queue({ name: JobName.LibraryBackfillPathChecksums });
       }
+    }
+    if (library.watch.enabled !== this.watchLibraries) {
+      // Watch configuration changed, update accordingly
+      this.watchLibraries = library.watch.enabled;
+      await (this.watchLibraries ? this.watchAll() : this.unwatchAll());
     }
   }
 
@@ -180,6 +180,7 @@ export class LibraryService extends BaseService {
       {
         usePolling: false,
         ignoreInitial: true,
+        ignored: library.exclusionPatterns,
         awaitWriteFinish: {
           stabilityThreshold: 5000,
           pollInterval: 1000,
@@ -953,7 +954,9 @@ export class LibraryService extends BaseService {
             break;
           }
 
-          const isExcluded = job.exclusionPatterns.some((pattern) => picomatch.isMatch(asset.originalPath, pattern));
+          const isExcluded = job.exclusionPatterns.some((pattern) =>
+            picomatch.isMatch(asset.originalPath, pattern, { nocase: true }),
+          );
 
           if (!isExcluded) {
             this.logger.debug(`Offline asset ${asset.originalPath} is now online in library ${job.libraryId}`);

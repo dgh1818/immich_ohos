@@ -181,7 +181,6 @@ class MapThumbnail extends HookConsumerWidget {
                     size: height / 2,
                     point: value,
                     assetRemoteId: assetMarkerRemoteId!,
-                    assetThumbhash: assetThumbhash!,
                     // The marker's own gesture detector otherwise wins the
                     // arena over the platform view / wrapper tap and swallows
                     // the tap (the pin sits on the map centre).

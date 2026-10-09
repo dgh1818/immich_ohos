@@ -7,8 +7,7 @@ import 'package:immich_mobile/domain/models/setting.model.dart';
 import 'package:immich_mobile/providers/infrastructure/setting.provider.dart' as store_settings;
 import 'package:immich_mobile/generated/translations.g.dart';
 import 'package:immich_mobile/providers/infrastructure/settings.provider.dart';
-import 'package:immich_mobile/widgets/settings/setting_group_title.dart';
-import 'package:immich_mobile/widgets/settings/settings_switch_list_tile.dart';
+import 'package:immich_ui/immich_ui.dart';
 
 class VideoViewerSettings extends HookConsumerWidget {
   const VideoViewerSettings({super.key});

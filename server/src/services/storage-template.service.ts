@@ -3,10 +3,12 @@ import handlebar from 'handlebars';
 import { DateTime } from 'luxon';
 import path from 'node:path';
 import sanitize from 'sanitize-filename';
-import { JOBS_ASSET_PAGINATION_SIZE } from 'src/constants';
-import { StorageCore } from 'src/cores/storage.core';
-import { OnEvent, OnJob } from 'src/decorators';
-import { ConfigTemplateStorageOptionDto } from 'src/dtos/config.dto';
+import type { ArgOf } from 'src/repositories/event.repository.js';
+import type { JobOf, StorageAsset } from 'src/types.js';
+import { JOBS_ASSET_PAGINATION_SIZE } from 'src/constants.js';
+import { StorageCore } from 'src/cores/storage.core.js';
+import { OnEvent, OnJob } from 'src/decorators.js';
+import { ConfigTemplateStorageOptionDto } from 'src/dtos/config.dto.js';
 import {
   AssetFileType,
   AssetPathType,
@@ -18,12 +20,11 @@ import {
   QueueName,
   StorageFolder,
   SystemMetadataKey,
-} from 'src/enum';
-import { ArgOf } from 'src/repositories/event.repository';
-import { BaseService } from 'src/services/base.service';
-import { JobOf, StorageAsset, StorageTemplateMigrationFailure, StorageTemplateMigrationState } from 'src/types';
-import { getAssetFile } from 'src/utils/asset.util';
-import { getFilenameExtension, getLivePhotoMotionFilename } from 'src/utils/file';
+} from 'src/enum.js';
+import { BaseService } from 'src/services/base.service.js';
+import { getAssetFile } from 'src/utils/asset.util.js';
+import { getFilenameExtension, getLivePhotoMotionFilename } from 'src/utils/file.js';
+import type { StorageTemplateMigrationFailure, StorageTemplateMigrationState } from 'src/types.js';
 
 const STORAGE_TEMPLATE_MIGRATION_FILE_TIMEOUT_MS = 3 * 60 * 1000;
 
@@ -113,10 +114,12 @@ export class StorageTemplateService extends BaseService {
   @OnEvent({ name: 'ConfigInit' })
   onConfigInit({ newConfig }: ArgOf<'ConfigInit'>) {
     const template = newConfig.storageTemplate.template;
-    if (!this._template || template !== this.template.raw) {
-      this.logger.debug(`Compiling new storage template: ${template}`);
-      this._template = this.compile(template);
+    if (this._template && template === this.template.raw) {
+      return;
     }
+
+    this.logger.debug(`Compiling new storage template: ${template}`);
+    this._template = this.compile(template);
   }
 
   @OnEvent({ name: 'ConfigInit', workers: [ImmichWorker.Microservices] })
@@ -692,13 +695,15 @@ export class StorageTemplateService extends BaseService {
 
     for (const token of Object.values(storageTokens).flat()) {
       substitutions[token] = dt.toFormat(token);
-      if (albumName) {
-        // Album date tokens are rendered in the server time zone to match storage template datetime behavior.
-        substitutions['album-startDate-' + token] = albumStartDate
-          ? DateTime.fromJSDate(albumStartDate).toFormat(token)
-          : '';
-        substitutions['album-endDate-' + token] = albumEndDate ? DateTime.fromJSDate(albumEndDate).toFormat(token) : '';
+      if (!albumName) {
+        continue;
       }
+
+      // Album date tokens are rendered in the server time zone to match storage template datetime behavior.
+      substitutions['album-startDate-' + token] = albumStartDate
+        ? DateTime.fromJSDate(albumStartDate).toFormat(token)
+        : '';
+      substitutions['album-endDate-' + token] = albumEndDate ? DateTime.fromJSDate(albumEndDate).toFormat(token) : '';
     }
 
     return template(substitutions).replaceAll(/\/{2,}/gm, '/');

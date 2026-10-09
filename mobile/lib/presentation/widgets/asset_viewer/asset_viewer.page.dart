@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:auto_route/auto_route.dart';
@@ -10,7 +9,6 @@ import 'package:immich_mobile/domain/models/album/album.model.dart';
 import 'package:immich_mobile/domain/models/asset/base_asset.model.dart';
 import 'package:immich_mobile/domain/models/events.model.dart';
 import 'package:immich_mobile/domain/models/setting.model.dart';
-import 'package:immich_mobile/domain/services/setting.service.dart';
 import 'package:immich_mobile/domain/services/timeline.service.dart';
 import 'package:immich_mobile/domain/utils/event_stream.dart';
 import 'package:immich_mobile/extensions/build_context_extensions.dart';
@@ -118,18 +116,19 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
   ModalRoute<dynamic>? _subscribedRoute;
   final _routeAware = _AssetViewerRouteAware();
 
-  bool get _isImageHdrEnabled => AppSetting.get(Setting.imageHdr);
-  bool get _isVideoHdrEnabled => AppSetting.get(Setting.videoHdr);
+  bool get _isImageHdrEnabled => ref.read(store_settings.settingsProvider).get(Setting.imageHdr);
+  bool get _isVideoHdrEnabled => ref.read(store_settings.settingsProvider).get(Setting.videoHdr);
 
   // AI HDR is a superset of preserve: the engine decodes native HDR content
   // as deterministic HLG and converts SDR via VPE (falling back to SDR on
   // devices where the conversion is unavailable).
   ui.ImageDynamicRangePolicy? _resolveDynamicRangePolicy() {
-    if (AppSetting.get(Setting.aiHdr)) {
+    if (ref.read(store_settings.settingsProvider).get(Setting.aiHdr)) {
       return ui.ImageDynamicRangePolicy.aiHdrAuto;
     }
     return _isImageHdrEnabled ? ui.ImageDynamicRangePolicy.preserve : null;
   }
+
   bool get _canUseRef => mounted && !_isDisposing;
 
   void _onTapNavigate(int direction) {
@@ -312,53 +311,8 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
     switch (event) {
       case TimelineReloadEvent():
         _onTimelineReloadEvent();
-      case ViewerReloadAssetEvent():
-        _onViewerReloadEvent();
-      case final ViewerStackAssetDeletedEvent event:
-        unawaited(_onViewerStackAssetDeletedEvent(event));
       default:
     }
-  }
-
-  void _onViewerReloadEvent() {
-    if (!_canUseRef) {
-      return;
-    }
-    if (_totalAssets <= 1) {
-      return;
-    }
-
-    final index = _pageController.page?.round() ?? 0;
-    final target = index >= _totalAssets - 1 ? index - 1 : index + 1;
-    unawaited(_pageController.animateToPage(target, duration: Durations.medium1, curve: Curves.easeInOut));
-    unawaited(_onAssetChanged(target));
-  }
-
-  Future<void> _onViewerStackAssetDeletedEvent(ViewerStackAssetDeletedEvent event) async {
-    final timelineAsset = ref.read(timelineServiceProvider).getAssetSafe(_currentPage);
-    if (timelineAsset == null) {
-      _onViewerReloadEvent();
-      return;
-    }
-
-    final stackProvider = stackChildrenNotifier(timelineAsset);
-
-    ref.invalidate(stackProvider);
-    final stack = await ref.read(stackProvider.future);
-
-    if (!mounted) {
-      return;
-    }
-
-    if (stack.isEmpty) {
-      _onViewerReloadEvent();
-      return;
-    }
-
-    final targetIndex = math.min(event.stackIndex, stack.length - 1);
-    ref.read(assetViewerProvider.notifier)
-      ..setAsset(stack[targetIndex])
-      ..setStackIndex(targetIndex);
   }
 
   void _onTimelineReloadEvent() {
@@ -434,7 +388,9 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
   }
 
   ImageProvider _getHdrImageProvider(BaseAsset asset) {
-    final useLocalAsset = asset.hasLocal && (!asset.hasRemote || !AppSetting.get(Setting.preferRemoteImage));
+    final useLocalAsset =
+        asset.hasLocal &&
+        (!asset.hasRemote || !ref.read(store_settings.settingsProvider).get(Setting.preferRemoteImage));
     return getFullImageProvider(
       asset,
       size: useLocalAsset ? const Size(-1, -1) : const Size(1080, 1920),
@@ -615,7 +571,7 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
 
     ref.listen(
       store_settings.settingsProvider.select(
-        (settings) => (settings.get(Setting.imageHdr), settings.get(Setting.videoHdr)),
+        (settings) => (settings.get(Setting.imageHdr), settings.get(Setting.videoHdr), settings.get(Setting.aiHdr)),
       ),
       (_, __) {
         if (!_canUseRef) {

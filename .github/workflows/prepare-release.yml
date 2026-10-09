@@ -80,7 +80,7 @@ jobs:
 
       # TODO move to mise
       - name: Install uv
-        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
 
       - name: Bump version
         env:
@@ -99,15 +99,6 @@ jobs:
           git add -A
           git commit -m "chore: version ${VERSION}"
           git push
-
-      - name: Commit and tag
-        id: push-tag
-        uses: EndBug/add-and-commit@290ea2c423ad77ca9c62ae0f5b224379612c0321 # v10.0.0
-        with:
-          default_author: github_actions
-          message: 'chore: version ${{ steps.output.outputs.version }}'
-          tag: ${{ steps.output.outputs.version }}
-          push: true
 
   build_mobile:
     uses: ./.github/workflows/build-mobile.yml
@@ -181,3 +172,13 @@ jobs:
             docker/hwaccel.transcoding.yml
             docker/prometheus.yml
             *.apk
+
+      - name: Cut the release branch
+        if: ${{ github.ref_name == 'main' }}
+        env:
+          GH_TOKEN: ${{ steps.token.outputs.token }}
+          VERSION: ${{ steps.output.outputs.version }}
+        run: |
+          line=$(sed -E 's/^(v[0-9]+\.[0-9]+).*/\1/' <<< "${VERSION}")
+          git push origin "HEAD:refs/heads/release/${line}"
+          gh label create "backport:release/${line}" --force --color 5319e7

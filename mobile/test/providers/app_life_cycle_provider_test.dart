@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:immich_mobile/constants/enums.dart';
@@ -79,7 +80,11 @@ class TestWebsocketNotifier extends WebsocketNotifier {
 }
 
 class TestDriftBackupNotifier extends BackupNotifier {
-  TestDriftBackupNotifier() : super(MockForegroundUploadService(), MockBackgroundUploadService(), UploadSpeedManager());
+  TestDriftBackupNotifier(MockBackgroundUploadService backgroundUploadService)
+    : super(MockForegroundUploadService(), backgroundUploadService, UploadSpeedManager());
+
+  @override
+  Future<void> stopForegroundBackup({String reason = "backup stopped"}) async {}
 }
 
 class TestNotificationPermissionNotifier extends NotificationPermissionNotifier {
@@ -99,6 +104,9 @@ void main() {
   late Completer<ServerVersion?> serverVersion;
   late MockServerInfoService serverInfoService;
   late MockBackgroundWorkerLockService lockService;
+  late MockBackgroundWorkerFgService fgService;
+  late MockBackgroundSyncManager backgroundSync;
+  late MockBackgroundUploadService backupUploadService;
   late ProviderContainer container;
   late TestWebsocketNotifier websocket;
   late AppLifeCycleNotifier lifeCycle;
@@ -125,7 +133,9 @@ void main() {
     serverVersion = Completer<ServerVersion?>();
     serverInfoService = MockServerInfoService();
     lockService = MockBackgroundWorkerLockService();
-    final backgroundSync = MockBackgroundSyncManager();
+    fgService = MockBackgroundWorkerFgService();
+    backgroundSync = MockBackgroundSyncManager();
+    backupUploadService = MockBackgroundUploadService();
     serverVersionCount = 0;
     memoryLaneBuilds = 0;
 
@@ -135,10 +145,13 @@ void main() {
     });
     when(() => lockService.lock()).thenAnswer((_) async {});
     when(() => lockService.unlock()).thenAnswer((_) async {});
+    when(() => fgService.wasLaunchedInBackground()).thenAnswer((_) async => false);
     when(() => backgroundSync.cancelResumeSyncs()).thenAnswer((_) async {});
     when(() => backgroundSync.syncLocal(full: any(named: 'full'))).thenAnswer((_) async {});
     when(() => backgroundSync.syncRemote()).thenAnswer((_) async => true);
     when(() => backgroundSync.hashAssets()).thenAnswer((_) async {});
+    when(() => backupUploadService.taskStatusStream).thenAnswer((_) => const Stream.empty());
+    when(() => backupUploadService.taskProgressStream).thenAnswer((_) => const Stream.empty());
 
     container = ProviderContainer(
       overrides: [
@@ -147,8 +160,9 @@ void main() {
         websocketProvider.overrideWith((ref) {
           return websocket = TestWebsocketNotifier(ref);
         }),
-        backupProvider.overrideWith((_) => TestDriftBackupNotifier()),
+        backupProvider.overrideWith((_) => TestDriftBackupNotifier(backupUploadService)),
         backgroundWorkerLockServiceProvider.overrideWithValue(lockService),
+        backgroundWorkerFgServiceProvider.overrideWithValue(fgService),
         backgroundSyncProvider.overrideWithValue(backgroundSync),
         appConfigProvider.overrideWithValue(defaultConfig),
         notificationPermissionProvider.overrideWith((_) => TestNotificationPermissionNotifier()),
@@ -160,9 +174,14 @@ void main() {
       ],
     );
     lifeCycle = container.read(appStateProvider.notifier);
+    container.read(websocketProvider);
+    debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
   });
 
-  tearDown(() => container.dispose());
+  tearDown(() {
+    debugDefaultTargetPlatformOverride = null;
+    container.dispose();
+  });
 
   Future<void> startResume() async {
     await lifeCycle.handleAppPause();
@@ -180,7 +199,7 @@ void main() {
     await lifeCycle.handleAppPause();
     await releaseResume();
 
-    expect(lifeCycle.getAppState(), AppLifeCycleEnum.paused);
+    expect(lifeCycle.state, AppLifeCycleEnum.paused);
     expect(serverVersionCount, 1);
     expect(websocket.disconnectCount, 2);
     expect(websocket.connectCount, 0);
@@ -194,7 +213,7 @@ void main() {
     unawaited(lifeCycle.handleAppResume());
     await websocket.connectCalled.future;
 
-    expect(lifeCycle.getAppState(), AppLifeCycleEnum.resumed);
+    expect(lifeCycle.state, AppLifeCycleEnum.resumed);
     expect(serverVersionCount, 2);
     expect(websocket.disconnectCount, 1);
     expect(websocket.connectCount, 1);
@@ -211,7 +230,7 @@ void main() {
     unawaited(lifeCycle.handleAppResume());
     await Future<void>.delayed(Duration.zero);
 
-    expect(lifeCycle.getAppState(), AppLifeCycleEnum.resumed);
+    expect(lifeCycle.state, AppLifeCycleEnum.resumed);
     expect(serverVersionCount, 2);
     expect(websocket.disconnectCount, 2);
     expect(websocket.connectCount, 1);
@@ -228,5 +247,66 @@ void main() {
     await Future<void>.delayed(Duration.zero);
 
     expect(memoryLaneBuilds, 2);
+  });
+
+  test('first resume runs when the app was launched in the background', () async {
+    when(() => fgService.wasLaunchedInBackground()).thenAnswer((_) async => true);
+    websocket.throwOnConnect = false;
+    serverVersion.complete();
+    await lifeCycle.handleAppResume();
+
+    expect(lifeCycle.state, AppLifeCycleEnum.resumed);
+    expect(serverVersionCount, 1);
+    expect(websocket.connectCount, 1);
+    verify(() => backgroundSync.syncLocal(full: true)).called(1);
+
+    await lifeCycle.handleAppPause();
+    await lifeCycle.handleAppResume();
+
+    verify(() => backgroundSync.syncLocal(full: false)).called(1);
+  });
+
+  test('first resume runs when the splash requested a full resume', () async {
+    websocket.throwOnConnect = false;
+    serverVersion.complete();
+    lifeCycle.requestFullResume();
+    await lifeCycle.handleAppResume();
+
+    expect(serverVersionCount, 1);
+    expect(websocket.connectCount, 1);
+    verify(() => backgroundSync.syncLocal(full: true)).called(1);
+  });
+
+  test('a background launch does not resume twice without a pause', () async {
+    when(() => fgService.wasLaunchedInBackground()).thenAnswer((_) async => true);
+    websocket.throwOnConnect = false;
+    serverVersion.complete();
+    await lifeCycle.handleAppResume();
+    await lifeCycle.handleAppResume();
+
+    expect(serverVersionCount, 1);
+    expect(websocket.connectCount, 1);
+    verify(() => backgroundSync.syncLocal(full: true)).called(1);
+  });
+
+  test('pause before the first sync keeps the full sync for the next resume', () async {
+    when(() => fgService.wasLaunchedInBackground()).thenAnswer((_) async => true);
+    websocket.throwOnConnect = false;
+    unawaited(lifeCycle.handleAppResume());
+    await untilCalled(() => serverInfoService.getServerVersion());
+    await lifeCycle.handleAppPause();
+    await releaseResume();
+
+    await lifeCycle.handleAppResume();
+
+    verify(() => backgroundSync.syncLocal(full: true)).called(1);
+  });
+
+  test('first resume is skipped on a normal launch', () async {
+    await lifeCycle.handleAppResume();
+
+    expect(lifeCycle.state, AppLifeCycleEnum.resumed);
+    expect(serverVersionCount, 0);
+    expect(websocket.connectCount, 0);
   });
 }

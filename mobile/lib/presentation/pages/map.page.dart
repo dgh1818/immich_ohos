@@ -93,7 +93,7 @@ class _MapPageState extends ConsumerState<MapPage> {
         return;
       }
 
-      final exif = await ref.read(assetServiceProvider).getExif(asset);
+      final exif = await ref.read(assetServiceProvider).watchExif(asset).first;
       if (!mounted || _pendingAssetId != assetId) {
         return;
       }

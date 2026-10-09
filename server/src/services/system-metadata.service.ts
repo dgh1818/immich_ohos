@@ -4,10 +4,10 @@ import {
   AdminOnboardingUpdateDto,
   ReverseGeocodingStateResponseDto,
   VersionCheckStateResponseDto,
-} from 'src/dtos/system-metadata.dto';
-import { JobName, SystemMetadataKey } from 'src/enum';
-import { BaseService } from 'src/services/base.service';
-import { OhosLivePhotoRescanState } from 'src/types';
+} from 'src/dtos/system-metadata.dto.js';
+import { JobName, SystemMetadataKey } from 'src/enum.js';
+import { BaseService } from 'src/services/base.service.js';
+import type { OhosLivePhotoRescanState } from 'src/types.js';
 
 const emptyOhosLivePhotoRescanState = (): OhosLivePhotoRescanState => ({
   status: 'completed',

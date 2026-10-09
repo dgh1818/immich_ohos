@@ -274,12 +274,12 @@ export class NetworkApiImpl extends NetworkApi {
     return this.ctx?.applicationInfo.name ?? '';
   }
 
-  override setRequestHeaders(headers: Map<string, string>, serverUrls: Array<string>, token: string | null): void {
+  override setRequestHeaders(headers: Map<string, string>, serverUrls: Array<string>, token: string | undefined): void {
     if (!this.ctx) {
       return;
     }
     URLSessionManager.setRequestHeaders(this.ctx, headers, serverUrls, token);
-    this.syncRequestStateToCurl(headers, serverUrls, token);
+    this.syncRequestStateToCurl(headers, serverUrls, token ?? null);
   }
 
   private isUiContext(ctx: common.Context): boolean {

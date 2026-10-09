@@ -1,3 +1,4 @@
+import 'package:async/async.dart';
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:flutter/foundation.dart';
@@ -71,6 +72,20 @@ void main() {
       final assets = await localAlbumRepo.getAssets(album.id);
       expect(assets.single.durationMs, 123000);
       expect(assets.single.checksum, 'checksum');
+    });
+  });
+
+  group('watchAll', () {
+    test('re-emits when an album loses its assets', () async {
+      final localAlbumRepo = mediumFactory.getRepository<LocalAlbumRepository>();
+      await localAlbumRepo.upsert(mediumFactory.localAlbum(), toUpsert: [_localAsset('1'), _localAsset('2')]);
+
+      final counts = StreamQueue(localAlbumRepo.watchAll().map((albums) => albums.single.assetCount));
+      addTearDown(counts.cancel);
+
+      expect(await counts.next, 2);
+      await localAlbumRepo.processDelta(updates: [], deletes: ['1', '2'], assetAlbums: {});
+      expect(await counts.next, 0);
     });
   });
 

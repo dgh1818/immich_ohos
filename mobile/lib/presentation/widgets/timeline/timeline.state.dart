@@ -25,13 +25,35 @@ abstract class TimelineArgs with _$TimelineArgs {
   }) = _TimelineArgs;
 }
 
-@freezed
-abstract class TimelineState with _$TimelineState {
-  const TimelineState._();
+class TimelineState {
+  final bool isScrolling;
+  final bool isScrubbing;
 
-  const factory TimelineState({@Default(false) bool isScrubbing, @Default(false) bool isScrolling}) = _TimelineState;
+  /// Indicates whether the timeline is scrolling beyond some configured "high" speed,
+  /// such as when programmatically scrolling to the top or a really fast user fling
+  final bool recommendDeferredLoading;
 
-  bool get isInteracting => isScrubbing || isScrolling;
+  const TimelineState({this.isScrolling = false, this.isScrubbing = false, this.recommendDeferredLoading = false});
+
+  bool get isInteracting => isScrolling || isScrubbing || recommendDeferredLoading;
+
+  @override
+  bool operator ==(covariant TimelineState other) {
+    return isScrolling == other.isScrolling &&
+        isScrubbing == other.isScrubbing &&
+        recommendDeferredLoading == other.recommendDeferredLoading;
+  }
+
+  @override
+  int get hashCode => isScrolling.hashCode ^ isScrubbing.hashCode ^ recommendDeferredLoading.hashCode;
+
+  TimelineState copyWith({bool? isScrolling, bool? isScrubbing, bool? recommendDeferredLoading}) {
+    return TimelineState(
+      isScrolling: isScrolling ?? this.isScrolling,
+      isScrubbing: isScrubbing ?? this.isScrubbing,
+      recommendDeferredLoading: recommendDeferredLoading ?? this.recommendDeferredLoading,
+    );
+  }
 }
 
 class TimelineStateNotifier extends Notifier<TimelineState> {
@@ -43,8 +65,12 @@ class TimelineStateNotifier extends Notifier<TimelineState> {
     state = state.copyWith(isScrolling: isScrolling);
   }
 
+  void setRecommendDeferredLoading(bool recommendDeferredLoading) {
+    state = state.copyWith(recommendDeferredLoading: recommendDeferredLoading);
+  }
+
   @override
-  TimelineState build() => const TimelineState(isScrubbing: false, isScrolling: false);
+  TimelineState build() => const TimelineState(isScrolling: false, recommendDeferredLoading: false);
 }
 
 // This provider watches the buckets from the timeline service & args and serves the segments.

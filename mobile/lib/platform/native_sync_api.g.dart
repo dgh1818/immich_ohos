@@ -31,6 +31,8 @@ bool _deepEquals(Object? a, Object? b) {
 
 enum PlatformAssetPlaybackStyle { unknown, image, video, imageAnimated, livePhoto, videoLooping }
 
+enum CloudIdErrorKind { notFound, ambiguous, incomplete, unknown }
+
 class PlatformAsset {
   PlatformAsset({
     required this.id,
@@ -278,7 +280,7 @@ class HashResult {
 }
 
 class CloudIdResult {
-  CloudIdResult({required this.assetId, this.error, this.cloudId});
+  CloudIdResult({required this.assetId, this.error, this.cloudId, this.errorKind});
 
   String assetId;
 
@@ -286,8 +288,10 @@ class CloudIdResult {
 
   String? cloudId;
 
+  CloudIdErrorKind? errorKind;
+
   List<Object?> _toList() {
-    return <Object?>[assetId, error, cloudId];
+    return <Object?>[assetId, error, cloudId, errorKind];
   }
 
   Object encode() {
@@ -296,7 +300,12 @@ class CloudIdResult {
 
   static CloudIdResult decode(Object result) {
     result as List<Object?>;
-    return CloudIdResult(assetId: result[0]! as String, error: result[1] as String?, cloudId: result[2] as String?);
+    return CloudIdResult(
+      assetId: result[0]! as String,
+      error: result[1] as String?,
+      cloudId: result[2] as String?,
+      errorKind: result[3] as CloudIdErrorKind?,
+    );
   }
 
   @override
@@ -326,20 +335,23 @@ class _PigeonCodec extends StandardMessageCodec {
     } else if (value is PlatformAssetPlaybackStyle) {
       buffer.putUint8(129);
       writeValue(buffer, value.index);
-    } else if (value is PlatformAsset) {
+    } else if (value is CloudIdErrorKind) {
       buffer.putUint8(130);
-      writeValue(buffer, value.encode());
-    } else if (value is PlatformAlbum) {
+      writeValue(buffer, value.index);
+    } else if (value is PlatformAsset) {
       buffer.putUint8(131);
       writeValue(buffer, value.encode());
-    } else if (value is SyncDelta) {
+    } else if (value is PlatformAlbum) {
       buffer.putUint8(132);
       writeValue(buffer, value.encode());
-    } else if (value is HashResult) {
+    } else if (value is SyncDelta) {
       buffer.putUint8(133);
       writeValue(buffer, value.encode());
-    } else if (value is CloudIdResult) {
+    } else if (value is HashResult) {
       buffer.putUint8(134);
+      writeValue(buffer, value.encode());
+    } else if (value is CloudIdResult) {
+      buffer.putUint8(135);
       writeValue(buffer, value.encode());
     } else {
       super.writeValue(buffer, value);
@@ -353,14 +365,17 @@ class _PigeonCodec extends StandardMessageCodec {
         final value = readValue(buffer) as int?;
         return value == null ? null : PlatformAssetPlaybackStyle.values[value];
       case 130:
-        return PlatformAsset.decode(readValue(buffer)!);
+        final value = readValue(buffer) as int?;
+        return value == null ? null : CloudIdErrorKind.values[value];
       case 131:
-        return PlatformAlbum.decode(readValue(buffer)!);
+        return PlatformAsset.decode(readValue(buffer)!);
       case 132:
-        return SyncDelta.decode(readValue(buffer)!);
+        return PlatformAlbum.decode(readValue(buffer)!);
       case 133:
-        return HashResult.decode(readValue(buffer)!);
+        return SyncDelta.decode(readValue(buffer)!);
       case 134:
+        return HashResult.decode(readValue(buffer)!);
+      case 135:
         return CloudIdResult.decode(readValue(buffer)!);
       default:
         return super.readValueOfType(type, buffer);

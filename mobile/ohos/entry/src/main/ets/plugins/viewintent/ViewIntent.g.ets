@@ -1,6 +1,20 @@
+/*
+* Copyright (C) 2024 Huawei Device Co., Ltd.
+* Licensed under the Apache License, Version 2.0 (the "License");
+* you may not use this file except in compliance with the License.
+* You may obtain a copy of the License at
+*
+*     http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing, software
+* distributed under the License is distributed on an "AS IS" BASIS,
+* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+* See the License for the specific language governing permissions and
+* limitations under the License.
+*/
 import StandardMessageCodec from '@ohos/flutter_ohos/src/main/ets/plugin/common/StandardMessageCodec';
 import BasicMessageChannel, { Reply } from '@ohos/flutter_ohos/src/main/ets/plugin/common/BasicMessageChannel';
-import { BinaryMessenger,TaskQueue } from '@ohos/flutter_ohos/src/main/ets/plugin/common/BinaryMessenger';
+import { BinaryMessenger } from '@ohos/flutter_ohos/src/main/ets/plugin/common/BinaryMessenger';
 import MessageCodec from '@ohos/flutter_ohos/src/main/ets/plugin/common/MessageCodec';
 import { ByteBuffer } from '@ohos/flutter_ohos/src/main/ets/util/ByteBuffer';
 
@@ -19,8 +33,7 @@ export class FlutterError implements Error {
   /** The error stack. */
   public stack?: string;
 
-  constructor(code: string, name: string,  message: string, stack?: string) 
-  {
+  constructor(code: string, name: string, message: string, stack?: string) {
     this.code = code;
     this.name = name;
     this.message = message;
@@ -28,8 +41,8 @@ export class FlutterError implements Error {
   }
 }
 
-function wrapError(error: Error): Array<Object> {
-  let errorList: Array<Object> = new Array<Object>(3);
+function wrapError(error: Error): Array<Object | null> {
+  let errorList: Array<Object | null> = new Array<Object | null>(3);
   if (error instanceof FlutterError) {
     let err: FlutterError = error as FlutterError;
     errorList[0] = err.code;
@@ -47,31 +60,31 @@ function wrapError(error: Error): Array<Object> {
 export class ViewIntentPayload {
   private path?: string;
 
-  public setPath(path:string | undefined):void {
+  public setPath(path: string | undefined): void {
     this.path = path;
   }
 
-  getPath(): string | undefined{
+  getPath(): string | undefined {
     return this.path;
   }
 
   private mimeType: string;
 
-  public setMimeType(mimeType:string):void {
+  public setMimeType(mimeType: string): void {
     this.mimeType = mimeType;
   }
 
-  getMimeType(): string{
+  getMimeType(): string {
     return this.mimeType;
   }
 
   private localAssetId?: string;
 
-  public setLocalAssetId(localAssetId:string | undefined):void {
+  public setLocalAssetId(localAssetId: string | undefined): void {
     this.localAssetId = localAssetId;
   }
 
-  getLocalAssetId(): string | undefined{
+  getLocalAssetId(): string | undefined {
     return this.localAssetId;
   }
 
@@ -81,24 +94,45 @@ export class ViewIntentPayload {
     this.localAssetId = localAssetId;
   }
 
-  toList(): (Object | null)[] {
-    let arr: (Object | null)[] = [];
-    arr.push(this.path !== undefined ? this.path : null);
-    arr.push(this.mimeType !== undefined ? this.mimeType : null);
-    arr.push(this.localAssetId !== undefined ? this.localAssetId : null);
+  toList(): Array<Object | null> {
+    let arr: Array<Object | null> = new Array<Object | null>();
+    if (this.path === undefined || this.path === null) {
+      arr.push(null);
+    } else {
+      arr.push(this.path);
+    }
+    if (this.mimeType === undefined || this.mimeType === null) {
+      arr.push(null);
+    } else {
+      arr.push(this.mimeType);
+    }
+    if (this.localAssetId === undefined || this.localAssetId === null) {
+      arr.push(null);
+    } else {
+      arr.push(this.localAssetId);
+    }
     return arr;
   }
 
-  static fromList(arr: (Object | null)[]): ViewIntentPayload {
-    let path: string | undefined = arr[0] != null ? arr[0] as string : undefined;
-    let mimeType: string = arr[1] as string;
-    let localAssetId: string | undefined = arr[2] != null ? arr[2] as string : undefined;
+  static fromList(arr: Object[]): ViewIntentPayload {
+    let path: string | undefined = undefined;
+    if (arr[0] !== null && arr[0] !== undefined) {
+      let pathObject: Object = arr[0];
+      path = pathObject as string | undefined;
+    }
+    let mimeTypeObject: Object = arr[1];
+    const mimeType: string = mimeTypeObject as string;
+    let localAssetId: string | undefined = undefined;
+    if (arr[2] !== null && arr[2] !== undefined) {
+      let localAssetIdObject: Object = arr[2];
+      localAssetId = localAssetIdObject as string | undefined;
+    }
     return new ViewIntentPayload(mimeType, path, localAssetId);
   }
 }
 
 export class PigeonCodec extends StandardMessageCodec {
-  static readonly INSTANCE: PigeonCodec  = new PigeonCodec();
+  static readonly INSTANCE: PigeonCodec = new PigeonCodec();
 
   getByte(n: number): number {
     let byteArray = new Uint8Array(1);
@@ -109,16 +143,16 @@ export class PigeonCodec extends StandardMessageCodec {
     super();
   }
 
-  readValueOfType(type: number,  buffer: ByteBuffer): ESObject {
+  readValueOfType(type: number, buffer: ByteBuffer): ESObject {
     switch (type) {
       case this.getByte(129):
-        return ViewIntentPayload.fromList(super.readValue(buffer) as (Object | null)[]);
+        return ViewIntentPayload.fromList(super.readValue(buffer) as Object[]);
       default:
         return super.readValueOfType(type, buffer);
     }
   }
 
-  writeValue(stream: ByteBuffer , value: ESObject): ESObject{
+  writeValue(stream: ByteBuffer, value: ESObject): ESObject {
     if (value instanceof ViewIntentPayload) {
       stream.writeUint8(this.getByte(129));
       this.writeValue(stream, (value as ViewIntentPayload).toList());
@@ -130,40 +164,41 @@ export class PigeonCodec extends StandardMessageCodec {
 
 
 export interface Result<T> {
-  success( result: T ): void;
+  success(result: T): void;
 
-  error( error: Error): void;
+  error(error: Error): void;
 }
 /* Generated abstract class from Pigeon that represents a handler of messages from Flutter.*/
 export abstract class ViewIntentHostApi {
 
-  abstract consumeViewIntent(result: Result<ViewIntentPayload>): void;
+  abstract consumeViewIntent(result: Result<ViewIntentPayload | undefined>): void;
   /** The codec used by ViewIntentHostApi. */
-  static getCodec(): MessageCodec<Object>{
+  static getCodec(): MessageCodec<Object> {
     return PigeonCodec.INSTANCE;
   }
   /*Sets up an instance of `ViewIntentHostApi` to handle messages through the `binaryMessenger`.*/
-  static setup(binaryMessenger: BinaryMessenger, api: ViewIntentHostApi | null): void {
+  static setup(binaryMessenger: BinaryMessenger, api: ViewIntentHostApi | null, messageChannelSuffix: string = ''): void {
+    const separatedMessageChannelSuffix: string = messageChannelSuffix !== '' ? '.' + messageChannelSuffix : '';
     {
       let channel: BasicMessageChannel<Object> =
           new BasicMessageChannel(
-              binaryMessenger, "dev.flutter.pigeon.immich_mobile.ViewIntentHostApi.consumeViewIntent", ViewIntentHostApi.getCodec());
+              binaryMessenger, 'dev.flutter.pigeon.immich_mobile.ViewIntentHostApi.consumeViewIntent' + separatedMessageChannelSuffix, ViewIntentHostApi.getCodec());
       if (api != null) {
         channel.setMessageHandler({
-            onMessage(message: Object ,reply: Reply<Object> ) {
-              class ResultImp implements Result<ViewIntentPayload>{
-                    success(result: ViewIntentPayload): void {
-                      let res: Array<Object> = [];
+            onMessage(message: Object, reply: Reply<Object>) {
+              class ResultImp implements Result<ViewIntentPayload | undefined>{
+                    success(result: ViewIntentPayload | undefined): void {
+                      let res: Array<Object | null> = [];
                       res.push(result);
                       reply.reply(res);
                     }
 
                     error(error: Error): void {
-                      let wrappedError: Array<Object> = wrapError(error);
+                      let wrappedError: Array<Object | null> = wrapError(error);
                       reply.reply(wrappedError);
                     }
               }
-              let resultCallback: Result<ViewIntentPayload> = new ResultImp();
+              let resultCallback: Result<ViewIntentPayload | undefined> = new ResultImp();
 
               api!.consumeViewIntent(resultCallback);
             } });

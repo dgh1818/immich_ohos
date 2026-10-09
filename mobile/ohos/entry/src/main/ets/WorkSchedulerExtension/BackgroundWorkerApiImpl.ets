@@ -47,6 +47,11 @@ export class BackgroundWorkerApiImpl extends BackgroundWorkerFgHostApi {
     }
   }
 
+  override wasLaunchedInBackground(): boolean {
+    // This signal is only meaningful for iOS background tasks.
+    return false;
+  }
+
   static readonly BACKGROUND_WORKER_NAME = "immich/BackgroundWorkerV1"
   static readonly BACKGROUND_WORKER_ID = 1;
   static readonly MediaObserver_WORKER_ID = 2;

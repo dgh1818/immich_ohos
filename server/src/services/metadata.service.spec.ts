@@ -2,7 +2,7 @@ import { BinaryField, ExifDateTime } from 'exiftool-vendored';
 import { DateTime } from 'luxon';
 import { randomBytes } from 'node:crypto';
 import { Stats } from 'node:fs';
-import { defaults } from 'src/dtos/config.dto';
+import { defaults } from 'src/dtos/config.dto.js';
 import {
   AssetFileType,
   AssetType,
@@ -13,17 +13,17 @@ import {
   JobName,
   JobStatus,
   SourceType,
-} from 'src/enum';
-import { ImmichTags } from 'src/repositories/metadata.repository';
-import { firstDateTime, MetadataService } from 'src/services/metadata.service';
-import { AssetFactory } from 'test/factories/asset.factory';
-import { PersonGroupFactory } from 'test/factories/person-group.factory';
-import { PersonFactory } from 'test/factories/person.factory';
-import { videoInfoStub } from 'test/fixtures/media.stub';
-import { tagStub } from 'test/fixtures/tag.stub';
-import { getForMetadataExtraction, getForSidecarWrite } from 'test/mappers';
-import { factory } from 'test/small.factory';
-import { makeStream, newTestService, ServiceMocks } from 'test/utils';
+} from 'src/enum.js';
+import { ImmichTags } from 'src/repositories/metadata.repository.js';
+import { MetadataService, firstDateTime } from 'src/services/metadata.service.js';
+import { AssetFactory } from 'test/factories/asset.factory.js';
+import { PersonGroupFactory } from 'test/factories/person-group.factory.js';
+import { PersonFactory } from 'test/factories/person.factory.js';
+import { videoInfoStub } from 'test/fixtures/media.stub.js';
+import { tagStub } from 'test/fixtures/tag.stub.js';
+import { getForMetadataExtraction, getForSidecarWrite } from 'test/mappers.js';
+import { factory } from 'test/small.factory.js';
+import { ServiceMocks, makeStream, newTestService } from 'test/utils.js';
 
 const forSidecarJob = (
   asset: {
@@ -327,6 +327,17 @@ describe(MetadataService.name, () => {
         width: null,
         height: null,
       });
+    });
+
+    it('should prefer the 32-bit sensitivity tags over a saturated ISO', async () => {
+      const asset = AssetFactory.create();
+      mocks.assetJob.getForMetadataExtraction.mockResolvedValue(getForMetadataExtraction(asset));
+      mockReadTags({ ISO: 65_535, RecommendedExposureIndex: 128_000 });
+
+      await sut.handleMetadataExtraction({ id: asset.id });
+      expect(mocks.asset.upsertExif).toHaveBeenCalledWith(
+        expect.objectContaining({ exif: expect.objectContaining({ iso: 128_000 }) }),
+      );
     });
 
     it('should not delete latituide and longitude without reverse geocode', async () => {
@@ -1073,7 +1084,7 @@ describe(MetadataService.name, () => {
         ISO: 100,
         LensModel: 'test lens',
         MediaGroupUUID: 'livePhoto',
-        Make: 'test-factory',
+        Make: 'test-factory.js',
         Model: "'mockel'",
         ModifyDate: ExifDateTime.fromISO(dateForTest.toISOString()),
         Orientation: 0,
@@ -1926,6 +1937,18 @@ describe(MetadataService.name, () => {
       await expect(sut.handleSidecarCheck({ id: 'non-existent' })).resolves.toBeUndefined();
 
       expect(mocks.asset.update).not.toHaveBeenCalled();
+    });
+
+    it('should skip database writes if no sidecar exists or was previously recorded', async () => {
+      const asset = forSidecarJob();
+
+      mocks.assetJob.getForSidecarCheckJob.mockResolvedValue(asset);
+      mocks.storage.checkFileExists.mockResolvedValue(false);
+
+      await expect(sut.handleSidecarCheck({ id: asset.id })).resolves.toBe(JobStatus.Skipped);
+
+      expect(mocks.asset.upsertFile).not.toHaveBeenCalled();
+      expect(mocks.asset.deleteFile).not.toHaveBeenCalled();
     });
 
     it('should detect a new sidecar at .jpg.xmp', async () => {

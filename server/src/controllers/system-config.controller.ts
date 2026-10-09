@@ -1,13 +1,12 @@
 import { Body, Controller, Delete, Get, Post, Put } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
-import { Endpoint, HistoryBuilder } from 'src/decorators';
-import { AdminConfigDto, ConfigTemplateStorageOptionDto } from 'src/dtos/config.dto';
-import { ApiTag, Permission } from 'src/enum';
-import { Authenticated } from 'src/middleware/auth.guard';
-import { StorageTemplateService } from 'src/services/storage-template.service';
-import { SystemConfigService } from 'src/services/system-config.service';
-import { StorageTemplateMigrationState } from 'src/types';
-
+import { Endpoint, HistoryBuilder } from 'src/decorators.js';
+import { AdminConfigDto, ConfigTemplateStorageOptionDto } from 'src/dtos/config.dto.js';
+import { ApiTag, Permission } from 'src/enum.js';
+import { Authenticated } from 'src/middleware/auth.guard.js';
+import { StorageTemplateService } from 'src/services/storage-template.service.js';
+import { SystemConfigService } from 'src/services/system-config.service.js';
+import type { StorageTemplateMigrationState } from 'src/types.js';
 @ApiTags(ApiTag.SystemConfig)
 @Controller('system-config')
 export class SystemConfigController {

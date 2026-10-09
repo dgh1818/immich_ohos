@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
+import 'package:async/async.dart';
 import 'package:huawei_cast/huawei_cast.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:immich_mobile/models/cast/cast_manager_state.dart';
@@ -9,9 +10,7 @@ import 'package:immich_mobile/providers/asset_viewer/asset_viewer.provider.dart'
 import 'package:immich_mobile/providers/asset_viewer/is_motion_video_playing.provider.dart';
 import 'package:immich_mobile/providers/asset_viewer/video_player_provider.dart';
 import 'package:immich_mobile/providers/cast.provider.dart';
-import 'package:immich_mobile/utils/hooks/timer_hook.dart';
 import 'package:immich_mobile/widgets/asset_viewer/center_play_button.dart';
-import 'package:immich_mobile/widgets/common/delayed_loading_indicator.dart';
 
 class VideoViewerControls extends HookConsumerWidget {
   final Duration hideTimerDuration;
@@ -40,21 +39,26 @@ class VideoViewerControls extends HookConsumerWidget {
     final isPlayingMotionVideo = ref.watch(isPlayingMotionVideoProvider);
     final huaweiCast = useMemoized(HuaweiCast.new);
 
-    final hideTimer = useTimer(hideTimerDuration, () {
-      if (!context.mounted || isPlayingMotionVideo) {
-        return;
-      }
+    final hideTimer = useMemoized(
+      () => RestartableTimer(hideTimerDuration, () {
+        if (!context.mounted || isPlayingMotionVideo) {
+          return;
+        }
 
-      final currentAsset = ref.read(assetViewerProvider).currentAsset;
-      final currentState = currentAsset == null
-          ? VideoPlaybackStatus.paused
-          : ref.read(videoPlayerProvider(currentAsset.id)).status;
+        final currentAsset = ref.read(assetViewerProvider).currentAsset;
+        final currentState = currentAsset == null
+            ? VideoPlaybackStatus.paused
+            : ref.read(videoPlayerProvider(currentAsset.id)).status;
 
-      if (currentState != VideoPlaybackStatus.paused && currentState != VideoPlaybackStatus.completed && assetIsVideo) {
-        ref.read(assetViewerProvider.notifier).setControls(false);
-      }
-    });
-    final showBuffering = state == VideoPlaybackStatus.buffering;
+        if (currentState != VideoPlaybackStatus.paused &&
+            currentState != VideoPlaybackStatus.completed &&
+            assetIsVideo) {
+          ref.read(assetViewerProvider.notifier).setControls(false);
+        }
+      }),
+      [hideTimerDuration],
+    );
+    useEffect(() => hideTimer.cancel, [hideTimer]);
 
     void showControlsAndStartHideTimer() {
       if (!context.mounted || isPlayingMotionVideo) {
@@ -154,26 +158,25 @@ class VideoViewerControls extends HookConsumerWidget {
         absorbing: !showControls,
         child: Stack(
           children: [
-            if (showBuffering)
-              const Center(child: DelayedLoadingIndicator(fadeInDuration: Duration(milliseconds: 400)))
-            else
-              GestureDetector(
-                onTap: () {
-                  if (!context.mounted) {
-                    return;
-                  }
-                  assetViewerNotifier.setControls(false);
-                },
-                child: CenterPlayButton(
-                  backgroundColor: Colors.black54,
-                  iconColor: Colors.white,
-                  isFinished: state == VideoPlaybackStatus.completed,
-                  isPlaying:
-                      state == VideoPlaybackStatus.playing || (cast.isCasting && cast.castState == CastState.playing),
-                  show: assetIsVideo && showControls,
-                  onPressed: togglePlay,
-                ),
+            GestureDetector(
+              onTap: () {
+                if (!context.mounted) {
+                  return;
+                }
+                assetViewerNotifier.setControls(false);
+              },
+              child: CenterPlayButton(
+                backgroundColor: Colors.black54,
+                iconColor: Colors.white,
+                isFinished: state == VideoPlaybackStatus.completed,
+                isPlaying:
+                    state == VideoPlaybackStatus.playing ||
+                    state == VideoPlaybackStatus.buffering ||
+                    (cast.isCasting && cast.castState == CastState.playing),
+                show: assetIsVideo && showControls,
+                onPressed: togglePlay,
               ),
+            ),
           ],
         ),
       ),

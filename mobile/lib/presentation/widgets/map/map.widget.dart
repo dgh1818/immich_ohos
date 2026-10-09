@@ -459,7 +459,6 @@ class _MapViewState extends ConsumerState<MapView> {
           return PositionedAssetMarkerIcon(
             point: marker.point,
             assetRemoteId: marker.asset.assetId,
-            assetThumbhash: marker.asset.thumbhash ?? '',
             size: _selectedMarkerSize,
             durationInMilliseconds: marker.shouldAnimate ? 100 : 0,
           );

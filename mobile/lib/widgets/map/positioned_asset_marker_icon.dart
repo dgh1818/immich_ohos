@@ -8,7 +8,6 @@ import 'package:immich_mobile/widgets/map/asset_marker_icon.dart';
 class PositionedAssetMarkerIcon extends StatelessWidget {
   final Point<num> point;
   final String assetRemoteId;
-  final String assetThumbhash;
   final double size;
   final int durationInMilliseconds;
 
@@ -17,7 +16,6 @@ class PositionedAssetMarkerIcon extends StatelessWidget {
   const PositionedAssetMarkerIcon({
     required this.point,
     required this.assetRemoteId,
-    required this.assetThumbhash,
     this.size = 100,
     this.durationInMilliseconds = 100,
     this.onTap,
@@ -35,7 +33,7 @@ class PositionedAssetMarkerIcon extends StatelessWidget {
         onTap: () => onTap?.call(),
         child: SizedBox.square(
           dimension: size,
-          child: AssetMarkerIcon(id: assetRemoteId, thumbhash: assetThumbhash, key: Key(assetRemoteId)),
+          child: AssetMarkerIcon(id: assetRemoteId, key: Key(assetRemoteId)),
         ),
       ),
     );
