@@ -243,7 +243,7 @@ class GCastService {
     return devices;
   }
 
-  Future<void> connect(dynamic device) async {
+  Future<void> openSystemPicker() async {
     final preparedAsset = await _prepareAsset(_currentPlaybackAsset, reload: true);
     if (preparedAsset == null) {
       return;

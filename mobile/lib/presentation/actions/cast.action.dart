@@ -17,7 +17,13 @@ class CastAction extends ActionBuilder {
     return .new(
       icon: isCasting ? Icons.cast_connected_rounded : Icons.cast_rounded,
       label: context.t.cast,
-      onAction: () async => unawaited(showDialog(context: context, builder: (_) => const CastDialog())),
+      onAction: () async {
+        if (isCasting) {
+          unawaited(showDialog(context: context, builder: (_) => const CastDialog()));
+        } else {
+          await ref.read(castProvider.notifier).openSystemPicker();
+        }
+      },
     );
   }
 }

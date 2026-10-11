@@ -1,10 +1,10 @@
 import 'dart:async';
 
+import 'package:async/async.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
-import 'package:async/async.dart';
-import 'package:huawei_cast/huawei_cast.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:huawei_cast/huawei_cast.dart';
 import 'package:immich_mobile/models/cast/cast_manager_state.dart';
 import 'package:immich_mobile/providers/asset_viewer/asset_viewer.provider.dart';
 import 'package:immich_mobile/providers/asset_viewer/is_motion_video_playing.provider.dart';
@@ -80,7 +80,7 @@ class VideoViewerControls extends HookConsumerWidget {
     }
 
     if (assetId != null) {
-      ref.listen(videoPlayerProvider(assetId).select((v) => v.position), (_, __) {
+      ref.listen(videoPlayerProvider(assetId).select((v) => v.position), (_, _) {
         if (!context.mounted) {
           return;
         }
@@ -95,22 +95,13 @@ class VideoViewerControls extends HookConsumerWidget {
         if (!context.mounted) {
           return;
         }
-        final currentAsset = ref.read(assetViewerProvider).currentAsset;
-        if (currentAsset == null) {
-          return;
-        }
-
-        final notifier = ref.read(videoPlayerProvider(currentAsset.id).notifier);
         switch (event.method) {
           case 'play':
-            unawaited(notifier.play());
-            break;
+            castNotifier.play();
           case 'pause':
-            unawaited(notifier.pause());
-            break;
+            castNotifier.pause();
           case 'seekTo':
-            notifier.seekTo(Duration(milliseconds: event.position ?? 0));
-            break;
+            castNotifier.seekTo(Duration(milliseconds: event.position ?? 0));
           default:
             break;
         }

@@ -75,8 +75,13 @@ class CastNotifier extends StateNotifier<CastManagerState> {
 
     switch (type) {
       case CastDestinationType.googleCast:
-        await _gCastService.connect(device);
+        await _gCastService.openSystemPicker();
     }
+  }
+
+  Future<void> openSystemPicker() async {
+    _gCastService.setCurrentPlaybackAsset(_currentCastAsset());
+    await _gCastService.openSystemPicker();
   }
 
   Future<List<(String, CastDestinationType, dynamic)>> getDevices() async {

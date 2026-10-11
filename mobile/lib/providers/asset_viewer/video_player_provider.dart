@@ -42,10 +42,15 @@ class VideoPlayerNotifier extends StateNotifier<VideoPlayerState> {
   Timer? _bufferingTimer;
   Timer? _seekTimer;
   Future<void>? _pendingSeek;
+  Future<void>? _holdPause;
   VideoPlaybackStatus? _holdStatus;
+  bool _isScrubbing = false;
+  bool _scrubChanged = false;
+  int _playbackGeneration = 0;
 
   @override
   void dispose() {
+    _playbackGeneration++;
     _bufferingTimer?.cancel();
     _seekTimer?.cancel();
     unawaited(WakelockPlus.disable());
@@ -55,6 +60,7 @@ class VideoPlayerNotifier extends StateNotifier<VideoPlayerState> {
   }
 
   void attachController(NativeVideoPlayerController controller) {
+    _playbackGeneration++;
     _controller = controller;
   }
 
@@ -83,13 +89,19 @@ class VideoPlayerNotifier extends StateNotifier<VideoPlayerState> {
   }
 
   Future<void> play() async {
-    if (_controller == null) {
+    final controller = _controller;
+    if (controller == null) {
       return;
     }
 
+    final generation = _playbackGeneration;
+
     try {
       await _flushSeek();
-      await _controller!.play();
+      if (!mounted || generation != _playbackGeneration || !identical(_controller, controller)) {
+        return;
+      }
+      await controller.play();
     } catch (e) {
       _log.severe('Error playing video: $e');
     }
@@ -98,6 +110,9 @@ class VideoPlayerNotifier extends StateNotifier<VideoPlayerState> {
   }
 
   Future<void> _flushSeek() async {
+    if (_isScrubbing) {
+      return;
+    }
     final timer = _seekTimer;
     if (timer?.isActive ?? false) {
       timer!.cancel();
@@ -116,7 +131,16 @@ class VideoPlayerNotifier extends StateNotifier<VideoPlayerState> {
       return;
     }
 
-    state = state.copyWith(position: position);
+    _bufferingTimer?.cancel();
+    state = state.copyWith(
+      position: position,
+      status: state.status == VideoPlaybackStatus.buffering ? VideoPlaybackStatus.playing : state.status,
+    );
+
+    if (_isScrubbing) {
+      _scrubChanged = true;
+      return;
+    }
 
     _seekTimer?.cancel();
 
@@ -124,6 +148,24 @@ class VideoPlayerNotifier extends StateNotifier<VideoPlayerState> {
       _seekTimer = null;
       unawaited(_dispatchSeek());
     });
+  }
+
+  /// Updates the progress bar while dragging without seeking the decoder.
+  void beginScrubbing() {
+    _scrubChanged = _seekTimer != null;
+    _seekTimer?.cancel();
+    _seekTimer = null;
+    _bufferingTimer?.cancel();
+    _isScrubbing = true;
+  }
+
+  /// Sends only the final slider position to the native player.
+  void endScrubbing() {
+    _isScrubbing = false;
+    if (_scrubChanged) {
+      _scrubChanged = false;
+      unawaited(_dispatchSeek());
+    }
   }
 
   Future<void> _dispatchSeek() async {
@@ -141,6 +183,9 @@ class VideoPlayerNotifier extends StateNotifier<VideoPlayerState> {
     } finally {
       if (identical(_pendingSeek, pendingSeek)) {
         _pendingSeek = null;
+        if (mounted && state.status == VideoPlaybackStatus.playing) {
+          _startBufferingTimer();
+        }
       }
     }
   }
@@ -165,7 +210,7 @@ class VideoPlayerNotifier extends StateNotifier<VideoPlayerState> {
     }
 
     _holdStatus = state.status;
-    unawaited(pause());
+    _holdPause = pause();
   }
 
   /// Restores playback to the status before [hold] was called.
@@ -173,19 +218,31 @@ class VideoPlayerNotifier extends StateNotifier<VideoPlayerState> {
     final status = _holdStatus;
     _holdStatus = null;
 
-    switch (status) {
-      case VideoPlaybackStatus.playing || VideoPlaybackStatus.buffering:
-        unawaited(play());
-      default:
-    }
+    final holdPause = _holdPause;
+    unawaited(() async {
+      await holdPause;
+      if (!identical(_holdPause, holdPause)) {
+        return;
+      }
+      _holdPause = null;
+      if (mounted &&
+          _holdStatus == null &&
+          (status == VideoPlaybackStatus.playing || status == VideoPlaybackStatus.buffering)) {
+        await play();
+      }
+    }());
   }
 
   void reset() {
+    _playbackGeneration++;
     _bufferingTimer?.cancel();
     _seekTimer?.cancel();
     _seekTimer = null;
+    _isScrubbing = false;
+    _scrubChanged = false;
+    _holdPause = null;
     _holdStatus = null;
-    WakelockPlus.disable();
+    unawaited(WakelockPlus.disable());
     state = _defaultState;
   }
 
@@ -230,7 +287,12 @@ class VideoPlayerNotifier extends StateNotifier<VideoPlayerState> {
   }
 
   void onNativePositionChanged() {
-    if (!mounted || (_seekTimer?.isActive ?? false)) {
+    if (!mounted ||
+        _isScrubbing ||
+        (CurrentPlatform.isOhos &&
+            _pendingSeek != null &&
+            (state.status == VideoPlaybackStatus.playing || state.status == VideoPlaybackStatus.buffering)) ||
+        (_seekTimer?.isActive ?? false)) {
       return;
     }
 
@@ -244,7 +306,7 @@ class VideoPlayerNotifier extends StateNotifier<VideoPlayerState> {
       return;
     }
 
-    if (state.status == VideoPlaybackStatus.playing) {
+    if (state.status == VideoPlaybackStatus.playing || state.status == VideoPlaybackStatus.buffering) {
       _startBufferingTimer();
     }
 
@@ -285,6 +347,9 @@ class VideoPlayerNotifier extends StateNotifier<VideoPlayerState> {
 
   void _startBufferingTimer() {
     _bufferingTimer?.cancel();
+    if (!mounted || _seekTimer != null || _pendingSeek != null || _holdPause != null) {
+      return;
+    }
     _bufferingTimer = Timer(Duration(seconds: CurrentPlatform.isOhos ? 3 : 1), () {
       if (mounted && state.status == VideoPlaybackStatus.playing) {
         state = state.copyWith(status: VideoPlaybackStatus.buffering);

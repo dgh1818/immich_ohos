@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:immich_mobile/constants/colors.dart';
 import 'package:immich_mobile/extensions/duration_extensions.dart';
+import 'package:immich_mobile/extensions/platform_extensions.dart';
 import 'package:immich_mobile/models/cast/cast_manager_state.dart';
 import 'package:immich_mobile/providers/asset_viewer/asset_viewer.provider.dart';
 import 'package:immich_mobile/providers/asset_viewer/video_player_provider.dart';
@@ -145,8 +146,20 @@ class _VideoControlsState extends ConsumerState<VideoControls> {
             activeColor: Colors.white,
             inactiveColor: whiteOpacity75,
             padding: EdgeInsets.zero,
-            onChangeStart: (_) => notifier.hold(),
-            onChangeEnd: (_) => notifier.release(),
+            onChangeStart: (_) {
+              if (CurrentPlatform.isOhos && !isCasting) {
+                notifier.beginScrubbing();
+              } else {
+                notifier.hold();
+              }
+            },
+            onChangeEnd: (_) {
+              if (CurrentPlatform.isOhos && !isCasting) {
+                notifier.endScrubbing();
+              } else {
+                notifier.release();
+              }
+            },
             onChanged: isLoaded ? (value) => _onSeek(isCasting, value) : null,
           ),
         ],
