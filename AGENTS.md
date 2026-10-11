@@ -40,6 +40,7 @@
 | 文件 | 检查点 |
 |---|---|
 | `mobile/lib/providers/app_life_cycle.provider.dart` | `_performPause()` 里 OHOS 必须跳过 `stopForegroundBackup()`(`if (!CurrentPlatform.isOhos)` 保护是否还在);`_shouldContinueOperation()` 对 OHOS 放行 paused/hidden |
+| `server/src/services/metadata.service.ts` | OHOS 动态照片整块(`checkOhosLivePhoto`/`readOhosLivePhotoTrailer`/`processOhosLivePhoto`/`linkOhosLivePhotos` + rescan 子系统)是否保留;`handleMetadataExtraction` 里 `checkOhosLivePhoto` 调用与 `hasOhosLivePhoto === 2 → linkOhosLivePhotos` 接线是否在;LIVE_ 提取公式必须是 `video=[size-liveSize-40, size-extraDataSize)`(2026-10-11 修复,旧公式 end=size-40 会把 40 字节 trailer 读进视频),cinemagraph 长度按 4 字节大端读;`asset.repository.ts` 的 `findOhosLivePhotoMatch` 与 `asset-job.repository.ts` 的 rescan 查询是否保留。上游分支 `ohos-moving-photo`(已推 dgh1818/immich_ohos)是最小移植版,merge 时以本分支为准 |
 | `mobile/lib/providers/backup/drift_backup.provider.dart` | `_startOhosBackgroundTransfer/_stopOhosBackgroundTransfer/_updateOhosBackgroundTransferProgress` 三方法及调用点是否保留;`_stopOhos...` 的 `checkActiveTasks` 保护是否被上游覆盖 |
 | `mobile/lib/domain/services/hash.service.dart` | `_startedBackgroundTransfer` 保活启停逻辑(hash 期间长时任务续命)是否保留 |
 | `mobile/lib/domain/services/background_worker.service.dart` | OHOS 分流必须仍是 `startBackupWithURLSession`(iOS 式 enqueue + 回调),不得被改成安卓式 `uploadCandidates` |
