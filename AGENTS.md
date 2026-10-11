@@ -108,6 +108,8 @@
 
   没有系统录屏指示器、只有几张截图帧，或 MP4 没有有效视频流时，不得称为“已完成录屏”。录屏证据应保存到 `device-test/` 等证据目录，不要提交到源码目录或 HAP 目录。
 
+  **测试截图一律不入库**：调试/验证截图（HDR 快照、真机截图、微信图片等）禁止 `git add`，统一放 `device-test/`（已整体 ignore）。根目录图片已全局 gitignore（`/*.jpg` `/*.png` 等，根锚定不影响 `design/` 子目录）；2026-09-20 曾因此清理过 43 张误入根目录的图片（微信照片 + HDR/平板调试截图），README 引用的历史图走 `v1.137.3-merge` 旧 tag 不受影响。README 需要新截图时放 `design/` 并用相对路径引用。
+
   **录屏是 HDR/花屏类显示问题的首选取证手段**：`snapshot_display`/`devecocli ui screenshot` 走截屏服务，在 HDR surface 或色彩空间异常时可能产生伪影或漏掉真实显示内容；系统录屏来自合成器管线，可信。逐帧分析流程：`ffprobe` 确认流有效 → `ffmpeg -ss <秒> -t <时长> -i <rec.mp4> -vf fps=<2> frames/t_%02d.png` 抽帧 → 逐帧读图对比转场/亮度跳变。注意 `hdc file recv` 的本地目标路径必须用 Windows 反斜杠绝对路径，否则会被 MSYS 前缀拼接。
 - DevEco CLI 可用于单帧截图：
 

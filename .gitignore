@@ -20,9 +20,14 @@ mobile/ios/build
 
 device-test/
 
-# Local HDR/device-test screenshots
-**/aihdr_*.png
-**/tablet_final.png
+# 测试截图/临时图片不入库:根目录图片全部忽略(design/ 等子目录不受影响)
+# 调试证据统一放 device-test/(本目录已整体忽略)
+/*.jpg
+/*.jpeg
+/*.png
+/*.webp
+/*.gif
+/*.bmp
 
 packages/**/build
 mobile/android/fastlane/report.xml
