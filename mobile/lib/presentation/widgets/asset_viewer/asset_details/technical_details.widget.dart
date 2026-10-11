@@ -118,7 +118,10 @@ class TechnicalDetails extends ConsumerWidget {
       (null, null) => null,
       (final String make, null) => make,
       (null, final String model) => model,
-      (final String make, final String model) => '$make $model',
+      (final String make, final String model) =>
+        make.toUpperCase() == 'HUAWEI' && (model.toUpperCase() == 'HUAWEI' || model.toUpperCase().startsWith('HUAWEI '))
+            ? model
+            : '$make $model',
     };
   }
 

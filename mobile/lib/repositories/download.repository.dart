@@ -118,7 +118,9 @@ class DownloadRepository {
         taskId: livePhotoVideoId,
         url: getOriginalUrlForRemoteId(livePhotoVideoId),
         headers: ApiService.getAuthenticatedRequestHeaders(getOriginalUrlForRemoteId(livePhotoVideoId)),
-        filename: asset.name.toUpperCase().replaceAll(RegExp(r"\.(JPG|HEIC)$"), '.MOV'),
+        filename: Platform.isOhos
+            ? asset.name.replaceFirst(RegExp(r'\.[^.]+$'), '.mp4')
+            : asset.name.toUpperCase().replaceAll(RegExp(r"\.(JPG|HEIC)$"), '.MOV'),
         updates: Updates.statusAndProgress,
         group: kDownloadGroupLivePhoto,
         metaData: json.encode(_dummyMetadata),

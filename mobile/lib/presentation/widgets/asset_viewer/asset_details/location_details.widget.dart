@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:immich_mobile/domain/models/asset/base_asset.model.dart';
@@ -10,7 +8,6 @@ import 'package:immich_mobile/generated/translations.g.dart';
 import 'package:immich_mobile/presentation/actions/edit_location.action.dart';
 import 'package:immich_mobile/presentation/widgets/asset_viewer/sheet_tile.widget.dart';
 import 'package:immich_mobile/widgets/asset_viewer/detail_panel/exif_map.dart';
-import 'package:maplibre_gl/maplibre_gl.dart';
 
 class LocationDetails extends ConsumerStatefulWidget {
   final BaseAsset asset;
@@ -23,7 +20,10 @@ class LocationDetails extends ConsumerStatefulWidget {
 }
 
 class _LocationDetailsState extends ConsumerState<LocationDetails> {
-  MapLibreMapController? _mapController;
+  String _reverseGeocodedLocation = '';
+
+  String _locationKey(BaseAsset asset, ExifInfo? exifInfo) =>
+      '${asset.id}:${exifInfo?.latitude}:${exifInfo?.longitude}';
 
   String? _getLocationName(ExifInfo? exifInfo) {
     if (exifInfo == null) {
@@ -39,18 +39,24 @@ class _LocationDetailsState extends ConsumerState<LocationDetails> {
     return null;
   }
 
-  void _onMapCreated(MapLibreMapController controller) {
-    _mapController = controller;
+  void _onReverseGeocoded(String text, String locationKey) {
+    if (!mounted || locationKey != _locationKey(widget.asset, widget.exifInfo)) {
+      return;
+    }
+
+    final location = text.trim();
+    if (location.isEmpty || location == _reverseGeocodedLocation) {
+      return;
+    }
+
+    setState(() => _reverseGeocodedLocation = location);
   }
 
   @override
   void didUpdateWidget(LocationDetails oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.exifInfo != oldWidget.exifInfo) {
-      final exif = widget.exifInfo;
-      if (exif != null && exif.hasCoordinates) {
-        unawaited(_mapController?.moveCamera(CameraUpdate.newLatLng(LatLng(exif.latitude!, exif.longitude!))));
-      }
+    if (_locationKey(widget.asset, widget.exifInfo) != _locationKey(oldWidget.asset, oldWidget.exifInfo)) {
+      _reverseGeocodedLocation = '';
     }
   }
 
@@ -66,7 +72,7 @@ class _LocationDetailsState extends ConsumerState<LocationDetails> {
     }
 
     final editLocation = const EditLocationAction(source: .viewer).create(context, ref);
-    final locationName = _getLocationName(exifInfo);
+    final locationName = _reverseGeocodedLocation.isNotEmpty ? _reverseGeocodedLocation : _getLocationName(exifInfo);
     final coordinates = "${exifInfo?.latitude?.toStringAsFixed(4)}, ${exifInfo?.longitude?.toStringAsFixed(4)}";
 
     return Padding(
@@ -87,10 +93,11 @@ class _LocationDetailsState extends ConsumerState<LocationDetails> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   ExifMap(
+                    key: ValueKey(_locationKey(asset, exifInfo)),
                     exifInfo: exifInfo!,
                     markerId: asset.id,
                     markerAssetThumbhash: asset.thumbHash,
-                    onMapCreated: _onMapCreated,
+                    onReverseGeocoded: (text) => _onReverseGeocoded(text, _locationKey(asset, exifInfo)),
                   ),
                   const SizedBox(height: 16),
                   if (locationName != null)
