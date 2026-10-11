@@ -3,6 +3,9 @@ import { DateTime } from 'luxon';
 import { R_OK } from 'node:constants';
 import { randomBytes } from 'node:crypto';
 import { Stats } from 'node:fs';
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { defaults } from 'src/dtos/config.dto.js';
 import {
   AssetFileType,
@@ -63,6 +66,40 @@ const makeFaceTags = (
     ],
   },
 });
+
+const paddedTag = (value: string) => Buffer.from(value.padEnd(20, ' '), 'latin1');
+
+// OpenHarmony MovingPhotoFileUtils single-file layout:
+// [image][video][cinemagraph?][cinemagraph length 4B BE?][versionTag 20B][durationTag 20B]["LIVE_" + liveSize 20B]
+const buildLivePhotoFile = (options: {
+  imageBytes: number;
+  videoBytes: number;
+  versionTag: string;
+  cinemagraphInfo?: Buffer;
+  liveSizeOverride?: number;
+}) => {
+  const image = Buffer.alloc(options.imageBytes, 0x61);
+  const video = Buffer.alloc(options.videoBytes, 0x76);
+  const cinemagraph = options.cinemagraphInfo ?? Buffer.alloc(0);
+  const hasCinemagraph = options.cinemagraphInfo !== undefined;
+  const cineLengthTag = Buffer.alloc(hasCinemagraph ? 4 : 0);
+  if (hasCinemagraph) {
+    cineLengthTag.writeUInt32BE(cinemagraph.length);
+  }
+  const liveSize = options.liveSizeOverride ?? video.length + 20 + cinemagraph.length + (hasCinemagraph ? 4 : 0);
+  return {
+    video,
+    file: Buffer.concat([
+      image,
+      video,
+      cinemagraph,
+      cineLengthTag,
+      paddedTag(options.versionTag),
+      paddedTag('0:600'),
+      paddedTag(`LIVE_${liveSize}`),
+    ]),
+  };
+};
 
 const emptyPackets = {
   totalDuration: 0,
@@ -2285,6 +2322,124 @@ describe(MetadataService.name, () => {
       const result = firstDateTime(tags);
       expect(result?.tag).toBe('CreationDate');
       expect(result?.dateTime?.toDate()?.toISOString()).toBe('2025-05-24T16:26:20.000Z');
+    });
+  });
+
+  describe('ohos moving photo', () => {
+    let tempDir: string;
+
+    beforeEach(async () => {
+      tempDir = await mkdtemp(join(tmpdir(), 'immich-ohos-live-photo-'));
+    });
+
+    afterEach(async () => {
+      await rm(tempDir, { recursive: true, force: true });
+    });
+
+    it('should detect and extract a single-file live photo per the OpenHarmony trailer layout', async () => {
+      const { video, file } = buildLivePhotoFile({ imageBytes: 100, videoBytes: 300, versionTag: 'v3_f12' });
+      const filePath = join(tempDir, 'IMG_1.jpg');
+      await writeFile(filePath, file);
+
+      const check = await sut['checkOhosLivePhoto'](filePath, AssetType.Image);
+      expect(check).toEqual({ format: 'embedded', liveSize: 320, extraDataSize: 60 });
+
+      const extracted = await sut['processOhosLivePhoto'](filePath, file.length, 320, 60);
+      expect(extracted.equals(video)).toBe(true);
+    });
+
+    it('should account for the cinemagraph info when extracting a single-file live photo', async () => {
+      const cinemagraphInfo = Buffer.alloc(10, 0x63);
+      const { video, file } = buildLivePhotoFile({
+        imageBytes: 100,
+        videoBytes: 300,
+        versionTag: 'v3_f12_c',
+        cinemagraphInfo,
+      });
+      const filePath = join(tempDir, 'IMG_2.jpg');
+      await writeFile(filePath, file);
+
+      const check = await sut['checkOhosLivePhoto'](filePath, AssetType.Image);
+      expect(check).toEqual({ format: 'embedded', liveSize: 334, extraDataSize: 74 });
+
+      const extracted = await sut['processOhosLivePhoto'](filePath, file.length, 334, 74);
+      expect(extracted.equals(video)).toBe(true);
+    });
+
+    it('should not detect a single-file live photo when the version tag is missing', async () => {
+      const { file } = buildLivePhotoFile({ imageBytes: 100, videoBytes: 300, versionTag: 'not-a-version-tag' });
+      const filePath = join(tempDir, 'IMG_3.jpg');
+      await writeFile(filePath, file);
+
+      expect(await sut['checkOhosLivePhoto'](filePath, AssetType.Image)).toBeUndefined();
+    });
+
+    it('should not detect a single-file live photo when the live size exceeds the file bounds', async () => {
+      const { file } = buildLivePhotoFile({
+        imageBytes: 100,
+        videoBytes: 300,
+        versionTag: 'v3_f12',
+        liveSizeOverride: 100_000,
+      });
+      const filePath = join(tempDir, 'IMG_4.jpg');
+      await writeFile(filePath, file);
+
+      expect(await sut['checkOhosLivePhoto'](filePath, AssetType.Image)).toBeUndefined();
+    });
+
+    it('should detect a Next moving photo image via the MovingPhotoMeta marker', async () => {
+      const filePath = join(tempDir, 'IMG_5.jpg');
+      await writeFile(filePath, Buffer.concat([Buffer.alloc(64, 0x61), Buffer.from('MovingPhotoMeta', 'utf8')]));
+
+      expect(await sut['checkOhosLivePhoto'](filePath, AssetType.Image)).toEqual({ format: 'pair' });
+    });
+
+    it('should detect a Next moving photo video via the mdta covertime key', async () => {
+      const filePath = join(tempDir, 'IMG_5.mp4');
+      await writeFile(
+        filePath,
+        Buffer.concat([Buffer.alloc(64, 0x76), Buffer.from('mdtacom.openharmony.covertime', 'utf8')]),
+      );
+
+      expect(await sut['checkOhosLivePhoto'](filePath, AssetType.Video)).toEqual({ format: 'pair' });
+    });
+
+    it('should not detect a moving photo in a plain image', async () => {
+      const filePath = join(tempDir, 'IMG_6.jpg');
+      await writeFile(filePath, Buffer.alloc(512, 0x61));
+
+      expect(await sut['checkOhosLivePhoto'](filePath, AssetType.Image)).toBeUndefined();
+    });
+
+    it('should link a Next moving photo pair and hide the motion asset', async () => {
+      const { file } = buildLivePhotoFile({ imageBytes: 100, videoBytes: 300, versionTag: 'v3_f12' });
+      const markerFile = Buffer.concat([file, Buffer.from('MovingPhotoMeta', 'utf8')]);
+      const filePath = join(tempDir, 'IMG_7.jpg');
+      await writeFile(filePath, markerFile);
+
+      const asset = AssetFactory.create({ originalPath: filePath, originalFileName: 'IMG_7.jpg' });
+      const motionAsset = AssetFactory.create({ type: AssetType.Video });
+      mocks.assetJob.getForMetadataExtraction.mockResolvedValue(getForMetadataExtraction(asset));
+      mocks.storage.stat.mockResolvedValue({
+        size: markerFile.length,
+        mtime: asset.fileModifiedAt,
+        mtimeMs: asset.fileModifiedAt.valueOf(),
+        birthtimeMs: asset.fileCreatedAt.valueOf(),
+      } as Stats);
+      mocks.asset.findOhosLivePhotoMatch.mockResolvedValue(motionAsset);
+
+      await sut.handleMetadataExtraction({ id: asset.id });
+
+      expect(mocks.asset.findOhosLivePhotoMatch).toHaveBeenCalledWith(
+        expect.objectContaining({ names: ['IMG_7.mp4'], type: AssetType.Video, path: tempDir }),
+      );
+      expect(mocks.asset.update).toHaveBeenCalledWith({ id: asset.id, livePhotoVideoId: motionAsset.id });
+      expect(mocks.asset.update).toHaveBeenCalledWith({ id: motionAsset.id, visibility: AssetVisibility.Hidden });
+      expect(mocks.album.removeAssetsFromAll).toHaveBeenCalledWith([motionAsset.id]);
+      expect(mocks.event.emit).toHaveBeenCalledWith('AssetHide', {
+        assetId: motionAsset.id,
+        userId: expect.any(String),
+      });
     });
   });
 });

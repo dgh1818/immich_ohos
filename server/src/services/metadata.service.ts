@@ -3,7 +3,7 @@ import { ContainerDirectoryItem, ExifDateTime, Tags } from 'exiftool-vendored';
 import { Insertable } from 'kysely';
 import { isUndefined, omitBy, pick } from 'lodash-es';
 import { DateTime, Duration } from 'luxon';
-import { Stats } from 'node:fs';
+import { Stats, promises as fs } from 'node:fs';
 import { constants } from 'node:fs/promises';
 import { join, parse } from 'node:path';
 import type { ArgOf } from 'src/repositories/event.repository.js';
@@ -133,6 +133,14 @@ type Dates = {
   dateTimeOriginal: Date;
   localDateTime: Date;
 };
+
+// HarmonyOS NEXT moving photo, mirroring OpenHarmony's media library (multimedia_media_library):
+// - paired format: an image (jpeg/heic) with a `MovingPhotoMeta` trailer marker next to a sibling
+//   video with the same base name (`MediaFileUtils.GetMovingPhotoVideoPath`), or a video whose
+//   QuickTime metadata carries the `mdta com.openharmony.covertime` key
+// - single-file format: an OpenHarmony live photo payload ending in the
+//   `["LIVE_" + liveSize 20B][durationTag 20B][versionTag 20B]` trailer
+type OhosLivePhotoCheck = { format: 'embedded'; liveSize: number; extraDataSize: number } | { format: 'pair' };
 
 @Injectable()
 export class MetadataService extends BaseService {
@@ -394,8 +402,10 @@ export class MetadataService extends BaseService {
       },
     );
 
-    if (this.isMotionPhoto(asset, exifTags)) {
-      tasks.push(() => this.applyMotionPhotos(asset, exifTags, dates, stats));
+    const ohosLivePhoto = await this.checkOhosLivePhoto(asset.originalPath, asset.type);
+
+    if (this.isMotionPhoto(asset, exifTags) || ohosLivePhoto?.format === 'embedded') {
+      tasks.push(() => this.applyMotionPhotos(asset, exifTags, dates, stats, ohosLivePhoto));
     }
 
     if (isFaceImportEnabled(metadata) && this.hasTaggedFaces(exifTags)) {
@@ -406,6 +416,10 @@ export class MetadataService extends BaseService {
 
     if (exifData.livePhotoCID) {
       await this.linkLivePhotos(asset, exifData);
+    }
+
+    if (ohosLivePhoto?.format === 'pair') {
+      await this.linkOhosLivePhotos(asset);
     }
 
     await this.assetRepository.upsertJobStatus({ assetId: asset.id, metadataExtractedAt: new Date() });
@@ -670,7 +684,13 @@ export class MetadataService extends BaseService {
     return asset.type === AssetType.Image && !!(tags.MotionPhoto || tags.MicroVideo);
   }
 
-  private async applyMotionPhotos(asset: Asset, tags: ImmichTags, dates: Dates, stats: Stats) {
+  private async applyMotionPhotos(
+    asset: Asset,
+    tags: ImmichTags,
+    dates: Dates,
+    stats: Stats,
+    ohosLivePhoto?: OhosLivePhotoCheck,
+  ) {
     const isMotionPhoto = tags.MotionPhoto;
     const isMicroVideo = tags.MicroVideo;
     const videoOffset = tags.MicroVideoOffset;
@@ -697,7 +717,7 @@ export class MetadataService extends BaseService {
       length = videoOffset;
     }
 
-    if (!length && !hasEmbeddedVideoFile && !hasMotionPhotoVideo) {
+    if (!length && !hasEmbeddedVideoFile && !hasMotionPhotoVideo && ohosLivePhoto?.format !== 'embedded') {
       return;
     }
 
@@ -714,6 +734,15 @@ export class MetadataService extends BaseService {
       //     JPEG-encoded; HEIC also contains these tags, so this conditional must come second
       else if (hasEmbeddedVideoFile) {
         video = await this.metadataRepository.extractBinaryTag(asset.originalPath, 'EmbeddedVideoFile');
+      }
+      //     OpenHarmony live photo trailer; JPEG-encoded
+      else if (ohosLivePhoto?.format === 'embedded') {
+        video = await this.processOhosLivePhoto(
+          asset.originalPath,
+          stats.size,
+          ohosLivePhoto.liveSize,
+          ohosLivePhoto.extraDataSize,
+        );
       }
       // Default video extraction
       else {
@@ -1171,5 +1200,168 @@ export class MetadataService extends BaseService {
         return null;
       }
     }
+  }
+
+  private async checkOhosLivePhoto(filePath: string, assetType: AssetType): Promise<OhosLivePhotoCheck | undefined> {
+    let stats: Stats;
+    try {
+      stats = await fs.stat(filePath);
+    } catch {
+      return undefined;
+    }
+
+    const fileSize = stats.size;
+    // smallest possible single-file live photo: 60B trailer + at least 1 byte of video
+    if (fileSize <= 60) {
+      return undefined;
+    }
+
+    try {
+      if (assetType === AssetType.Image) {
+        const trailer = await this.readOhosLivePhotoTrailer(filePath, fileSize);
+        if (trailer) {
+          return { format: 'embedded', ...trailer };
+        }
+
+        if (await this.hasTailMarker(filePath, fileSize, 'MovingPhotoMeta', 2 * 1024 * 1024)) {
+          return { format: 'pair' };
+        }
+
+        return undefined;
+      }
+
+      if (
+        assetType === AssetType.Video &&
+        (await this.hasTailMarker(filePath, fileSize, 'mdtacom.openharmony.covertime', 4 * 1024))
+      ) {
+        return { format: 'pair' };
+      }
+
+      return undefined;
+    } catch {
+      return undefined;
+    }
+  }
+
+  private async readOhosLivePhotoTrailer(
+    filePath: string,
+    fileSize: number,
+  ): Promise<{ liveSize: number; extraDataSize: number } | undefined> {
+    const tailLength = Math.min(64, fileSize);
+    const tail = await this.readFileTail(filePath, tailLength, fileSize);
+    if (tail.length < 60) {
+      return undefined;
+    }
+
+    const liveTag = tail.toString('latin1', tail.length - 20);
+    if (!liveTag.startsWith('LIVE_')) {
+      return undefined;
+    }
+
+    // eslint-disable-next-line unicorn/prefer-number-coercion -- must mirror the official atoi: leading digits only, padding stops the parse
+    const liveSize = Number.parseInt(liveTag.slice(5), 10);
+    // official validity bounds: imageSize = fileSize - liveSize - 40 > 0 and videoSize = liveSize - 20 > 0
+    if (Number.isNaN(liveSize) || liveSize <= 20 || liveSize >= fileSize - 40) {
+      return undefined;
+    }
+
+    const versionTag = tail.toString('latin1', tail.length - 60, tail.length - 40).trim();
+    const versionMatch = /^[vV]\d+_[fF]\d+(_c)?$/.exec(versionTag);
+    if (!versionMatch) {
+      return undefined;
+    }
+
+    let extraDataSize = 60;
+    if (versionMatch[1] === '_c') {
+      if (tail.length < 64) {
+        return undefined;
+      }
+      // cinemagraph length: 4 raw big-endian bytes right before the standard 60B trailer
+      extraDataSize = 64 + tail.readUInt32BE(tail.length - 64);
+    }
+
+    return { liveSize, extraDataSize };
+  }
+
+  private async hasTailMarker(filePath: string, fileSize: number, marker: string, maxLength: number): Promise<boolean> {
+    const needle = Buffer.from(marker, 'utf8');
+    const tail = await this.readFileTail(filePath, Math.min(maxLength, fileSize), fileSize);
+    return tail.includes(needle);
+  }
+
+  private async readFileTail(filePath: string, length: number, fileSize: number): Promise<Buffer> {
+    const buffer = Buffer.alloc(length);
+    const fd = await fs.open(filePath, 'r');
+    try {
+      const { bytesRead } = await fd.read(buffer, 0, length, fileSize - length);
+      return buffer.subarray(0, bytesRead);
+    } finally {
+      await fd.close();
+    }
+  }
+
+  // Single-file live photo payload per OpenHarmony MovingPhotoFileUtils: the video starts at
+  // fileSize - liveSize - 40 and ends at fileSize - extraDataSize, where liveSize counts the
+  // video plus its 20B version tag plus any cinemagraph info.
+  private async processOhosLivePhoto(
+    filePath: string,
+    fileSize: number,
+    liveSize: number,
+    extraDataSize: number,
+  ): Promise<Buffer> {
+    const videoStart = fileSize - liveSize - 40;
+    const videoEnd = fileSize - extraDataSize;
+    if (videoStart < 0 || videoStart >= videoEnd) {
+      throw new Error(
+        `Invalid Ohos live photo layout: fileSize=${fileSize}, liveSize=${liveSize}, extraDataSize=${extraDataSize}`,
+      );
+    }
+
+    const videoLength = videoEnd - videoStart;
+    const fd = await fs.open(filePath, 'r');
+    try {
+      const video = Buffer.alloc(videoLength);
+      await fd.read(video, 0, videoLength, videoStart);
+      return video;
+    } finally {
+      await fd.close();
+    }
+  }
+
+  private async linkOhosLivePhotos(asset: {
+    id: string;
+    type: AssetType;
+    originalPath: string;
+    originalFileName: string;
+    ownerId: string;
+    libraryId: string | null;
+  }): Promise<void> {
+    const { dir } = parse(asset.originalPath);
+    const baseName = parse(asset.originalFileName).name;
+    const otherType = asset.type === AssetType.Image ? AssetType.Video : AssetType.Image;
+    const names =
+      asset.type === AssetType.Image
+        ? [`${baseName}.mp4`]
+        : [`${baseName}.jpg`, `${baseName}.jpeg`, `${baseName}.heic`];
+    const match = await this.assetRepository.findOhosLivePhotoMatch({
+      path: dir,
+      names,
+      ownerId: asset.ownerId,
+      libraryId: asset.libraryId,
+      otherAssetId: asset.id,
+      type: otherType,
+    });
+    if (!match) {
+      return;
+    }
+
+    const [photoAsset, motionAsset] = asset.type === AssetType.Image ? [asset, match] : [match, asset];
+    await Promise.all([
+      this.assetRepository.update({ id: photoAsset.id, livePhotoVideoId: motionAsset.id }),
+      this.assetRepository.update({ id: motionAsset.id, visibility: AssetVisibility.Hidden }),
+      this.albumRepository.removeAssetsFromAll([motionAsset.id]),
+    ]);
+
+    await this.eventRepository.emit('AssetHide', { assetId: motionAsset.id, userId: motionAsset.ownerId });
   }
 }

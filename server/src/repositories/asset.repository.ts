@@ -7,6 +7,7 @@ import {
   type SelectQueryBuilder,
   type Selectable,
   type ShallowDehydrateObject,
+  type SqlBool,
   UpdateResult,
   type Updateable,
   sql,
@@ -76,6 +77,15 @@ interface LivePhotoSearchOptions {
   libraryId?: string | null;
   livePhotoCID: string;
   otherAssetId: string;
+  type: AssetType;
+}
+
+interface OhosLivePhotoSearchOptions {
+  ownerId: string;
+  libraryId: string | null;
+  otherAssetId: string;
+  path: string;
+  names: string[];
   type: AssetType;
 }
 
@@ -705,6 +715,33 @@ export class AssetRepository {
       .where('asset_exif.livePhotoCID', '=', livePhotoCID)
       .limit(1)
       .executeTakeFirst();
+  }
+
+  // OpenHarmony moving photo pair: the video resource is a sibling file of the image with the
+  // same base name (MediaFileUtils.GetMovingPhotoVideoPath) and a duration of at most 10 seconds.
+  findOhosLivePhotoMatch(options: OhosLivePhotoSearchOptions) {
+    const { ownerId, libraryId, otherAssetId, path, names, type } = options;
+    let query = this.db
+      .selectFrom('asset')
+      .select(['asset.id', 'asset.ownerId', 'asset.livePhotoVideoId'])
+      .where('id', '!=', asUuid(otherAssetId))
+      .where('ownerId', '=', asUuid(ownerId))
+      .where('type', '=', type)
+      .where((eb) =>
+        eb.or(names.map((name) => sql<SqlBool>`lower("asset"."originalFileName") = ${name.toLowerCase()}`)),
+      )
+      .where(sql<SqlBool>`regexp_replace("asset"."originalPath", '/[^/]*$', '') = ${path}`)
+      .$if(type === AssetType.Video, (qb) =>
+        qb.where((eb) => eb.or([eb('asset.duration', 'is', null), eb('asset.duration', '<=', 10_000)])),
+      );
+
+    if (libraryId === null) {
+      query = query.where('asset.libraryId', 'is', null);
+    } else if (libraryId) {
+      query = query.where('asset.libraryId', '=', asUuid(libraryId));
+    }
+
+    return query.limit(1).executeTakeFirst();
   }
 
   getStatistics(ownerId: string, { visibility, isFavorite, isTrashed }: AssetStatsOptions): Promise<AssetStats> {

@@ -27,6 +27,7 @@ export const newAssetRepositoryMock = (): Mocked<RepositoryInterface<AssetReposi
     update: vitest.fn(),
     remove: vitest.fn(),
     findLivePhotoMatch: vitest.fn(),
+    findOhosLivePhotoMatch: vitest.fn(),
     getStatistics: vitest.fn(),
     getCalendarHeatmap: vitest.fn(),
     getTimeBucket: vitest.fn(),
