@@ -1,21 +1,17 @@
 ﻿import { workScheduler, WorkSchedulerExtensionAbility } from "@kit.BackgroundTasksKit";
 import {
-  DartExecutor,
-  FlutterCallbackInformation,
   FlutterEngine,
   FlutterEngineCache,
   FlutterInjector,
   FlutterLoader,
+  MethodChannel,
   Reply,
 } from "@ohos/flutter_ohos";
 import { BackgroundWorkerBgHostApi, BackgroundWorkerFlutterApi } from "./BackgroundWorker.g";
-import dataPreferences from '@ohos.data.preferences'
-import preferences from "@ohos.data.preferences";
 import { BackgroundWorkerApiImpl } from "./BackgroundWorkerApiImpl";
 import { notificationManager } from '@kit.NotificationKit';
 import { DartEntrypoint } from '@ohos/flutter_ohos/src/main/ets/embedding/engine/dart/DartExecutor';
 import { BackgroundGeneratedPluginRegistrant } from '../plugins/BackgroundGeneratedPluginRegistrant';
-import { BackgroundServicePlugin } from '../plugins/BackgroundServicePlugin';
 import { NativeSyncApiOhos } from '../plugins/sync/Messages_ohos.g';
 import { MessagesImplBase } from '../plugins/sync/MessagesImplBase';
 import { LocalImageApiOhos } from '../plugins/Images/LocalImages.g';
@@ -28,15 +24,14 @@ import { ConnectivityApiImpl } from '../plugins/connectivity/ConnectivityApiImpl
 import BackgroundEngineLock from '../plugins/Background/BackgroundEngineLock';
 import { BackgroundWorkerLockApi } from '../plugins/Background/BackgroundWorkerLock.g';
 import { BackgroundWorkerPreferences } from '../plugins/Background/BackgroundWorkerPreferences';
-import { UIAbility } from "@kit.AbilityKit";
-import { common } from '@kit.AbilityKit'
 import { NetworkApi } from '../plugins/core/Network.g';
 import { NetworkApiImpl } from '../plugins/core/NetworkApiImpl';
+import { BackgroundWorkerLog } from './BackgroundWorkerLog';
 
 export class Deferred<T> {
   public promise: Promise<T>;
-  public resolve!: (value: T | PromiseLike<T>) => void;
-  public reject!: (reason?: object) => void;
+  public resolve: (value: T | PromiseLike<T>) => void = () => {};
+  public reject: (reason?: object) => void = () => {};
 
   constructor() {
     this.promise = new Promise<T>((res, rej) => {
@@ -48,20 +43,29 @@ export class Deferred<T> {
 
 class BackgroundWorkerReply implements Reply<void> {
   private readonly success: boolean;
+  private readonly runId: number;
 
-  constructor(success: boolean) {
+  constructor(runId: number, success: boolean) {
+    this.runId = runId;
     this.success = success;
   }
 
   reply(reply: void): void {
-    BackgroundWorker.backgroundWorkerBgHostApiImpl?.complete(reply == undefined && this.success);
+    BackgroundWorker.completeRun(this.runId, reply == undefined && this.success);
   }
 }
 
 class BackgroundWorkerUploadReply implements Reply<boolean> {
+  private readonly runId: number;
+
+  constructor(runId: number) {
+    this.runId = runId;
+  }
+
   reply(needsRetry: boolean): void {
     // onAndroidUpload returns whether Flutter needs the native worker to retry.
-    BackgroundWorker.backgroundWorkerBgHostApiImpl?.complete(needsRetry === false);
+    BackgroundWorkerLog.info(`Dart upload callback returned needsRetry=${needsRetry}`);
+    BackgroundWorker.completeRun(this.runId, needsRetry === false);
   }
 }
 
@@ -82,6 +86,10 @@ class BackgroundWorker extends WorkSchedulerExtensionAbility {
   public static completionHandler: Deferred<boolean> = new Deferred<boolean>();
   /// Flag to track whether the background task has completed to prevent duplicate completions
   public static isComplete = false
+  public static activeRunId: number = 0;
+  public static activeWorkToken?: string;
+  public static startupTimeout?: number;
+  public static readonly STARTUP_TIMEOUT_MS: number = 60_000;
   private TAG = "BackgroundWorker";
   public static readonly NOTIFICATION_ID = 100;
   public static workerInfo?: workScheduler.WorkInfo;
@@ -95,17 +103,34 @@ class BackgroundWorker extends WorkSchedulerExtensionAbility {
 
   constructor() {
     super();
-    if (!this.loader.initialized) {
-      this.loader.startInitialization(this.ctx);
+  }
+
+  public static isActiveRun(runId: number): boolean {
+    return runId === BackgroundWorker.activeRunId && !BackgroundWorker.isComplete;
+  }
+
+  public static clearStartupTimeout(): void {
+    if (BackgroundWorker.startupTimeout !== undefined) {
+      clearTimeout(BackgroundWorker.startupTimeout);
+      BackgroundWorker.startupTimeout = undefined;
     }
   }
+
+  public static completeRun(runId: number, success: boolean): void {
+    if (!BackgroundWorker.isActiveRun(runId)) {
+      return;
+    }
+    BackgroundWorker.backgroundWorkerBgHostApiImpl?.complete(success);
+  }
+
   private registerPlugins(flutterEngine: FlutterEngine) {
-    this.ctx.getApplicationContext()
+    BackgroundWorkerLog.info('Plugin registration started');
     // workScheduler cannot safely import UI/video plugins such as native_video_player
     // on HarmonyOS 6, so the background engine uses a dedicated registrant.
     BackgroundGeneratedPluginRegistrant.registerWith(flutterEngine);
+    BackgroundWorkerLog.info('Generated background plugins registered');
     const messenger = flutterEngine.dartExecutor.getBinaryMessenger();
-    BackgroundWorker.nativeSyncApiImpl = new MessagesImplBase(this.ctx.getApplicationContext());   //??????ability?????????y?????????
+    BackgroundWorker.nativeSyncApiImpl = new MessagesImplBase(this.ctx.getApplicationContext());
     BackgroundWorker.localImageApiImpl = new LocalImagesImpl(this.ctx.getApplicationContext());
     BackgroundWorker.remoteImageApiImpl = new RemoteImagesImpl(this.ctx.getApplicationContext());
     const backgroundWorkerApiImpl = new BackgroundWorkerApiImpl(this.ctx.getApplicationContext());
@@ -114,16 +139,24 @@ class BackgroundWorker extends WorkSchedulerExtensionAbility {
     const networkApiImpl = new NetworkApiImpl(this.ctx.getApplicationContext());
 
     NativeSyncApiOhos.setup(messenger, BackgroundWorker.nativeSyncApiImpl);
+    BackgroundWorkerLog.info('Registered NativeSyncApiOhos');
     LocalImageApiOhos.setup(messenger, BackgroundWorker.localImageApiImpl);
+    BackgroundWorkerLog.info('Registered LocalImageApiOhos');
     RemoteImageApiOhos.setup(messenger, BackgroundWorker.remoteImageApiImpl);
+    BackgroundWorkerLog.info('Registered RemoteImageApiOhos');
     BackgroundWorkerFgHostApi.setup(messenger, backgroundWorkerApiImpl);
+    BackgroundWorkerLog.info('Registered BackgroundWorkerFgHostApi');
     ConnectivityApi.setup(messenger, connectivityApiImpl);
+    BackgroundWorkerLog.info('Registered ConnectivityApi');
     BackgroundWorkerLockApi.setup(messenger, BackgroundWorker.backgroundEngineLock);
+    BackgroundWorkerLog.info('Registered BackgroundWorkerLockApi');
     NetworkApi.setup(messenger, networkApiImpl);
+    BackgroundWorkerLog.info('Registered NetworkApi');
     const backgroundEngineLock = BackgroundWorker.backgroundEngineLock;
     if (backgroundEngineLock != undefined) {
       flutterEngine.getPlugins()?.add(backgroundEngineLock);
     }
+    BackgroundWorkerLog.info('Plugin registration completed');
   }
   public static cancelPlugins() {
     try {
@@ -136,83 +169,146 @@ class BackgroundWorker extends WorkSchedulerExtensionAbility {
   }
 
   onWorkStart(workInfo: workScheduler.WorkInfo): void {
-    // Reset state for each run
+    if (BackgroundWorker.workerInfo !== undefined && !BackgroundWorker.isComplete) {
+      BackgroundWorkerLog.warn('Ignoring duplicate onWorkStart while a background worker is active');
+      return;
+    }
+
+    BackgroundWorkerLog.beginRun();
+    const runId = BackgroundWorker.activeRunId + 1;
+    BackgroundWorker.activeRunId = runId;
+    const workToken = workInfo.parameters?.immichBackgroundRunToken;
+    BackgroundWorker.activeWorkToken = typeof workToken === "string" ? workToken : undefined;
+    BackgroundWorker.clearStartupTimeout();
     BackgroundWorker.isComplete = false;
     BackgroundWorker.completionHandler = new Deferred<boolean>();
-    BackgroundWorker.backgroundWorkerBgHostApiImpl = new BackgroundWorkerBgHostApiImpl();
+    BackgroundWorker.backgroundWorkerBgHostApiImpl = new BackgroundWorkerBgHostApiImpl(runId);
     BackgroundWorker.workerInfo = workInfo;
-    console.info(`onWorkStart, workInfo = ${JSON.stringify(workInfo)}`);
-    console.info(this.TAG, "Starting background upload worker")
+    BackgroundWorkerLog.info(`onWorkStart received workId=${workInfo.workId}, abilityName=${workInfo.abilityName}, runId=${runId}, hasRunToken=${BackgroundWorker.activeWorkToken !== undefined}`);
+    BackgroundWorkerLog.info('Background worker run state initialized');
     try {
       const notif = new BackgroundWorkerPreferences(this.ctx).getNotificationConfig();
+      BackgroundWorkerLog.info('Publishing background worker startup notification');
       BackgroundWorker.backgroundWorkerBgHostApiImpl?.showNotification(notif.title, notif.message);
     } catch (e) {
-      console.error(this.TAG, 'showNotification failed', e);
+      BackgroundWorkerLog.error(`Startup notification setup failed: ${String(e)}`);
     }
-    // Ensure Flutter runtime is ready before creating an engine
-    this.loader.ensureInitializationComplete(null);
-    BackgroundWorker.engine = new FlutterEngine(this.ctx, null, null, null);
-    this.registerPlugins(BackgroundWorker.engine);
-
-    BackgroundWorker.flutterApi =
-      new BackgroundWorkerFlutterApi(BackgroundWorker.engine.dartExecutor.getBinaryMessenger())
-
-    BackgroundWorkerBgHostApi.setup(
-      BackgroundWorker.engine.dartExecutor.getBinaryMessenger(),
-      BackgroundWorker.backgroundWorkerBgHostApiImpl,
-    )
-
-    // Cache the engine similar to Android, so we can detect running background worker if needed
     try {
-      FlutterEngineCache.getInstance().put(BackgroundWorkerApiImpl.ENGINE_CACHE_KEY, BackgroundWorker.engine);
-    } catch (_) {
-      // ignore cache failures
-    }
+      BackgroundWorkerLog.info('Constructing background FlutterEngine');
+      const engine = new FlutterEngine(this.ctx, null, null, null);
+      BackgroundWorker.engine = engine;
+      // FlutterEngine construction alone does not attach a native shell or create
+      // its plugin registry. Match FlutterEngineGroup's init-before-run sequence.
+      BackgroundWorkerLog.info('Calling FlutterEngine.init');
+      engine.init(this.ctx, null, false);
+      BackgroundWorkerLog.info('FlutterEngine.init completed');
+      this.registerPlugins(engine);
 
-    // Kick off the Dart entrypoint that runs background sync
-    const entrypoint = new DartEntrypoint(
-      this.loader.findAppBundlePath(),
-      "package:immich_mobile/domain/services/background_worker.service.dart",
-      "backgroundSyncNativeEntrypoint"
-    );
-    BackgroundWorker.engine.dartExecutor.executeDartEntrypoint(entrypoint);
+      const messenger = engine.dartExecutor.getBinaryMessenger();
+      BackgroundWorkerLog.info('Creating Flutter/native background message channels');
+      BackgroundWorker.flutterApi = new BackgroundWorkerFlutterApi(messenger);
+      BackgroundWorkerLog.attach(new MethodChannel(messenger, 'immich/background_worker_diagnostics'));
+      BackgroundWorkerBgHostApi.setup(
+        messenger,
+        BackgroundWorker.backgroundWorkerBgHostApiImpl,
+      );
+
+      // Cache the engine similar to Android, so we can detect a running worker.
+      try {
+        FlutterEngineCache.getInstance().put(BackgroundWorkerApiImpl.ENGINE_CACHE_KEY, engine);
+        BackgroundWorkerLog.info('Background FlutterEngine cached');
+      } catch (e) {
+        BackgroundWorkerLog.warn(`Failed to cache background FlutterEngine: ${String(e)}`);
+      }
+
+      // Do not leave a WorkScheduler job and notification active if Dart never
+      // completes its initialization handshake.
+      BackgroundWorker.startupTimeout = setTimeout(() => {
+        if (!BackgroundWorker.isActiveRun(runId)) {
+          return;
+        }
+        BackgroundWorkerLog.error(`Timed out after ${BackgroundWorker.STARTUP_TIMEOUT_MS}ms waiting for Dart initialization handshake`);
+        BackgroundWorker.completeRun(runId, false);
+      }, BackgroundWorker.STARTUP_TIMEOUT_MS);
+
+      BackgroundWorkerLog.info('Resolving Dart entrypoint bundle path');
+      const entrypoint = new DartEntrypoint(
+        this.loader.findAppBundlePath(),
+        "package:immich_mobile/domain/services/background_worker.service.dart",
+        "backgroundSyncNativeEntrypoint"
+      );
+      BackgroundWorkerLog.info('Executing background Dart entrypoint backgroundSyncNativeEntrypoint');
+      engine.dartExecutor.executeDartEntrypoint(entrypoint);
+    } catch (e) {
+      BackgroundWorkerLog.error(`Failed to start background FlutterEngine: ${String(e)}`);
+      BackgroundWorker.completeRun(runId, false);
+    }
   }
 
   onWorkStop(workInfo: workScheduler.WorkInfo) {
-    console.log("About to stop BackupWorker");
-    if(BackgroundWorker.isComplete) {
+    BackgroundWorkerLog.info(`onWorkStop received workId=${workInfo.workId}, abilityName=${workInfo.abilityName}`);
+    const workToken = workInfo.parameters?.immichBackgroundRunToken;
+    const runId = BackgroundWorker.activeRunId;
+    if (workToken !== BackgroundWorker.activeWorkToken) {
+      BackgroundWorkerLog.info('Ignoring onWorkStop because its run token does not match the active run');
       return;
     }
+    if (!BackgroundWorker.isActiveRun(runId)) {
+      BackgroundWorkerLog.info(`Ignoring onWorkStop because runId=${runId} is no longer active`);
+      return;
+    }
+    BackgroundWorkerLog.warn(`Active runId=${runId} was stopped by WorkScheduler; requesting Dart cancellation`);
+    BackgroundWorker.clearStartupTimeout();
 
     // 尝试调用 FlutterApi cancel
     if (BackgroundWorker.flutterApi != null) {
       try {
-        BackgroundWorker.flutterApi.cancel(new BackgroundWorkerReply(false));
+        BackgroundWorker.flutterApi.cancel(new BackgroundWorkerReply(runId, false));
       } catch (e) {
-        console.error("flutterApi.cancel error:", e);
+        BackgroundWorkerLog.error(`Flutter cancel callback failed: ${String(e)}`);
         // 出错也保证失败
-        BackgroundWorker.backgroundWorkerBgHostApiImpl!.complete(false);
+        BackgroundWorker.completeRun(runId, false);
       }
     }
 
     // 5 秒后 fallback，保证任务完成
     setTimeout(() => {
-      BackgroundWorker.backgroundWorkerBgHostApiImpl!.complete(false);
+      BackgroundWorkerLog.warn(`Dart cancellation fallback expired for runId=${runId}`);
+      BackgroundWorker.completeRun(runId, false);
     }, 5000);
   }
 }
 
 class BackgroundWorkerBgHostApiImpl extends BackgroundWorkerBgHostApi {
   private TAG = "BackgroundWorker";
+  private readonly runId: number;
+
+  constructor(runId: number) {
+    super();
+    this.runId = runId;
+  }
+
   /**
    * Called by the Flutter side when it has finished initialization and is ready to receive commands.
    * Routes the appropriate task type (refresh or processing) to the corresponding Flutter method.
    * This method acts as a bridge between the native Android background task system and Flutter.
    */
   override onInitialized() {
+    if (!BackgroundWorker.isActiveRun(this.runId)) {
+      BackgroundWorkerLog.warn(`Ignoring Dart initialization handshake for inactive runId=${this.runId}`);
+      return;
+    }
+    BackgroundWorkerLog.info(`Received background Dart initialization handshake for runId=${this.runId}`);
+    BackgroundWorker.clearStartupTimeout();
     try {
-      BackgroundWorker.flutterApi!.onAndroidUpload(20, new BackgroundWorkerUploadReply());
+      const flutterApi = BackgroundWorker.flutterApi;
+      if (flutterApi === undefined) {
+        throw new Error("Background Flutter API is unavailable after initialization");
+      }
+      BackgroundWorkerLog.info(`Dispatching Dart background upload callback for runId=${this.runId}`);
+      flutterApi.onAndroidUpload(20, new BackgroundWorkerUploadReply(this.runId));
     } catch (e) {
+      BackgroundWorkerLog.error(`Failed to dispatch Dart background upload callback: ${String(e)}`);
       this.handleHostResult(false);
     }
   }
@@ -231,28 +327,34 @@ class BackgroundWorkerBgHostApiImpl extends BackgroundWorkerBgHostApi {
     };
 
     try {
-      notificationManager.publish(request);
+      notificationManager.publish(request).then(() => {
+        BackgroundWorkerLog.info('Background worker notification published');
+      }).catch((e: Object) => {
+        BackgroundWorkerLog.error(`Publishing background worker notification failed: ${String(e)}`);
+      });
     } catch (e) {
-      console.error(`${this.TAG} publish notification failed`, e);
+      BackgroundWorkerLog.error(`Publishing background worker notification failed: ${String(e)}`);
     }
   }
 
   override close() {
-    if(BackgroundWorker.isComplete) {
+    if (!BackgroundWorker.isActiveRun(this.runId)) {
       return;
     }
+    BackgroundWorker.clearStartupTimeout();
 
     if (BackgroundWorker.flutterApi != null) {
       try {
-        BackgroundWorker.flutterApi.cancel(new BackgroundWorkerReply(false));
+        BackgroundWorker.flutterApi.cancel(new BackgroundWorkerReply(this.runId, false));
       } catch (e) {
-        console.error("flutterApi.cancel error:", e);
-        BackgroundWorker.backgroundWorkerBgHostApiImpl!.complete(false);
+        BackgroundWorkerLog.error(`Flutter cancel callback failed during close: ${String(e)}`);
+        BackgroundWorker.completeRun(this.runId, false);
       }
     }
 
     setTimeout(() => {
-      BackgroundWorker.backgroundWorkerBgHostApiImpl!.complete(false);
+      BackgroundWorkerLog.warn(`Close fallback expired for runId=${this.runId}`);
+      BackgroundWorker.completeRun(this.runId, false);
     }, 5000);
 
   }
@@ -264,13 +366,16 @@ class BackgroundWorkerBgHostApiImpl extends BackgroundWorkerBgHostApi {
    * - Parameter result: The result returned from a Flutter API call
    */
   private handleHostResult(result: boolean) {
+    if (!BackgroundWorker.isActiveRun(this.runId)) {
+      return;
+    }
     if (result) {
-      console.log("Background Worker finished");
+      BackgroundWorkerLog.info(`Dart background runId=${this.runId} completed and requested success`);
       this.complete(true);
       return;
     }
 
-    console.error("Background Worker failed");
+    BackgroundWorkerLog.error(`Dart background runId=${this.runId} reported failure`);
     this.complete(false);
   }
 
@@ -283,36 +388,52 @@ class BackgroundWorkerBgHostApiImpl extends BackgroundWorkerBgHostApi {
    * - Parameter success: Indicates whether the background task completed successfully
   */
   public complete(success: boolean) {
-    if (BackgroundWorker.isComplete) {
+    if (!BackgroundWorker.isActiveRun(this.runId)) {
       return;
     }
 
-    console.info(this.TAG, "About to complete BackupWorker with result:" +success)
+    BackgroundWorkerLog.info(`Completing background runId=${this.runId}, success=${success}`);
     BackgroundWorker.isComplete = true;
+    BackgroundWorker.clearStartupTimeout();
     const workerInfo = BackgroundWorker.workerInfo;
     if (workerInfo != undefined) {
       try {
         workScheduler.stopWork(workerInfo, false);
-      } catch (_) {
-        // ignore stop errors
+        BackgroundWorkerLog.info(`Stopped WorkScheduler workId=${workerInfo.workId}`);
+      } catch (e) {
+        BackgroundWorkerLog.warn(`Stopping WorkScheduler workId=${workerInfo.workId} failed: ${String(e)}`);
       }
       BackgroundWorker.workerInfo = undefined;
     }
+    BackgroundWorker.activeWorkToken = undefined;
     BackgroundWorker.cancelPlugins();
-    BackgroundWorker.engine?.destroy();
+    const engine = BackgroundWorker.engine;
     BackgroundWorker.engine = undefined;
     BackgroundWorker.flutterApi = undefined;
     try {
-      notificationManager.cancel(BackgroundWorker.NOTIFICATION_ID);
-    } catch (_) {
-      // ignore notification cleanup errors
+      engine?.destroy();
+      BackgroundWorkerLog.info('Background FlutterEngine destroyed');
+    } catch (e) {
+      BackgroundWorkerLog.error(`Destroying background FlutterEngine failed: ${String(e)}`);
+    }
+    try {
+      notificationManager.cancel(BackgroundWorker.NOTIFICATION_ID).then(() => {
+        BackgroundWorkerLog.info('Background worker notification cancelled');
+      }).catch((e: Object) => {
+        BackgroundWorkerLog.warn(`Cancelling background worker notification failed: ${String(e)}`);
+      });
+    } catch (e) {
+      BackgroundWorkerLog.warn(`Cancelling background worker notification failed: ${String(e)}`);
     }
     try {
       FlutterEngineCache.getInstance().remove(BackgroundWorkerApiImpl.ENGINE_CACHE_KEY);
-    } catch (_) {
-      // ignore cache cleanup errors
+      BackgroundWorkerLog.info('Background FlutterEngine cache entry removed');
+    } catch (e) {
+      BackgroundWorkerLog.warn(`Removing background FlutterEngine cache entry failed: ${String(e)}`);
     }
 
     BackgroundWorker.completionHandler.resolve(success);
+    BackgroundWorker.backgroundWorkerBgHostApiImpl = undefined;
+    BackgroundWorkerLog.info(`Background runId=${this.runId} cleanup completed`);
   }
 }

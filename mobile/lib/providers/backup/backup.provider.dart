@@ -100,10 +100,23 @@ class BackupNotifier extends StateNotifier<BackupState> {
     if (!Platform.isOhos) {
       return;
     }
+    _logger.info('Requesting OHOS DATA_TRANSFER long-running task');
     try {
-      await _nativeSyncApi.startBackgroundTransfer();
-    } catch (_) {
+      final notificationId = await _nativeSyncApi.startBackgroundTransfer();
+      if (notificationId > 0) {
+        _logger.info('OHOS DATA_TRANSFER long-running task started: notificationId=$notificationId');
+      } else {
+        _logger.warning(
+          'OHOS DATA_TRANSFER request returned no active notification (id=$notificationId); continuing upload without a long-running task',
+        );
+      }
+    } catch (error, stack) {
       // Keep the upload path alive if the OHOS long-running task cannot start.
+      _logger.warning(
+        'OHOS DATA_TRANSFER long-running task request failed; continuing upload without it',
+        error,
+        stack,
+      );
     }
   }
 
@@ -124,8 +137,10 @@ class BackupNotifier extends StateNotifier<BackupState> {
     }
     try {
       await _nativeSyncApi.stopBackgroundTransfer();
-    } catch (_) {
+      _logger.info('OHOS DATA_TRANSFER long-running task stopped');
+    } catch (error, stack) {
       // Ignore cleanup failures on OHOS.
+      _logger.warning('Stopping OHOS DATA_TRANSFER long-running task failed', error, stack);
     }
   }
 

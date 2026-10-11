@@ -14,6 +14,7 @@ import { wantAgent, WantAgent } from '@kit.AbilityKit';
 import { notificationManager } from '@kit.NotificationKit';
 import { backgroundTaskManager } from '@kit.BackgroundTasksKit';
 import { deviceInfo } from '@kit.BasicServicesKit';
+import { BackgroundWorkerLog } from '../../WorkSchedulerExtension/BackgroundWorkerLog';
 
 import util from '@ohos.util';
 import { vibrator } from '@kit.SensorServiceKit';
@@ -1067,11 +1068,19 @@ export class MessagesImplBase extends NativeSyncApiOhos {
    */
   public override async startBackgroundTransfer(result: Result<number>) {
     if (!this.ctx) {
-      console.error(`${this.TAG} context is null, cannot start background running`);
-      result.success(0);
+      BackgroundWorkerLog.error('startBackgroundTransfer rejected: native context is null');
+      result.error(new FlutterError('BACKGROUND_TRANSFER_NO_CONTEXT', 'BackgroundTaskError', 'Native context is null'));
+      return;
+    }
+    BackgroundWorkerLog.info(`startBackgroundTransfer requested, uiAbilityContext=${this.isUiContext(this.ctx)}, existingNotificationId=${this.liveNotificationId}`);
+    if (!this.isUiContext(this.ctx)) {
+      const message = 'OpenHarmony Stage long-running tasks can only be requested from a UIAbility; WorkSchedulerExtensionAbility context is unsupported';
+      BackgroundWorkerLog.error(`startBackgroundTransfer rejected: ${message}`);
+      result.error(new FlutterError('BACKGROUND_TASK_UNSUPPORTED_CONTEXT', 'BackgroundTaskError', message));
       return;
     }
     if (this.liveNotificationId >= 0) {
+      BackgroundWorkerLog.info(`Reusing active background transfer notificationId=${this.liveNotificationId}`);
       result.success(this.liveNotificationId);
       return;
     }
@@ -1089,57 +1098,74 @@ export class MessagesImplBase extends NativeSyncApiOhos {
     };
 
     try {
+      BackgroundWorkerLog.info('Requesting WantAgent for background transfer notification');
       wantAgent.getWantAgent(wantAgentInfo).then((wantAgentObj: WantAgent) => {
+        BackgroundWorkerLog.info(`WantAgent created; requesting DATA_TRANSFER long-running task with sdkApiVersion=${deviceInfo.sdkApiVersion}`);
         let list: Array<string> = ["dataTransfer"];
+        const failStart = (stage: string, error: Object): void => {
+          const businessError = error as BusinessError;
+          const message = `${stage}: code=${businessError.code}, message=${businessError.message}, error=${String(error)}`;
+          BackgroundWorkerLog.error(message);
+          this.liveNotificationId = -1;
+          result.error(new FlutterError('BACKGROUND_TRANSFER_FAILED', 'BackgroundTaskError', message));
+        };
         if (deviceInfo.sdkApiVersion >= 21) {
-          backgroundTaskManager.startBackgroundRunning(
-            this.ctx!,
-            list,
-            wantAgentObj,
-          ).then((res: backgroundTaskManager.ContinuousTaskNotification) => {
-            console.info("Operation startBackgroundRunning succeeded");
-            this.liveNotificationId = res.notificationId;
-            if (this.liveNotificationId <= 0) {
-              this.liveNotificationId = -1;
-              result.success(0);
-              return;
-            }
-            this.lastLiveNotificationUpdatedAt = 0;
-            result.success(this.liveNotificationId);
-          }).catch((error: BusinessError) => {
-            console.error(`Operation startBackgroundRunning failed. code is ${error.code} message is ${error.message}`);
-            this.liveNotificationId = -1;
-            result.success(0);
-          });
-        } else {
-          backgroundTaskManager.startBackgroundRunning(
-            this.ctx!,
-            backgroundTaskManager.BackgroundMode.DATA_TRANSFER,
-            wantAgentObj,
-            (err: BusinessError | undefined) => {
-              if (err) {
-                console.error(`Failed to startBackgroundRunning. Code=${err.code} msg=${err.message}`);
+          try {
+            backgroundTaskManager.startBackgroundRunning(
+              this.ctx!,
+              list,
+              wantAgentObj,
+            ).then((res: backgroundTaskManager.ContinuousTaskNotification) => {
+              BackgroundWorkerLog.info(`startBackgroundRunning resolved, notificationId=${res.notificationId}`);
+              this.liveNotificationId = res.notificationId;
+              if (this.liveNotificationId <= 0) {
+                BackgroundWorkerLog.error('startBackgroundRunning returned a non-positive notificationId');
                 this.liveNotificationId = -1;
-                result.success(0);
+                result.error(new FlutterError('BACKGROUND_TRANSFER_INVALID_NOTIFICATION', 'BackgroundTaskError', 'Long-running task returned an invalid notification ID'));
                 return;
               }
-              this.liveNotificationId = 100;
               this.lastLiveNotificationUpdatedAt = 0;
-              console.info("Succeeded in startBackgroundRunning.");
               result.success(this.liveNotificationId);
-            }
-          );
+            }).catch((error: BusinessError) => {
+              failStart('startBackgroundRunning Promise rejected', error);
+            });
+          } catch (error) {
+            failStart('startBackgroundRunning threw synchronously', error as Object);
+          }
+        } else {
+          BackgroundWorkerLog.info('Using callback-style startBackgroundRunning API');
+          try {
+            backgroundTaskManager.startBackgroundRunning(
+              this.ctx!,
+              backgroundTaskManager.BackgroundMode.DATA_TRANSFER,
+              wantAgentObj,
+              (err: BusinessError | undefined) => {
+                if (err) {
+                  failStart('startBackgroundRunning callback failed', err);
+                  return;
+                }
+                this.liveNotificationId = 100;
+                this.lastLiveNotificationUpdatedAt = 0;
+                BackgroundWorkerLog.info('startBackgroundRunning callback succeeded, notificationId=100');
+                result.success(this.liveNotificationId);
+              }
+            );
+          } catch (error) {
+            failStart('startBackgroundRunning threw synchronously', error as Object);
+          }
         }
       }).catch((err: BusinessError) => {
-        console.error(`getWantAgent failed code=${err.code} msg=${err.message}`);
+        const message = `wantAgent.getWantAgent rejected: code=${err.code}, message=${err.message}`;
+        BackgroundWorkerLog.error(message);
         this.liveNotificationId = -1;
-        result.success(0);
+        result.error(new FlutterError('BACKGROUND_TRANSFER_WANT_AGENT_FAILED', 'BackgroundTaskError', message));
       });
     } catch (e) {
       const err = e as BusinessError;
-      console.error(`startBackgroundRunning failed code=${err.code} msg=${err.message}`);
+      const message = `startBackgroundTransfer threw synchronously: code=${err.code}, message=${err.message}`;
+      BackgroundWorkerLog.error(message);
       this.liveNotificationId = -1;
-      result.success(0);
+      result.error(new FlutterError('BACKGROUND_TRANSFER_FAILED', 'BackgroundTaskError', message));
     }
   }
 
@@ -1180,9 +1206,11 @@ export class MessagesImplBase extends NativeSyncApiOhos {
 
     try {
       await notificationManager.publish(request);
+      BackgroundWorkerLog.info(`Background transfer progress notification published: progress=${integerProgress}, notificationId=${targetId}`);
       result.success();
     } catch (e) {
       const err = e as BusinessError;
+      BackgroundWorkerLog.error(`Publishing background transfer progress failed: code=${err.code}, message=${err.message}`);
       console.error(`publish live view fail code=${err.code} msg=${err.message}`);
       result.success();
     }
@@ -1193,6 +1221,15 @@ export class MessagesImplBase extends NativeSyncApiOhos {
    */
   public override async stopBackgroundTransfer(result: Result<void>) {
     if (!this.ctx) {
+      BackgroundWorkerLog.warn('stopBackgroundTransfer: native context is null; clearing local task state');
+      this.liveNotificationId = -1;
+      this.lastLiveNotificationUpdatedAt = 0;
+      this.continuousTaskId = 0;
+      result.success();
+      return;
+    }
+    if (!this.isUiContext(this.ctx)) {
+      BackgroundWorkerLog.info('stopBackgroundTransfer skipped: current context is not a UIAbility');
       this.liveNotificationId = -1;
       this.lastLiveNotificationUpdatedAt = 0;
       this.continuousTaskId = 0;
@@ -1200,19 +1237,26 @@ export class MessagesImplBase extends NativeSyncApiOhos {
       return;
     }
 
+    BackgroundWorkerLog.info(`stopBackgroundTransfer requested, notificationId=${this.liveNotificationId}`);
+
     try {
       if (this.liveNotificationId >= 0) {
         await notificationManager.cancel(this.liveNotificationId);
       }
     } catch (cancelErr) {
       const err = cancelErr as BusinessError;
+      BackgroundWorkerLog.warn(`Cancelling transfer notification failed: code=${err.code}, message=${err.message}`);
       console.error(`cancel notification fail code=${err.code} msg=${err.message}`);
     }
 
     try {
       await backgroundTaskManager.stopBackgroundRunning(this.ctx);
-    } catch (_) {
-      // Ignore repeated stop and verification errors.
+      BackgroundWorkerLog.info('backgroundTaskManager.stopBackgroundRunning completed');
+    } catch (e) {
+      const err = e as BusinessError;
+      BackgroundWorkerLog.warn(`backgroundTaskManager.stopBackgroundRunning failed: code=${err.code}, message=${err.message}`);
+      result.error(new FlutterError('BACKGROUND_TRANSFER_STOP_FAILED', 'BackgroundTaskError', err.message));
+      return;
     } finally {
       this.liveNotificationId = -1;
       this.lastLiveNotificationUpdatedAt = 0;

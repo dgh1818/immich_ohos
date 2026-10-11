@@ -6,6 +6,7 @@ import { workScheduler } from '@kit.BackgroundTasksKit';
 import { BackgroundWorkerPreferences } from '../plugins/Background/BackgroundWorkerPreferences';
 import { BusinessError } from '@kit.BasicServicesKit';
 import { FlutterEngineCache } from '@ohos/flutter_ohos';
+import { BackgroundWorkerLog } from './BackgroundWorkerLog';
 
 export class BackgroundWorkerApiImpl extends BackgroundWorkerFgHostApi {
   private ctx?: common.ApplicationContext;
@@ -17,6 +18,7 @@ export class BackgroundWorkerApiImpl extends BackgroundWorkerFgHostApi {
   }
 
   override enable() {
+    BackgroundWorkerLog.info('Background worker enable requested');
     BackgroundWorkerApiImpl.enqueueMediaObserver(this.ctx!)
     BackgroundWorkerApiImpl.enqueuePeriodicWorker(this.ctx!)
   }
@@ -27,6 +29,7 @@ export class BackgroundWorkerApiImpl extends BackgroundWorkerFgHostApi {
   }
 
   override configure(settings: BackgroundWorkerSettings): void {
+    BackgroundWorkerLog.info(`Background worker configuration received: minimumDelaySeconds=${settings.getMinimumDelaySeconds()}, requiresCharging=${settings.getRequiresCharging()}`);
     const prefs = new BackgroundWorkerPreferences(this.ctx!);
     prefs.updateSettings({
       minimumDelaySeconds: settings.getMinimumDelaySeconds() ?? 0,
@@ -37,13 +40,14 @@ export class BackgroundWorkerApiImpl extends BackgroundWorkerFgHostApi {
   }
 
   override disable() {
+    BackgroundWorkerLog.info('Background worker disable requested');
     try {
       workScheduler.stopWork(BackgroundWorkerApiImpl.MEDIAOBSERVER_WORKER_INFO, true)
       workScheduler.stopWork(BackgroundWorkerApiImpl.BACKGROUND_WORKER_INFO, true);
       workScheduler.stopWork(BackgroundWorkerApiImpl.PERIODIC_WORKER_INFO, true);
-      console.info(BackgroundWorkerApiImpl.TAG, "Cancelled background upload tasks success")
+      BackgroundWorkerLog.info('Cancelled background upload scheduler tasks');
     }catch (e) {
-      console.info(BackgroundWorkerApiImpl.TAG, "Cancelled background upload tasks failed")
+      BackgroundWorkerLog.warn(`Cancelling background upload scheduler tasks failed: ${String(e)}`);
     }
   }
 
@@ -54,6 +58,7 @@ export class BackgroundWorkerApiImpl extends BackgroundWorkerFgHostApi {
 
   static readonly BACKGROUND_WORKER_NAME = "immich/BackgroundWorkerV1"
   static readonly BACKGROUND_WORKER_ID = 1;
+  private static backgroundWorkSequence: number = 0;
   static readonly MediaObserver_WORKER_ID = 2;
   static readonly PERIODIC_WORKER_ID = 3;
   static readonly OBSERVER_WORKER_NAME = "immich/MediaObserverV1"
@@ -103,12 +108,14 @@ export class BackgroundWorkerApiImpl extends BackgroundWorkerFgHostApi {
 
   public static enqueueMediaObserver(ctx: common.ApplicationContext): void {
     const settings = new BackgroundWorkerPreferences(ctx).getSettings();
+    BackgroundWorkerLog.info(`Scheduling MediaObserver: requiresCharging=${settings.requiresCharging}`);
     let constraints: workScheduler.WorkInfo = {
       workId: BackgroundWorkerApiImpl.MediaObserver_WORKER_ID,
       bundleName: 'com.dgh18.immich',
       abilityName: 'MediaObserverScheduler',
       batteryStatus: workScheduler.BatteryStatus.BATTERY_STATUS_OKAY,
       networkType: workScheduler.NetworkType.NETWORK_TYPE_ANY,
+      isPersisted: true,
     };
     if (settings.requiresCharging) {
       constraints.isCharging = true;
@@ -118,16 +125,22 @@ export class BackgroundWorkerApiImpl extends BackgroundWorkerFgHostApi {
       workScheduler.stopWork(BackgroundWorkerApiImpl.MEDIAOBSERVER_WORKER_INFO, true);
     } catch (error) {
       const e = error as BusinessError;
-      console.info(BackgroundWorkerApiImpl.TAG, `No existing media observer worker to cancel: ${e.code} ${e.message}`);
+      BackgroundWorkerLog.info(`No existing media observer work to cancel: code=${e.code}, message=${e.message}`);
     }
 
-    workScheduler.startWork(constraints);
-    console.info(BackgroundWorkerApiImpl.TAG, "Enqueued media observer worker with name" + BackgroundWorkerApiImpl.OBSERVER_WORKER_NAME +
-    BackgroundWorkerApiImpl.MediaObserver_WORKER_ID);
+    try {
+      workScheduler.startWork(constraints);
+      BackgroundWorkerLog.info(`MediaObserver scheduled: abilityName=${constraints.abilityName}, workId=${constraints.workId}`);
+    } catch (error) {
+      const e = error as BusinessError;
+      BackgroundWorkerLog.error(`Scheduling MediaObserver failed: code=${e.code}, message=${e.message}`);
+      throw new Error(`Scheduling MediaObserver failed: ${e.code} ${e.message}`);
+    }
   }
 
   public static enqueuePeriodicWorker(ctx: common.ApplicationContext): void {
     const settings = new BackgroundWorkerPreferences(ctx).getSettings();
+    BackgroundWorkerLog.info(`Scheduling periodic worker: requiresCharging=${settings.requiresCharging}, repeatCycleMs=${BackgroundWorkerApiImpl.PERIODIC_WORKER_REPEAT_MS}`);
     const constraints: workScheduler.WorkInfo = {
       workId: BackgroundWorkerApiImpl.PERIODIC_WORKER_ID,
       bundleName: 'com.dgh18.immich',
@@ -146,22 +159,37 @@ export class BackgroundWorkerApiImpl extends BackgroundWorkerFgHostApi {
       workScheduler.stopWork(BackgroundWorkerApiImpl.PERIODIC_WORKER_INFO, true);
     } catch (error) {
       const e = error as BusinessError;
-      console.info(BackgroundWorkerApiImpl.TAG, `No existing periodic background worker to cancel: ${e.code} ${e.message}`);
+      BackgroundWorkerLog.info(`No existing periodic work to cancel: code=${e.code}, message=${e.message}`);
     }
 
-    workScheduler.startWork(constraints);
-    console.info(BackgroundWorkerApiImpl.TAG, "Enqueued periodic background worker with name: " +
-    BackgroundWorkerApiImpl.PERIODIC_WORKER_NAME);
+    try {
+      workScheduler.startWork(constraints);
+      BackgroundWorkerLog.info(`Periodic worker scheduled: abilityName=${constraints.abilityName}, workId=${constraints.workId}, persisted=${constraints.isPersisted}`);
+    } catch (error) {
+      const e = error as BusinessError;
+      BackgroundWorkerLog.error(`Scheduling periodic worker failed: code=${e.code}, message=${e.message}`);
+      throw new Error(`Scheduling periodic worker failed: ${e.code} ${e.message}`);
+    }
   }
 
   public static enqueueBackgroundWorker(): void {
+    BackgroundWorkerLog.info('Requesting one-shot background upload work');
     try {
-      workScheduler.startWork(BackgroundWorkerApiImpl.BACKGROUND_WORKER_INFO);
-      console.info(BackgroundWorkerApiImpl.TAG, "Enqueued background worker with name: " +
-      BackgroundWorkerApiImpl.BACKGROUND_WORKER_NAME);
+      const runToken = `${Date.now()}-${++BackgroundWorkerApiImpl.backgroundWorkSequence}`;
+      const workInfo: workScheduler.WorkInfo = {
+        workId: BackgroundWorkerApiImpl.BACKGROUND_WORKER_ID,
+        bundleName: 'com.dgh18.immich',
+        abilityName: 'BackgroundWorker',
+        batteryStatus: workScheduler.BatteryStatus.BATTERY_STATUS_OKAY,
+        parameters: {
+          immichBackgroundRunToken: runToken,
+        },
+      };
+      workScheduler.startWork(workInfo);
+      BackgroundWorkerLog.info(`One-shot background upload work scheduled: workId=${workInfo.workId}, abilityName=${workInfo.abilityName}, runToken=${runToken}`);
     } catch (error) {
       const e = error as BusinessError;
-      console.info(BackgroundWorkerApiImpl.TAG, `Background worker was not enqueued: ${e.code} ${e.message}`);
+      BackgroundWorkerLog.error(`One-shot background upload work was not scheduled: code=${e.code}, message=${e.message}`);
     }
   }
 
@@ -170,6 +198,7 @@ export class BackgroundWorkerApiImpl extends BackgroundWorkerFgHostApi {
       try {
         workScheduler.obtainAllWorks((error: BusinessError, workInfoList: Array<workScheduler.WorkInfo>) => {
           if (error) {
+            BackgroundWorkerLog.error(`Querying WorkScheduler state failed: code=${error.code}, message=${error.message}`);
             console.error(`isBackgroundWorkerRunning failed: ${error.code} ${error.message}`);
             resolve(false);
             return;
@@ -177,9 +206,11 @@ export class BackgroundWorkerApiImpl extends BackgroundWorkerFgHostApi {
           const running = workInfoList.some(
             (info) => info.abilityName === BackgroundWorkerApiImpl.BACKGROUND_WORKER_INFO.abilityName,
           );
+          BackgroundWorkerLog.info(`WorkScheduler state queried: works=${workInfoList.length}, backgroundWorkerRunning=${running}`);
           resolve(running);
         });
       } catch (e) {
+        BackgroundWorkerLog.error(`Querying WorkScheduler state threw: ${String(e)}`);
         console.error('isBackgroundWorkerRunning exception', e);
         resolve(false);
       }
@@ -187,16 +218,18 @@ export class BackgroundWorkerApiImpl extends BackgroundWorkerFgHostApi {
   }
 
   public static cancelBackgroundWorker() {
+    BackgroundWorkerLog.info('Cancelling one-shot background worker');
     try {
       workScheduler.stopWork(BackgroundWorkerApiImpl.BACKGROUND_WORKER_INFO);
-      console.info("MediaObserverScheduler", "Cancelled background worker");
+      BackgroundWorkerLog.info('One-shot background worker cancellation requested');
     } catch (e) {
-      console.error("MediaObserverScheduler cancelBackgroundWorker error", e);
+      BackgroundWorkerLog.warn(`One-shot background worker cancellation failed: ${String(e)}`);
     }
     try {
       FlutterEngineCache.getInstance().remove(BackgroundWorkerApiImpl.ENGINE_CACHE_KEY);
-    } catch (_) {
-      // ignore cache cleanup errors
+      BackgroundWorkerLog.info('Background FlutterEngine cache entry removed during cancellation');
+    } catch (e) {
+      BackgroundWorkerLog.warn(`Removing background FlutterEngine cache entry during cancellation failed: ${String(e)}`);
     }
   }
 

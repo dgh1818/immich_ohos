@@ -29,11 +29,11 @@ class BackupSettings extends ConsumerWidget {
         SettingGroupTitle(title: context.t.network_requirements, icon: Icons.cell_tower),
         const _UseCellularForVideosButton(),
         const _UseCellularForPhotosButton(),
-        if (CurrentPlatform.isAndroid) ...[
+        if (CurrentPlatform.isAndroid || CurrentPlatform.isOhos) ...[
           const Divider(),
           SettingGroupTitle(title: context.t.background_options, icon: Icons.charging_station_rounded),
           const _BackupOnlyWhenChargingButton(),
-          const _BackupDelaySlider(),
+          if (CurrentPlatform.isAndroid) const _BackupDelaySlider(),
         ],
         if (CurrentPlatform.isOhos) ...[
           const Divider(),

@@ -69,11 +69,18 @@ class HashService {
 
         final assetsToHash = await _localAlbumRepository.getAssetsToHash(album.id);
         if (assetsToHash.isNotEmpty && !_startedBackgroundTransfer && Platform.isOhos) {
+          _log.info('Requesting OHOS DATA_TRANSFER long-running task before hashing ${assetsToHash.length} assets');
           try {
-            await _nativeSyncApi.startBackgroundTransfer();
+            final notificationId = await _nativeSyncApi.startBackgroundTransfer();
+            _log.info('OHOS hashing background-transfer request completed: notificationId=$notificationId');
             _startedBackgroundTransfer = true;
-          } catch (_) {
+          } catch (error, stack) {
             // Keep hashing if the OHOS long-running task cannot be started.
+            _log.warning(
+              'OHOS hashing background-transfer request failed; continuing hashing without it',
+              error,
+              stack,
+            );
           }
         }
         toHashCount = assetsToHash.length;
@@ -107,8 +114,10 @@ class HashService {
         if (!backupEnabled) {
           try {
             await _nativeSyncApi.stopBackgroundTransfer();
-          } catch (_) {
+            _log.info('Stopped OHOS DATA_TRANSFER long-running task after hashing');
+          } catch (error, stack) {
             // Ignore cleanup failures on OHOS.
+            _log.warning('Failed to stop OHOS DATA_TRANSFER long-running task after hashing', error, stack);
           }
         } else {
           unawaited(() async {
@@ -118,9 +127,15 @@ class HashService {
               final livePhotoTasks = await FileDownloader().allTasks(group: kBackupLivePhotoGroup);
               if (backupTasks.isEmpty && livePhotoTasks.isEmpty) {
                 await _nativeSyncApi.stopBackgroundTransfer();
+                _log.info('Stopped OHOS DATA_TRANSFER task after confirming there are no active upload tasks');
               }
-            } catch (_) {
+            } catch (error, stack) {
               // Ignore cleanup failures on OHOS.
+              _log.warning(
+                'Failed while checking active uploads/stopping OHOS DATA_TRANSFER task after hashing',
+                error,
+                stack,
+              );
             }
           }());
         }

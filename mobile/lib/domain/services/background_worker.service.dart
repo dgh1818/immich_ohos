@@ -1,8 +1,10 @@
 import 'dart:async';
+import 'dart:developer' as developer;
 import 'dart:ui';
 
 import 'package:background_downloader/background_downloader.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:immich_mobile/constants/constants.dart';
 import 'package:immich_mobile/data/data_controller.dart';
@@ -27,38 +29,115 @@ import 'package:immich_mobile/services/auth.service.dart';
 import 'package:immich_mobile/services/foreground_upload.service.dart';
 import 'package:immich_mobile/services/localization.service.dart';
 import 'package:immich_mobile/utils/bootstrap.dart';
-import 'package:immich_mobile/utils/debug_print.dart';
 import 'package:immich_mobile/wm_executor.dart';
 import 'package:logging/logging.dart';
 
+Future<dynamic> _recordNativeDiagnostic(Logger logger, MethodCall call) async {
+  if (call.method != 'log') {
+    throw MissingPluginException('Unknown native background diagnostic method: ${call.method}');
+  }
+  final args = call.arguments as Map<Object?, Object?>?;
+  final level = args?['level'] as String? ?? 'info';
+  final timestamp = args?['timestamp'] as String? ?? 'unknown-time';
+  final message = args?['message'] as String? ?? '<empty native message>';
+  final formatted = 'OHOS ArkTS background [$timestamp] $message';
+  switch (level) {
+    case 'warning':
+      logger.warning(formatted);
+    case 'severe':
+      logger.severe(formatted);
+    default:
+      logger.info(formatted);
+  }
+  return null;
+}
+
 class BackgroundWorkerFgService {
   final BackgroundWorkerFgHostApi _foregroundHostApi;
+  final Logger _logger = Logger('BackgroundWorkerFgService');
+  bool _nativeLogBridgeInitialized = false;
 
-  const BackgroundWorkerFgService(this._foregroundHostApi);
+  BackgroundWorkerFgService(this._foregroundHostApi);
+
+  Future<void> _initializeNativeLogBridge() async {
+    if (_nativeLogBridgeInitialized) {
+      return;
+    }
+    if (Logger.root.level.value > Level.INFO.value) {
+      Logger.root.level = Level.INFO;
+      _logger.info('Background diagnostics lowered the foreground log threshold to INFO for this process');
+    }
+    _nativeDiagnosticChannel.setMethodCallHandler((call) => _recordNativeDiagnostic(_logger, call));
+    try {
+      final ready = await _nativeDiagnosticChannel.invokeMethod<bool>('ready');
+      _nativeLogBridgeInitialized = ready == true;
+      _logger.info('Foreground native log bridge handshake completed: ready=$ready');
+    } catch (error, stack) {
+      _logger.warning('Foreground native log bridge handshake failed; native details remain in HiLog', error, stack);
+    }
+  }
+
+  static const _nativeDiagnosticChannel = MethodChannel('immich/background_worker_diagnostics');
 
   // TODO: Move this call to native side once old timeline is removed
-  Future<void> enable() => _foregroundHostApi.enable();
+  Future<void> enable() async {
+    await _initializeNativeLogBridge();
+    _logger.info('Requesting native background worker registration');
+    try {
+      await _foregroundHostApi.enable();
+      _logger.info('Native background worker registration call completed');
+    } catch (error, stack) {
+      _logger.severe('Native background worker registration failed', error, stack);
+      rethrow;
+    }
+  }
 
-  Future<void> saveNotificationMessage(String title, String body) =>
-      _foregroundHostApi.saveNotificationMessage(title, body);
+  Future<void> saveNotificationMessage(String title, String body) async {
+    await _initializeNativeLogBridge();
+    await _foregroundHostApi.saveNotificationMessage(title, body);
+  }
 
-  Future<void> configure({int? minimumDelaySeconds, bool? requireCharging}) {
+  Future<void> configure({int? minimumDelaySeconds, bool? requireCharging}) async {
+    await _initializeNativeLogBridge();
     final backup = SettingsRepository.instance.appConfig.backup;
-    return _foregroundHostApi.configure(
-      BackgroundWorkerSettings(
-        minimumDelaySeconds: minimumDelaySeconds ?? backup.triggerDelay,
-        requiresCharging: requireCharging ?? backup.requireCharging,
-      ),
+    final settings = BackgroundWorkerSettings(
+      minimumDelaySeconds: minimumDelaySeconds ?? backup.triggerDelay,
+      requiresCharging: requireCharging ?? backup.requireCharging,
     );
+    _logger.info(
+      'Configuring native background worker: minimumDelaySeconds=${settings.minimumDelaySeconds}, '
+      'requiresCharging=${settings.requiresCharging}',
+    );
+    try {
+      await _foregroundHostApi.configure(settings);
+      _logger.info('Native background worker configuration call completed');
+    } catch (error, stack) {
+      _logger.severe('Native background worker configuration failed', error, stack);
+      rethrow;
+    }
   }
 
   // ignore: unused-code
-  Future<void> disable() => _foregroundHostApi.disable();
+  Future<void> disable() async {
+    await _initializeNativeLogBridge();
+    _logger.info('Disabling native background worker registration');
+    try {
+      await _foregroundHostApi.disable();
+      _logger.info('Native background worker disable call completed');
+    } catch (error, stack) {
+      _logger.severe('Native background worker disable call failed', error, stack);
+      rethrow;
+    }
+  }
 
-  Future<bool> wasLaunchedInBackground() => _foregroundHostApi.wasLaunchedInBackground();
+  Future<bool> wasLaunchedInBackground() async {
+    await _initializeNativeLogBridge();
+    return _foregroundHostApi.wasLaunchedInBackground();
+  }
 }
 
 class BackgroundWorkerBgService extends BackgroundWorkerFlutterApi {
+  static const _nativeDiagnosticChannel = MethodChannel('immich/background_worker_diagnostics');
   ProviderContainer? _ref;
   final DataController _dataController;
   final BackgroundWorkerBgHostApi _backgroundHostApi;
@@ -86,20 +165,31 @@ class BackgroundWorkerBgService extends BackgroundWorkerFlutterApi {
     _localSyncService = ref.read(localSyncServiceProvider);
     _remoteSyncService = ref.read(syncStreamServiceProvider);
     _hashService = ref.read(hashServiceProvider);
+    _nativeDiagnosticChannel.setMethodCallHandler((call) => _recordNativeDiagnostic(_logger, call));
     BackgroundWorkerFlutterApi.setUp(this);
+  }
+
+  Future<void> initializeNativeLogBridge() async {
+    try {
+      final ready = await _nativeDiagnosticChannel.invokeMethod<bool>('ready');
+      _logger.info('Native background log bridge handshake completed: ready=$ready');
+    } catch (error, stack) {
+      _logger.warning('Native background log bridge handshake failed; native details remain in HiLog', error, stack);
+    }
   }
 
   bool get _isBackupEnabled => SettingsRepository.instance.appConfig.backup.enabled;
 
   Future<void> init() async {
     try {
-      await Future.wait(
-        [
-          loadTranslations(),
-          workerManagerPatch.init(dynamicSpawning: true),
-          _ref?.read(authServiceProvider).setOpenApiServiceEndpoint(),
-          // Initialize the file downloader
-          FileDownloader().configure(
+      _logger.info('Background worker Dart service initialization started');
+      final initSteps = <Future<void>>[
+        _runStage('loadTranslations', loadTranslations),
+        _runStage('workerManagerPatch.init', () => workerManagerPatch.init(dynamicSpawning: true)),
+        // Initialize the file downloader.
+        _runStage(
+          'FileDownloader.configure',
+          () => FileDownloader().configure(
             globalConfig: [
               // maxConcurrent: 6, maxConcurrentByHost(server):6, maxConcurrentByGroup: 3
               (Config.holdingQueue, (6, 6, 3)),
@@ -107,23 +197,50 @@ class BackgroundWorkerBgService extends BackgroundWorkerFlutterApi {
               (Config.runInForegroundIfFileLargerThan, 256),
             ],
           ),
-          FileDownloader().trackTasksInGroup(kDownloadGroupLivePhoto, markDownloadedComplete: false),
-          FileDownloader().trackTasks(),
-        ].nonNulls,
-      );
+        ),
+        _runStage(
+          'trackTasksInGroup(live photo downloads)',
+          () => FileDownloader().trackTasksInGroup(kDownloadGroupLivePhoto, markDownloadedComplete: false),
+        ),
+        _runStage('trackTasks', () => FileDownloader().trackTasks()),
+      ];
+      final authService = _ref?.read(authServiceProvider);
+      if (authService != null) {
+        initSteps.add(_runStage('setOpenApiServiceEndpoint', authService.setOpenApiServiceEndpoint));
+      }
+      await Future.wait(initSteps);
 
+      _logger.info('Configuring background downloader notifications');
       configureFileDownloaderNotifications();
+      _logger.info('Background downloader notifications configured');
 
       // Notify the host that the background worker service has been initialized and is ready to use
-      unawaited(_backgroundHostApi.onInitialized());
+      await _runStage('native onInitialized handshake', _backgroundHostApi.onInitialized);
     } catch (error, stack) {
       _logger.severe("Failed to initialize background worker", error, stack);
-      unawaited(_backgroundHostApi.close());
+      try {
+        await _runStage('native close after initialization failure', _backgroundHostApi.close);
+      } catch (closeError, closeStack) {
+        _logger.severe('Failed to close native background worker after initialization failure', closeError, closeStack);
+      }
+    }
+  }
+
+  Future<T> _runStage<T>(String name, Future<T> Function() action) async {
+    _logger.info('Background stage started: $name');
+    try {
+      final result = await action();
+      _logger.info('Background stage completed: $name');
+      return result;
+    } catch (error, stack) {
+      _logger.severe('Background stage failed: $name', error, stack);
+      rethrow;
     }
   }
 
   @override
   Future<bool> onAndroidUpload(int? maxMinutes) async {
+    _logger.info('Native background upload callback received: maxMinutes=$maxMinutes');
     final hashTimeout = Duration(minutes: _isBackupEnabled ? 3 : 6);
     final backupTimeout = maxMinutes != null ? Duration(minutes: maxMinutes - 1) : null;
     await _optimizeDB();
@@ -193,12 +310,16 @@ class BackgroundWorkerBgService extends BackgroundWorkerFlutterApi {
     );
     final sw = Stopwatch()..start();
     try {
-      if (!await _syncAssets(hashTimeout: hashTimeout)) {
+      if (!await _runStage('local sync, remote sync, and hashing', () => _syncAssets(hashTimeout: hashTimeout))) {
         _logger.warning("Remote sync did not complete successfully, skipping backup");
         return true;
       }
 
-      final backupFuture = _handleBackup(remoteSync: Future.value(true));
+      _logger.info('Synchronization and hashing completed; preparing backup upload');
+      final backupFuture = _runStage(
+        'background backup enqueue and upload',
+        () => _handleBackup(remoteSync: Future.value(true)),
+      );
       Timer? cancelTimer;
       if (backupTimeout != null) {
         cancelTimer = Timer(backupTimeout, () {
@@ -229,21 +350,23 @@ class BackgroundWorkerBgService extends BackgroundWorkerFlutterApi {
     try {
       await _cleanup();
     } catch (error, stack) {
-      dPrint(() => 'Failed to cleanup background worker: $error with stack: $stack');
+      _logger.severe('Failed to cleanup background worker after cancellation', error, stack);
     }
   }
 
   Future<void> _optimizeDB() async {
+    _logger.info('Optimizing background worker databases');
     try {
       await (_dataController.db.optimize(allTables: true), _dataController.logDb.optimize()).wait;
+      _logger.info('Background worker database optimization completed');
     } catch (error, stack) {
-      dPrint(() => "Error during background worker optimize: $error, $stack");
+      _logger.warning('Background worker database optimization failed', error, stack);
     }
   }
 
   Future<void> _cleanup() async {
     await runZonedGuarded(_handleCleanup, (error, stack) {
-      dPrint(() => "Error during background worker cleanup: $error, $stack");
+      _logger.severe('Unhandled error during background worker cleanup', error, stack);
     });
   }
 
@@ -255,6 +378,7 @@ class BackgroundWorkerBgService extends BackgroundWorkerFlutterApi {
 
     try {
       _isCleanedUp = true;
+      _logger.info('Background worker cleanup started');
       final nativeSyncApi = _ref?.read(nativeSyncApiProvider);
 
       _logger.info("Cleaning up background worker");
@@ -264,18 +388,23 @@ class BackgroundWorkerBgService extends BackgroundWorkerFlutterApi {
 
       // Workers share one sqlite connection, so DB teardown must wait until every worker has stopped using it.
       await Future.wait([if (nativeSyncApi != null) nativeSyncApi.cancelHashing()]);
+      _logger.info('Native hashing cancellation completed');
       await workerManagerPatch.dispose().catchError((_) async {});
+      _logger.info('Worker manager disposed');
+      _nativeDiagnosticChannel.setMethodCallHandler(null);
+      _logger.info('Native diagnostic channel detached');
       await Future.wait([LogService.I.dispose(), dbStore.Store.dispose()]);
       await _dataController.close();
 
       _ref?.dispose();
       _ref = null;
     } catch (error, stack) {
-      dPrint(() => 'Failed to cleanup background worker: $error with stack: $stack');
+      _logger.severe('Failed to cleanup background worker', error, stack);
     }
   }
 
   Future<bool> _handleBackup({required Future<bool> remoteSync}) async {
+    _logger.info('Background backup handler entered');
     final needsRetry = await runZonedGuarded(() async {
       if (_isCleanedUp) {
         return false;
@@ -293,12 +422,15 @@ class BackgroundWorkerBgService extends BackgroundWorkerFlutterApi {
       }
 
       if (CurrentPlatform.isIOS || CurrentPlatform.isOhos) {
+        _logger.info('Starting URLSession-style background backup path for OHOS/iOS');
         await _ref?.read(backupProvider.notifier).startBackupWithURLSession(currentUser.id, remoteSync);
+        _logger.info('URLSession-style background backup call returned');
         return false;
       }
 
       final uploadService = _ref?.read(foregroundUploadServiceProvider);
       var failed = 0;
+      _logger.info('Starting foregroundUploadService background candidate upload path');
       await uploadService?.uploadCandidates(
         currentUser.id,
         _cancellationToken,
@@ -308,18 +440,21 @@ class BackgroundWorkerBgService extends BackgroundWorkerFlutterApi {
       _logger.info("Background backup finished, $failed uploads failed");
       // Retry when at least one upload failed
       return failed > 0;
-    }, (error, stack) => dPrint(() => "Error in backup zone $error, $stack"));
+    }, (error, stack) => _logger.severe('Unhandled error in background backup handler', error, stack));
+    _logger.info('Background backup handler finished; needsRetry=${needsRetry ?? true}');
     return needsRetry ?? true;
   }
 
   Future<bool> _syncAssets({Duration? hashTimeout}) async {
-    await _localSyncService.sync();
+    await _runStage('local media synchronization', _localSyncService.sync);
     if (_isCleanedUp) {
+      _logger.warning('Background worker was cleaned up after local synchronization');
       return false;
     }
 
-    final isSuccess = await _remoteSyncService.sync();
+    final isSuccess = await _runStage('server synchronization', _remoteSyncService.sync);
     if (_isCleanedUp) {
+      _logger.warning('Background worker was cleaned up after server synchronization');
       return isSuccess;
     }
 
@@ -333,7 +468,7 @@ class BackgroundWorkerBgService extends BackgroundWorkerFlutterApi {
       );
     }
 
-    await hashFuture;
+    await _runStage('asset hashing', () => hashFuture);
     return isSuccess;
   }
 }
@@ -359,9 +494,52 @@ class BackgroundWorkerLockService {
 /// library, make sure to update the entry points and URI in native workers as well
 @pragma('vm:entry-point')
 Future<void> backgroundSyncNativeEntrypoint() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  DartPluginRegistrant.ensureInitialized();
+  final logger = Logger('BackgroundWorkerBgService');
+  try {
+    developer.log('Background Dart entrypoint entered', name: 'BackgroundWorkerBgService', level: 800);
+    WidgetsFlutterBinding.ensureInitialized();
+    developer.log('WidgetsFlutterBinding initialized', name: 'BackgroundWorkerBgService', level: 800);
+    DartPluginRegistrant.ensureInitialized();
+    developer.log('Dart plugin registrant initialized', name: 'BackgroundWorkerBgService', level: 800);
 
-  final (dataController, apiService) = await Bootstrap.initDomain(shouldBufferLogs: false, disableStoreWatching: true);
-  await BackgroundWorkerBgService(dataController: dataController, apiService: apiService).init();
+    developer.log('Starting Bootstrap.initDomain', name: 'BackgroundWorkerBgService', level: 800);
+    final (dataController, apiService) = await Bootstrap.initDomain(
+      shouldBufferLogs: false,
+      disableStoreWatching: true,
+    );
+    logger.info('Bootstrap.initDomain completed; Immich logging is ready');
+    if (Logger.root.level.value > Level.INFO.value) {
+      Logger.root.level = Level.INFO;
+      logger.info('Background diagnostic log level lowered to INFO for this worker isolate');
+    }
+    logger.info('Creating background worker service');
+    final service = BackgroundWorkerBgService(dataController: dataController, apiService: apiService);
+    await service.initializeNativeLogBridge();
+    await service.init();
+  } catch (error, stack) {
+    logger.severe('Failed to bootstrap background worker', error, stack);
+    // LogService is installed partway through Bootstrap.initDomain. Keep an OS log
+    // fallback for failures that happen before its Immich-log subscription exists.
+    developer.log(
+      'Background worker startup/bootstrap failed; inspect error and stack for the last completed stage',
+      name: 'BackgroundWorkerBgService',
+      error: error,
+      stackTrace: stack,
+      level: 1000,
+    );
+    try {
+      // Bootstrap can fail before BackgroundWorkerBgService installs its Dart API.
+      // Notify the native worker so it can cancel/complete instead of hanging.
+      await BackgroundWorkerBgHostApi().close();
+    } catch (closeError, closeStack) {
+      logger.severe('Failed to notify native host about background bootstrap failure', closeError, closeStack);
+      developer.log(
+        'Failed to notify native host about background bootstrap failure',
+        name: 'BackgroundWorkerBgService',
+        error: closeError,
+        stackTrace: closeStack,
+        level: 1000,
+      );
+    }
+  }
 }

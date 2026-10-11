@@ -13,7 +13,7 @@
 * limitations under the License.
 */
 
-import { FlutterAbility, FlutterEngine, FlutterShellArgs } from '@ohos/flutter_ohos';
+import { FlutterAbility, FlutterEngine, FlutterShellArgs, MethodChannel } from '@ohos/flutter_ohos';
 import { GeneratedPluginRegistrant } from '../plugins/GeneratedPluginRegistrant';
 import { BackgroundServicePlugin } from '../../../main/ets/plugins/BackgroundServicePlugin';
 import { NativeSyncApiOhos } from '../../../main/ets/plugins/sync/Messages_ohos.g';
@@ -23,6 +23,7 @@ import {MessagesImplBase} from '../plugins/sync/MessagesImplBase'
 import { LocalImagesImpl } from '../plugins/Images/LocalImagesImpl';
 import { RemoteImagesImpl } from '../plugins/Images/RemoteImagesImpl';
 import { BackgroundWorkerApiImpl } from '../WorkSchedulerExtension/BackgroundWorkerApiImpl';
+import { BackgroundWorkerLog } from '../WorkSchedulerExtension/BackgroundWorkerLog';
 import { BackgroundWorkerFgHostApi } from '../WorkSchedulerExtension/BackgroundWorker.g';
 import { ConnectivityApi } from '../plugins/connectivity/Connectivity.g';
 import { ConnectivityApiImpl } from '../plugins/connectivity/ConnectivityApiImpl';
@@ -83,6 +84,7 @@ export default class EntryAbility extends FlutterAbility {
     let permissionApiImpl = new PermissionApiImpl(super.getAbility().context);
     let viewIntentApiImpl = new ViewIntentApiImpl();
     let messenger = flutterEngine.dartExecutor.getBinaryMessenger();
+    BackgroundWorkerLog.attach(new MethodChannel(messenger, 'immich/background_worker_diagnostics'));
     NativeSyncApiOhos.setup(messenger, nativeSyncApiImpl)
     LocalImageApiOhos.setup(messenger, localImageApiImpl);
     RemoteImageApiOhos.setup(messenger, remoteImageApiImpl);
