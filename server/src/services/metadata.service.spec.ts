@@ -2,6 +2,9 @@ import { BinaryField, ExifDateTime } from 'exiftool-vendored';
 import { DateTime } from 'luxon';
 import { randomBytes } from 'node:crypto';
 import { Stats } from 'node:fs';
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { defaults } from 'src/dtos/config.dto.js';
 import {
   AssetFileType,
@@ -2175,6 +2178,132 @@ describe(MetadataService.name, () => {
       const result = firstDateTime(tags);
       expect(result?.tag).toBe('CreationDate');
       expect(result?.dateTime?.toDate()?.toISOString()).toBe('2025-05-24T16:26:20.000Z');
+    });
+  });
+
+  describe('ohos moving photo', () => {
+    const paddedTag = (value: string) => Buffer.from(value.padEnd(20, ' '), 'latin1');
+
+    // OpenHarmony MovingPhotoFileUtils layout:
+    // [image][video][cinemagraph?][versionTag 20B][durationTag 20B]["LIVE_" + liveSize 20B]
+    const buildLivePhotoFile = (options: {
+      imageBytes: number;
+      videoBytes: number;
+      versionTag: string;
+      cinemagraphInfo?: Buffer;
+      liveSizeOverride?: number;
+    }) => {
+      const image = Buffer.alloc(options.imageBytes, 0x61);
+      const video = Buffer.alloc(options.videoBytes, 0x76);
+      const cinemagraph = options.cinemagraphInfo ?? Buffer.alloc(0);
+      const hasCinemagraph = options.cinemagraphInfo !== undefined;
+      const cineLengthTag = Buffer.alloc(hasCinemagraph ? 4 : 0);
+      if (hasCinemagraph) {
+        cineLengthTag.writeUInt32BE(cinemagraph.length);
+      }
+      const liveSize = options.liveSizeOverride ?? video.length + 20 + cinemagraph.length + (hasCinemagraph ? 4 : 0);
+      return {
+        video,
+        file: Buffer.concat([
+          image,
+          video,
+          cinemagraph,
+          cineLengthTag,
+          paddedTag(options.versionTag),
+          paddedTag('0:600'),
+          paddedTag(`LIVE_${liveSize}`),
+        ]),
+      };
+    };
+
+    let tempDir: string;
+
+    beforeEach(async () => {
+      tempDir = await mkdtemp(join(tmpdir(), 'immich-ohos-live-photo-'));
+    });
+
+    afterEach(async () => {
+      await rm(tempDir, { recursive: true, force: true });
+    });
+
+    it('should detect and extract a single-file live photo per the OpenHarmony trailer layout', async () => {
+      const { video, file } = buildLivePhotoFile({ imageBytes: 100, videoBytes: 300, versionTag: 'v3_f12' });
+      const filePath = join(tempDir, 'IMG_1.jpg');
+      await writeFile(filePath, file);
+
+      const check = await sut['checkOhosLivePhoto'](filePath, AssetType.Image);
+      expect(check.hasOhosLivePhoto).toBe(1);
+      expect(check.ohosVideoOffset).toBe(320);
+      expect(check.ohosExtraDataSize).toBe(60);
+      expect(check.source).toBe('embedded');
+
+      const extracted = await sut['processOhosLivePhoto'](filePath, file.length, check.ohosVideoOffset, check.ohosExtraDataSize);
+      console.log('DEBUG extracted.length=', extracted.length, 'video.length=', video.length, 'first=', extracted[0], 'last=', extracted[extracted.length - 1], 'check=', JSON.stringify(check));
+      expect(extracted.equals(video)).toBe(true);
+    });
+
+    it('should account for the cinemagraph info when extracting a single-file live photo', async () => {
+      const cinemagraphInfo = Buffer.alloc(10, 0x63);
+      const { video, file } = buildLivePhotoFile({
+        imageBytes: 100,
+        videoBytes: 300,
+        versionTag: 'v3_f12_c',
+        cinemagraphInfo,
+      });
+      const filePath = join(tempDir, 'IMG_2.jpg');
+      await writeFile(filePath, file);
+
+      const check = await sut['checkOhosLivePhoto'](filePath, AssetType.Image);
+      expect(check.hasOhosLivePhoto).toBe(1);
+      expect(check.ohosVideoOffset).toBe(334);
+      expect(check.ohosExtraDataSize).toBe(74);
+
+      const extracted = await sut['processOhosLivePhoto'](filePath, file.length, check.ohosVideoOffset, check.ohosExtraDataSize);
+      expect(extracted.equals(video)).toBe(true);
+    });
+
+    it('should not detect a live photo when the version tag is missing', async () => {
+      const { file } = buildLivePhotoFile({ imageBytes: 100, videoBytes: 300, versionTag: 'not-a-version-tag' });
+      const filePath = join(tempDir, 'IMG_3.jpg');
+      await writeFile(filePath, file);
+
+      const check = await sut['checkOhosLivePhoto'](filePath, AssetType.Image);
+      expect(check.hasOhosLivePhoto).toBe(0);
+    });
+
+    it('should not extract beyond the video bounds of a single-file live photo', async () => {
+      const { file } = buildLivePhotoFile({ imageBytes: 100, videoBytes: 300, versionTag: 'v3_f12', liveSizeOverride: 100_000 });
+      const filePath = join(tempDir, 'IMG_4.jpg');
+      await writeFile(filePath, file);
+
+      const check = await sut['checkOhosLivePhoto'](filePath, AssetType.Image);
+      expect(check.hasOhosLivePhoto).toBe(0);
+    });
+
+    it('should detect a Next moving photo image via the MovingPhotoMeta marker', async () => {
+      const filePath = join(tempDir, 'IMG_5.jpg');
+      await writeFile(filePath, Buffer.concat([Buffer.alloc(64, 0x61), Buffer.from('MovingPhotoMeta', 'utf8')]));
+
+      const check = await sut['checkOhosLivePhoto'](filePath, AssetType.Image);
+      expect(check.hasOhosLivePhoto).toBe(2);
+      expect(check.source).toBe('metadata');
+    });
+
+    it('should detect a Next moving photo video via the mdta covertime key', async () => {
+      const filePath = join(tempDir, 'IMG_5.mp4');
+      await writeFile(filePath, Buffer.concat([Buffer.alloc(64, 0x76), Buffer.from('mdtacom.openharmony.covertime', 'utf8')]));
+
+      const check = await sut['checkOhosLivePhoto'](filePath, AssetType.Video);
+      expect(check.hasOhosLivePhoto).toBe(2);
+      expect(check.source).toBe('videoCoverTime');
+    });
+
+    it('should not detect a moving photo in a plain image', async () => {
+      const filePath = join(tempDir, 'IMG_6.jpg');
+      await writeFile(filePath, Buffer.alloc(512, 0x61));
+
+      const check = await sut['checkOhosLivePhoto'](filePath, AssetType.Image);
+      expect(check.hasOhosLivePhoto).toBe(0);
     });
   });
 });

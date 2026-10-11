@@ -143,6 +143,7 @@ type OhosLivePhotoCheckResult = {
   hasOhosLivePhoto: number;
   ohosFileSize: number;
   ohosVideoOffset: number;
+  ohosExtraDataSize?: number;
   ohosLivePhotoId?: string;
   source?: 'embedded' | 'metadata' | 'xtStyle' | 'videoCoverTime';
 };
@@ -703,10 +704,16 @@ export class MetadataService extends BaseService {
       },
     );
 
-    const { hasOhosLivePhoto, ohosLivePhotoId } = await this.checkOhosLivePhoto(asset.originalPath, asset.type);
+    const { hasOhosLivePhoto, ohosLivePhotoId, ohosFileSize, ohosVideoOffset, ohosExtraDataSize } =
+      await this.checkOhosLivePhoto(asset.originalPath, asset.type);
 
     if (this.isMotionPhoto(asset, exifTags) || hasOhosLivePhoto === 1) {
-      tasks.push(() => this.applyMotionPhotos(asset, exifTags, dates, stats));
+      tasks.push(() => this.applyMotionPhotos(asset, exifTags, dates, stats, {
+        hasOhosLivePhoto,
+        ohosFileSize,
+        ohosVideoOffset,
+        ohosExtraDataSize,
+      }));
     }
 
     if (isFaceImportEnabled(metadata) && this.hasTaggedFaces(exifTags)) {
@@ -990,7 +997,7 @@ export class MetadataService extends BaseService {
     return asset.type === AssetType.Image && !!(tags.MotionPhoto || tags.MicroVideo);
   }
 
-  private async applyMotionPhotos(asset: Asset, tags: ImmichTags, dates: Dates, stats: Stats) {
+  private async applyMotionPhotos(asset: Asset, tags: ImmichTags, dates: Dates, stats: Stats, ohosCheck: OhosLivePhotoCheckResult) {
     const isMotionPhoto = tags.MotionPhoto;
     const isMicroVideo = tags.MicroVideo;
     const videoOffset = tags.MicroVideoOffset;
@@ -999,10 +1006,7 @@ export class MetadataService extends BaseService {
     const directory = Array.isArray(tags.ContainerDirectory)
       ? (tags.ContainerDirectory as ContainerDirectoryItem[])
       : null;
-    const { hasOhosLivePhoto, ohosFileSize, ohosVideoOffset } = await this.checkOhosLivePhoto(
-      asset.originalPath,
-      asset.type,
-    );
+    const { hasOhosLivePhoto, ohosFileSize, ohosVideoOffset, ohosExtraDataSize } = ohosCheck;
 
     let length = 0;
     let padding = 0;
@@ -1021,7 +1025,7 @@ export class MetadataService extends BaseService {
       length = videoOffset;
     }
 
-    if (hasOhosLivePhoto == 1) {
+    if (hasOhosLivePhoto === 1) {
       length = ohosVideoOffset;
       this.logger.log(`Is Ohos JPEG-encoded livephoto (${asset.id})`);
     }
@@ -1046,8 +1050,8 @@ export class MetadataService extends BaseService {
         video = await this.metadataRepository.extractBinaryTag(asset.originalPath, 'EmbeddedVideoFile');
       }
       //     Ohos LivePhoto video extraction; JPEG-encoded
-      else if (hasOhosLivePhoto == 1) {
-        video = await this.processOhosLivePhoto(asset.originalPath, ohosFileSize, ohosVideoOffset);
+      else if (hasOhosLivePhoto === 1) {
+        video = await this.processOhosLivePhoto(asset.originalPath, ohosFileSize, ohosVideoOffset, ohosExtraDataSize);
       }
       // Default video extraction
       else {
@@ -1584,31 +1588,37 @@ export class MetadataService extends BaseService {
     }
   }
 
-  private async processOhosLivePhoto(filePath: string, fileSize: number, offset: number): Promise<Buffer> {
-    if (offset < 0) {
-      throw new Error(`Invalid Ohoslivephoto metadata`);
+  // Single-file live photo payload per OpenHarmony MovingPhotoFileUtils:
+  // [image bytes][video bytes][cinemagraph info?][versionTag 20B "v<n>_f<n>[_c]"][durationTag 20B]["LIVE_" + liveSize 20B]
+  // where liveSize = videoSize + 20 + cinemagraphLength, so the video ends at fileSize - extraDataSize.
+  private async processOhosLivePhoto(
+    filePath: string,
+    fileSize: number,
+    liveSize: number,
+    extraDataSize?: number,
+  ): Promise<Buffer> {
+    if (liveSize < 0) {
+      throw new Error(`Invalid Ohos live photo metadata: liveSize=${liveSize}`);
     }
 
-    let OhosVideoEndOffset = 40;
-    const end = fileSize - OhosVideoEndOffset;
-    const start = end - offset;
-
-    if (start < 0 || start >= end) {
-      throw new Error(`Invalid data range: start=${start}, end=${end}`);
+    const videoStart = fileSize - liveSize - 40;
+    const videoEnd = fileSize - (extraDataSize ?? 60);
+    if (videoStart < 0 || videoStart >= videoEnd) {
+      throw new Error(
+        `Invalid Ohos live photo layout: fileSize=${fileSize}, liveSize=${liveSize}, extraDataSize=${extraDataSize}`,
+      );
     }
 
-    let video: Buffer;
-    const videoLength = end - start + 1;
+    const videoLength = videoEnd - videoStart;
     const fd = await fs.open(filePath, 'r');
 
     try {
-      video = Buffer.alloc(end - start + 1);
-      await fd.read(video, 0, videoLength, start);
+      const video = Buffer.alloc(videoLength);
+      await fd.read(video, 0, videoLength, videoStart);
+      return video;
     } finally {
       await fd.close();
     }
-
-    return video;
   }
 
   private findOhosLivePhotoId(buffer: Buffer, marker?: string): string | undefined {
@@ -1654,49 +1664,42 @@ export class MetadataService extends BaseService {
     }
 
     const ohosFileSize = stats.size;
-    let ohosLiveMetaDataOFFSET = 20;
-    let ohosVideoEndOffset = 40;
-    let metadataBuffer = Buffer.alloc(ohosLiveMetaDataOFFSET);
-    const minSize = ohosVideoEndOffset + 1;
+    // smallest possible single-file live photo: 60B trailer + at least 1 byte of video
+    const minSize = 61;
     if (ohosFileSize < minSize) {
       return { hasOhosLivePhoto, ohosFileSize, ohosVideoOffset };
     }
     if (assetType === AssetType.Image) {
+      const tailLength = Math.min(64, ohosFileSize);
+      const tailBuffer = Buffer.alloc(tailLength);
       const fd = await fs.open(filePath, 'r');
       try {
-        await fd.read(metadataBuffer, 0, ohosLiveMetaDataOFFSET, ohosFileSize - ohosLiveMetaDataOFFSET);
+        await fd.read(tailBuffer, 0, tailLength, ohosFileSize - tailLength);
       } finally {
         await fd.close();
       }
 
-      let liveStr = '';
-      for (let i = 0; i < 5; i++) {
-        const byte = metadataBuffer.readUInt8(i);
-        liveStr += String.fromCharCode(byte);
-      }
-      if (liveStr == 'LIVE_') {
-        hasOhosLivePhoto = 1;
-      }
-
-      let numberStr = '';
-      if (hasOhosLivePhoto) {
-        const startPos = 5;
-        for (let i = startPos; i < metadataBuffer.length; i++) {
-          const byte = metadataBuffer.readUInt8(i);
-          if (byte === 0x20) continue; // Skip spaces
-          if (byte >= 0x30 && byte <= 0x39) {
-            numberStr += String.fromCharCode(byte);
-          } else {
-            break;
+      const liveTag = tailBuffer.subarray(tailLength - 20).toString('latin1');
+      if (liveTag.startsWith('LIVE_')) {
+        // parseInt mirrors the official atoi: leading digits only, padding stops the parse
+        const liveSize = Number.parseInt(liveTag.slice(5), 10);
+        // official validity bounds: imageSize = fileSize - liveSize - 40 > 0 and videoSize = liveSize - 20 > 0
+        if (!Number.isNaN(liveSize) && liveSize > 20 && liveSize < ohosFileSize - 40) {
+          const versionTag = tailBuffer.subarray(tailLength - 60, tailLength - 40).toString('latin1').trim();
+          const versionMatch = /^[vV]\d+_[fF]\d+(_c)?$/.exec(versionTag);
+          if (versionMatch) {
+            let extraDataSize = 60;
+            if (versionMatch[1] === '_c') {
+              if (tailLength < 64) {
+                return { hasOhosLivePhoto, ohosFileSize, ohosVideoOffset };
+              }
+              // cinemagraph length: 4 raw big-endian bytes right before the standard 60B trailer
+              const cineLength = tailBuffer.readUInt32BE(tailLength - 64);
+              extraDataSize = 60 + 4 + cineLength;
+            }
+            hasOhosLivePhoto = 1;
+            return { hasOhosLivePhoto, ohosFileSize, ohosVideoOffset: liveSize, ohosExtraDataSize: extraDataSize, source: 'embedded' };
           }
-        }
-        ohosVideoOffset = parseInt(numberStr, 10);
-
-        if (isNaN(ohosVideoOffset)) {
-          hasOhosLivePhoto = 0;
-          return { hasOhosLivePhoto, ohosFileSize, ohosVideoOffset };
-        } else {
-          return { hasOhosLivePhoto, ohosFileSize, ohosVideoOffset, source: 'embedded' };
         }
       }
     }
