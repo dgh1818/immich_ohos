@@ -34,6 +34,7 @@
         startWindowBackground: "$color:start_window_background",
         "orientation": "auto_rotation_restricted",
         exported: true,
+        launchType: "singleton",
         skills: [
           {
             entities: ["entity.system.home"],
@@ -51,6 +52,15 @@
                 scheme: "file",
                 utd: "general.video",
                 maxFileSupported: 50,
+              },
+            ],
+          },
+          {
+            entities: ["entity.system.browsable"],
+            actions: ["ohos.want.action.viewData"],
+            uris: [
+              {
+                scheme: "app.immich",
               },
             ],
           },

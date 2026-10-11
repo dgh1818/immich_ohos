@@ -28,6 +28,7 @@
     "image_gallery_saver": "file:../har/image_gallery_saver.har",
     "local_auth_ohos": "file:../har/local_auth_ohos.har",
     "huawei_cast": "file:../har/huawei_cast.har",
+    "flutter_web_auth_2": "file:../har/flutter_web_auth_2.har",
     "background_downloader": "file:../har/background_downloader.har",
     "wakelock_plus": "file:../har/wakelock_plus.har",
     "receive_sharing_intent": "file:../har/receive_sharing_intent.har",

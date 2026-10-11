@@ -18,6 +18,7 @@ import ImageGallerySaverPlugin from 'image_gallery_saver';
 import HuaweiCastPlugin from 'huawei_cast';
 import GeolocatorOhosPlugin from 'flutter_geolocator_ohos';
 import FluttertoastPlugin from 'fluttertoast';
+import FlutterWebAuth2Plugin from 'flutter_web_auth_2';
 import FlutterUdidPlugin from 'flutter_udid';
 import FlutterSecureStorageOhosPlugin from 'flutter_secure_storage_ohos';
 import FlutterLocalNotificationsPlugin from 'flutter_local_notifications';
@@ -57,6 +58,7 @@ export class GeneratedPluginRegistrant {
       flutterEngine.getPlugins()?.add(new HuaweiCastPlugin());
       flutterEngine.getPlugins()?.add(new GeolocatorOhosPlugin());
       flutterEngine.getPlugins()?.add(new FluttertoastPlugin());
+      flutterEngine.getPlugins()?.add(new FlutterWebAuth2Plugin());
       flutterEngine.getPlugins()?.add(new FlutterUdidPlugin());
       flutterEngine.getPlugins()?.add(new FlutterSecureStorageOhosPlugin());
       flutterEngine.getPlugins()?.add(new FlutterLocalNotificationsPlugin());

@@ -31,6 +31,7 @@
     "sqflite_ohos": "file:./har/sqflite_ohos.har",
     "flutter_local_notifications": "file:./har/flutter_local_notifications.har",
     "flutter_secure_storage_ohos": "file:./har/flutter_secure_storage_ohos.har",
+    "flutter_web_auth_2": "file:./har/flutter_web_auth_2.har",
     "flutter_udid": "file:./har/flutter_udid.har",
     "flutter_geolocator_ohos": "file:./har/flutter_geolocator_ohos.har",
     "image_picker_ohos": "file:./har/image_picker_ohos.har",

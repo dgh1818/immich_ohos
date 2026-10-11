@@ -35,7 +35,11 @@ dependencies:
   flutter_secure_storage: ^9.2.4
   flutter_svg: ^2.2.4
   flutter_udid: ^4.1.6
-  flutter_web_auth_2: ^5.0.2
+  flutter_web_auth_2:
+    git:
+      url: https://gitcode.com/dgh18/flutter_web_auth_2.git
+      ref: 450b4fe
+      path: flutter_web_auth_2
   fluttertoast: ^8.2.14
   geolocator: ^14.0.2
   home_widget: ^0.9.3
