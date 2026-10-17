@@ -41,7 +41,7 @@
 |---|---|
 | `mobile/lib/providers/app_life_cycle.provider.dart` | `_performPause()` 里 OHOS 必须跳过 `stopForegroundBackup()`(`if (!CurrentPlatform.isOhos)` 保护是否还在);`_shouldContinueOperation()` 对 OHOS 放行 paused/hidden |
 | `server/src/services/metadata.service.ts` | OHOS 动态照片整块(`checkOhosLivePhoto`/`readOhosLivePhotoTrailer`/`processOhosLivePhoto`/`linkOhosLivePhotos` + rescan 子系统)是否保留;`handleMetadataExtraction` 里 `checkOhosLivePhoto` 调用与 `hasOhosLivePhoto === 2 → linkOhosLivePhotos` 接线是否在;LIVE_ 提取公式必须是 `video=[size-liveSize-40, size-extraDataSize)`(2026-10-11 修复,旧公式 end=size-40 会把 40 字节 trailer 读进视频),cinemagraph 长度按 4 字节大端读;`asset.repository.ts` 的 `findOhosLivePhotoMatch` 与 `asset-job.repository.ts` 的 rescan 查询是否保留。上游分支 `ohos-moving-photo`(已推 dgh1818/immich_ohos)是最小移植版,merge 时以本分支为准 |
-| `mobile/lib/providers/backup/drift_backup.provider.dart` | `_startOhosBackgroundTransfer/_stopOhosBackgroundTransfer/_updateOhosBackgroundTransferProgress` 三方法及调用点是否保留;`_stopOhos...` 的 `checkActiveTasks` 保护是否被上游覆盖 |
+| `mobile/lib/providers/backup/backup.provider.dart` | (原名 drift_backup.provider.dart,v3.3.1 线已改名)`_startOhosBackgroundTransfer/_stopOhosBackgroundTransfer/_updateOhosBackgroundTransferProgress` 三方法及调用点是否保留;`_stopOhos...` 的 `checkActiveTasks` 保护与 `isHashing` 让位是否被上游覆盖 |
 | `mobile/lib/domain/services/hash.service.dart` | `_startedBackgroundTransfer` 保活启停逻辑(hash 期间长时任务续命)是否保留 |
 | `mobile/lib/domain/services/background_worker.service.dart` | OHOS 分流必须仍是 `startBackupWithURLSession`(iOS 式 enqueue + 回调),不得被改成安卓式 `uploadCandidates` |
 | `mobile/ohos/entry/src/main/ets/WorkSchedulerExtension/BackgroundWorker.ets` | `onWorkStart()` 必须在插件注册和 `executeDartEntrypoint()` 前调用 `engine.init(ctx, null, false)`;仅调用 `FlutterLoader.ensureInitializationComplete()` 不会 attach 当前 Engine 或建立插件注册表。启动异常与 Dart `onInitialized` 握手超时必须完成任务并销毁 Engine;每次 enqueue 必须携带唯一 `parameters` run token,`onWorkStop()` 按回传 token 匹配当前 run,旧回调不得取消新 run。DevEco 文档限制 WorkSchedulerExtensionAbility 引用 `backgroundTaskManager`,且单次回调最长 2 分钟;从该 extension 启动的 Engine 不得假定 `MessagesImplBase.startBackgroundTransfer()` 能申请长时任务,必须按 UIAbility 长时任务上下文重新确认调用边界并做真机验证 |
@@ -118,11 +118,19 @@
   devecocli ui screenshot --device <serial> --path <local-png-or-jpg>
   ```
 
-- 如需分析“拖动进度条时手指尚未释放”的中间状态，可在单独进程执行 HDC UI swipe，并在该进程退出前调用 `snapshot_display` 或 `devecocli ui screenshot` 保存中间帧：
+- 如需分析“拖动进度条时手指尚未释放”的中间状态，可在单独进程执行 HDC UI `swipe`，并在该进程退出前调用 `snapshot_display` 或 `devecocli ui screenshot` 保存中间帧：
 
   ```text
   hdc -t <serial> shell uitest uiInput swipe <x1> <y1> <x2> <y2> <velocity>
   ```
 
-  `velocity` 使用设备支持的有效范围（当前命令帮助给出的范围为 200–40000）。中间帧仅用于诊断手势过程，完整用户操作仍以系统 MP4 为准。
+  `velocity` 使用设备支持的有效范围（当前命令帮助给出的范围为 200–40000）。`swipe`/`drag` 用于按路径拖动；需要模拟快速惯性滚动时应使用 `fling`，不要把 `swipe` 的速度值直接当成 fling 速度：
+
+  ```text
+  hdc -t <serial> shell uitest uiInput fling <x1> <y1> <x2> <y2> 40000
+  ```
+
+  `fling` 的方向由起止坐标决定；当前设备帮助中的速度上限为 40000。可连续派发多次 fling 做深甩压力测试，并把两次命令的实际起止时间写入 metadata；脚本等待时间设为 0 只表示没有额外 sleep，HDC 命令本身仍有注入耗时。每次测试需录系统 MP4，核对录屏指示器、ffprobe 视频流和 contact sheet；白色占位格要结合逐帧比例、图片加载日志及 hitrace 判断，不能只凭某一张截图判定。
+
+  中间帧仅用于诊断手势过程，完整用户操作仍以系统 MP4 为准。HarmonyOS UI 测试的 `swipe` 和 `fling` 命令形式应以目标设备上的 `uitest uiInput help` 为准；不要把某个应用脚本的手势次数、坐标或速度校准值当成通用值。
 - 录屏、构建、安装和运行时视觉验收是不同证据层级：必须先明确实际安装的 HAP/Engine 版本，再录制实际设备上的操作；不能用构建成功或安装成功替代录屏和用户可见状态的验收。
