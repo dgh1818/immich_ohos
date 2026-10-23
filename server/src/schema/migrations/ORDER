@@ -82,6 +82,8 @@
 1780592070031-ConvertNegativeRatingToNull
 1780592071031-AssetOcrSync
 1781089983296-CreateIntegrityReportTable
+1781748259837-AllowDuplicateExternalLibraryChecksums
+1781960000000-RestoreExternalLibraryChecksumUniqueness
 1782414436633-AddPluginMethodAllowedHosts
 1782500000000-RestoreLivePhotoStillVisibility
 1784647658615-AddOAuthBearerTokenToSession
@@ -98,3 +100,4 @@
 1790587508209-RenameGeoNamesCountries
 1790616293884-PersonSharing
 1790693088454-AddPersonUserTableSharedBySharedWithConstraint
+1792213725597-AddAssetFaceAssetState

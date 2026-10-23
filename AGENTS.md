@@ -62,6 +62,8 @@
 - `docs-build.yml`/`docs-deploy.yml`/`sdk.yml`/`fdroid.yml`(fork 无法运行的上游基础设施:文档站/npm/F-Droid,缺 secrets):2026-09-18 起从注释禁用改为**直接删除**(`3a3a2b07ae`)。注释法挡不住 push 触发——文件存在(哪怕整文件注释)GitHub 仍会用推送中的旧版执行并失败,每次 push 分支/tag 都产生一批红叉(实测)。**merge 上游后这 4 个文件会重新出现,必须重新 `git rm`**,不要再退回注释法;上游内容需要时去 immich-app/immich 查阅
 - server/ 端 merge 必查(2026-09-19 v3.2.1 核查,修复 `2208c90757`):①上游 v3.2.1 起 `server/src/config.ts` 被重构并入 `server/src/dtos/config.dto.ts`(schema+defaults 同文件),fork 对旧 config.ts 的 defaults 定制必须迁到新位置——本次丢了 storageTemplate 默认值(c26d2299ee: `enabled: true` + `'{{album}}/{{filename}}`');`library.useContentHash` 属于已正确迁移的范例。②fork 的 spec 测试块易被上游 spec 重写无声覆盖,`library.service.spec.ts` 的外部库 content-hash/backfill 全套测试(~490 行)曾整块丢失而实现仍在——merge 后对 fork 改过的 `*.spec.ts` 逐个 `git diff <上游tag> HEAD -- <file>` 确认 fork hunk 还在。③Windows 本机跑 server 测试(vitest,`npx vitest --config test/vitest.config.mjs`)有固有环境噪声(上游用正斜杠字面量断言路径),storage-template/ library 的 validate 类失败与纯上游在本机的失败同族,判别回归时用纯上游 tag 的对应文件对照跑;依赖装法=仓库根 `pnpm install --frozen-lockfile`(monorepo)。④**Windows 禁忌**:git worktree 指向主仓库 node_modules 的 junction 上执行 `git worktree remove --force` 会穿透 junction 删除主仓库依赖(实测全毁,需删根 node_modules 后 `pnpm install` 全量重建)
 
+- server schema migrations: 每次 merge 后运行 `server` 的 `sql-tools migrations verify-order`,确认所有 `server/src/schema/migrations/*.ts`(包括 fork 保留的兼容/修复迁移)都登记在 `ORDER` 且顺序正确。2026-10-23 合 v3.3.5 时发现 `1781748259837-AllowDuplicateExternalLibraryChecksums` 与 `1781960000000-RestoreExternalLibraryChecksumUniqueness` 曾漏登记;本次已补入并复验 `ORDER is consistent`
+
 ### 冲突解决原则
 
 1. `app_life_cycle.provider.dart` 出现 backup/stop 相关 diff → 一律保留本分支版本,逐行对照上表
