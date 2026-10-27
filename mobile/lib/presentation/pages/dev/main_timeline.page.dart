@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:auto_route/auto_route.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:immich_mobile/presentation/widgets/feature_message/feature_message_dialog.widget.dart';
@@ -91,6 +92,9 @@ class _MainTimelinePageState extends ConsumerState<MainTimelinePage> {
       children: [
         Positioned.fill(
           child: Timeline(
+            appBar: defaultTargetPlatform == TargetPlatform.ohos
+                ? const ImmichSliverAppBar(floating: true, pinned: false, snap: false, transparent: true)
+                : const ImmichSliverAppBar(floating: true, pinned: false, snap: false),
             topSliverWidget: const SliverToBoxAdapter(child: MemoryLane()),
             topSliverWidgetHeight: hasMemories ? 200 : 0,
             showStorageIndicator: true,

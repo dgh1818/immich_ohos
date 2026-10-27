@@ -27,6 +27,9 @@
 ## OHOS 应用版本号与装机
 
 - OHOS 安装版本的唯一源头是 `mobile/pubspec.yaml` 的 `version: x.y.z+<versionCode>`;只修改这里,再由 `fvm flutter build hap` 自动同步到 `mobile/ohos/AppScope/app.json5` 和最终 HAP 的 `pack.info`,不要把 AppScope 单独作为长期版本源修改。
+- upstream `v3.3.5` 对应的应用版本必须是 `3.3.5+330050000`;升级 Immich 版本时,`versionName` 与对应 build number 必须一起按发布版本调整,不得沿用 `3.3.1` 线的 `330010xxx`。
+- 通过 HDC 自测安装必须使用与当前应用签名密钥匹配且未过期的 `debug`/测试 profile;正式发布 profile 可能以 `9568322: signature verification failed due to not trusted app source` 拒绝侧载。发布签名仅用于正式分发,不得据此卸载已有应用。
+- 当前签名文件位置(`mobile/ohos/build-profile.json5`,只记录路径,禁止记录密码):debug 测试签名 `certpath=C:\Users\dugua\.ohos\config\debug_ohos_wmkEtdMqYjVAd1O9t2zQX3Ye2arAEivZBm2UFrmlREk=.cer`、`profile=C:\Users\dugua\.ohos\config\debug_ohos_wmkEtdMqYjVAd1O9t2zQX3Ye2arAEivZBm2UFrmlREk=.p7b`、`storeFile=C:\Users\dugua\.ohos\config\debug_ohos_wmkEtdMqYjVAd1O9t2zQX3Ye2arAEivZBm2UFrmlREk=.p12`;发布签名材料(`signingConfigs.name=default`)为 `certpath=F:\immich_sign\immich_release.cer`、`profile=F:\immich_sign\immich_testRelease.p7b`、`storeFile=F:\immich_sign\immich_ohos.p12`。当前 `products.default.signingConfig=debug`;`fvm flutter build hap --release` 表示 release 构建模式,不代表使用 release 签名,每次构建/安装前都要检查所选签名配置及最终包的签名类型。
 - 装机前必须检查最终 HAP 内 `pack.info` 的 `version.code` 与目标设备已安装包的 `versionCode`;必须单调递增,否则 HarmonyOS 会报 `install version downgrade`。需要保留应用数据时不得先卸载,应提高 `mobile/pubspec.yaml` 的 build number 后重新构建并使用 `hdc -t <serial> install -r`。
 - `versionName` 可保持上游版本号,但 OHOS build number 必须高于目标设备已有版本;改版本号后必须重新构建 HAP,不能把旧 HAP 当作新版本安装。
 
@@ -53,6 +56,7 @@
 
 - `mobile/lib/domain/services/device_permission.service.dart`:`_gallery()` 里 OHOS 必须保留独立早退分支 `if (CurrentPlatform.isOhos) return handler(.photos);`(与 iOS 分支平行,2026-09-18 修复)。上游 #30477(随 `acb8809b19` merge v3.2.1 进来)把守卫从旧的 `Platform.isAndroid` 反转成"非 iOS 全走 Android 路径",OHOS 上 `getAndroidSdkVersion()` 会硬调 `androidInfo`,而 OHOS fork 的 device_info_plus 返回 OHOS 形状数据,`AndroidBuildVersion._fromMap` 必抛 `type 'Null' is not a subtype of type 'String'`;登录成功后 `requestGalleryPermission()` 在 `TabShellRoute` 跳转前抛异常,表现为"退出登录后无法登录"。同文件守卫若再被上游改写,对照重构前 `gallery_permission.provider.dart` 的 OHOS 行为(非 Android → 直接 `Permission.photos`)
 - `mobile/ohos/.../plugins/connectivity/ConnectivityApiImpl.ets`:`isUnmetered` 必须包含 `bearerTypes.includes(BEARER_WIFI)` 判定。OHOS 系统只给 VPN/穿戴分布式网络报 `NET_CAPABILITY_NOT_METERED`,WiFi 默认网络不报(caps 实测 `[12,15,16]`);只信 caps 会导致 WiFi 下永远被判计费 → 不开"蜂窝备份"就不上传
+- OHOS 原生认证 Cookie:`mobile/ohos/entry/src/main/ets/plugins/core/URLSessionManager.ets` 不得按 Cookie jar 遍历顺序选择多 endpoint 中的 token 并广播;仅当响应更新认证 Cookie 时,以该响应的 request host 为来源同步,`setRequestHeaders` 收到的 Flutter token 是权威值,无 token 时不得保留/传播旧认证 Cookie;登出 `AuthService.clearLocalData()` 必须清空 OHOS 原生 Cookie。合并时逐项核对这些语义。上游同类问题见 immich-app/immich#30857(iOS),勿把其未修复的同步策略带入 OHOS。
 
 - `mobile/pubspec.yaml` 的 `photo_manager` git ref:必须指向 fork(`dgh1818/flutter_photo_manager`)中含 `68089cb`(OHOS `deleteAssets` 单次上限 300 的分片修复,在 `PhotoAssetHandler.ets` 的 deleteWithIds/moveToTrash)或之后的提交,不得换回 pub.dev 版;immich 侧 `asset_media.repository.dart` 的 `deleteAll()` 保持上游原样(分片在插件 native 层)。动态照片备份链依赖 fork 的两处 OHOS 特化:`entity.isLivePhoto` 非 iOS 走 `subtype == 3`(=媒体库 `PhotoSubtype.MOVING_PHOTO`,旧固件该枚举值若不同则动态照片静默降级为纯照片) + `getFullSizeFileWithId` 里 `photoSubtype==3 && subtype==3` 时走官方 `MovingPhoto.requestContent(VIDEO_RESOURCE)` 提取伴随 mp4;升级 photo_manager 时必须逐行核对这两处还在
 - `mobile/lib/repositories/upload.repository.dart`:`Platform.isOhos` 的 `OhosMultipartRequest`(filePath 直传)分支是否保留
@@ -65,6 +69,8 @@
 - server schema migrations: 每次 merge 后运行 `server` 的 `sql-tools migrations verify-order`,确认所有 `server/src/schema/migrations/*.ts`(包括 fork 保留的兼容/修复迁移)都登记在 `ORDER` 且顺序正确。2026-10-23 合 v3.3.5 时发现 `1781748259837-AllowDuplicateExternalLibraryChecksums` 与 `1781960000000-RestoreExternalLibraryChecksumUniqueness` 曾漏登记;本次已补入并复验 `ORDER is consistent`
 
 ### 冲突解决原则
+
+- OHOS beta 主照片时间线顶部布局:`mobile/lib/presentation/pages/dev/main_timeline.page.dart` 的同步/上传/备份/头像控件必须继续由外层 `Stack` 覆盖在网格上;OHOS 分支必须给 `Timeline` 传 `appBar: null`,不能让默认 `Timeline.appBar` 留下一条空的 `ImmichSliverAppBar`。每次 merge 人工核对该页、`mobile/lib/presentation/widgets/timeline/timeline.widget.dart` 默认 AppBar 和 `mobile/lib/widgets/common/immich_sliver_app_bar.dart` 的背景/标题/动作,并在真机检查滚动到顶与滚动后两种状态。回归来源已查明:`v3.2.1` merge (`acb8809b19`) 把 `ImmichSliverAppBar.backgroundColor` 从透明改为主题 surface、并把默认 `Timeline` AppBar 从 pinned 改为不固定;OHOS 标题此前已被本地改成空 `SizedBox.shrink`,因此该 merge 让空 AppBar 显示成顶部浅色空栏。后续 `v3.3.5` merge 未触碰这些相关文件。修复时保留 OHOS 叠加控件,不要靠重新塞回头像/备份按钮来填充空栏。
 
 1. `app_life_cycle.provider.dart` 出现 backup/stop 相关 diff → 一律保留本分支版本,逐行对照上表
 2. 上游重构 backup 编排 → 先 `git log -S "stopForegroundBackup" -- mobile/lib/providers/` 考古再决定

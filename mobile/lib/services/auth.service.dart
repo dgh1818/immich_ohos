@@ -5,6 +5,7 @@ import 'package:immich_mobile/domain/models/settings_key.dart';
 import 'package:immich_mobile/domain/models/store.model.dart';
 import 'package:immich_mobile/domain/utils/background_sync.dart';
 import 'package:immich_mobile/entities/store.entity.dart';
+import 'package:immich_mobile/extensions/platform_extensions.dart';
 import 'package:immich_mobile/infrastructure/repositories/network.repository.dart';
 import 'package:immich_mobile/infrastructure/repositories/settings.repository.dart';
 import 'package:immich_mobile/models/auth/auxilary_endpoint.model.dart';
@@ -131,6 +132,14 @@ class AuthService {
         .networkExternalEndpointList,
       ]),
     ]);
+
+    if (CurrentPlatform.isOhos) {
+      try {
+        await NetworkRepository.setHeaders(ApiService.getRequestHeaders(), const [], token: null);
+      } catch (error, stackTrace) {
+        _log.warning('Unable to clear OHOS authentication cookies', error, stackTrace);
+      }
+    }
   }
 
   Future<void> changePassword({required String currentPassword, required String newPassword}) async {

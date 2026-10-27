@@ -28,6 +28,7 @@ class ImmichSliverAppBar extends ConsumerWidget {
   final bool floating;
   final bool pinned;
   final bool snap;
+  final bool transparent;
   final Widget? title;
   final double? expandedHeight;
 
@@ -38,6 +39,7 @@ class ImmichSliverAppBar extends ConsumerWidget {
     this.floating = true,
     this.pinned = false,
     this.snap = true,
+    this.transparent = false,
     this.title,
     this.expandedHeight,
   });
@@ -54,10 +56,11 @@ class ImmichSliverAppBar extends ConsumerWidget {
         duration: Durations.medium1,
         opacity: isMultiSelectEnabled ? 0 : 1,
         sliver: SliverAppBar(
-          backgroundColor: context.colorScheme.surface,
-          surfaceTintColor: context.colorScheme.surfaceTint,
+          backgroundColor: transparent ? Colors.transparent : context.colorScheme.surface,
+          surfaceTintColor: transparent ? Colors.transparent : context.colorScheme.surfaceTint,
           elevation: 0,
-          scrolledUnderElevation: 1.0,
+          scrolledUnderElevation: transparent ? 0 : 1.0,
+          forceMaterialTransparency: transparent,
           floating: floating,
           pinned: pinned,
           snap: snap,

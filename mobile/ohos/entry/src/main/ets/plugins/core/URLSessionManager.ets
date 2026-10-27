@@ -133,10 +133,15 @@ export class URLSessionManager {
     }
 
     const cookies = URLSessionManager.loadCookies(context).slice();
+    let hasAuthCookieUpdate = false;
     setCookieValues.forEach((value) => {
       const parsed = URLSessionManager.parseSetCookie(requestUrl, value);
       if (!parsed) {
         return;
+      }
+
+      if (URLSessionManager.AUTH_COOKIE_NAMES.has(parsed.name)) {
+        hasAuthCookieUpdate = true;
       }
 
       const existingIndex = cookies.findIndex((cookie) =>
@@ -152,10 +157,15 @@ export class URLSessionManager {
       }
     });
 
-    const syncedCookies = URLSessionManager.syncAuthCookies(
-      URLSessionManager.removeExpiredCookies(cookies),
-      URLSessionManager.loadRequestState(context).serverUrls
-    );
+    let syncedCookies = URLSessionManager.removeExpiredCookies(cookies);
+    const requestHost = URLSessionManager.parseRequestUrl(requestUrl)?.host;
+    if (hasAuthCookieUpdate && requestHost) {
+      syncedCookies = URLSessionManager.syncAuthCookies(
+        syncedCookies,
+        URLSessionManager.loadRequestState(context).serverUrls,
+        requestHost
+      );
+    }
     URLSessionManager.persistCookies(context, syncedCookies);
   }
 
@@ -192,9 +202,16 @@ export class URLSessionManager {
     };
     URLSessionManager.requestStateLoaded = true;
 
-    let cookies = URLSessionManager.syncAuthCookies(URLSessionManager.loadCookies(context), serverUrls);
+    let cookies = URLSessionManager.removeExpiredCookies(URLSessionManager.loadCookies(context));
     if (token !== undefined && token !== null && token.length > 0) {
+      // The Flutter token is authoritative. Do not let an arbitrary cookie from
+      // another configured host replace it while preparing the native cookie jar.
+      cookies = URLSessionManager.removeAuthCookiesForServerUrls(cookies, serverUrls);
       cookies = URLSessionManager.mergeCookies(cookies, URLSessionManager.createAuthCookies(serverUrls, token));
+    } else {
+      // A missing token is an unauthenticated state; stale native cookies must
+      // not survive logout or be copied back onto a later endpoint.
+      cookies = cookies.filter((cookie) => !URLSessionManager.AUTH_COOKIE_NAMES.has(cookie.name));
     }
     URLSessionManager.persistCookies(context, cookies);
   }
@@ -493,7 +510,11 @@ export class URLSessionManager {
     return URLSessionManager.removeExpiredCookies(merged);
   }
 
-  private static syncAuthCookies(cookies: StoredCookie[], serverUrls: string[]): StoredCookie[] {
+  private static syncAuthCookies(
+    cookies: StoredCookie[],
+    serverUrls: string[],
+    sourceHost: string
+  ): StoredCookie[] {
     const parsedServerUrls: ParsedServerUrl[] = [];
     serverUrls.forEach((serverUrl) => {
       const parsed = URLSessionManager.parseServerUrl(serverUrl);
@@ -505,21 +526,32 @@ export class URLSessionManager {
       return cookies;
     }
 
-    const serverHosts = new Set<string>(parsedServerUrls.map((serverUrl) => serverUrl.host));
+    const normalizedSourceHost = sourceHost.toLowerCase();
+    const serverHosts = new Set<string>(parsedServerUrls.map((serverUrl) => serverUrl.host.toLowerCase()));
+    if (!serverHosts.has(normalizedSourceHost)) {
+      return cookies;
+    }
+
     const now = Date.now();
     const sourceCookies = new Map<string, StoredCookie>();
     cookies.forEach((cookie) => {
       if (
         URLSessionManager.AUTH_COOKIE_NAMES.has(cookie.name) &&
-        serverHosts.has(cookie.domain) &&
+        URLSessionManager.domainMatches(sourceHost, cookie.domain) &&
         !URLSessionManager.isExpiredCookie(cookie, now)
       ) {
-        sourceCookies.set(cookie.name, cookie);
+        const previous = sourceCookies.get(cookie.name);
+        const isExactHostCookie = cookie.domain.toLowerCase() === sourceHost.toLowerCase();
+        const previousIsExactHostCookie = previous?.domain.toLowerCase() === sourceHost.toLowerCase();
+        if (!previous || isExactHostCookie || !previousIsExactHostCookie) {
+          sourceCookies.set(cookie.name, cookie);
+        }
       }
     });
 
     const filteredCookies = cookies.filter((cookie) =>
-      !(URLSessionManager.AUTH_COOKIE_NAMES.has(cookie.name) && serverHosts.has(cookie.domain))
+      !(URLSessionManager.AUTH_COOKIE_NAMES.has(cookie.name) &&
+        parsedServerUrls.some((serverUrl) => URLSessionManager.domainMatches(serverUrl.host, cookie.domain)))
     );
 
     if (sourceCookies.size === 0) {
@@ -541,6 +573,24 @@ export class URLSessionManager {
     });
 
     return filteredCookies;
+  }
+
+  private static removeAuthCookiesForServerUrls(cookies: StoredCookie[], serverUrls: string[]): StoredCookie[] {
+    const serverHosts: string[] = [];
+    serverUrls.forEach((serverUrl) => {
+      const parsed = URLSessionManager.parseServerUrl(serverUrl);
+      if (parsed) {
+        serverHosts.push(parsed.host);
+      }
+    });
+    if (serverHosts.length === 0) {
+      return cookies.filter((cookie) => !URLSessionManager.AUTH_COOKIE_NAMES.has(cookie.name));
+    }
+
+    return cookies.filter((cookie) =>
+      !URLSessionManager.AUTH_COOKIE_NAMES.has(cookie.name) ||
+      !serverHosts.some((host) => URLSessionManager.domainMatches(host, cookie.domain))
+    );
   }
 
   private static createAuthCookies(serverUrls: string[], token: string): StoredCookie[] {
@@ -748,7 +798,9 @@ export class URLSessionManager {
   }
 
   private static domainMatches(host: string, domain: string): boolean {
-    return host === domain || host.endsWith(`.${domain}`);
+    const normalizedHost = host.toLowerCase();
+    const normalizedDomain = domain.toLowerCase();
+    return normalizedHost === normalizedDomain || normalizedHost.endsWith(`.${normalizedDomain}`);
   }
 
   private static pathMatches(requestPath: string, cookiePath: string): boolean {
