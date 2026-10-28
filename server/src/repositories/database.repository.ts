@@ -5,7 +5,7 @@ import { Kysely, sql } from 'kysely';
 import { FileMigrationProvider, Migrator } from 'kysely/migration';
 import { InjectKysely } from 'nestjs-kysely';
 import { readdir } from 'node:fs/promises';
-import { join } from 'node:path';
+import { join, normalize } from 'node:path';
 import { diff } from 'semver';
 import z from 'zod';
 import type { ExtensionVersion, VectorExtension } from 'src/types.js';
@@ -20,7 +20,7 @@ import {
   serverVersion,
 } from 'src/constants.js';
 import { GenerateSql } from 'src/decorators.js';
-import { DatabaseExtension, DatabaseLock, VectorIndex } from 'src/enum.js';
+import { ChecksumAlgorithm, DatabaseExtension, DatabaseLock, VectorIndex } from 'src/enum.js';
 import { ConfigRepository } from 'src/repositories/config.repository.js';
 import { LoggingRepository } from 'src/repositories/logging.repository.js';
 import { immich_uuid_v7 } from 'src/schema/functions.js';
@@ -385,7 +385,7 @@ export class DatabaseRepository {
 
     await this.fixExternalLibraryChecksumMigrationOrder();
 
-    const migrator = this.createMigrator();
+    const migrator = this.createMigrator(await this.needsUnorderedExternalLibraryChecksumMigrations());
 
     const { error, results = [] } = await migrator.migrateToLatest();
 
@@ -437,7 +437,42 @@ export class DatabaseRepository {
     `.execute(this.db);
   }
 
+  private async needsUnorderedExternalLibraryChecksumMigrations(): Promise<boolean> {
+    const migrations = await this.createMigrator().getMigrations();
+    const names = migrations.map(({ name }) => name);
+    const executed = migrations
+      .filter(({ executedAt }) => executedAt)
+      .toSorted((a, b) => a.executedAt!.getTime() - b.executedAt!.getTime() || a.name.localeCompare(b.name))
+      .map(({ name }) => name);
+
+    if (executed.every((name, index) => name === names[index])) {
+      return false;
+    }
+
+    const checksumMigrations = [
+      '1781748259837-AllowDuplicateExternalLibraryChecksums',
+      '1781960000000-RestoreExternalLibraryChecksumUniqueness',
+    ];
+    const isChecksumMigration = (name: string) => checksumMigrations.includes(name);
+    const otherNames = names.filter((name) => !isChecksumMigration(name));
+    const otherExecuted = executed.filter((name) => !isChecksumMigration(name));
+    const checksumExecuted = executed.filter(isChecksumMigration);
+
+    if (
+      executed.includes('1782414436633-AddPluginMethodAllowedHosts') &&
+      otherExecuted.every((name, index) => name === otherNames[index]) &&
+      checksumExecuted.every((name, index) => name === checksumMigrations[index])
+    ) {
+      this.logger.warn('Allowing the known external-library checksum migration order after upstream migrations');
+      return true;
+    }
+
+    return false;
+  }
+
   async migrateFilePaths(sourceFolder: string, targetFolder: string): Promise<void> {
+    targetFolder = normalize(targetFolder);
+
     // remove trailing slashes
     if (sourceFolder.endsWith('/')) {
       sourceFolder = sourceFolder.slice(0, -1);
@@ -449,15 +484,26 @@ export class DatabaseRepository {
 
     // escaping regex special characters with a backslash
     const sourceRegex = '^' + sourceFolder.replaceAll(/[-[\]{}()*+?.,\\^$|#\s]/g, String.raw`\$&`);
-    const source = sql.raw(`'${sourceRegex}'`);
+    const source = sql.lit(sourceRegex);
     const target = sql.lit(targetFolder);
+    const remappedAssetPath = sql<string>`REGEXP_REPLACE("originalPath", ${source}, ${target})`;
 
     await this.db.transaction().execute(async (tx) => {
       await tx
         .updateTable('asset')
-        .set((eb) => ({
-          originalPath: eb.fn('REGEXP_REPLACE', ['originalPath', source, target]),
-        }))
+        .set({
+          originalPath: remappedAssetPath,
+          checksum: sql<Buffer>`digest('path:' || ${remappedAssetPath}, 'sha1')`,
+        })
+        .where('isExternal', '=', true)
+        .where('checksumAlgorithm', '=', ChecksumAlgorithm.sha1Path)
+        .where('originalPath', '~', sourceRegex)
+        .execute();
+
+      await tx
+        .updateTable('asset')
+        .set({ originalPath: remappedAssetPath })
+        .where((eb) => eb.or([eb('isExternal', '=', false), eb('checksumAlgorithm', '!=', ChecksumAlgorithm.sha1Path)]))
         .execute();
 
       await tx
@@ -520,11 +566,11 @@ export class DatabaseRepository {
     await sql`SELECT pg_advisory_unlock(${lock})`.execute(connection);
   }
 
-  private createMigrator(): Migrator {
+  private createMigrator(allowUnorderedMigrations = false): Migrator {
     return new Migrator({
       db: this.db,
       migrationLockTableName: 'kysely_migrations_lock',
-      allowUnorderedMigrations: this.configRepository.isDev(),
+      allowUnorderedMigrations: this.configRepository.isDev() || allowUnorderedMigrations,
       migrationTableName: 'kysely_migrations',
       provider: new FileMigrationProvider({
         fs: { readdir },
