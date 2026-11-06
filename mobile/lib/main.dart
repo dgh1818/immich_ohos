@@ -127,7 +127,9 @@ Future<void> initApp() async {
 
   await FileDownloader().trackTasksInGroup(kDownloadGroupLivePhoto, markDownloadedComplete: false);
 
-  unawaited(FileDownloader().trackTasks());
+  // On OHOS, a leftover task file may belong to an earlier download selection.
+  // Do not synthesize a completion callback from file existence alone.
+  unawaited(FileDownloader().trackTasks(markDownloadedComplete: !Platform.isOhos));
 
   LicenseRegistry.addLicense(() async* {
     for (final license in nonPubLicenses.entries) {

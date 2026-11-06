@@ -38,7 +38,13 @@ class DownloadService {
     _downloadRepository.onTaskProgress = _onTaskProgressCallback;
     _downloadRepository.onLivePhotoRecordComplete = _onLivePhotoRecordComplete;
 
-    unawaited(_savePreviouslyCompletedLivePhotos());
+    // OHOS task records survive restarts. Automatically saving every completed
+    // pair here can save photos from an older selection during an unrelated
+    // download action; OHOS Live Photos are saved from the selected download's
+    // completion callbacks instead.
+    if (!Platform.isOhos) {
+      unawaited(_savePreviouslyCompletedLivePhotos());
+    }
   }
 
   Future<void> _savePreviouslyCompletedLivePhotos() async {

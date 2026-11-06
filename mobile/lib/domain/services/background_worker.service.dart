@@ -202,7 +202,10 @@ class BackgroundWorkerBgService extends BackgroundWorkerFlutterApi {
           'trackTasksInGroup(live photo downloads)',
           () => FileDownloader().trackTasksInGroup(kDownloadGroupLivePhoto, markDownloadedComplete: false),
         ),
-        _runStage('trackTasks', () => FileDownloader().trackTasks()),
+        _runStage(
+          'trackTasks',
+          () => FileDownloader().trackTasks(markDownloadedComplete: !CurrentPlatform.isOhos),
+        ),
       ];
       final authService = _ref?.read(authServiceProvider);
       if (authService != null) {
