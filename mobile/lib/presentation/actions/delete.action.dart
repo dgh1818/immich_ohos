@@ -122,8 +122,8 @@ class DeleteAction extends AssetActionBuilder {
   }) async {
     final assetService = ref.read(assetServiceProvider);
     if (localIds.isNotEmpty) {
-      await _cleanupLocalAssets(context, ref, localIds, isLocalOnly: isLocalOnly);
-      if (!context.mounted) {
+      final count = await _cleanupLocalAssets(context, ref, localIds, isLocalOnly: isLocalOnly);
+      if (count <= 0 || !context.mounted) {
         return null;
       }
     }
