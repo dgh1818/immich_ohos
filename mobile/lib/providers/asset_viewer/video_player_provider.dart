@@ -50,7 +50,6 @@ class VideoPlayerNotifier extends StateNotifier<VideoPlayerState> {
 
   @override
   void dispose() {
-    _playbackGeneration++;
     _bufferingTimer?.cancel();
     _seekTimer?.cancel();
     unawaited(WakelockPlus.disable());
@@ -176,13 +175,18 @@ class VideoPlayerNotifier extends StateNotifier<VideoPlayerState> {
 
     final pendingSeek = controller.seekTo(state.position.inMilliseconds);
     _pendingSeek = pendingSeek;
+    var succeeded = false;
     try {
       await pendingSeek;
+      succeeded = true;
     } catch (e) {
       _log.severe('Error seeking video: $e');
     } finally {
       if (identical(_pendingSeek, pendingSeek)) {
         _pendingSeek = null;
+        if (CurrentPlatform.isOhos && succeeded && identical(_controller, controller)) {
+          onNativePositionChanged();
+        }
         if (mounted && state.status == VideoPlaybackStatus.playing) {
           _startBufferingTimer();
         }
@@ -289,9 +293,7 @@ class VideoPlayerNotifier extends StateNotifier<VideoPlayerState> {
   void onNativePositionChanged() {
     if (!mounted ||
         _isScrubbing ||
-        (CurrentPlatform.isOhos &&
-            _pendingSeek != null &&
-            (state.status == VideoPlaybackStatus.playing || state.status == VideoPlaybackStatus.buffering)) ||
+        (CurrentPlatform.isOhos && _pendingSeek != null) ||
         (_seekTimer?.isActive ?? false)) {
       return;
     }

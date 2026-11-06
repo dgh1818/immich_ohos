@@ -7,7 +7,6 @@ import 'package:immich_mobile/domain/models/asset/base_asset.model.dart';
 import 'package:immich_mobile/domain/models/store.model.dart';
 import 'package:immich_mobile/entities/store.entity.dart';
 import 'package:immich_mobile/extensions/platform_extensions.dart';
-import 'package:immich_mobile/infrastructure/repositories/storage.repository.dart';
 import 'package:immich_mobile/presentation/widgets/asset_viewer/video_viewer_controls.widget.dart';
 import 'package:immich_mobile/providers/asset_viewer/asset_viewer.provider.dart';
 import 'package:immich_mobile/providers/asset_viewer/is_motion_video_playing.provider.dart';
@@ -184,7 +183,7 @@ class NativeVideoViewerState extends ConsumerState<NativeVideoViewer> with Widge
         _log.warning('Local file missing for ${videoAsset.name} (${videoAsset.localId}), playing the remote copy');
       }
 
-      final remoteId = (videoAsset as RemoteAsset).id;
+      final remoteAsset = videoAsset as RemoteAsset;
 
       final serverEndpoint = Store.get(StoreKey.serverEndpoint);
       if (!context.mounted) {
@@ -193,14 +192,16 @@ class NativeVideoViewerState extends ConsumerState<NativeVideoViewer> with Widge
 
       final isOriginalVideo = ref.read(appConfigProvider).viewer.loadOriginalVideo;
       final String postfixUrl = isOriginalVideo ? 'original' : 'video/playback';
-      final String videoUrl = videoAsset.livePhotoVideoId != null
-          ? '$serverEndpoint/assets/${videoAsset.livePhotoVideoId}/$postfixUrl'
-          : '$serverEndpoint/assets/$remoteId/$postfixUrl';
+      final String assetId = remoteAsset.livePhotoVideoId ?? remoteAsset.id;
+      final String videoUrl = '$serverEndpoint/assets/$assetId/$postfixUrl';
 
       return await VideoSource.init(
         path: videoUrl,
         type: VideoSourceType.network,
-        headers: ApiService.getAuthenticatedRequestHeaders(videoUrl),
+        headers: {
+          ...ApiService.getAuthenticatedRequestHeaders(videoUrl),
+          if (CurrentPlatform.isOhos) 'X-Immich-Seek-Transport': 'http1',
+        },
       );
     } catch (error) {
       _log.severe('Error creating video source for asset ${videoAsset.name}: $error');

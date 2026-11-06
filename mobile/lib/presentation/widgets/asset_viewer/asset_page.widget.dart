@@ -12,6 +12,7 @@ import 'package:immich_mobile/domain/models/setting.model.dart';
 import 'package:immich_mobile/domain/services/timeline.service.dart';
 import 'package:immich_mobile/domain/utils/event_stream.dart';
 import 'package:immich_mobile/extensions/build_context_extensions.dart';
+import 'package:immich_mobile/extensions/platform_extensions.dart';
 import 'package:immich_mobile/extensions/scroll_extensions.dart';
 import 'package:immich_mobile/presentation/widgets/asset_viewer/asset_details.widget.dart';
 import 'package:immich_mobile/presentation/widgets/asset_viewer/asset_stack.provider.dart';
@@ -527,7 +528,16 @@ class _AssetPageState extends ConsumerState<AssetPage> {
                   child: _buildPhotoView(
                     asset: displayAsset,
                     heroAttributes: isCurrent
-                        ? PhotoViewHeroAttributes(tag: '${asset.heroTag}_${widget.heroOffset}')
+                        ? PhotoViewHeroAttributes(
+                            tag: '${asset.heroTag}_${widget.heroOffset}',
+                            // Keep the OHOS player alive while the thumbnail is in flight.
+                            placeholderBuilder: CurrentPlatform.isOhos && displayAsset.isVideo
+                                ? (context, heroSize, child) => SizedBox.fromSize(
+                                    size: heroSize,
+                                    child: Offstage(child: TickerMode(enabled: false, child: child)),
+                                  )
+                                : null,
+                          )
                         : null,
                     isCurrent: isCurrent,
                     isPlayingMotionVideo: isPlayingMotionVideo,
