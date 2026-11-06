@@ -6,6 +6,8 @@
 - Prefer the smallest necessary patch.
 - Do not introduce unnecessary abstractions, wrappers, or local deviations from upstream behavior.
 - Do not rewrite upstream logic unless required for the task.
+- Immich 本体与插件都要逐行压缩相对上游版本的差异，保留上游变量名与写法，能内联的简单处理不要另起函数。OHOS 修复优先放在 ArkTS，只有平台返回值无法完整表达界面状态时才保留必要的 Dart 适配；不得为减少行数删掉已有 HDR、投屏、备份等功能。
+- 需要子代理时默认使用 Sol；未经用户另行指定，不调用 Astra。
 
 ## NetStack 修复后的 NetworkKit 切换
 
@@ -23,15 +25,28 @@
 ## Flutter OHOS 引擎构建
 
 - 引擎(WSL `~/engine_3.44.9`)一律用仓库自带的 `./ohos -t release` 构建,不得手工拼 ninja/out 目录或另写构建命令。构建产物同步进 `mobile/ohos/har/flutter.har` 后再构建 HAP;装机前必须确认源码 mtime 早于 HAP 构建时间,禁止把旧构建当新版安装。
+- Windows 构建 ARM64 release HAP 时，不能只检查 AOT 工具的 `windows_simarm64` 或 `libapp.so` 的 ELF `e_machine=183`；snapshot 的目标系统与压缩指针配置也必须匹配选用的 Engine。2026-11-04 实测当前 runtime 要求 `arm64 ohos compressed-pointers`；普通 `host_release\gen_snapshot.exe` 输出 x86-64，`gen_snapshot_product_linux_arm64.exe` 虽输出 ARM64，却是 `arm64 linux no-compressed-pointers`，两者都不能用于当前 OHOS runtime。Windows 配套工具恢复前，用现有 WSL `/home/dgh18/engine_3.44.9/engine/src/out/ohos_release_arm64/clang_x64/gen_snapshot` 对本次 app.dill 生成应用 AOT，再重新打包签名；不要为此重编或替换 Engine/HAR。核对最终 HAP 的 ELF、snapshot features 和 `libflutter.so` SHA256，避免把应用启动前的 isolate 崩溃误判为 Dart 设置改动。
+- 不得仅凭文件名或工具自身是 x64，就把 Windows host_release/gen_snapshot.exe 复制到 FVM 的 OHOS 目录作为手机 AOT 工具。必须用当前 app.dill 生成产物并核对 AArch64 ELF、`arm64 ohos compressed-pointers`、工具与 Engine 的构建版本；安装前还要核对最终 HAP 内 libflutter.so 的 SHA256 与本次验证通过的 WSL Engine/HAR 一致。
 
 ## OHOS 应用版本号与装机
 
 - OHOS 安装版本的唯一源头是 `mobile/pubspec.yaml` 的 `version: x.y.z+<versionCode>`;只修改这里,再由 `fvm flutter build hap` 自动同步到 `mobile/ohos/AppScope/app.json5` 和最终 HAP 的 `pack.info`,不要把 AppScope 单独作为长期版本源修改。
 - upstream `v3.3.5` 对应的应用版本必须是 `3.3.5+330050000`;升级 Immich 版本时,`versionName` 与对应 build number 必须一起按发布版本调整,不得沿用 `3.3.1` 线的 `330010xxx`。
 - 通过 HDC 自测安装必须使用与当前应用签名密钥匹配且未过期的 `debug`/测试 profile;正式发布 profile 可能以 `9568322: signature verification failed due to not trusted app source` 拒绝侧载。发布签名仅用于正式分发,不得据此卸载已有应用。
-- 当前签名文件位置(`mobile/ohos/build-profile.json5`,只记录路径,禁止记录密码):debug 测试签名 `certpath=C:\Users\dugua\.ohos\config\debug_ohos_wmkEtdMqYjVAd1O9t2zQX3Ye2arAEivZBm2UFrmlREk=.cer`、`profile=C:\Users\dugua\.ohos\config\debug_ohos_wmkEtdMqYjVAd1O9t2zQX3Ye2arAEivZBm2UFrmlREk=.p7b`、`storeFile=C:\Users\dugua\.ohos\config\debug_ohos_wmkEtdMqYjVAd1O9t2zQX3Ye2arAEivZBm2UFrmlREk=.p12`;发布签名材料(`signingConfigs.name=default`)为 `certpath=F:\immich_sign\immich_release.cer`、`profile=F:\immich_sign\immich_testRelease.p7b`、`storeFile=F:\immich_sign\immich_ohos.p12`。当前 `products.default.signingConfig=debug`;`fvm flutter build hap --release` 表示 release 构建模式,不代表使用 release 签名,每次构建/安装前都要检查所选签名配置及最终包的签名类型。
+- 当前签名文件位置(`mobile/ohos/build-profile.json5`,只记录路径,禁止记录密码):当前 `products.default.signingConfig=debug`。
+  - Debug 构建签名配置引用 `certpath=C:\Users\dugua\.ohos\config\debug_ohos_wmkEtdMqYjVAd1O9t2zQX3Ye2arAEivZBm2UFrmlREk=.cer`、最新 `profile=C:\Users\dugua\.ohos\config\immich_debug_20261102Debug.p7b`、`storeFile=C:\Users\dugua\.ohos\config\debug_ohos_wmkEtdMqYjVAd1O9t2zQX3Ye2arAEivZBm2UFrmlREk=.p12`。
+  - AGC 中为该应用登记的 Debug 证书文件位于 `C:\Users\dugua\Downloads\auto_debug_80086000132630559.cer.cer`(公有证书文件,不是密钥库)。
+  - 发布签名材料(`signingConfigs.name=default`)为 `certpath=F:\immich_sign\immich_release.cer`、`profile=F:\immich_sign\immich_testRelease.p7b`、`storeFile=F:\immich_sign\immich_ohos.p12`。
+  - `fvm flutter build hap --release` 表示 release 构建模式,不代表使用 release 签名;每次构建/安装前都要检查所选签名配置及最终包的签名类型。
 - 装机前必须检查最终 HAP 内 `pack.info` 的 `version.code` 与目标设备已安装包的 `versionCode`;必须单调递增,否则 HarmonyOS 会报 `install version downgrade`。需要保留应用数据时不得先卸载,应提高 `mobile/pubspec.yaml` 的 build number 后重新构建并使用 `hdc -t <serial> install -r`。
 - `versionName` 可保持上游版本号,但 OHOS build number 必须高于目标设备已有版本;改版本号后必须重新构建 HAP,不能把旧 HAP 当作新版本安装。
+
+## AppGallery 测试版发布与更新日志
+
+- 编写新测试版的“测试说明”时,如果用户提供上次版本的更新日志作为参考,必须把它当作已发布版本的基线,不能原样保留旧条目后再追加新条目。只写本次版本相对上次发布新增或修复的内容;提交前逐条确认每条都属于本次版本,并检查版本范围和条目没有沿用旧版文案。
+- 最终点击“提交审核”前,重新核对测试说明全文、HAP 版本号/版本码、测试组、市场范围、加密选项和自测附件。AppGallery 受理后可能立即进入预审,测试说明会变为只读且页面没有撤回入口;预审通过还会自动提交应用市场审核。因此不能把提交后的预审阶段当作可编辑草稿。
+- “准备提交”状态可能同时显示正在预审;以页面提示和字段是否只读判断实际阶段,不要只凭列表状态文字推断尚未提交。出现预审提示后先核实状态,不要重复提交。
+- 新建正式版草稿时，自测文件可能自动继承上个正式版的附件；用户指定新视频后，只保留本次指定的视频，检查并移除草稿内继承的旧视频，再保存并复核。除非用户另有要求，邀请测试版不上传自测视频。
 
 ## Merging Upstream Tags (OHOS)
 
@@ -62,11 +77,15 @@
 - `mobile/lib/repositories/upload.repository.dart`:`Platform.isOhos` 的 `OhosMultipartRequest`(filePath 直传)分支是否保留
 - `mobile/pubspec.yaml` + `mobile/ohos/oh-package.json5`:`background_downloader` 等 OHOS override(`../../package_flutter/...` 与 `file:./har/*.har`)是否被升级冲掉
 - 投屏 / AVSession 链路:`mobile/pubspec.yaml` 的 `huawei_cast` override 必须指向 `../../package_flutter/huawei_cast`;`mobile/ohos/oh-package.json5` 必须把 `huawei_cast` override 到 `file:./har/huawei_cast.har`,`mobile/ohos/entry/oh-package.json5` 必须依赖 `file:../har/huawei_cast.har`;`mobile/ohos/entry/src/main/ets/plugins/GeneratedPluginRegistrant.ets` 必须从 `huawei_cast` 导入并注册 `HuaweiCastPlugin`。真实调用链应保持 `CastDialog → CastNotifier.connect → GCastService.connect → GCastRepository.connect → HuaweiCast.startCast`，native 插件收到远端设备连接后由 `AVCastController` 准备并启动媒体。系统播控的 `remoteControlStream` 回调必须经 `CastNotifier.play/pause/seekTo`，让活动投屏时的命令到达 `GCastService → GCastRepository → huawei_cast`；直接调用本机 `VideoPlayerNotifier` 会绕过远端控制。`mobile/ohos/entry/src/main/ets/plugins/Cast/HuaweiCastPlugin.ets` 是历史重复文件，不是生成注册器引用的包插件；必须核对实际依赖与 HAR，不能只看这个重复文件或只看 import。
+- 视频定位链路:核对实际 override 的 `native_video_player_ohos/ohos/src/main/ets/me/albemala/native_video_player/NativeVideoPlayerViewController.ets` 和 `mobile/lib/providers/asset_viewer/video_player_provider.dart`。2026-11-04 源码回归确认:网络源不能套用本地文件的 `SEEK_CONTINUOUS`;普通 seek 超时不代表原生操作已取消，不得清掉在途标记与最后排队目标后又发竞争 seek;向后定位完成后不能用 `time <= target + 100ms` 永久过滤正常递增的 `timeUpdate`。OHOS Dart 等待定位期间须阻止旧位置覆盖，成功后须补同步实际落点。真机必须录制同一视频的前跳、后跳和连续定位，核对画面与进度持续推进;`seekDone`、AVSession 的预测进度或停止 spinner 均不能证明取数和播放已恢复。另有已抓到的原生 Range 请求约 10 秒超时问题，不能仅凭这些状态修复宣称网络卡顿已解决。
 - `.github/workflows/docker.yml` + `.gitmodules` + `dgh1818/devtools`(服务端 Docker 构建,2026-09-18 恢复:`77c9deff83`+`105d46b027`)。merge 后必查:①两处 `uses:` 必须指向 `dgh1818/devtools/.github/workflows/multi-runner-build.yml@<与上游同步过的 SHA>`——上游 v4.0.0 起 `tags` 输入 required 且已删除 `dockerhub-push`,server 必须传 `tags: *tag-rules`;若 merge 后残留旧接口参数(传 `dockerhub-push` 给新接口或给旧接口传 `tags`),release 必 `startup_failure` 且 job 不创建(v3.2.1 merge 实际发生,后被误禁用掩盖)。②`DOCKERHUB_NAMESPACE: docker.io/dgh18`(上游硬编码 `altran1502`,勿带回)。③ML 三件套(retag_ml/machine-learning/success-check-ml)`if: ${{ false }}`。④mirror job `needs: [pre-job, server]` 且 matrix 只留 `image: [immich-server]`(ML 被 skip 会连带 skip mirror,ML 镜像不存在也不能进 matrix)。⑤`mobile/flutter_photo_manager`、`mobile/photo_manager_image_provider`、`mobile/third_party/jni` 是 gitlink 登记,**新增 gitlink 必须同步补 `.gitmodules` 条目**,否则 CI checkout v7 直接 `fatal: No url found for submodule path` 双平台构建全灭。devtools 本地 clone 在 `F:\devtools_dgh1818`,与 immich-app/devtools main 保持零差异(同步:`git merge upstream/main`,multi-runner-build.yml 冲突一律取上游);Docker Hub 推送由 mirror job 完成(用 `DOCKERHUB_USERNAME/TOKEN` secrets,已配);`PUSH_O_MATIC_*` 无需配置,create-workflow-token 对空 inputs 有 fallback
 - `docs-build.yml`/`docs-deploy.yml`/`sdk.yml`/`fdroid.yml`(fork 无法运行的上游基础设施:文档站/npm/F-Droid,缺 secrets):2026-09-18 起从注释禁用改为**直接删除**(`3a3a2b07ae`)。注释法挡不住 push 触发——文件存在(哪怕整文件注释)GitHub 仍会用推送中的旧版执行并失败,每次 push 分支/tag 都产生一批红叉(实测)。**merge 上游后这 4 个文件会重新出现,必须重新 `git rm`**,不要再退回注释法;上游内容需要时去 immich-app/immich 查阅
 - server/ 端 merge 必查(2026-09-19 v3.2.1 核查,修复 `2208c90757`):①上游 v3.2.1 起 `server/src/config.ts` 被重构并入 `server/src/dtos/config.dto.ts`(schema+defaults 同文件),fork 对旧 config.ts 的 defaults 定制必须迁到新位置——本次丢了 storageTemplate 默认值(c26d2299ee: `enabled: true` + `'{{album}}/{{filename}}`');`library.useContentHash` 属于已正确迁移的范例。②fork 的 spec 测试块易被上游 spec 重写无声覆盖,`library.service.spec.ts` 的外部库 content-hash/backfill 全套测试(~490 行)曾整块丢失而实现仍在——merge 后对 fork 改过的 `*.spec.ts` 逐个 `git diff <上游tag> HEAD -- <file>` 确认 fork hunk 还在。③Windows 本机跑 server 测试(vitest,`npx vitest --config test/vitest.config.mjs`)有固有环境噪声(上游用正斜杠字面量断言路径),storage-template/ library 的 validate 类失败与纯上游在本机的失败同族,判别回归时用纯上游 tag 的对应文件对照跑;依赖装法=仓库根 `pnpm install --frozen-lockfile`(monorepo)。④**Windows 禁忌**:git worktree 指向主仓库 node_modules 的 junction 上执行 `git worktree remove --force` 会穿透 junction 删除主仓库依赖(实测全毁,需删根 node_modules 后 `pnpm install` 全量重建)
 
 - server schema migrations: 每次 merge 后运行 `server` 的 `sql-tools migrations verify-order`,确认所有 `server/src/schema/migrations/*.ts`(包括 fork 保留的兼容/修复迁移)都登记在 `ORDER` 且顺序正确。2026-10-23 合 v3.3.5 时发现 `1781748259837-AllowDuplicateExternalLibraryChecksums` 与 `1781960000000-RestoreExternalLibraryChecksumUniqueness` 曾漏登记;本次已补入并复验 `ORDER is consistent`
+
+- OHOS 网络视频取数：API 26 的 `MediaSourceLoader` 只能由已确认返回单文件的 `/assets/{id}/original`、`/assets/{id}/video/playback` 调用方显式启用，不能套用到任意 HLS/DASH 或外部 URL。controller 必须强引用 `media.MediaSource` 到对应 reset/release 完成；只保留 loader 会让 MediaSource 被回收，清掉 read 回调后永久转圈。正长度 read 收齐时原生 `respondData` 已完成请求，恰好读到文件 EOF 也不得再重复 `finishLoading`，否则会误结束下一次 read。2026-11-05 真机已验证这些边界及大于 4 GiB 的 Range；固定约 10 秒的原生 HTTP 停顿与此诊断加载器的生命周期问题须分别判断。
+- 不得仅按原生缓冲公式降低 `preferredBufferDuration` 就宣称起播更快。2026-11-05 MatePad 同一 4K 视频实测从 20 改为合法值 4 后，两次停在 prepared，缓存满后无后续 read、无音频起播；只恢复 20 即恢复播放。调参必须验证首次起播、连续 seek 后的音画与持续读取，不能把 `prepare`、`play()` 返回或视频首帧回调当成真正起播。
 
 ### 冲突解决原则
 
