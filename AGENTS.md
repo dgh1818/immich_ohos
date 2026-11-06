@@ -89,7 +89,7 @@
 
 ### 冲突解决原则
 
-- OHOS beta 主照片时间线顶部布局:`mobile/lib/presentation/pages/dev/main_timeline.page.dart` 的同步/上传/备份/头像控件必须继续由外层 `Stack` 覆盖在网格上;OHOS 分支必须给 `Timeline` 传 `appBar: null`,不能让默认 `Timeline.appBar` 留下一条空的 `ImmichSliverAppBar`。每次 merge 人工核对该页、`mobile/lib/presentation/widgets/timeline/timeline.widget.dart` 默认 AppBar 和 `mobile/lib/widgets/common/immich_sliver_app_bar.dart` 的背景/标题/动作,并在真机检查滚动到顶与滚动后两种状态。回归来源已查明:`v3.2.1` merge (`acb8809b19`) 把 `ImmichSliverAppBar.backgroundColor` 从透明改为主题 surface、并把默认 `Timeline` AppBar 从 pinned 改为不固定;OHOS 标题此前已被本地改成空 `SizedBox.shrink`,因此该 merge 让空 AppBar 显示成顶部浅色空栏。后续 `v3.3.5` merge 未触碰这些相关文件。修复时保留 OHOS 叠加控件,不要靠重新塞回头像/备份按钮来填充空栏。
+- OHOS beta 主照片时间线顶部布局:`mobile/lib/presentation/pages/dev/main_timeline.page.dart` 的同步/上传/备份/头像控件必须继续由外层 `Stack` 覆盖在网格上;OHOS 的 `Timeline` 应保留 `transparent: true` 的 `ImmichSliverAppBar` 占位,使 Memory 卡片在顶部有间距,滚动时照片可透过顶栏;不要删除顶栏,也不要恢复不透明的浅色空栏。每次 merge 人工核对该页、`mobile/lib/presentation/widgets/timeline/timeline.widget.dart` 默认 AppBar 和 `mobile/lib/widgets/common/immich_sliver_app_bar.dart` 的背景/标题/动作,并在真机检查滚动到顶与滚动后两种状态。回归来源已查明:`v3.2.1` merge (`acb8809b19`) 把 `ImmichSliverAppBar.backgroundColor` 从透明改为主题 surface、并把默认 `Timeline` AppBar 从 pinned 改为不固定;OHOS 标题此前已被本地改成空 `SizedBox.shrink`,因此该 merge 让空 AppBar 显示成顶部浅色空栏。后续 `v3.3.5` merge 未触碰这些相关文件。修复时保留 OHOS 叠加控件,不要靠重新塞回头像/备份按钮来填充空栏。
 
 1. `app_life_cycle.provider.dart` 出现 backup/stop 相关 diff → 一律保留本分支版本,逐行对照上表
 2. 上游重构 backup 编排 → 先 `git log -S "stopForegroundBackup" -- mobile/lib/providers/` 考古再决定
