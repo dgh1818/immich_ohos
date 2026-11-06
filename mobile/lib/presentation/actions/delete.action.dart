@@ -123,7 +123,7 @@ class DeleteAction extends AssetActionBuilder {
     final assetService = ref.read(assetServiceProvider);
     if (localIds.isNotEmpty) {
       final count = await _cleanupLocalAssets(context, ref, localIds, isLocalOnly: isLocalOnly);
-      if (count <= 0 || !context.mounted) {
+      if (count <= 0 || (CurrentPlatform.isOhos && count != localIds.length) || !context.mounted) {
         return null;
       }
     }
