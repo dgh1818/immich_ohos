@@ -428,7 +428,7 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
         return;
       }
 
-      final hdr = ViewerHdr.imageModeFromColorSpace(info.image.colorSpace);
+      final hdr = ViewerHdr.imageModeFromHdrColorSpace(info.image.hdrColorSpace);
 
       _assetHdrModeCache[asset.heroTag] = hdr;
 

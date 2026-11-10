@@ -18,8 +18,8 @@ class ViewerHdr {
     return nextMode;
   }
 
-  static int imageModeFromColorSpace(ui.ColorSpace colorSpace) {
-    return colorSpace == ui.ColorSpace.extendedSRGB ? 1 : 0;
+  static int imageModeFromHdrColorSpace(ui.ImageHdrColorSpace colorSpace) {
+    return colorSpace == ui.ImageHdrColorSpace.unknown ? 0 : 1;
   }
 
   static void applyVideoMode({required bool enabled}) {
