@@ -250,8 +250,6 @@ class LoginForm extends HookConsumerWidget {
     bool isSyncRemoteDeletionsMode() => Platform.isAndroid && Store.get(StoreKey.manageLocalMediaAndroid, false);
 
     Future<void> login() async {
-      TextInput.finishAutofillContext();
-
       // Invalidate all api repository provider instance to take into account new access token
       invalidateAllApiRepositoryProviders(ref);
 
@@ -262,6 +260,7 @@ class LoginForm extends HookConsumerWidget {
           return;
         }
 
+        TextInput.finishAutofillContext();
         if (result.shouldChangePassword && !result.isAdmin) {
           unawaited(context.pushRoute(const ChangePasswordRoute()));
           passwordController.clear();
