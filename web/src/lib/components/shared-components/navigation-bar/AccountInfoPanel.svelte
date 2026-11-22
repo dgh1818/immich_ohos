@@ -1,17 +1,16 @@
 <script lang="ts">
-  import { page } from '$app/state';
-  import { focusTrap } from '$lib/actions/focus-trap';
-  import { authManager } from '$lib/managers/auth-manager.svelte';
-  import AvatarEditModal from '$lib/modals/AvatarEditModal.svelte';
-  import HelpAndFeedbackModal from '$lib/modals/HelpAndFeedbackModal.svelte';
-  import { Route } from '$lib/route';
-  import { userInteraction } from '$lib/stores/user.svelte';
-  import { getAboutInfo, type ServerAboutResponseDto } from '@immich/sdk';
+  import { focusTrap } from '#lib/actions/focus-trap.ts';
+  import { authManager } from '#lib/managers/auth-manager.svelte.ts';
+  import AvatarEditModal from '#lib/modals/AvatarEditModal.svelte';
+  import HelpAndFeedbackModal from '#lib/modals/HelpAndFeedbackModal.svelte';
+  import { getAboutInfoQuery } from '#lib/queries/server-info.query.ts';
+  import { Route } from '#lib/route.ts';
   import { Button, Icon, IconButton, modalManager } from '@immich/ui';
   import { mdiCog, mdiLogout, mdiPencil, mdiWrench } from '@mdi/js';
-  import { onMount } from 'svelte';
+  import { createQuery } from '@tanstack/svelte-query';
   import { t } from 'svelte-i18n';
   import { fade } from 'svelte/transition';
+  import { page } from '$app/state';
   import UserAvatar from '../UserAvatar.svelte';
 
   type Props = {
@@ -20,11 +19,8 @@
 
   let { onClose }: Props = $props();
 
-  let info: ServerAboutResponseDto | undefined = $state();
-
-  onMount(async () => {
-    info = userInteraction.aboutInfo ?? (await getAboutInfo());
-  });
+  const query = createQuery(getAboutInfoQuery);
+  const info = $derived(query.data);
 </script>
 
 <div

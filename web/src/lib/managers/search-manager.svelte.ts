@@ -1,11 +1,11 @@
+import { MediaType, QueryType, validQueryTypes } from '#lib/constants.ts';
+import { Route } from '#lib/route.ts';
+import type { SearchFilter } from '#lib/types.ts';
+import { asLocalTimeISO, parseUtcDate } from '#lib/utils/date-time.ts';
 import { AssetTypeEnum, AssetVisibility, type MetadataSearchDto, type SmartSearchDto } from '@immich/sdk';
 import type { DateTime } from 'luxon';
 import { SvelteSet } from 'svelte/reactivity';
 import { goto } from '$app/navigation';
-import { MediaType, QueryType, validQueryTypes } from '$lib/constants';
-import { Route } from '$lib/route';
-import type { SearchFilter } from '$lib/types';
-import { asLocalTimeISO, parseUtcDate } from '$lib/utils/date-time';
 
 const QUERY_TYPE_STORAGE_KEY = 'searchQueryType';
 
@@ -86,7 +86,7 @@ class SearchManager {
       display: {
         isArchive: searchQuery.visibility === AssetVisibility.Archive,
         isFavorite: searchQuery.isFavorite ?? false,
-        isNotInAlbum: 'isNotInAlbum' in searchQuery ? (searchQuery.isNotInAlbum ?? false) : false,
+        isNotInAlbum: 'isNotInAlbum' in searchQuery && (searchQuery.isNotInAlbum ?? false),
       },
       mediaType:
         searchQuery.type === AssetTypeEnum.Image

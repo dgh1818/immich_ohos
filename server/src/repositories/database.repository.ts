@@ -2,13 +2,12 @@ import { schemaDiff, schemaFromCode, schemaFromDatabase } from '@immich/sql-tool
 import { Injectable } from '@nestjs/common';
 import AsyncLock from 'async-lock';
 import { Kysely, sql } from 'kysely';
-import { FileMigrationProvider, Migrator } from 'kysely/migration';
+import { FileMigrationProvider, MIGRATION_LOCK_ID, Migrator } from 'kysely/migration';
 import { InjectKysely } from 'nestjs-kysely';
 import { readdir } from 'node:fs/promises';
 import { join, normalize } from 'node:path';
 import { diff } from 'semver';
 import z from 'zod';
-import type { ExtensionVersion, VectorExtension } from 'src/types.js';
 import {
   EXTENSION_NAMES,
   POSTGRES_VERSION_RANGE,
@@ -26,8 +25,11 @@ import { LoggingRepository } from 'src/repositories/logging.repository.js';
 import { immich_uuid_v7 } from 'src/schema/functions.js';
 // eslint-disable-next-line import-x/no-duplicates
 import 'src/schema/index.js'; // make sure all schema definitions are imported for schemaFromCode
+
 // eslint-disable-next-line import-x/no-duplicates
 import { DB } from 'src/schema/index.js';
+import type { ExtensionVersion, VectorExtension } from 'src/types.js';
+import { hashAssetPath } from 'src/utils/checksum.js';
 import { vectorIndexQuery } from 'src/utils/database.js';
 
 export let cachedVectorExtension: VectorExtension | undefined;
@@ -242,7 +244,8 @@ export class DatabaseRepository {
       await sql`
         ALTER TABLE ${sql.raw(table)}
         ALTER COLUMN embedding
-        SET DATA TYPE vector(${sql.raw(String(dimSize))})`.execute(tx);
+        SET DATA TYPE vector(${sql.raw(String(dimSize))})
+      `.execute(tx);
       await sql.raw(vectorIndexQuery({ vectorExtension, table, indexName, lists })).execute(tx);
     });
     this.logger.log(`Reindexed ${indexName}`);
@@ -289,6 +292,7 @@ export class DatabaseRepository {
       functions: { ignoreExtra: false },
       parameters: { ignoreExtra: true },
       extensions: { ignoreExtra: true },
+      ignorePrefixes: ['futo_backups_'],
     });
 
     return drift;
@@ -383,91 +387,127 @@ export class DatabaseRepository {
   async runMigrations(): Promise<number> {
     this.logger.log('Running migrations');
 
-    await this.fixExternalLibraryChecksumMigrationOrder();
+    const results = await this.db.connection().execute(async (connection) => {
+      const adapter = connection.getExecutor().adapter;
+      const lockOptions = { lockTable: 'kysely_migrations_lock', lockRowId: MIGRATION_LOCK_ID };
+      // Hold the same lock as upstream until this outer transaction commits.
+      await adapter.acquireMigrationLock(connection, lockOptions);
+      try {
+        return await connection.transaction().execute(async (tx) => {
+          await sql`
+            DO $$
+            BEGIN
+              IF to_regclass('kysely_migrations') IS NOT NULL THEN
+                DELETE FROM "kysely_migrations"
+                WHERE "name" IN (
+                  '1781748259837-AllowDuplicateExternalLibraryChecksums',
+                  '1781960000000-RestoreExternalLibraryChecksumUniqueness'
+                );
+              END IF;
+            END $$;
+          `.execute(tx);
 
-    const migrator = this.createMigrator(await this.needsUnorderedExternalLibraryChecksumMigrations());
+          const { error, results = [] } = await this.createMigrator(tx).migrateToLatest();
+          if (error) {
+            const missing =
+              error instanceof Error ? error.message.match(/previously executed migration (.+) is missing/u) : null;
+            if (missing) {
+              throw new Error(
+                `Migration "${missing[1]}" was already applied to this database but is not in this version of Immich (${serverVersion}). ` +
+                  `This usually means the database was migrated by a newer version. Downgrades are not supported.`,
+                { cause: error },
+              );
+            }
 
-    const { error, results = [] } = await migrator.migrateToLatest();
+            throw error;
+          }
+
+          await this.restoreExternalLibraryChecksumIndex(tx);
+          return results;
+        });
+      } finally {
+        await adapter.releaseMigrationLock(connection, lockOptions);
+        // Kysely 0.29.7 also takes this session lock inside the supplied transaction.
+        // If its transaction aborts, the inner unlock SQL can fail with 25P02.
+        // Release only that leftover lock on this pinned connection.
+        await sql`
+          SELECT pg_advisory_unlock(3853314791062309107::bigint)
+          FROM pg_locks
+          WHERE locktype = 'advisory' AND pid = pg_backend_pid() AND granted
+            AND objsubid = 1
+            AND classid::bigint = (3853314791062309107::bigint >> 32)
+            AND objid::bigint = (3853314791062309107::bigint & 4294967295)
+        `.execute(connection);
+      }
+    });
 
     for (const result of results) {
-      if (result.status === 'Success') {
-        this.logger.log(`Migration "${result.migrationName}" succeeded`);
-      } else if (result.status === 'Error') {
-        this.logger.warn(`Migration "${result.migrationName}" failed`);
-      }
-    }
-
-    if (error) {
-      this.logger.error(`Migrations failed: ${error}`);
-
-      const missing =
-        error instanceof Error ? error.message.match(/previously executed migration (.+) is missing/u) : null;
-      if (missing) {
-        throw new Error(
-          `Migration "${missing[1]}" was already applied to this database but is not in this version of Immich (${serverVersion}). ` +
-            `This usually means the database was migrated by a newer version. Downgrades are not supported.`,
-          { cause: error },
-        );
-      }
-
-      throw error;
+      this.logger.log(`Migration "${result.migrationName}" succeeded`);
     }
 
     this.logger.log('Finished running migrations');
     return results.length;
   }
 
-  private async fixExternalLibraryChecksumMigrationOrder(): Promise<void> {
+  private async restoreExternalLibraryChecksumIndex(tx: Kysely<DB>): Promise<void> {
     await sql`
       DO $$
+      DECLARE
+        index_is_unique boolean;
+        index_schema name;
       BEGIN
-        IF to_regclass('kysely_migrations') IS NOT NULL THEN
-          DELETE FROM "kysely_migrations"
-          WHERE "name" IN (
-            '1781748259837-AllowDuplicateExternalLibraryChecksums',
-            '1781960000000-RestoreExternalLibraryChecksumUniqueness'
-          )
-          AND NOT EXISTS (
-            SELECT 1
-            FROM "kysely_migrations"
-            WHERE "name" = '1776217577402-DropAuditTable'
-          );
+        SET LOCAL lock_timeout = '5s';
+        LOCK TABLE "asset" IN ACCESS SHARE MODE;
+        SELECT i.indisunique, ns.nspname INTO STRICT index_is_unique, index_schema
+        FROM pg_index i
+        JOIN pg_class idx ON idx.oid = i.indexrelid
+        JOIN pg_class tbl ON tbl.oid = i.indrelid AND tbl.relnamespace = idx.relnamespace
+        JOIN pg_namespace ns ON ns.oid = idx.relnamespace
+        JOIN pg_am am ON am.oid = idx.relam
+        JOIN pg_attribute owner_col ON owner_col.attrelid = i.indrelid AND owner_col.attnum = i.indkey[0]
+        JOIN pg_attribute library_col ON library_col.attrelid = i.indrelid AND library_col.attnum = i.indkey[1]
+        JOIN pg_attribute checksum_col ON checksum_col.attrelid = i.indrelid AND checksum_col.attnum = i.indkey[2]
+        JOIN pg_opclass uuid_ops ON uuid_ops.oid = i.indclass[0] AND uuid_ops.oid = i.indclass[1]
+        JOIN pg_opclass bytea_ops ON bytea_ops.oid = i.indclass[2]
+        WHERE tbl.oid = to_regclass('asset')
+          AND idx.relname = 'asset_ownerId_libraryId_checksum_idx'
+          AND am.amname = 'btree'
+          AND i.indisvalid AND i.indisready AND i.indislive AND i.indimmediate
+          AND NOT i.indisexclusion AND i.indexprs IS NULL
+          AND i.indnkeyatts = 3 AND i.indnatts = 3
+          AND owner_col.attname = 'ownerId' AND NOT owner_col.attisdropped
+          AND library_col.attname = 'libraryId' AND NOT library_col.attisdropped
+          AND checksum_col.attname = 'checksum' AND NOT checksum_col.attisdropped
+          AND uuid_ops.opcname = 'uuid_ops' AND uuid_ops.opcmethod = am.oid
+          AND uuid_ops.opcnamespace = 'pg_catalog'::regnamespace
+          AND bytea_ops.opcname = 'bytea_ops' AND bytea_ops.opcmethod = am.oid
+          AND bytea_ops.opcnamespace = 'pg_catalog'::regnamespace
+          AND i.indcollation[0] = 0 AND i.indcollation[1] = 0 AND i.indcollation[2] = 0
+          AND i.indoption[0] = 0 AND i.indoption[1] = 0 AND i.indoption[2] = 0
+          -- PostgreSQL 14 has no indnullsnotdistinct column.
+          AND NOT COALESCE((to_jsonb(i)->>'indnullsnotdistinct')::boolean, false)
+          -- The predicate contains only a mixed-case identifier, always quoted.
+          AND pg_get_expr(i.indpred, i.indrelid, false) = '("libraryId" IS NOT NULL)';
+
+        IF NOT index_is_unique THEN
+          -- Hold the write lock from validation through the replacement. CREATE
+          -- UNIQUE INDEX validates the data itself and aborts on any collision.
+          LOCK TABLE "asset" IN ACCESS EXCLUSIVE MODE;
+          CREATE UNIQUE INDEX "asset_ownerId_libraryId_checksum_compat_idx"
+            ON "asset" ("ownerId", "libraryId", "checksum")
+            WHERE ("libraryId" IS NOT NULL);
+          EXECUTE format('DROP INDEX %I.%I', index_schema, 'asset_ownerId_libraryId_checksum_idx');
+          EXECUTE format('ALTER INDEX %I.%I RENAME TO %I',
+            index_schema, 'asset_ownerId_libraryId_checksum_compat_idx', 'asset_ownerId_libraryId_checksum_idx');
         END IF;
+      EXCEPTION
+        WHEN no_data_found THEN
+          RAISE EXCEPTION 'Missing or unexpected external library checksum index: asset_ownerId_libraryId_checksum_idx';
+        WHEN unique_violation THEN
+          RAISE EXCEPTION 'Cannot restore external library checksum uniqueness: %', SQLERRM
+            USING ERRCODE = 'unique_violation', DETAIL = 'Conflicting asset checksums were left unchanged.';
       END $$;
-    `.execute(this.db);
-  }
-
-  private async needsUnorderedExternalLibraryChecksumMigrations(): Promise<boolean> {
-    const migrations = await this.createMigrator().getMigrations();
-    const names = migrations.map(({ name }) => name);
-    const executed = migrations
-      .filter(({ executedAt }) => executedAt)
-      .toSorted((a, b) => a.executedAt!.getTime() - b.executedAt!.getTime() || a.name.localeCompare(b.name))
-      .map(({ name }) => name);
-
-    if (executed.every((name, index) => name === names[index])) {
-      return false;
-    }
-
-    const checksumMigrations = [
-      '1781748259837-AllowDuplicateExternalLibraryChecksums',
-      '1781960000000-RestoreExternalLibraryChecksumUniqueness',
-    ];
-    const isChecksumMigration = (name: string) => checksumMigrations.includes(name);
-    const otherNames = names.filter((name) => !isChecksumMigration(name));
-    const otherExecuted = executed.filter((name) => !isChecksumMigration(name));
-    const checksumExecuted = executed.filter(isChecksumMigration);
-
-    if (
-      executed.includes('1782414436633-AddPluginMethodAllowedHosts') &&
-      otherExecuted.every((name, index) => name === otherNames[index]) &&
-      checksumExecuted.every((name, index) => name === checksumMigrations[index])
-    ) {
-      this.logger.warn('Allowing the known external-library checksum migration order after upstream migrations');
-      return true;
-    }
-
-    return false;
+    `.execute(tx);
   }
 
   async migrateFilePaths(sourceFolder: string, targetFolder: string): Promise<void> {
@@ -489,16 +529,55 @@ export class DatabaseRepository {
     const remappedAssetPath = sql<string>`REGEXP_REPLACE("originalPath", ${source}, ${target})`;
 
     await this.db.transaction().execute(async (tx) => {
-      await tx
-        .updateTable('asset')
-        .set({
-          originalPath: remappedAssetPath,
-          checksum: sql<Buffer>`digest('path:' || ${remappedAssetPath}, 'sha1')`,
-        })
-        .where('isExternal', '=', true)
-        .where('checksumAlgorithm', '=', ChecksumAlgorithm.sha1Path)
-        .where('originalPath', '~', sourceRegex)
-        .execute();
+      // Keep path selection stable against imports and other path writes until all tables are updated.
+      await sql`SET LOCAL lock_timeout = '5s'`.execute(tx);
+      await sql`LOCK TABLE asset, asset_file, person, "user" IN SHARE ROW EXCLUSIVE MODE`.execute(tx);
+      const {
+        rows: [collision],
+      } = await sql<{ exists: boolean }>`
+        WITH moved AS (
+          SELECT id, "libraryId", ${remappedAssetPath} AS path
+          FROM asset
+          WHERE "isExternal" AND "libraryId" IS NOT NULL
+            AND "originalPath" ~ ${sourceRegex} AND "originalPath" <> ${remappedAssetPath}
+        )
+        SELECT EXISTS (
+          SELECT 1 FROM moved GROUP BY "libraryId", path HAVING COUNT(*) > 1
+          UNION ALL
+          SELECT 1 FROM moved
+          JOIN asset ON asset."libraryId" = moved."libraryId" AND asset."originalPath" = moved.path
+          WHERE asset."isExternal" AND asset.id <> moved.id
+            AND NOT EXISTS (SELECT 1 FROM moved AS other WHERE other.id = asset.id)
+        )
+      `.execute(tx);
+      if (collision.exists) {
+        throw new Error('Cannot migrate file paths: multiple external assets would share a path in the same library');
+      }
+
+      let afterId: string | undefined;
+      while (true) {
+        const assets = await tx
+          .selectFrom('asset')
+          .select(['id', remappedAssetPath.as('path')])
+          .where('isExternal', '=', true)
+          .where('checksumAlgorithm', '=', ChecksumAlgorithm.sha1Path)
+          .where('originalPath', '~', sourceRegex)
+          .$if(afterId !== undefined, (query) => query.where('id', '>', afterId!))
+          .orderBy('id')
+          .limit(1000)
+          .execute();
+        if (assets.length === 0) {
+          break;
+        }
+
+        const values = assets.map(({ id, path }) => sql`(${id}::uuid, ${path}::text, ${hashAssetPath(path)}::bytea)`);
+        await sql`
+          UPDATE asset SET "originalPath" = input.path, checksum = input.checksum
+          FROM (VALUES ${sql.join(values)}) AS input(id, path, checksum)
+          WHERE asset.id = input.id
+        `.execute(tx);
+        afterId = assets.at(-1)!.id;
+      }
 
       await tx
         .updateTable('asset')
@@ -566,11 +645,11 @@ export class DatabaseRepository {
     await sql`SELECT pg_advisory_unlock(${lock})`.execute(connection);
   }
 
-  private createMigrator(allowUnorderedMigrations = false): Migrator {
+  private createMigrator(db: Kysely<DB>): Migrator {
     return new Migrator({
-      db: this.db,
+      db,
       migrationLockTableName: 'kysely_migrations_lock',
-      allowUnorderedMigrations: this.configRepository.isDev() || allowUnorderedMigrations,
+      allowUnorderedMigrations: this.configRepository.isDev(),
       migrationTableName: 'kysely_migrations',
       provider: new FileMigrationProvider({
         fs: { readdir },

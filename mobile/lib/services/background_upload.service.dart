@@ -330,9 +330,6 @@ class BackgroundUploadService {
     ///
     /// We implement two separate upload groups for this, the normal one for the video file
     /// and the higher priority group for the photo file because the video file is already uploaded.
-    ///
-    /// The cancel operation will only cancel the video group (normal group), the photo group will not
-    /// be touched, as the video file is already uploaded.
 
     if (entity.isLivePhoto) {
       file = await _storageRepository.getMotionFileForAsset(asset);

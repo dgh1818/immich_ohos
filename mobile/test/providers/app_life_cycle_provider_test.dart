@@ -123,6 +123,7 @@ void main() {
     logService = await LogService.init(
       logRepository: logRepository,
       settingsRepository: settingsRepository,
+      storeService: MockStoreService(),
       shouldBuffer: false,
     );
   });

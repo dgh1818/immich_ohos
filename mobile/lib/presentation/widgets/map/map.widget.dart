@@ -12,7 +12,6 @@ import 'package:immich_mobile/domain/utils/event_stream.dart';
 import 'package:immich_mobile/extensions/asyncvalue_extensions.dart';
 import 'package:immich_mobile/extensions/build_context_extensions.dart';
 import 'package:immich_mobile/generated/translations.g.dart';
-import 'package:immich_mobile/presentation/widgets/bottom_sheet/base_bottom_sheet.widget.dart';
 import 'package:immich_mobile/presentation/widgets/bottom_sheet/map_bottom_sheet.widget.dart';
 import 'package:immich_mobile/presentation/widgets/map/map.state.dart';
 import 'package:immich_mobile/presentation/widgets/map/map_utils.dart';

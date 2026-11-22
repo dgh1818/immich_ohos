@@ -1,13 +1,14 @@
 <script lang="ts">
-  import { ProjectionType } from '$lib/constants';
-  import { authManager } from '$lib/managers/auth-manager.svelte';
-  import type { TimelineAsset } from '$lib/managers/timeline-manager/types';
-  import { mediaQueryManager } from '$lib/stores/media-query-manager.svelte';
-  import { locale, playVideoThumbnailOnHover } from '$lib/stores/preferences.store';
-  import { getAssetMediaUrl, getAssetPlaybackUrl } from '$lib/utils';
-  import { moveFocus } from '$lib/utils/focus-util';
-  import { currentUrlReplaceAssetId } from '$lib/utils/navigation';
-  import { getAltText } from '$lib/utils/thumbnail-util';
+  import Thumbhash from '#lib/components/Thumbhash.svelte';
+  import { ProjectionType } from '#lib/constants.ts';
+  import { authManager } from '#lib/managers/auth-manager.svelte.ts';
+  import type { TimelineAsset } from '#lib/managers/timeline-manager/types.ts';
+  import { mediaQueryManager } from '#lib/stores/media-query-manager.svelte.ts';
+  import { locale, playVideoThumbnailOnHover } from '#lib/stores/preferences.store.ts';
+  import { getAssetMediaUrl, getAssetPlaybackUrl } from '#lib/utils.ts';
+  import { moveFocus } from '#lib/utils/focus-util.ts';
+  import { currentUrlReplaceAssetId } from '#lib/utils/navigation.ts';
+  import { getAltText } from '#lib/utils/thumbnail-util.ts';
   import { AssetMediaSize, AssetVisibility, type UserResponseDto } from '@immich/sdk';
   import { Icon } from '@immich/ui';
   import {
@@ -24,9 +25,9 @@
   import { onMount } from 'svelte';
   import type { ClassValue } from 'svelte/elements';
   import { fade } from 'svelte/transition';
-  import Thumbhash from '$lib/components/Thumbhash.svelte';
   import ImageThumbnail from './ImageThumbnail.svelte';
   import VideoThumbnail from './VideoThumbnail.svelte';
+
   interface Props {
     asset: TimelineAsset;
     groupIndex?: number;
@@ -229,9 +230,9 @@
   bind:this={element}
   data-asset={asset.id}
   data-thumbnail-focus-container
-  data-selected={selected ? true : undefined}
-  data-readonly={readonly ? true : undefined}
-  data-disabled={disabled ? true : undefined}
+  data-selected={selected || undefined}
+  data-readonly={readonly || undefined}
+  data-disabled={disabled || undefined}
   tabindex={0}
   role="link"
 >
@@ -320,7 +321,7 @@
         <!-- Favorite asset star -->
         {#if !authManager.isSharedLink && asset.isFavorite}
           <div class="absolute inset-s-2 bottom-2 z-2">
-            <Icon data-icon-favorite icon={mdiHeart} size="24" class="text-white" />
+            <Icon data-testid="favorite-icon" icon={mdiHeart} size="24" class="text-white" />
           </div>
         {/if}
 
@@ -334,7 +335,7 @@
 
         {#if !authManager.isSharedLink && showArchiveIcon && asset.visibility === AssetVisibility.Archive}
           <div class={['absolute inset-s-2 z-2', asset.isFavorite ? 'bottom-10' : 'bottom-2']}>
-            <Icon data-icon-archive icon={mdiArchiveArrowDownOutline} size="24" class="text-white" />
+            <Icon data-testid="archive-icon" icon={mdiArchiveArrowDownOutline} size="24" class="text-white" />
           </div>
         {/if}
 
@@ -384,6 +385,7 @@
 
     {#if selectionCandidate}
       <div
+        data-testid="selection-candidate"
         class={['absolute top-0 z-2 size-full bg-immich-primary opacity-40', { 'rounded-xl': selected }]}
         in:fade={{ duration: 100 }}
         out:fade={{ duration: 100 }}
@@ -402,13 +404,13 @@
         {disabled}
       >
         {#if disabled}
-          <Icon data-icon-select icon={mdiCheckCircle} size="24" class="text-zinc-800" />
+          <Icon icon={mdiCheckCircle} size="24" class="text-zinc-800" />
         {:else if selected}
           <div class="rounded-full bg-[#D9DCEF] dark:bg-[#232932]">
-            <Icon data-icon-select icon={mdiCheckCircle} size="24" class="text-primary" />
+            <Icon icon={mdiCheckCircle} size="24" class="text-primary" />
           </div>
         {:else}
-          <Icon data-icon-select icon={mdiCheckCircle} size="24" class="text-white/80 group-hover/select:text-white" />
+          <Icon icon={mdiCheckCircle} size="24" class="text-white/80 group-hover/select:text-white" />
         {/if}
       </button>
     {/if}

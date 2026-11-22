@@ -3,6 +3,7 @@ import 'package:immich_mobile/constants/constants.dart';
 import 'package:immich_mobile/data/data_controller.dart';
 import 'package:immich_mobile/domain/models/store.model.dart';
 import 'package:immich_mobile/domain/services/log.service.dart';
+import 'package:immich_mobile/domain/services/store.service.dart';
 import 'package:immich_mobile/entities/store.entity.dart';
 import 'package:immich_mobile/generated/translations.g.dart';
 import 'package:immich_mobile/extensions/translate_extensions.dart';
@@ -87,6 +88,7 @@ abstract final class Bootstrap {
     await LogService.init(
       logRepository: LogRepository(dataController.logDb),
       settingsRepository: settingsRepo,
+      storeService: StoreService.I,
       shouldBuffer: shouldBufferLogs,
     );
 

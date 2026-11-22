@@ -44,6 +44,34 @@ abstract class ImageRequest {
 
   void _onCancelled();
 
+  // OHOS remote currently hands off encoded bytes. Other native producers
+  // can also return decoded pixels, including JPEG XL on Android and iOS.
+  Future<(ui.Codec, ui.ImageDescriptor)?> _codecFromResponse(Map<String, Object>? info, {ui.Size? decodeSize}) async {
+    switch (info) {
+      case {'pointer': final int pointer, 'length': final int length} when pointer != 0 && length > 0:
+        return _codecFromEncodedPlatformImage(
+          pointer,
+          length,
+          decodeSize: decodeSize,
+          dynamicRangePolicy: dynamicRangePolicy,
+        );
+      case {
+            'pointer': final int pointer,
+            'width': final int width,
+            'height': final int height,
+            'rowBytes': final int rowBytes,
+          }
+          when pointer != 0 && width > 0 && height > 0 && rowBytes >= width * 4:
+        return _codecFromDecodedPlatformImage(pointer, width, height, rowBytes, isHdr: info['isHdr'] == true);
+      case {'pointer': final int pointer} when pointer != 0:
+        malloc.free(Pointer<Uint8>.fromAddress(pointer));
+        throw const FormatException('Invalid native image buffer metadata');
+      default:
+        // OHOS cancellation can reply with an empty map.
+        return null;
+    }
+  }
+
   Future<(ui.Codec, ui.ImageDescriptor)?> _codecFromEncodedPlatformImage(
     int address,
     int length, {
@@ -68,21 +96,27 @@ abstract class ImageRequest {
       return null;
     }
 
-    final descriptor = await ui.ImageDescriptor.encoded(buffer);
-    buffer.dispose();
+    final ui.ImageDescriptor descriptor;
+    try {
+      descriptor = await ui.ImageDescriptor.encoded(buffer);
+    } finally {
+      buffer.dispose();
+    }
     if (_isCancelled) {
       descriptor.dispose();
       return null;
     }
 
     final target = _targetSize(descriptor.width, descriptor.height, decodeSize);
-    final codec = dynamicRangePolicy == null
-        ? await descriptor.instantiateCodec(targetWidth: target?.$1, targetHeight: target?.$2)
-        : await descriptor.instantiateCodecWithDynamicRange(
-            dynamicRangePolicy: dynamicRangePolicy,
-            targetWidth: target?.$1,
-            targetHeight: target?.$2,
-          );
+    final ui.Codec codec;
+    try {
+      codec = dynamicRangePolicy == null
+          ? await descriptor.instantiateCodec(targetWidth: target?.$1, targetHeight: target?.$2)
+          : await _instantiateHdrCodec(descriptor, dynamicRangePolicy, target);
+    } catch (_) {
+      descriptor.dispose();
+      rethrow;
+    }
     if (_isCancelled) {
       descriptor.dispose();
       codec.dispose();
@@ -92,18 +126,18 @@ abstract class ImageRequest {
     return (codec, descriptor);
   }
 
-  Future<ui.FrameInfo?> _fromEncodedPlatformImage(
-    int address,
-    int length, {
-    ui.Size? decodeSize,
-    ui.ImageDynamicRangePolicy? dynamicRangePolicy,
-  }) async {
-    final result = await _codecFromEncodedPlatformImage(
-      address,
-      length,
-      decodeSize: decodeSize,
-      dynamicRangePolicy: dynamicRangePolicy,
-    );
+  // Keep the OHOS-only engine call outside the standard decode path.
+  Future<ui.Codec> _instantiateHdrCodec(
+    ui.ImageDescriptor descriptor,
+    ui.ImageDynamicRangePolicy policy,
+    (int, int)? target,
+  ) => descriptor.instantiateCodecWithDynamicRange(
+    dynamicRangePolicy: policy,
+    targetWidth: target?.$1,
+    targetHeight: target?.$2,
+  );
+
+  Future<ui.FrameInfo?> _firstFrame((ui.Codec, ui.ImageDescriptor)? result) async {
     if (result == null) {
       return null;
     }
@@ -115,9 +149,13 @@ abstract class ImageRequest {
       return null;
     }
 
-    final frame = await codec.getNextFrame();
-    descriptor.dispose();
-    codec.dispose();
+    final ui.FrameInfo frame;
+    try {
+      frame = await codec.getNextFrame();
+    } finally {
+      descriptor.dispose();
+      codec.dispose();
+    }
     if (_isCancelled) {
       frame.image.dispose();
       return null;
@@ -139,13 +177,13 @@ abstract class ImageRequest {
     return ((width * scale).ceil(), (height * scale).ceil());
   }
 
-  Future<ui.FrameInfo?> _fromDecodedPlatformImage(
+  Future<(ui.Codec, ui.ImageDescriptor)?> _codecFromDecodedPlatformImage(
     int address,
     int width,
     int height,
-    int rowBytes, [
+    int rowBytes, {
     bool isHdr = false,
-  ]) async {
+  }) async {
     final pointer = Pointer<Uint8>.fromAddress(address);
     if (_isCancelled) {
       malloc.free(pointer);
@@ -165,30 +203,58 @@ abstract class ImageRequest {
       return null;
     }
 
-    final descriptor = ui.ImageDescriptor.raw(
-      buffer,
-      width: width,
-      height: height,
-      rowBytes: rowBytes,
-      pixelFormat: isHdr ? ui.PixelFormat.rgba1010102 : ui.PixelFormat.rgba8888,
-    );
-    buffer.dispose();
+    final ui.ImageDescriptor descriptor;
+    try {
+      descriptor = ui.ImageDescriptor.raw(
+        buffer,
+        width: width,
+        height: height,
+        rowBytes: rowBytes,
+        pixelFormat: isHdr ? ui.PixelFormat.rgba1010102 : ui.PixelFormat.rgba8888,
+      );
+    } finally {
+      buffer.dispose();
+    }
 
-    final codec = await descriptor.instantiateCodec();
+    final ui.Codec codec;
+    try {
+      codec = await descriptor.instantiateCodec();
+    } catch (_) {
+      descriptor.dispose();
+      rethrow;
+    }
     if (_isCancelled) {
       descriptor.dispose();
       codec.dispose();
       return null;
     }
 
-    final frame = await codec.getNextFrame();
-    descriptor.dispose();
-    codec.dispose();
-    if (_isCancelled) {
-      frame.image.dispose();
-      return null;
-    }
+    return (codec, descriptor);
+  }
+}
 
-    return frame;
+// Raw and single-frame codecs can defer decoding until getNextFrame().
+class _DescriptorBackedCodec implements ui.Codec {
+  final ui.Codec _codec;
+  final ui.ImageDescriptor _descriptor;
+
+  _DescriptorBackedCodec(this._codec, this._descriptor);
+
+  @override
+  int get frameCount => _codec.frameCount;
+
+  @override
+  int get repetitionCount => _codec.repetitionCount;
+
+  @override
+  Future<ui.FrameInfo> getNextFrame() => _codec.getNextFrame();
+
+  @override
+  void dispose() {
+    try {
+      _codec.dispose();
+    } finally {
+      _descriptor.dispose();
+    }
   }
 }

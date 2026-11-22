@@ -20,30 +20,13 @@ class RemoteImageRequest extends ImageRequest {
       uri,
       requestId: requestId,
       // AI HDR needs encoded bytes so the engine can perform the SDR -> HLG
-      // conversion on the client. Native decoded responses are preferable for
-      // the source-preserving path because they carry their isHdr metadata.
+      // conversion on the client. OHOS currently returns encoded bytes for
+      // both values, while other producers may return decoded pixels.
       preferEncoded: dynamicRangePolicy?.name == 'aiHdrAuto',
       width: decodeSize?.width.ceil(),
       height: decodeSize?.height.ceil(),
     );
-    // Android falls back to encoded data if native decoding fails, so check for both shapes of the response.
-    final frame = switch (info) {
-      {'pointer': final int pointer, 'length': final int length} => await _fromEncodedPlatformImage(
-        pointer,
-        length,
-        decodeSize: decodeSize,
-        dynamicRangePolicy: dynamicRangePolicy,
-      ),
-      {
-        'pointer': final int pointer,
-        'width': final int width,
-        'height': final int height,
-        'rowBytes': final int rowBytes,
-        'isHdr': final bool isHdr,
-      } =>
-        await _fromDecodedPlatformImage(pointer, width, height, rowBytes, isHdr),
-      _ => null,
-    };
+    final frame = await _firstFrame(await _codecFromResponse(info, decodeSize: decodeSize));
     return frame == null ? null : ImageInfo(image: frame.image, scale: scale);
   }
 
@@ -60,18 +43,8 @@ class RemoteImageRequest extends ImageRequest {
       width: null,
       height: null,
     );
-    if (info == null) {
-      return null;
-    }
-
-    final (codec, _) =
-        await _codecFromEncodedPlatformImage(
-          info['pointer']! as int,
-          info['length']! as int,
-          dynamicRangePolicy: dynamicRangePolicy,
-        ) ??
-        (null, null);
-    return codec;
+    final result = await _codecFromResponse(info);
+    return result == null ? null : _DescriptorBackedCodec(result.$1, result.$2);
   }
 
   @override

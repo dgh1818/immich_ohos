@@ -58,7 +58,7 @@ Future<void> _writerTask(String path) async {
   } finally {
     await db.close();
     await dbConnection.close();
-    sqlitePool.close();
+    await sqlitePool.close();
   }
 }
 

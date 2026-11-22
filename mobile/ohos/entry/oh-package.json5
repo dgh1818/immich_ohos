@@ -17,7 +17,6 @@
     "share_plus": "file:../har/share_plus.har",
     "connectivity_plus": "file:../har/connectivity_plus.har",
     "package_info_plus": "file:../har/package_info_plus.har",
-    "sqflite_ohos": "file:../har/sqflite_ohos.har",
     "flutter_local_notifications": "file:../har/flutter_local_notifications.har",
     "flutter_secure_storage_ohos": "file:../har/flutter_secure_storage_ohos.har",
     "flutter_udid": "file:../har/flutter_udid.har",

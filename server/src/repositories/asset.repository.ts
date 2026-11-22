@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import {
+  sql,
   type ExpressionBuilder,
   type Insertable,
   type Kysely,
@@ -7,17 +8,16 @@ import {
   type SelectQueryBuilder,
   type Selectable,
   type ShallowDehydrateObject,
-  UpdateResult,
   type Updateable,
-  sql,
   type SqlBool,
 } from 'kysely';
 import { jsonArrayFrom } from 'kysely/helpers/postgres';
 import { isEmpty, isUndefined, omitBy } from 'lodash-es';
 import { InjectKysely } from 'nestjs-kysely';
-import type { AuthDto } from 'src/dtos/auth.dto.js';
+import { JOBS_LIBRARY_PAGINATION_SIZE } from 'src/constants.js';
 import { LockableProperty, Stack } from 'src/database.js';
 import { Chunked, ChunkedArray, DummyValue, GenerateSql } from 'src/decorators.js';
+import { isMetadataHidden, type AuthDto } from 'src/dtos/auth.dto.js';
 import {
   AssetFileType,
   AssetOrder,
@@ -35,6 +35,7 @@ import { AssetFileTable } from 'src/schema/tables/asset-file.table.js';
 import { AssetJobStatusTable } from 'src/schema/tables/asset-job-status.table.js';
 import { AssetMetadataTable } from 'src/schema/tables/asset-metadata.table.js';
 import { AssetTable } from 'src/schema/tables/asset.table.js';
+import { hashAssetPath } from 'src/utils/checksum.js';
 import {
   anyUuid,
   asUuid,
@@ -56,7 +57,6 @@ import {
   withTagId,
   withTags,
 } from 'src/utils/database.js';
-import { globToPostgresRegex } from 'src/utils/misc.js';
 
 export type AssetStats = Record<AssetType, number>;
 
@@ -713,19 +713,40 @@ export class AssetRepository {
   }
 
   /** Bulk update external library assets to use path-based checksum */
-  async updateAllExternalToPathHash(ids: string[]): Promise<void> {
-    if (ids.length === 0) {
-      return;
+  async updateAllExternalToPathHash(assets: Pick<Selectable<AssetTable>, 'id' | 'originalPath' | 'checksum'>[]): Promise<number> {
+    if (assets.length === 0) {
+      return 0;
     }
 
-    await this.db
-      .updateTable('asset')
-      .set(() => ({
-        checksum: sql<Buffer>`digest('path:' || "originalPath", 'sha1')`,
-        checksumAlgorithm: ChecksumAlgorithm.sha1Path,
-      }))
-      .where('id', 'in', ids)
-      .execute();
+    const values = assets.map(
+      ({ id, originalPath, checksum }) =>
+        sql`(${id}::uuid, ${originalPath}::text, ${checksum}::bytea, ${hashAssetPath(originalPath)}::bytea)`,
+    );
+    const result = await sql`
+      WITH candidates AS (
+        SELECT asset.id, input.original_path, input.old_checksum, input.new_checksum,
+          ROW_NUMBER() OVER (PARTITION BY asset."ownerId", asset."libraryId", input.new_checksum ORDER BY asset.id) AS rank
+        FROM (VALUES ${sql.join(values)}) AS input(id, original_path, old_checksum, new_checksum)
+        JOIN asset ON asset.id = input.id
+        WHERE asset."isExternal" AND asset."libraryId" IS NOT NULL
+          AND asset."checksumAlgorithm" = ${ChecksumAlgorithm.sha1File}
+          AND asset."originalPath" = input.original_path AND asset.checksum = input.old_checksum
+          AND NOT EXISTS (
+            SELECT 1 FROM asset AS existing
+            WHERE existing."ownerId" = asset."ownerId" AND existing."libraryId" = asset."libraryId"
+              AND existing.checksum = input.new_checksum AND existing.id <> asset.id
+          )
+      )
+      UPDATE asset
+      SET checksum = candidates.new_checksum, "checksumAlgorithm" = ${ChecksumAlgorithm.sha1Path}
+      FROM candidates
+      WHERE asset.id = candidates.id AND candidates.rank = 1
+        AND asset."isExternal" AND asset."libraryId" IS NOT NULL
+        AND asset."checksumAlgorithm" = ${ChecksumAlgorithm.sha1File}
+        AND asset."originalPath" = candidates.original_path AND asset.checksum = candidates.old_checksum
+      RETURNING asset.id
+    `.execute(this.db);
+    return result.rows.length;
   }
 
   async update(asset: Updateable<AssetTable> & { id: string }) {
@@ -786,13 +807,14 @@ export class AssetRepository {
   }
 
   findLivePhotoMatch(options: LivePhotoSearchOptions) {
-    const { ownerId, otherAssetId, livePhotoCID, type } = options;
+    const { ownerId, libraryId, otherAssetId, livePhotoCID, type } = options;
     return this.db
       .selectFrom('asset')
       .select(['asset.id', 'asset.ownerId'])
       .innerJoin('asset_exif', 'asset.id', 'asset_exif.assetId')
       .where('id', '!=', asUuid(otherAssetId))
       .where('ownerId', '=', asUuid(ownerId))
+      .$call((qb) => (libraryId ? qb.where('libraryId', '=', asUuid(libraryId)) : qb.where('libraryId', 'is', null)))
       .where('type', '=', type)
       .where('asset_exif.livePhotoCID', '=', livePhotoCID)
       .limit(1)
@@ -931,6 +953,7 @@ export class AssetRepository {
   })
   getTimeBucket(timeBucket: string, options: TimeBucketOptions, auth: AuthDto) {
     const order = options.order ?? 'desc';
+    const bucket = timeBucket.replace(/^[+-]/, '');
     const query = this.db
       .with('cte', (qb) =>
         qb
@@ -965,9 +988,7 @@ export class AssetRepository {
               )
               .as('ratio'),
           ])
-          .$if(!auth.sharedLink || auth.sharedLink.showExif, (qb) =>
-            qb.select(['asset_exif.city', 'asset_exif.country']),
-          )
+          .$if(!isMetadataHidden(auth), (qb) => qb.select(['asset_exif.city', 'asset_exif.country']))
           .$if(!!options.withCoordinates, (qb) => qb.select(['asset_exif.latitude', 'asset_exif.longitude']))
           .where('asset.deletedAt', options.isTrashed ? 'is not' : 'is', null)
           .$if(options.visibility === undefined, withDefaultVisibility)
@@ -984,7 +1005,14 @@ export class AssetRepository {
 
             return withBoundingBox(withBoundingCircle, bbox);
           })
-          .where(truncatedDate(options.orderBy), '=', timeBucket.replace(/^[+-]/, ''))
+          .$if(options.orderBy === AssetOrderBy.CreatedAt, (qb) =>
+            qb
+              .where('asset.createdAt', '>=', sql<Date>`${bucket}::timestamp AT TIME ZONE 'UTC'`)
+              .where('asset.createdAt', '<', sql<Date>`(${bucket}::timestamp + interval '1 month') AT TIME ZONE 'UTC'`),
+          )
+          .$if(options.orderBy !== AssetOrderBy.CreatedAt, (qb) =>
+            qb.where(truncatedDate(options.orderBy), '=', bucket),
+          )
           .$if(!!options.albumId, (qb) =>
             qb.where((eb) =>
               eb.exists(
@@ -1065,7 +1093,7 @@ export class AssetRepository {
             eb.fn.coalesce(eb.fn('array_agg', ['status']), sql.lit('{}')).as('status'),
             eb.fn.coalesce(eb.fn('array_agg', ['thumbhash']), sql.lit('{}')).as('thumbhash'),
           ])
-          .$if(!auth.sharedLink || auth.sharedLink.showExif, (qb) =>
+          .$if(!isMetadataHidden(auth), (qb) =>
             qb.select((eb) => [
               eb.fn.coalesce(eb.fn('array_agg', ['city']), sql.lit('{}')).as('city'),
               eb.fn.coalesce(eb.fn('array_agg', ['country']), sql.lit('{}')).as('country'),
@@ -1198,31 +1226,45 @@ export class AssetRepository {
       .execute();
   }
 
-  @GenerateSql({ params: [DummyValue.UUID, [DummyValue.STRING], [DummyValue.STRING]] })
-  async detectOfflineExternalAssets(
-    libraryId: string,
-    importPaths: string[],
-    exclusionPatterns: string[],
-  ): Promise<UpdateResult> {
-    const paths = importPaths.map((importPath) => `${importPath}%`);
-    const exclusions = exclusionPatterns.map((pattern) => globToPostgresRegex(pattern));
+  @GenerateSql({ params: [DummyValue.UUID, () => true] })
+  detectOfflineExternalAssets(libraryId: string, isInLibrary: (originalPath: string) => boolean): Promise<number> {
+    // read and write on one connection, so concurrent library scans can't deadlock on the pool
+    return this.db.transaction().execute(async (trx) => {
+      const query = trx
+        .selectFrom('asset')
+        .select(['asset.id', 'asset.originalPath'])
+        .where('asset.libraryId', '=', asUuid(libraryId))
+        .where('asset.isOffline', '=', false)
+        .where('asset.isExternal', '=', true);
+      await sql`declare offline_check no scroll cursor for ${query}`.execute(trx);
 
-    return this.db
-      .updateTable('asset')
-      .set({
-        isOffline: true,
-        deletedAt: new Date(),
-      })
-      .where('isOffline', '=', false)
-      .where('isExternal', '=', true)
-      .where('libraryId', '=', asUuid(libraryId))
-      .where((eb) =>
-        eb.or([
-          eb.not(eb.or(paths.map((path) => eb('originalPath', 'like', path)))),
-          eb.or(exclusions.map((pattern) => eb('originalPath', '~*', pattern))),
-        ]),
-      )
-      .executeTakeFirstOrThrow();
+      const fetchBatch = async () => {
+        const { rows } = await sql<{ id: string; originalPath: string }>`
+          fetch ${sql.lit(JOBS_LIBRARY_PAGINATION_SIZE)} from offline_check
+        `.execute(trx);
+        return rows;
+      };
+
+      const deletedAt = new Date();
+      let count = 0;
+      for (let rows = await fetchBatch(); rows.length > 0; rows = await fetchBatch()) {
+        const ids = rows.filter(({ originalPath }) => !isInLibrary(originalPath)).map(({ id }) => id);
+        if (ids.length === 0) {
+          continue;
+        }
+
+        // a concurrent check of the same library may have offlined these rows after the cursor was declared
+        const { numUpdatedRows } = await trx
+          .updateTable('asset')
+          .set({ isOffline: true, deletedAt })
+          .where('id', '=', anyUuid(ids))
+          .where('isOffline', '=', false)
+          .executeTakeFirst();
+        count += Number(numUpdatedRows);
+      }
+
+      return count;
+    });
   }
 
   @GenerateSql({ params: [DummyValue.UUID, [DummyValue.STRING]] })

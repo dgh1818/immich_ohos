@@ -1,5 +1,4 @@
 import { BadRequestException } from '@nestjs/common';
-import type { DeepPartial } from 'src/types.js';
 import { SystemConfig, defaults } from 'src/dtos/config.dto.js';
 import {
   AudioCodec,
@@ -18,6 +17,7 @@ import {
   VideoContainer,
 } from 'src/enum.js';
 import { SystemConfigService } from 'src/services/system-config.service.js';
+import type { DeepPartial } from 'src/types.js';
 import { mockEnvData } from 'test/repositories/config.repository.mock.js';
 import { ServiceMocks, newTestService } from 'test/utils.js';
 
@@ -47,6 +47,7 @@ const updatedConfig = Object.freeze<SystemConfig>({
     [QueueName.Editor]: { concurrency: 2 },
   },
   backup: {
+    beta: false,
     database: {
       enabled: true,
       cronExpression: '0 02 * * *',
@@ -176,6 +177,11 @@ const updatedConfig = Object.freeze<SystemConfig>({
     storageLabelClaim: 'preferred_username',
     storageQuotaClaim: 'immich_quota',
     roleClaim: 'immich_role',
+  },
+  passkey: {
+    enabled: false,
+    domain: null,
+    additionalDomains: [],
   },
   passwordLogin: {
     enabled: true,
@@ -396,6 +402,21 @@ describe(SystemConfigService.name, () => {
       expect(mocks.systemMetadata.readFile).toHaveBeenCalledWith('immich-config.json');
     });
 
+    it('should disable passkeys when enabled in the database', async () => {
+      mocks.systemMetadata.get.mockResolvedValue({ passkey: { enabled: true } });
+
+      const config = await sut.getAdminConfig();
+      expect(config.passkey.enabled).toBe(false);
+    });
+
+    it('should disable passkeys when enabled in the config file', async () => {
+      mocks.config.getEnv.mockReturnValue(mockEnvData({ configFile: 'immich-config.json' }));
+      mocks.systemMetadata.readFile.mockResolvedValue(JSON.stringify({ passkey: { enabled: true } }));
+
+      const config = await sut.getAdminConfig();
+      expect(config.passkey.enabled).toBe(false);
+    });
+
     it('should allow underscores in the machine learning url', async () => {
       mocks.config.getEnv.mockReturnValue(mockEnvData({ configFile: 'immich-config.json' }));
       const partialConfig = { machineLearning: { urls: ['immich_machine_learning'] } };
@@ -416,14 +437,14 @@ describe(SystemConfigService.name, () => {
       },
     ];
 
-    for (const { should, externalDomain, result } of externalDomainTests) {
+    for (const { should, externalDomain, result = 'https://demo.immich.app' } of externalDomainTests) {
       it(`should normalize an external domain ${should}`, async () => {
         mocks.config.getEnv.mockReturnValue(mockEnvData({ configFile: 'immich-config.json' }));
         const partialConfig = { server: { externalDomain } };
         mocks.systemMetadata.readFile.mockResolvedValue(JSON.stringify(partialConfig));
 
         const config = await sut.getAdminConfig();
-        expect(config.server.externalDomain).toEqual(result ?? 'https://demo.immich.app');
+        expect(config.server.externalDomain).toEqual(result);
       });
     }
 

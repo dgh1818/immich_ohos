@@ -2,12 +2,12 @@ name: immich_mobile
 description: Immich - selfhosted backup media file on mobile phone
 
 publish_to: 'none'
-version: 3.3.5+330050027
+version: 3.4.2+340020000
 
 environment:
   sdk: '>=3.12.0 <4.0.0'
   # Keep the OHOS fork on the engine version validated by this checkout.
-  flutter: '>=3.44.9 <3.45.0'
+  flutter: '>=3.47.2 <3.48.0'
 
 dependencies:
   async: ^2.13.1
@@ -46,6 +46,8 @@ dependencies:
   hooks_riverpod: ^2.6.1
   http: ^1.6.0
   image_picker: ^1.2.3
+  native_core:
+    path: ../native/native_core
   immich_ui:
     path: './packages/ui'
   intl: ^0.20.2
@@ -84,9 +86,8 @@ dependencies:
   sliver_tools: ^0.2.12
   stream_transform: ^2.1.1
   sqlite3: ^3.4.0
-  sqlite_async: 0.14.2
-  sqlite3_connection_pool: ^0.2.7
-  thumbhash: 0.1.0+1
+  sqlite_async: 0.14.8
+  sqlite3_connection_pool: ^0.2.13
   timezone: ^0.9.4
   url_launcher: ^6.3.2
   uuid: ^4.6.0
@@ -119,6 +120,8 @@ dependency_overrides:
   # Pin bonsoir to 5.x until cast releases a version compatible with bonsoir 6.x.
   bonsoir: ^5.1.11
   path_provider_android: 2.2.23
+  # Newer Android bindings require JNI 1.x; Immich's shared OkHttp uses JNI 0.15.
+  shared_preferences_android: 2.4.25
   native_video_player:
     path: ../../package_flutter/native_video_player_ohos
   local_auth:
@@ -133,7 +136,9 @@ dependency_overrides:
   background_downloader:
     path: ../../package_flutter/background_downloader_ohos
   sqlite3:
-    path: ../../package_flutter/sqlite3-ohos/sqlite3
+    git:
+      url: https://gitcode.com/CPF-Flutter/fluttertpc_sqlite3.dart.git
+      ref: br_3.41_dev
   sqlite3_connection_pool:
     path: ../../package_flutter/sqlite3-ohos/sqlite3_connection_pool
   huawei_cast:
@@ -150,7 +155,7 @@ dependency_overrides:
     git:
       url: 'https://gitcode.com/CPF-Flutter/flutter_packages.git'
       path: 'packages/pigeon'
-      ref: br_pigeon-v26.1.5_ohos_dev
+      ref: br_pigeon-v26.3.4_ohos_dev
   flutter_secure_storage:
     git:
       url: 'https://gitcode.com/dgh18/fluttertpc_flutter_secure_storage.git'
@@ -238,9 +243,9 @@ dependency_overrides:
     path: ../../package_flutter/flutter-maplibre-gl-ohos/maplibre_gl_web
   share_plus:
     git:
-      url: 'https://gitcode.com/openharmony-sig/flutter_plus_plugins.git'
+      url: 'https://gitcode.com/CPF-Flutter/flutter_plus_plugins.git'
       path: 'packages/share_plus/share_plus'
-      ref: master
+      ref: br_share_plus-v10.1.1_ohos
   intl: 0.20.2
   uuid: ^4.4.2
 
@@ -251,7 +256,10 @@ dependency_overrides:
   drift: 2.34.0
   drift_dev: 2.34.0
   jni:
-    path: ./third_party/jni
+    git:
+      url: https://gitcode.com/CPF-Flutter/fluttertpc_dart_native.git
+      ref: 9d2eaf45940e5042637b3387b18292ed39223a4a
+      path: pkgs/jni
 
 dev_dependencies:
   auto_route_generator: ^10.5.0
@@ -272,15 +280,9 @@ dev_dependencies:
   # Type safe platform code
   pigeon: ^27.3.0
 
-hooks:
-  user_defines:
-    sqlite3:
-      source: system
-
 flutter:
   uses-material-design: true
   assets:
-    - NativeAssetsManifest.json
     - assets/
     - assets/icons/notification_icon.png
     - assets/feature_message/

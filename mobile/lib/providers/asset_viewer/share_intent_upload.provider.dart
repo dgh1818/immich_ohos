@@ -110,8 +110,7 @@ class ShareIntentUploadStateNotifier extends StateNotifier<List<ShareIntentAttac
       onSuccess: (fileId, _) {
         _updateStatus(fileId, UploadStatus.complete, progress: 1.0);
       },
-      onError: (fileId, errorMessage) {
-        _logger.warning("Upload failed for file: $fileId, error: $errorMessage");
+      onError: (fileId, _) {
         _updateStatus(fileId, UploadStatus.failed);
       },
     );

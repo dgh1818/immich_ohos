@@ -7,31 +7,34 @@
 - Do not introduce unnecessary abstractions, wrappers, or local deviations from upstream behavior.
 - Do not rewrite upstream logic unless required for the task.
 - Immich 本体与插件都要逐行压缩相对上游版本的差异，保留上游变量名与写法，能内联的简单处理不要另起函数。OHOS 修复优先放在 ArkTS，只有平台返回值无法完整表达界面状态时才保留必要的 Dart 适配；不得为减少行数删掉已有 HDR、投屏、备份等功能。
+- 每次完成上游 merge 后，分别将 Immich 本体对照目标上游 tag、各插件对照其相应的上游版本或提交重新检查 diff；删除合并重复、已失效或已被上游等效实现的改动，逐项确认剩余差异的必要性，尽量减少差异行。必要的 OHOS 特化、用户定制和跨平台功能必须保留并验证，不能为了缩短 diff 而删除。
+- 插件选型优先使用功能等效、版本兼容且具备实际 OHOS 支持的社区上游实现；只有确认上游缺少必要功能、修复或平台支持时才使用 fork，并在其上保留最小必要补丁。每次评估记录候选来源、版本、未覆盖的本地功能和验证结果，避免无必要地自行维护整套插件。
 - 需要子代理时默认使用 Sol；未经用户另行指定，不调用 Astra。
 
 ## NetStack 修复后的 NetworkKit 切换
 
-- 当前 HDR 交付线继续使用 libcurl,不得仅因为 OpenHarmony/GitCode 源码已经合入修复就切回 NetworkKit。只有修复已经进入目标手机的系统固件,并在该固件上验证 `requestInStream` + `multiFormDataList` 同时传入 `filePath` 和 `remoteFileName` 时仍通过文件路径流式上传,才允许开始切换。
+- 按用户要求逐步切换：HarmonyOS 7.0 及以上使用系统传输能力，旧系统暂时保留 libcurl 兼容分支；不得仅凭 SDK/target API 判断设备实际系统版本。用户反馈 7.0.0.105 已修复 multipart 同时指定 `filePath` 与 `remoteFileName` 时整文件读入内存的问题，但不得据此宣称所有 7.0 固件均已实测。无法可靠识别系统版本或无法满足证书等配置时必须明确处理，不得悄悄丢失安全设置。
 - 系统回归必须包含一个大于 2 GiB 的真实视频 multipart 上传,并确认上传进度持续推进、应用及系统网络进程无 OOM/崩溃、服务端可正确解析响应。CI、编译通过、小文件测试或只检查 OpenHarmony 源码均不能替代此真机回归。
 - 切换时以以下备份分支作为 NetworkKit 实现参考:
   - `F:\immich_ohos\mobile`: `backup/networkkit-native-bridge-20260825`
   - `F:\package_flutter\ohos_http`: `backup/networkkit-native-bridge-20260825`
   - `F:\package_flutter\background_downloader_ohos`: `backup/networkkit-ohos-http-20260825`
 - 不得直接把三个仓库整体重置或长期切回上述旧备份分支。应从届时各仓库的最新交付分支新建切换分支,逐项对照并迁移 NetworkKit 实现,保留备份分支创建后新增的 HDR 功能、上游合并和 bug 修复。
-- 切换目标是 `ohos_http` 不再打包 libcurl、`background_downloader_ohos` 只依赖 `ohos_http` 的系统 HTTP 能力、HDR 安装包不包含 x86 模拟器原生库。不得重新引入大于 2 GiB 时改走 `request.uploadFile` 的分流。
+- 最终目标是 `ohos_http` 不再打包 libcurl、后台下载器使用系统传输能力、HDR 安装包不包含 x86 模拟器原生库；过渡期仍须打包旧系统所需的 libcurl，但已识别为 7.0 及以上的设备不得走该旧路径。不得重新引入大于 2 GiB 时改走 `request.uploadFile` 的分流。
 - 迁移时必须保留并重新验证自签名 CA、跳过服务端证书校验、P12 客户端证书及密码透传;Worker 必须使用 `ApplicationContext` 对应的应用级 `filesDir`,与 `ssl_client_cert` 及 cache 目录的创建位置一致,不得退回曾经错误的 UIContext/cache 路径解析。
-- 切换后的 release HAP 必须实际解包确认不含 `libcurl.so*`、x86 原生库和 `integration_test.har`,然后安装到目标真机,完成登录/同步、后台备份、超大视频上传和自签名服务器回归。验证未全部完成时不得把 NetworkKit 切换标记为完成。
+- 过渡期 release HAP 仍需打包旧系统使用的 libcurl；实际解包确认不含 x86 原生库和 `integration_test.har`，并在真机确认 7.0 及以上的传输没有进入 libcurl。只有移除旧系统兼容分支后，才要求解包确认不含 `libcurl.so*`。切换验证还须覆盖登录/同步、后台备份、超大视频上传和自签名服务器；验证未全部完成时不得把 NetworkKit 切换标记为完成。
+- Flutter OHOS 3.47.9 构建工具当前会把 `integration_test` 开发插件也编入 release。保留上游测试源码和开发依赖，发布构建时在隔离工作区临时排除该依赖及残留插件引用，构建后还原；检查 HAP 的 `ets/modules.abc` 和 `pkgContextInfo.json` 确实没有 `integration_test`，不能只检查是否有 HAR 文件。
 
 ## Flutter OHOS 引擎构建
 
-- 引擎(WSL `~/engine_3.44.9`)一律用仓库自带的 `./ohos -t release` 构建,不得手工拼 ninja/out 目录或另写构建命令。构建产物同步进 `mobile/ohos/har/flutter.har` 后再构建 HAP;装机前必须确认源码 mtime 早于 HAP 构建时间,禁止把旧构建当新版安装。
-- Windows 构建 ARM64 release HAP 时，不能只检查 AOT 工具的 `windows_simarm64` 或 `libapp.so` 的 ELF `e_machine=183`；snapshot 的目标系统与压缩指针配置也必须匹配选用的 Engine。2026-11-04 实测当前 runtime 要求 `arm64 ohos compressed-pointers`；普通 `host_release\gen_snapshot.exe` 输出 x86-64，`gen_snapshot_product_linux_arm64.exe` 虽输出 ARM64，却是 `arm64 linux no-compressed-pointers`，两者都不能用于当前 OHOS runtime。Windows 配套工具恢复前，用现有 WSL `/home/dgh18/engine_3.44.9/engine/src/out/ohos_release_arm64/clang_x64/gen_snapshot` 对本次 app.dill 生成应用 AOT，再重新打包签名；不要为此重编或替换 Engine/HAR。核对最终 HAP 的 ELF、snapshot features 和 `libflutter.so` SHA256，避免把应用启动前的 isolate 崩溃误判为 Dart 设置改动。
+- 当前项目使用 FVM `custom_3.47.9`，对应 WSL 引擎 `/home/dgh18/engine_3.47.9/engine`。确需重编时使用仓库自带的 `./ohos -t release`；构建 HAP 前比较 WSL、FVM 与项目 `flutter.har` 的 SHA256，不能让 Flutter 自动下载或旧产物覆盖自编译引擎。
+- Windows 构建 ARM64 release HAP 时，除了检查 `libapp.so` 的 AArch64 ELF，还要核对 snapshot features 为 `arm64 ohos compressed-pointers`，并比较 HAP 内 `libflutter.so` 与当前 WSL Engine/HAR 的 SHA256。2026-11-04 的 3.44.9 问题中，普通 x64 或 Linux no-compressed-pointers 的 gen_snapshot 均不能用于 OHOS；2026-11-23 的 3.47.9 Windows 工具已生成匹配的 OHOS snapshot，只有验证不匹配时才排查或改用同版本 WSL 工具，不得随意重编或替换引擎。
 - 不得仅凭文件名或工具自身是 x64，就把 Windows host_release/gen_snapshot.exe 复制到 FVM 的 OHOS 目录作为手机 AOT 工具。必须用当前 app.dill 生成产物并核对 AArch64 ELF、`arm64 ohos compressed-pointers`、工具与 Engine 的构建版本；安装前还要核对最终 HAP 内 libflutter.so 的 SHA256 与本次验证通过的 WSL Engine/HAR 一致。
 
 ## OHOS 应用版本号与装机
 
 - OHOS 安装版本的唯一源头是 `mobile/pubspec.yaml` 的 `version: x.y.z+<versionCode>`;只修改这里,再由 `fvm flutter build hap` 自动同步到 `mobile/ohos/AppScope/app.json5` 和最终 HAP 的 `pack.info`,不要把 AppScope 单独作为长期版本源修改。
-- upstream `v3.3.5` 对应的应用版本必须是 `3.3.5+330050000`;升级 Immich 版本时,`versionName` 与对应 build number 必须一起按发布版本调整,不得沿用 `3.3.1` 线的 `330010xxx`。
+- upstream `v3.3.5` 对应 `3.3.5+330050000`，`v3.4.2` 对应 `3.4.2+340020000`；升级 Immich 版本时，`versionName` 与对应 build number 必须一起按发布版本调整，不得沿用旧版本号。后续同一版本发布递增时仍需高于已安装设备的 build number。
 - 通过 HDC 自测安装必须使用与当前应用签名密钥匹配且未过期的 `debug`/测试 profile;正式发布 profile 可能以 `9568322: signature verification failed due to not trusted app source` 拒绝侧载。发布签名仅用于正式分发,不得据此卸载已有应用。
 - 当前签名文件位置(`mobile/ohos/build-profile.json5`,只记录路径,禁止记录密码):当前 `products.default.signingConfig=debug`。
   - Debug 构建签名配置引用 `certpath=C:\Users\dugua\.ohos\config\debug_ohos_wmkEtdMqYjVAd1O9t2zQX3Ye2arAEivZBm2UFrmlREk=.cer`、最新 `profile=C:\Users\dugua\.ohos\config\immich_debug_20261102Debug.p7b`、`storeFile=C:\Users\dugua\.ohos\config\debug_ohos_wmkEtdMqYjVAd1O9t2zQX3Ye2arAEivZBm2UFrmlREk=.p12`。
@@ -84,12 +87,17 @@
 - `docs-build.yml`/`docs-deploy.yml`/`sdk.yml`/`fdroid.yml`(fork 无法运行的上游基础设施:文档站/npm/F-Droid,缺 secrets):2026-09-18 起从注释禁用改为**直接删除**(`3a3a2b07ae`)。注释法挡不住 push 触发——文件存在(哪怕整文件注释)GitHub 仍会用推送中的旧版执行并失败,每次 push 分支/tag 都产生一批红叉(实测)。**merge 上游后这 4 个文件会重新出现,必须重新 `git rm`**,不要再退回注释法;上游内容需要时去 immich-app/immich 查阅
 - server/ 端 merge 必查(2026-09-19 v3.2.1 核查,修复 `2208c90757`):①上游 v3.2.1 起 `server/src/config.ts` 被重构并入 `server/src/dtos/config.dto.ts`(schema+defaults 同文件),fork 对旧 config.ts 的 defaults 定制必须迁到新位置——本次丢了 storageTemplate 默认值(c26d2299ee: `enabled: true` + `'{{album}}/{{filename}}`');`library.useContentHash` 属于已正确迁移的范例。②fork 的 spec 测试块易被上游 spec 重写无声覆盖,`library.service.spec.ts` 的外部库 content-hash/backfill 全套测试(~490 行)曾整块丢失而实现仍在——merge 后对 fork 改过的 `*.spec.ts` 逐个 `git diff <上游tag> HEAD -- <file>` 确认 fork hunk 还在。③Windows 本机跑 server 测试(vitest,`npx vitest --config test/vitest.config.mjs`)有固有环境噪声(上游用正斜杠字面量断言路径),storage-template/ library 的 validate 类失败与纯上游在本机的失败同族,判别回归时用纯上游 tag 的对应文件对照跑;依赖装法=仓库根 `pnpm install --frozen-lockfile`(monorepo)。④**Windows 禁忌**:git worktree 指向主仓库 node_modules 的 junction 上执行 `git worktree remove --force` 会穿透 junction 删除主仓库依赖(实测全毁,需删根 node_modules 后 `pnpm install` 全量重建)
 
-- server schema migrations: 每次 merge 后运行 `server` 的 `sql-tools migrations verify-order`,确认所有 `server/src/schema/migrations/*.ts`(包括 fork 保留的兼容/修复迁移)都登记在 `ORDER` 且顺序正确。2026-10-23 合 v3.3.5 时发现 `1781748259837-AllowDuplicateExternalLibraryChecksums` 与 `1781960000000-RestoreExternalLibraryChecksumUniqueness` 曾漏登记;本次已补入并复验 `ORDER is consistent`
+- server schema migrations: 每次 merge 后运行 `server` 的 `sql-tools migrations verify-order`,确认所有迁移都登记在 `ORDER` 且顺序正确。旧 OHOS 版额外写入的 `1781748259837-AllowDuplicateExternalLibraryChecksums` 和 `1781960000000-RestoreExternalLibraryChecksumUniqueness` 不能作为新迁移重新加入：启动迁移在事务中兼容清理这两条旧记录，并验证或恢复外部图库唯一索引，以便迁移后的数据库可切回同版本上游。路径 SHA-1 必须与 `sha1('path:' + originalPath)` 一致且不能依赖额外安装 pgcrypto；合并时分别验证内容哈希开关、新上游数据库和旧 OHOS 数据库快照，保留 checksum 并验证上游回切。含冲突数据的旧非唯一索引不得静默删除或重写资产；升级失败必须回滚。
 
 - OHOS 网络视频取数：API 26 的 `MediaSourceLoader` 只能由已确认返回单文件的 `/assets/{id}/original`、`/assets/{id}/video/playback` 调用方显式启用，不能套用到任意 HLS/DASH 或外部 URL。controller 必须强引用 `media.MediaSource` 到对应 reset/release 完成；只保留 loader 会让 MediaSource 被回收，清掉 read 回调后永久转圈。正长度 read 收齐时原生 `respondData` 已完成请求，恰好读到文件 EOF 也不得再重复 `finishLoading`，否则会误结束下一次 read。2026-11-05 真机已验证这些边界及大于 4 GiB 的 Range；固定约 10 秒的原生 HTTP 停顿与此诊断加载器的生命周期问题须分别判断。
 - 不得仅按原生缓冲公式降低 `preferredBufferDuration` 就宣称起播更快。2026-11-05 MatePad 同一 4K 视频实测从 20 改为合法值 4 后，两次停在 prepared，缓存满后无后续 read、无音频起播；只恢复 20 即恢复播放。调参必须验证首次起播、连续 seek 后的音画与持续读取，不能把 `prepare`、`play()` 返回或视频首帧回调当成真正起播。
 
 ### 冲突解决原则
+
+- 插件升级和上游合并必须逐项审计 `mobile/pubspec.yaml`、`pubspec.lock`、submodule 与本地 `path` 依赖，并检查各插件仓库是否有更新的 OHOS 适配分支及其实际版本。指向用户 GitHub/GitCode fork 或本地目录的插件可能包含专门修复，先检查其实际解析提交、本地未提交改动及相对原插件上游的差异，再比较候选 OHOS 新分支的源码和行为；不得仅凭版本号、分支名或依赖解析成功就替换。上游没有等效修复的补丁必须保留并适配新接口，已被上游等效修复的才可移除，并记录核查和验证结果。特别核对后台上传、视频定位、地图、动态照片、分享和 SQLite 原生库等已有 OHOS 特化；`photo_manager` 仍按上文要求使用 fork 和 lock 中的实际提交，不额外添加 ref。
+- 对官方尚无完整 OHOS 适配、由本项目自行维护的插件，还要比较新版 Immich 声明的原版插件版本，以及原插件自 fork 基线以来新增的提交。确认哪些上游接口、功能和修复应随版本提升合入，再移植到现有 OHOS 适配并检查 Dart、Android/iOS 与 ArkTS/原生接口的一致性；保留仍未被上游覆盖的本地修改和必要测试，不能因 path override 能解析就忽略上游更新。
+- 插件版本升级时必须逐项对照 Dart 平台通道和 Android/Kotlin、iOS/Swift 的新增配置、方法、回调、错误码与生命周期行为，在 OHOS 的 ArkTS/原生侧实现对应语义并验证，不能只升级公共 Dart 层。包括 `background_downloader` 9.5.6 的 `Config.skipExistingFiles`，以及后台上传、网络约束、取消和任务恢复；如受系统能力限制，明确记录缺口，不得声称已完整对齐。
+- 更新 OHOS Pigeon 前用包含 `Uint8List` 的实际样例检查生成的 ArkTS 类型及编解码：二进制数据必须是 `Uint8Array`，不能误生成 `number[]`。如果新版生成器仍有问题，保留必要的手工修正并复核所有受影响的生成文件。
 
 - OHOS beta 主照片时间线顶部布局:`mobile/lib/presentation/pages/dev/main_timeline.page.dart` 的同步/上传/备份/头像控件必须继续由外层 `Stack` 覆盖在网格上;OHOS 的 `Timeline` 应保留 `transparent: true` 的 `ImmichSliverAppBar` 占位,使 Memory 卡片在顶部有间距,滚动时照片可透过顶栏;不要删除顶栏,也不要恢复不透明的浅色空栏。每次 merge 人工核对该页、`mobile/lib/presentation/widgets/timeline/timeline.widget.dart` 默认 AppBar 和 `mobile/lib/widgets/common/immich_sliver_app_bar.dart` 的背景/标题/动作,并在真机检查滚动到顶与滚动后两种状态。回归来源已查明:`v3.2.1` merge (`acb8809b19`) 把 `ImmichSliverAppBar.backgroundColor` 从透明改为主题 surface、并把默认 `Timeline` AppBar 从 pinned 改为不固定;OHOS 标题此前已被本地改成空 `SizedBox.shrink`,因此该 merge 让空 AppBar 显示成顶部浅色空栏。后续 `v3.3.5` merge 未触碰这些相关文件。修复时保留 OHOS 叠加控件,不要靠重新塞回头像/备份按钮来填充空栏。
 

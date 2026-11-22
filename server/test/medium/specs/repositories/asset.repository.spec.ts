@@ -1,15 +1,20 @@
-import { Kysely } from 'kysely';
-import { AssetOrder, AssetOrderBy, AssetVisibility } from 'src/enum.js';
+import { Insertable, Kysely } from 'kysely';
+import { chunk } from 'lodash-es';
+import { JOBS_LIBRARY_PAGINATION_SIZE } from 'src/constants.js';
+import { AssetFileType, AssetOrder, AssetOrderBy, AssetType, AssetVisibility, ChecksumAlgorithm } from 'src/enum.js';
 import { AssetRepository } from 'src/repositories/asset.repository.js';
+import { LibraryRepository } from 'src/repositories/library.repository.js';
 import { LoggingRepository } from 'src/repositories/logging.repository.js';
 import { DB } from 'src/schema/index.js';
+import { AssetTable } from 'src/schema/tables/asset.table.js';
 import { BaseService } from 'src/services/base.service.js';
-import { newMediumService } from 'test/medium.factory.js';
+import { mediumFactory, newMediumService } from 'test/medium.factory.js';
 import { factory } from 'test/small.factory.js';
 import { getKyselyDB } from 'test/utils.js';
 
 let defaultDatabase: Kysely<DB>;
 
+// eslint-disable-next-line unicorn/no-unnecessary-parameters
 const setup = (db?: Kysely<DB>) => {
   const { ctx } = newMediumService(BaseService, {
     database: db || defaultDatabase,
@@ -22,6 +27,13 @@ const setup = (db?: Kysely<DB>) => {
 beforeAll(async () => {
   defaultDatabase = await getKyselyDB();
 });
+
+const newExternalLibrary = async (ctx: ReturnType<typeof setup>['ctx']) => {
+  const { user } = await ctx.newUser();
+  return ctx
+    .get(LibraryRepository)
+    .create({ ownerId: user.id, name: 'library', importPaths: [], exclusionPatterns: [] });
+};
 
 // Metadata extraction is repeatable: probing improves, files get repaired,
 // and a re-run has to be able to correct what an earlier run stored.
@@ -64,6 +76,68 @@ const keyframeRow = (assetId: string, n: number) => ({
 });
 
 describe(AssetRepository.name, () => {
+  it('backfills path checksums without changing duplicate or stale rows', async () => {
+    const { ctx, sut } = setup();
+    const library = await newExternalLibrary(ctx);
+    const originalPath = '/图库/照片.JPG';
+    const inserts = [originalPath, originalPath, '/图库/旧路径.jpg'].map((originalPath, index) =>
+      mediumFactory.assetInsert({
+        originalPath,
+        ownerId: library.ownerId,
+        libraryId: library.id,
+        isExternal: true,
+        checksum: Buffer.alloc(20, index + 1),
+        checksumAlgorithm: ChecksumAlgorithm.sha1File,
+      }),
+    );
+    const assets = await ctx.database.insertInto('asset').values(inserts).returningAll().execute();
+    const stale = assets.find((asset) => asset.originalPath === '/图库/旧路径.jpg')!;
+    await ctx.database
+      .updateTable('asset')
+      .set({ originalPath: '/图库/新路径.jpg' })
+      .where('id', '=', stale.id)
+      .execute();
+
+    expect(await sut.updateAllExternalToPathHash(assets)).toBe(1);
+    expect(await sut.updateAllExternalToPathHash(assets)).toBe(0);
+
+    const rows = await ctx.database.selectFrom('asset').selectAll().where('libraryId', '=', library.id).execute();
+    expect(rows).toHaveLength(3);
+    expect(rows.filter((row) => row.checksumAlgorithm === ChecksumAlgorithm.sha1Path)).toMatchObject([
+      { originalPath, checksum: Buffer.from('d3fc84a795bcdb9627976f7b26a2fa8810641c20', 'hex') },
+    ]);
+    expect(rows.find((row) => row.id === stale.id)).toMatchObject({
+      originalPath: '/图库/新路径.jpg',
+      checksum: stale.checksum,
+      checksumAlgorithm: ChecksumAlgorithm.sha1File,
+    });
+  });
+
+  describe('deleteFile', () => {
+    it('should delete only the requested asset and file type', async () => {
+      const { ctx, sut } = setup();
+      const { user } = await ctx.newUser();
+      const { asset } = await ctx.newAsset({ ownerId: user.id });
+      const { asset: other } = await ctx.newAsset({ ownerId: user.id });
+      await sut.upsertFiles([
+        { assetId: asset.id, type: AssetFileType.Sidecar, path: '/photos/photo.jpg.xmp' },
+        { assetId: asset.id, type: AssetFileType.Thumbnail, path: '/photos/thumbnail.jpg' },
+        { assetId: other.id, type: AssetFileType.Sidecar, path: '/photos/other.jpg.xmp' },
+      ]);
+
+      await sut.deleteFile({ assetId: asset.id, type: AssetFileType.Sidecar });
+
+      await expect(
+        ctx.database
+          .selectFrom('asset_file')
+          .where('assetId', 'in', [asset.id, other.id])
+          .select('path')
+          .orderBy('path')
+          .execute(),
+      ).resolves.toEqual([{ path: '/photos/other.jpg.xmp' }, { path: '/photos/thumbnail.jpg' }]);
+    });
+  });
+
   describe('getTimeBucket', () => {
     it('should order assets by local day first and fileCreatedAt within each day', async () => {
       const { ctx, sut } = setup();
@@ -502,10 +576,116 @@ describe(AssetRepository.name, () => {
     });
   });
 
+  describe('findLivePhotoMatch', () => {
+    type LibraryKind = 'upload' | 'external' | 'other external';
+
+    const setupLivePhoto = async ({ still, motion }: { still: LibraryKind; motion: LibraryKind }) => {
+      const { ctx, sut } = setup();
+      const { user } = await ctx.newUser();
+      const newLibrary = () =>
+        ctx
+          .get(LibraryRepository)
+          .create({ ownerId: user.id, name: 'library', importPaths: [], exclusionPatterns: [] });
+      const [external, otherExternal] = await Promise.all([newLibrary(), newLibrary()]);
+      const libraryIds = { upload: null, external: external.id, 'other external': otherExternal.id };
+      const livePhotoCID = 'live-photo-cid';
+
+      const [{ asset: stillAsset }, { asset: motionAsset }] = await Promise.all([
+        ctx.newAsset({ ownerId: user.id, type: AssetType.Image, libraryId: libraryIds[still] }),
+        ctx.newAsset({ ownerId: user.id, type: AssetType.Video, libraryId: libraryIds[motion] }),
+      ]);
+      await Promise.all([
+        ctx.newExif({ assetId: stillAsset.id, livePhotoCID }),
+        ctx.newExif({ assetId: motionAsset.id, livePhotoCID }),
+      ]);
+
+      const match = await sut.findLivePhotoMatch({
+        ownerId: user.id,
+        libraryId: libraryIds[still],
+        livePhotoCID,
+        otherAssetId: stillAsset.id,
+        type: AssetType.Video,
+      });
+
+      return { match, motionAsset };
+    };
+
+    it.each<LibraryKind>(['upload', 'external'])(
+      'should match a motion video in the same %s library',
+      async (library) => {
+        const { match, motionAsset } = await setupLivePhoto({ still: library, motion: library });
+
+        expect(match).toEqual({ id: motionAsset.id, ownerId: motionAsset.ownerId });
+      },
+    );
+
+    it.each<{ still: LibraryKind; motion: LibraryKind }>([
+      { still: 'upload', motion: 'external' },
+      { still: 'external', motion: 'upload' },
+      { still: 'external', motion: 'other external' },
+    ])('should not match a still in the $still library to a motion video in the $motion library', async (libraries) => {
+      const { match } = await setupLivePhoto(libraries);
+
+      expect(match).toBeUndefined();
+    });
+  });
+
   describe('createAll', () => {
     it('should return an empty array when given an empty input', async () => {
       const { sut } = setup();
       await expect(sut.createAll([])).resolves.toStrictEqual([]);
     });
+  });
+
+  describe('detectOfflineExternalAssets', () => {
+    it('should offline the assets the matcher rejects and return how many it offlined', async () => {
+      const { ctx, sut } = setup();
+      const [library, otherLibrary] = await Promise.all([newExternalLibrary(ctx), newExternalLibrary(ctx)]);
+      const deletedAt = new Date('2020-01-01T00:00:00.000Z');
+      const newExternalAsset = (originalPath: string, dto: Partial<Insertable<AssetTable>> = {}) =>
+        ctx.newAsset({ ownerId: library.ownerId, libraryId: library.id, isExternal: true, originalPath, ...dto });
+      const [{ asset: kept }, { asset: rejected }, { asset: alreadyOffline }, { asset: otherLibraryAsset }] =
+        await Promise.all([
+          newExternalAsset('/keep/a.jpg'),
+          newExternalAsset('/reject/b.jpg'),
+          newExternalAsset('/reject/c.jpg', { isOffline: true, deletedAt }),
+          ctx.newAsset({
+            ownerId: otherLibrary.ownerId,
+            libraryId: otherLibrary.id,
+            isExternal: true,
+            originalPath: '/reject/d.jpg',
+          }),
+        ]);
+
+      await expect(sut.detectOfflineExternalAssets(library.id, (path) => path.startsWith('/keep/'))).resolves.toBe(1);
+
+      await expect(sut.getById(kept.id)).resolves.toMatchObject({ isOffline: false, deletedAt: null });
+      await expect(sut.getById(rejected.id)).resolves.toMatchObject({ isOffline: true, deletedAt: expect.any(Date) });
+      await expect(sut.getById(alreadyOffline.id)).resolves.toMatchObject({ isOffline: true, deletedAt });
+      await expect(sut.getById(otherLibraryAsset.id)).resolves.toMatchObject({ isOffline: false, deletedAt: null });
+    });
+
+    it('should offline each asset once when the same library is checked concurrently', async () => {
+      const { ctx, sut } = setup();
+      const library = await newExternalLibrary(ctx);
+      const assets = Array.from({ length: JOBS_LIBRARY_PAGINATION_SIZE * 2 }, (_, index) =>
+        mediumFactory.assetInsert({
+          ownerId: library.ownerId,
+          libraryId: library.id,
+          isExternal: true,
+          originalPath: `/reject/${index}.jpg`,
+        }),
+      );
+      for (const batch of chunk(assets, 1000)) {
+        await sut.createAll(batch);
+      }
+
+      const counts = await Promise.all([
+        sut.detectOfflineExternalAssets(library.id, () => false),
+        sut.detectOfflineExternalAssets(library.id, () => false),
+      ]);
+
+      expect(counts[0] + counts[1]).toBe(assets.length);
+    }, 60_000);
   });
 });

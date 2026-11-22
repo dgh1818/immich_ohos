@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { handleError } from '$lib/utils/handle-error';
+  import { handleError } from '#lib/utils/handle-error.ts';
   import { getBaseUrl } from '@immich/sdk';
   import { Icon, toastManager } from '@immich/ui';
   import { mdiImageRefreshOutline, mdiPause, mdiPlay, mdiReplay, mdiStop } from '@mdi/js';

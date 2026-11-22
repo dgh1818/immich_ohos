@@ -53,6 +53,7 @@ class NativeVideoViewerState extends ConsumerState<NativeVideoViewer> with Widge
   bool _isVideoReady = false;
   bool _shouldPlayOnForeground = true;
   bool _isDisposing = false;
+  bool _showPlayer = false;
   late final VideoPlayerNotifier _notifier;
   late final CastNotifier _castNotifier;
 
@@ -104,9 +105,10 @@ class NativeVideoViewerState extends ConsumerState<NativeVideoViewer> with Widge
   Future<void> didChangeAppLifecycleState(AppLifecycleState state) async {
     switch (state) {
       case AppLifecycleState.resumed:
-        if (_shouldPlayOnForeground && widget.isCurrent) {
+        if (_shouldPlayOnForeground && widget.isCurrent && _controller != null) {
+          final controller = _controller;
           await _castNotifier.preparePlaybackMetadata(widget.asset, isCurrent: true);
-          if (!_canUseRef || !widget.isCurrent) {
+          if (!_canUseRef || !widget.isCurrent || _controller != controller) {
             return;
           }
           await _notifier.play();
@@ -247,7 +249,8 @@ class NativeVideoViewerState extends ConsumerState<NativeVideoViewer> with Widge
   }
 
   Future<void> _onPlaybackReady() async {
-    if (!_canUseRef || !widget.isCurrent) {
+    final controller = _controller;
+    if (!_canUseRef || !widget.isCurrent || controller == null) {
       return;
     }
 
@@ -270,7 +273,7 @@ class NativeVideoViewerState extends ConsumerState<NativeVideoViewer> with Widge
     final autoPlayVideo = ref.read(appConfigProvider).viewer.autoPlayVideo;
     if (autoPlayVideo || widget.asset.isMotionPhoto) {
       await _castNotifier.preparePlaybackMetadata(widget.asset, isCurrent: true);
-      if (!_canUseRef || !widget.isCurrent) {
+      if (!_canUseRef || !widget.isCurrent || _controller != controller) {
         return;
       }
       await _notifier.play();
@@ -326,7 +329,7 @@ class NativeVideoViewerState extends ConsumerState<NativeVideoViewer> with Widge
     }
 
     final source = await videoSource;
-    if (source == null || !_canUseRef) {
+    if (source == null || !_canUseRef || !widget.isCurrent || _controller != nc) {
       return;
     }
 
@@ -346,7 +349,7 @@ class NativeVideoViewerState extends ConsumerState<NativeVideoViewer> with Widge
   }
 
   void _initController(NativeVideoPlayerController nc) {
-    if (_controller != null || !_canUseRef) {
+    if (_controller != null || !_canUseRef || !_showPlayer) {
       return;
     }
 
@@ -369,6 +372,17 @@ class NativeVideoViewerState extends ConsumerState<NativeVideoViewer> with Widge
   Widget build(BuildContext context) {
     final isCasting = ref.watch(castProvider.select((c) => c.isCasting));
     final status = ref.watch(videoPlayerProvider(widget.asset.id).select((v) => v.status));
+    // Remove the native view as soon as the route starts leaving so iOS can
+    // dispose it before the transition consumes the remaining platform-view frames.
+    final isRouteActive = ModalRoute.of(context)?.isActive ?? true;
+    _showPlayer = !isCasting && isRouteActive;
+    if (!_showPlayer && _controller != null) {
+      _loadTimer?.cancel();
+      _removeListeners();
+      _controller = null;
+      _isVideoReady = false;
+    }
+
     final videoInfo = _controller?.videoInfo;
     final width = widget.asset.width;
     final height = widget.asset.height;
@@ -387,9 +401,9 @@ class NativeVideoViewerState extends ConsumerState<NativeVideoViewer> with Widge
               // constraints: in loose Center constraints the Image renders at
               // its intrinsic size, and a video's server preview is only
               // 1080p, so it would not fill the screen.
-              if (!_isVideoReady || widget.asset.isMotionPhoto || isCasting)
+              if (!_isVideoReady || widget.asset.isMotionPhoto || !_showPlayer)
                 Center(child: SizedBox.expand(child: widget.image)),
-              if (!isCasting) ...[
+              if (_showPlayer) ...[
                 Visibility.maintain(
                   visible: _isVideoReady,
                   child: Center(
@@ -410,7 +424,7 @@ class NativeVideoViewerState extends ConsumerState<NativeVideoViewer> with Widge
             ],
           ),
         ),
-        if (widget.showControls) const Center(child: VideoViewerControls()),
+        if (widget.showControls && isRouteActive) const Center(child: VideoViewerControls()),
       ],
     );
   }

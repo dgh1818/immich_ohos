@@ -34,7 +34,8 @@ RUN --mount=type=cache,target=/ccache \
     --skip_tests \
     --use_openvino CPU \
     --use_cache \
-    --compile_no_warning_as_error
+    --compile_no_warning_as_error \
+    --no_telemetry
 
 # bundle openvino into the wheel as the published one does, so it is what the EP loads beside it
 WORKDIR /code/onnxruntime/build/Release/dist
@@ -47,7 +48,7 @@ RUN /opt/venv/bin/wheel unpack onnxruntime_openvino-*.whl && \
 
 FROM python:3.13-slim-bookworm@sha256:2325bb286ec344af3e5898cc224b5844e2707ac6e26b1632516fd3edc84a5e26 AS builder-cuda
 
-FROM python:3.13-trixie@sha256:4a0820d8b1b1a1e012a23ff9a1296a3e28b48896a4d27a328a91ee197ce619d9 AS builder-armnn
+FROM python:3.13-trixie@sha256:82c46c08c991d3d3ff10476ac5e386c2c28f27bbd3985a02c5e39fe99ab272eb AS builder-armnn
 
 # renovate: datasource=github-releases depName=ARM-software/armnn
 ARG ARMNN_VERSION="v26.07"
@@ -87,19 +88,11 @@ ENV MACHINE_LEARNING_MODEL_ARENA=false
 
 FROM python:3.13-slim-trixie@sha256:cf50a4f6ac4f026458b08d5222023d700ac806410dff5e9ca8728fa44f2b850f AS prod-openvino
 
-RUN apt-get update && \
-    apt-get install --no-install-recommends -yqq ocl-icd-libopencl1 wget && \
-    wget -nv https://github.com/intel/intel-graphics-compiler/releases/download/v2.41.5/intel-igc-core-2_2.41.5+22716_amd64.deb && \
-    wget -nv https://github.com/intel/intel-graphics-compiler/releases/download/v2.41.5/intel-igc-opencl-2_2.41.5+22716_amd64.deb && \
-    wget -nv https://github.com/intel/compute-runtime/releases/download/26.35.39758.10/intel-opencl-icd_26.35.39758.10-0_amd64.deb &&  \
-    wget -nv https://github.com/intel/intel-graphics-compiler/releases/download/igc-1.0.17537.24/intel-igc-core_1.0.17537.24_amd64.deb && \
-    wget -nv https://github.com/intel/intel-graphics-compiler/releases/download/igc-1.0.17537.24/intel-igc-opencl_1.0.17537.24_amd64.deb && \
-    wget -nv https://github.com/intel/compute-runtime/releases/download/24.35.30872.36/intel-opencl-icd-legacy1_24.35.30872.36_amd64.deb && \
-    # TODO: Figure out how to get renovate to manage this differently versioned libigdgmm file
-    wget -nv https://github.com/intel/compute-runtime/releases/download/26.35.39758.10/libigdgmm12_22.10.0_amd64.deb && \
-    dpkg -i *.deb && \
-    rm *.deb && \
-    apt-get remove wget -yqq && \
+RUN --mount=type=bind,source=scripts/install-intel-runtime.sh,target=/tmp/install-intel-runtime.sh \
+    apt-get update && \
+    apt-get install --no-install-recommends -yqq ocl-icd-libopencl1 curl && \
+    /tmp/install-intel-runtime.sh && \
+    apt-get remove curl -yqq && \
     rm -rf /var/lib/apt/lists/*
 
 FROM nvidia/cuda:12.2.2-runtime-ubuntu22.04@sha256:94c1577b2cd9dd6c0312dc04dff9cb2fdce2b268018abc3d7c2dbcacf1155000 AS prod-cuda

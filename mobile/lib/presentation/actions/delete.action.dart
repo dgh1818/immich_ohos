@@ -121,6 +121,7 @@ class DeleteAction extends AssetActionBuilder {
     required bool isLocalOnly,
   }) async {
     final assetService = ref.read(assetServiceProvider);
+    final message = context.t.trash_action_prompt(count: remoteIds.length);
     if (localIds.isNotEmpty) {
       final count = await _cleanupLocalAssets(context, ref, localIds, isLocalOnly: isLocalOnly);
       if (count <= 0 || (CurrentPlatform.isOhos && count != localIds.length) || !context.mounted) {
@@ -128,7 +129,6 @@ class DeleteAction extends AssetActionBuilder {
       }
     }
 
-    final message = context.t.trash_action_prompt(count: remoteIds.length);
     await assetService.trash(remoteIds);
     return message;
   }

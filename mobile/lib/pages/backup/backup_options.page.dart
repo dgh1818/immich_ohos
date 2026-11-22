@@ -56,7 +56,7 @@ class BackupOptionsPage extends ConsumerWidget {
 
           final backupNotifier = ref.read(backupProvider.notifier);
           final backgroundSync = ref.read(backgroundSyncProvider);
-          backupNotifier.stopForegroundBackup(reason: "backup settings updated");
+          await backupNotifier.stopForegroundBackup(reason: "backup settings updated");
           unawaited(
             backgroundSync.syncRemote().then((success) {
               if (success) {

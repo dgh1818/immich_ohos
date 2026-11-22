@@ -4,8 +4,6 @@ import { R_OK } from 'node:constants';
 import { Stats } from 'node:fs';
 import path, { isAbsolute, parse } from 'node:path';
 import picomatch from 'picomatch';
-import type { ArgOf } from 'src/repositories/event.repository.js';
-import type { JobOf } from 'src/types.js';
 import { JOBS_LIBRARY_PAGINATION_SIZE } from 'src/constants.js';
 import { StorageCore } from 'src/cores/storage.core.js';
 import { OnEvent, OnJob } from 'src/decorators.js';
@@ -31,13 +29,15 @@ import {
   QueueName,
   SystemMetadataKey,
 } from 'src/enum.js';
+import type { ArgOf } from 'src/repositories/event.repository.js';
 import { AssetSyncResult } from 'src/repositories/library.repository.js';
 import { AssetTable } from 'src/schema/tables/asset.table.js';
 import { BaseService } from 'src/services/base.service.js';
+import type { JobOf } from 'src/types.js';
 import { ExternalLibraryChecksumBackfillState, ExternalLibraryPathChecksumBackfillState } from 'src/types.js';
 import { isAssetChecksumConstraint } from 'src/utils/database.js';
 import { mimeTypes } from 'src/utils/mime-types.js';
-import { batched, findOrFail, handlePromiseError } from 'src/utils/misc.js';
+import { batched, createLibraryMatcher, findOrFail, handlePromiseError } from 'src/utils/misc.js';
 
 const EXTERNAL_LIBRARY_IMAGE_HASH_BATCH_SIZE = 100;
 const EXTERNAL_LIBRARY_HASH_RETRY_ATTEMPTS = 3;
@@ -471,14 +471,14 @@ export class LibraryService extends BaseService {
       return JobStatus.Success;
     }
 
-    const ids = assets.map((a) => a.id);
     const lastId = assets.at(-1)!.id;
 
     try {
-      await this.assetRepository.updateAllExternalToPathHash(ids);
-      state.updated += ids.length;
+      const updated = await this.assetRepository.updateAllExternalToPathHash(assets);
+      state.updated += updated;
+      state.failed += assets.length - updated;
       state.afterId = lastId;
-      state.scanned += ids.length;
+      state.scanned += assets.length;
       delete state.retry;
     } catch (error: Error | any) {
       const attempts = state.retry?.id === lastId ? state.retry.attempts + 1 : 1;
@@ -491,9 +491,9 @@ export class LibraryService extends BaseService {
         this.logger.error(
           `Failed to update path checksums for batch ending at ${lastId} after ${attempts} attempts: ${error}`,
         );
-        state.failed += ids.length;
+        state.failed += assets.length;
         state.afterId = lastId;
-        state.scanned += ids.length;
+        state.scanned += assets.length;
         delete state.retry;
       }
     }
@@ -598,6 +598,8 @@ export class LibraryService extends BaseService {
         '**/.stfolder/**',
       ],
     });
+
+    await this.eventRepository.emit('LibraryCreate');
     return mapLibrary(library);
   }
 
@@ -786,6 +788,7 @@ export class LibraryService extends BaseService {
     }
 
     const library = await this.libraryRepository.update(id, dto);
+    await this.eventRepository.emit('LibraryUpdate');
     return mapLibrary(library);
   }
 
@@ -798,6 +801,8 @@ export class LibraryService extends BaseService {
 
     await this.libraryRepository.softDelete(id);
     await this.jobRepository.queue({ name: JobName.LibraryDelete, data: { id } });
+
+    await this.eventRepository.emit('LibraryDelete');
   }
 
   @OnJob({ name: JobName.LibraryDelete, queue: QueueName.Library })
@@ -911,6 +916,7 @@ export class LibraryService extends BaseService {
   @OnJob({ name: JobName.LibrarySyncAssets, queue: QueueName.Library })
   async handleSyncAssets(job: JobOf<JobName.LibrarySyncAssets>): Promise<JobStatus> {
     const assets = await this.assetJobRepository.getForSyncAssets(job.assetIds);
+    const isInLibrary = createLibraryMatcher(job);
 
     const assetIdsToOffline: string[] = [];
     const trashedAssetIdsToOffline: string[] = [];
@@ -945,33 +951,19 @@ export class LibraryService extends BaseService {
           break;
         }
         case AssetSyncResult.CHECK_OFFLINE: {
-          const isInImportPath = job.importPaths.some((path) => asset.originalPath.startsWith(path));
-
-          if (!isInImportPath) {
+          if (!isInLibrary(asset.originalPath)) {
             this.logger.verbose(
-              `Offline asset ${asset.originalPath} is still not in any import path, keeping offline in library ${job.libraryId}`,
+              `Offline asset ${asset.originalPath} is still not in any import path or covered by an exclusion pattern, keeping offline in library ${job.libraryId}`,
             );
             break;
           }
 
-          const isExcluded = job.exclusionPatterns.some((pattern) =>
-            picomatch.isMatch(asset.originalPath, pattern, { nocase: true }),
-          );
-
-          if (!isExcluded) {
-            this.logger.debug(`Offline asset ${asset.originalPath} is now online in library ${job.libraryId}`);
-            if (asset.status === AssetStatus.Trashed) {
-              trashedAssetIdsToOnline.push(asset.id);
-            } else {
-              assetIdsToOnline.push(asset.id);
-            }
-            break;
+          this.logger.debug(`Offline asset ${asset.originalPath} is now online in library ${job.libraryId}`);
+          if (asset.status === AssetStatus.Trashed) {
+            trashedAssetIdsToOnline.push(asset.id);
+          } else {
+            assetIdsToOnline.push(asset.id);
           }
-
-          this.logger.verbose(
-            `Offline asset ${asset.originalPath} is in an import path but still covered by exclusion pattern, keeping offline in library ${job.libraryId}`,
-          );
-
           break;
         }
       }
@@ -1144,13 +1136,10 @@ export class LibraryService extends BaseService {
       `Checking ${assetCount} asset(s) against import paths and exclusion patterns in library ${library.id}...`,
     );
 
-    const offlineResult = await this.assetRepository.detectOfflineExternalAssets(
+    const affectedAssetCount = await this.assetRepository.detectOfflineExternalAssets(
       library.id,
-      library.importPaths,
-      library.exclusionPatterns,
+      createLibraryMatcher(library),
     );
-
-    const affectedAssetCount = Number(offlineResult.numUpdatedRows);
 
     this.logger.log(
       `${affectedAssetCount} asset(s) out of ${assetCount} were offlined due to import paths and/or exclusion pattern(s) in library ${library.id}`,

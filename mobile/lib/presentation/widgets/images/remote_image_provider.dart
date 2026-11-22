@@ -148,15 +148,7 @@ class RemoteFullImageProvider extends ImageProvider<RemoteFullImageProvider> {
       return;
     }
 
-    final previewRequest = loader.request = RemoteImageRequest(
-      uri: getThumbnailUrlForRemoteId(
-        key.assetId,
-        type: AssetMediaSize.preview,
-        thumbhash: key.thumbhash,
-        edited: key.edited,
-      ),
-      dynamicRangePolicy: key.dynamicRangePolicy,
-    );
+    final previewRequest = loader.request = _previewRequest(key);
     final loadOriginal = key.assetType == AssetType.image && SettingsRepository.instance.appConfig.image.loadOriginal;
     yield* loader.loadRequest(previewRequest, decode, isFinal: !loadOriginal);
 
@@ -168,10 +160,7 @@ class RemoteFullImageProvider extends ImageProvider<RemoteFullImageProvider> {
       return;
     }
 
-    final originalRequest = loader.request = RemoteImageRequest(
-      uri: getOriginalUrlForRemoteId(key.assetId, edited: key.edited),
-      dynamicRangePolicy: key.dynamicRangePolicy,
-    );
+    final originalRequest = loader.request = _originalRequest(key);
     yield* loader.loadRequest(originalRequest, decode, isFinal: true);
   }
 
@@ -182,15 +171,7 @@ class RemoteFullImageProvider extends ImageProvider<RemoteFullImageProvider> {
       return;
     }
 
-    final previewRequest = loader.request = RemoteImageRequest(
-      uri: getThumbnailUrlForRemoteId(
-        key.assetId,
-        type: AssetMediaSize.preview,
-        thumbhash: key.thumbhash,
-        edited: key.edited,
-      ),
-      dynamicRangePolicy: key.dynamicRangePolicy,
-    );
+    final previewRequest = loader.request = _previewRequest(key);
     yield* loader.loadRequest(previewRequest, decode, isFinal: false);
 
     if (loader.isCancelled) {
@@ -198,10 +179,7 @@ class RemoteFullImageProvider extends ImageProvider<RemoteFullImageProvider> {
     }
 
     // always try original for animated, since previews don't support animation
-    final originalRequest = loader.request = RemoteImageRequest(
-      uri: getOriginalUrlForRemoteId(key.assetId, edited: key.edited),
-      dynamicRangePolicy: key.dynamicRangePolicy,
-    );
+    final originalRequest = loader.request = _originalRequest(key);
     final codec = await loader.loadCodecRequest(originalRequest, isFinal: true);
     if (codec == null) {
       if (loader.isCancelled) {
@@ -211,6 +189,21 @@ class RemoteFullImageProvider extends ImageProvider<RemoteFullImageProvider> {
     }
     yield codec;
   }
+
+  RemoteImageRequest _previewRequest(RemoteFullImageProvider key) => RemoteImageRequest(
+    uri: getThumbnailUrlForRemoteId(
+      key.assetId,
+      type: AssetMediaSize.preview,
+      thumbhash: key.thumbhash,
+      edited: key.edited,
+    ),
+    dynamicRangePolicy: key.dynamicRangePolicy,
+  );
+
+  RemoteImageRequest _originalRequest(RemoteFullImageProvider key) => RemoteImageRequest(
+    uri: getOriginalUrlForRemoteId(key.assetId, edited: key.edited),
+    dynamicRangePolicy: key.dynamicRangePolicy,
+  );
 
   @override
   bool operator ==(Object other) {

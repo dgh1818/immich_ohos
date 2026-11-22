@@ -1,10 +1,10 @@
 <script lang="ts">
-  import { authManager } from '$lib/managers/auth-manager.svelte';
-  import PeopleFilterUserPicker from '$lib/modals/PeopleFilterUserPicker.svelte';
-  import type { PeopleFilter } from '$lib/types';
-  import { handleError } from '$lib/utils/handle-error';
+  import { authManager } from '#lib/managers/auth-manager.svelte.ts';
+  import PeopleFilterUserPicker from '#lib/modals/PeopleFilterUserPicker.svelte';
+  import type { PeopleFilter } from '#lib/types.ts';
+  import { handleError } from '#lib/utils/handle-error.ts';
   import { getClusterGroupUsers, type UserResponseDto } from '@immich/sdk';
-  import { Button, Checkbox, FormModal, Label, modalManager, Stack, Text } from '@immich/ui';
+  import { Button, Checkbox, FormModal, Label, Stack, Text, modalManager } from '@immich/ui';
   import { mdiClose, mdiTune } from '@mdi/js';
   import { onMount, untrack } from 'svelte';
   import { t } from 'svelte-i18n';
@@ -22,7 +22,21 @@
   let isHidden = $state(untrack(() => filter.isHidden));
   let users = $state<UserResponseDto[]>([]);
 
-  const cycle = (value?: boolean) => (value === undefined ? true : value ? false : undefined);
+  const cycle = (value?: boolean) => {
+    switch (value) {
+      case undefined: {
+        return true;
+      }
+
+      case true: {
+        return false;
+      }
+
+      case false: {
+        return undefined;
+      }
+    }
+  };
 
   onMount(async () => {
     try {
@@ -82,7 +96,7 @@
 </script>
 
 {#snippet row(id: string, label: string, userId: string, onPick: () => Promise<void>)}
-  {@const user = getUser(userId)}
+  {const user = $derived(getUser(userId))}
   <div class="flex items-center justify-between gap-2">
     <Label id="{id}-label" for={id}>{label}</Label>
     <Button

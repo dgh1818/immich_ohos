@@ -1,14 +1,3 @@
-import type {
-  AudioStreamInfo,
-  BitrateDistribution,
-  HlsCommandOptions,
-  TranscodeCommand,
-  VideoCodecSWConfig,
-  VideoFormat,
-  VideoInterfaces,
-  VideoStreamInfo,
-  VideoTuning,
-} from 'src/types.js';
 import {
   AUDIO_ENCODER,
   AV1_LEVELS,
@@ -28,6 +17,17 @@ import {
   TranscodeTarget,
   VideoCodec,
 } from 'src/enum.js';
+import type {
+  AudioStreamInfo,
+  BitrateDistribution,
+  HlsCommandOptions,
+  TranscodeCommand,
+  VideoCodecSWConfig,
+  VideoFormat,
+  VideoInterfaces,
+  VideoStreamInfo,
+  VideoTuning,
+} from 'src/types.js';
 
 export const isVideoRotated = (videoStream: VideoStreamInfo): boolean => Math.abs(videoStream.rotation) === 90;
 
@@ -71,6 +71,7 @@ export class BaseConfig implements VideoCodecSWConfig {
   readonly presets = ['veryslow', 'slower', 'slow', 'medium', 'fast', 'faster', 'veryfast', 'superfast', 'ultrafast'];
   protected constructor(
     protected config: ConfigFFmpegDto,
+    // eslint-disable-next-line unicorn/no-object-as-default-parameter
     protected tune: VideoTuning = { strictGop: false, lowLatency: false },
   ) {}
 
@@ -945,7 +946,7 @@ export class VaapiSwDecodeConfig extends BaseHWConfig {
     const options = this.getToneMapping(videoStream);
     options.push('hwupload=extra_hw_frames=64');
     if (this.shouldScale(videoStream)) {
-      options.push(`scale_vaapi=${this.getScaling(videoStream)}:mode=hq:out_range=pc:format=nv12`);
+      options.push(`scale_vaapi=${this.getScaling(videoStream)}:mode=hq:format=nv12`);
     }
 
     return options;
@@ -1025,9 +1026,9 @@ export class VaapiHwDecodeConfig extends VaapiSwDecodeConfig {
     const options = [];
     const tonemapOptions = this.getToneMapping(videoStream);
     if (tonemapOptions.length === 0 && !videoStream.pixelFormat.endsWith('420p')) {
-      options.push(`scale_vaapi=${this.getScaling(videoStream)}:mode=hq:out_range=pc:format=nv12`);
+      options.push(`scale_vaapi=${this.getScaling(videoStream)}:mode=hq:format=nv12`);
     } else if (this.shouldScale(videoStream)) {
-      options.push(`scale_vaapi=${this.getScaling(videoStream)}:mode=hq:out_range=pc`);
+      options.push(`scale_vaapi=${this.getScaling(videoStream)}:mode=hq`);
     }
     options.push(...tonemapOptions);
     return options;

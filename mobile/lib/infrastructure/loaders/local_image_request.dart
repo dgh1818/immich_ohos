@@ -30,22 +30,7 @@ class LocalImageRequest extends ImageRequest {
       isVideo: assetType == AssetType.video,
       preferEncoded: false,
     );
-    if (info == null) {
-      return null;
-    }
-
-    final pointer = info["pointer"] as int?;
-    if (pointer == null) {
-      return null;
-    }
-
-    final frame = await _fromDecodedPlatformImage(
-      pointer,
-      info["width"]! as int,
-      info["height"]! as int,
-      info["rowBytes"]! as int,
-      info["isHdr"] as bool,
-    );
+    final frame = await _firstFrame(await _codecFromResponse(info));
     return frame == null ? null : ImageInfo(image: frame.image, scale: scale);
   }
 
@@ -63,19 +48,8 @@ class LocalImageRequest extends ImageRequest {
       isVideo: assetType == AssetType.video,
       preferEncoded: true,
     );
-    if (info == null) {
-      return null;
-    }
-
-    final pointer = info['pointer'] as int?;
-    if (pointer == null) {
-      return null;
-    }
-
-    final (codec, _) =
-        await _codecFromEncodedPlatformImage(pointer, info['length']! as int, dynamicRangePolicy: dynamicRangePolicy) ??
-        (null, null);
-    return codec;
+    final result = await _codecFromResponse(info);
+    return result == null ? null : _DescriptorBackedCodec(result.$1, result.$2);
   }
 
   @override

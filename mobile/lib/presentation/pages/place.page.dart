@@ -150,8 +150,12 @@ class _PlaceList extends ConsumerWidget {
           final hasChineseA = containsChinese(a.$1);
           final hasChineseB = containsChinese(b.$1);
 
-          if (hasChineseA && !hasChineseB) return -1;
-          if (!hasChineseA && hasChineseB) return 1;
+          if (hasChineseA && !hasChineseB) {
+            return -1;
+          }
+          if (!hasChineseA && hasChineseB) {
+            return 1;
+          }
           return a.$1.compareTo(b.$1);
         });
 

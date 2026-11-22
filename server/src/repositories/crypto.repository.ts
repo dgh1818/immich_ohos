@@ -3,6 +3,7 @@ import { compareSync, hash } from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { createHash, createPublicKey, createVerify, randomBytes, randomUUID } from 'node:crypto';
 import { createReadStream } from 'node:fs';
+import { hashSha1 } from 'src/utils/checksum.js';
 
 @Injectable()
 export class CryptoRepository {
@@ -42,7 +43,7 @@ export class CryptoRepository {
   }
 
   hashSha1(value: string | Buffer): Buffer {
-    return createHash('sha1').update(value).digest();
+    return hashSha1(value);
   }
 
   hashFile(filepath: string | Buffer, signal?: AbortSignal): Promise<Buffer> {

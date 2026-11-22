@@ -14,7 +14,7 @@
 
 - Use the project OHOS Flutter SDK and build from `F:\immich_ohos\mobile`:
   - `fvm flutter build hap --release`
-  - A plain `flutter build hap --release` is equivalent only when `Get-Command flutter` resolves to `F:\fvm\versions\custom_3.41.9\bin\flutter.bat`.
+  - A plain `flutter build hap --release` is equivalent only when `Get-Command flutter` resolves to `F:\fvm\versions\custom_3.47.9\bin\flutter.bat`.
 - 2026-08-23 failure and root cause:
   - `flutter_26.log` and `flutter_27.log` recorded `ProcessException`, exit code `255`, at `ohpm install --all`.
   - Their `flutter doctor` output explicitly reported `Ohpm is missing, please configure "ohpm" to the environment variable PATH`.
@@ -29,11 +29,11 @@
 ## Flutter engine OHOS artifacts
 
 - The WSL engine source of truth is:
-  - `/home/dgh18/engine_3.41/engine`
+  - `/home/dgh18/engine_3.47.9/engine`
 - Build OHOS release engine artifacts from WSL with the Linux OHOS SDK environment loaded, for example:
-  - `wsl -e bash -ic 'cd /home/dgh18/engine_3.41/engine && ./ohos -t release'`
+  - `wsl -e bash -ic 'cd /home/dgh18/engine_3.47.9/engine && ./ohos -t release'`
 - After rebuilding the WSL OHOS release engine, replace the FVM release artifact used by mobile builds:
-  - `F:\fvm\versions\custom_3.41.9\bin\cache\artifacts\engine\ohos-arm64-release\flutter.har`
+  - `F:\fvm\versions\custom_3.47.9\bin\cache\artifacts\engine\ohos-arm64-release\flutter.har`
 - Normal `flutter build hap` should use the FVM release artifact and sync the mobile project HAR:
   - `F:\immich_ohos\mobile\ohos\har\flutter.har`
 
@@ -122,9 +122,9 @@
 
 ## OHOS sqlite3 v3
 
-- For `sqlite3` v3 on OHOS, use `hooks.user_defines.sqlite3.source: system` in the mobile `pubspec.yaml` and keep the OHOS dependency `"sqlite3-native-library": "3.53.0"` in `ohos/oh-package.json5`.
+- For Flutter-OH 3.47.9, use the CPF-Flutter OHOS `sqlite3` package's bundled native asset and the OHOS-adapted `sqlite3_connection_pool`. Verify the final HAP contains one SQLite implementation per target ABI, and that both packages use the same loaded SQLite symbols. The former `source: system` plus OHPM `sqlite3-native-library` arrangement was for the 3.44.9 build and must not be mixed into the bundled-asset path.
 - Do not re-add `sqlite3_flutter_libs` for the v3 path unless explicitly reverting to the old sqlite3 2.x plugin flow.
-- Do not call `package:sqlite3` global native variables such as `sqlite3.tempDirectory` on OHOS. That path resolves `sqlite3_temp_directory` through Dart native-assets and can fail with `No available native assets`; prefer the `sqlite_async/native.dart` connection path backed by the OHOS `sqlite3-native-library`.
+- Do not call `package:sqlite3` global native variables such as `sqlite3.tempDirectory` on OHOS. That path previously failed native-assets symbol resolution; continue using the `sqlite_async/native.dart` connection path unless the new engine and bundled library have been verified on device.
 - Keep `configureSqliteCache()` returning early on OHOS. Immich already opens sqlite through `sqlite_async/native.dart` with `PRAGMA temp_store = MEMORY`; setting `sqlite3.tempDirectory` on OHOS is unnecessary and can trigger native-assets symbol resolution failures.
 - Upstream Immich stores the Drift databases under `getApplicationDocumentsDirectory()` as `immich.sqlite` and `immich_logs.sqlite`; this repo keeps that path. On the current OHOS `path_provider_ohos`, that maps through Flutter-OH `PathUtils.getDataDirectory()` to the app sandbox `context.filesDir/flutter`.
-- Keep `NativeAssetsManifest.json` registered as a root Flutter asset until Flutter-OH copies `native_assets.json` into `flutter_assets/NativeAssetsManifest.json` itself. This manifest is required for packages such as `sqlite3_connection_pool` whose `.so` is bundled but still needs a Dart native-assets mapping.
+- Flutter-OH 3.47.9's `OhosAssetBundle` copies generated `native_assets.json` to `flutter_assets/NativeAssetsManifest.json`, so do not add the old arm64-only hand-written manifest as a root asset. Verify the generated manifest contains the actual target ABI and library mappings in the final HAP; builds on older engines need the corresponding native-assets compatibility assessed separately.

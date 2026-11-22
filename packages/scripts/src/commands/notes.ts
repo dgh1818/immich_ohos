@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { Public } from 'src/types.js';
@@ -15,6 +15,7 @@ const REPO = 'immich-app/immich';
 const Files = {
   Config: join(root, '.github/release.yml'),
   Template: join(root, 'misc/release/notes.tmpl'),
+  Output: join(root, 'misc/release/notes.md'),
 };
 
 export type NotesOptions = {
@@ -54,6 +55,12 @@ type PullRequestNode = {
 
 const PULL_REQUEST_BATCH = 50;
 const SEARCH_BATCH = 20;
+
+export class FileSystem {
+  writeFileSync(path: string, data: string) {
+    writeFileSync(path, data);
+  }
+}
 
 export class GitClient {
   log(previous: string, tag: string) {
@@ -152,6 +159,34 @@ export class GitHubClient {
     return firstTimers;
   }
 
+  async getCreditBodies(candidates: Contributor[]) {
+    const bodies = new Map<string, string[]>();
+
+    for (const batch of this.chunk(candidates, SEARCH_BATCH)) {
+      const fields = batch
+        .map(({ author, mergedAt }, index) => {
+          const search = JSON.stringify(
+            `repo:${REPO} is:pr is:merged in:body "credit" "${author.login}" merged:<${mergedAt}`,
+          );
+          return `c_${index}: search(query: ${search}, type: ISSUE, first: 100) { nodes { ... on PullRequest { body } } }`;
+        })
+        .join('\n');
+
+      const data = await this.graphql<
+        Record<string, { nodes: Array<{ body?: string }> }>
+      >(`query { ${fields} }`);
+
+      for (const [index, { author }] of batch.entries()) {
+        bodies.set(
+          author.login,
+          data[`c_${index}`].nodes.flatMap(({ body }) => body ?? []),
+        );
+      }
+    }
+
+    return bodies;
+  }
+
   private chunk<T>(items: T[], size: number) {
     const chunks: T[][] = [];
     for (let i = 0; i < items.length; i += size) {
@@ -189,6 +224,7 @@ export class GitHubClient {
 
 export class NotesService {
   constructor(
+    private fs: Public<FileSystem>,
     private git: Public<GitClient>,
     private github: Public<GitHubClient>,
   ) {}
@@ -198,8 +234,9 @@ export class NotesService {
     const pulls = await this.getPullRequests(commits);
     const changes = this.selectChanges(commits, pulls);
     const firstTimers = await this.getFirstTimers(changes);
+    const notes = this.render({ tag, previous, changes, firstTimers });
 
-    return this.render({ tag, previous, changes, firstTimers });
+    this.fs.writeFileSync(Files.Output, notes);
   }
 
   private parseCommits(log: string): Commit[] {
@@ -250,16 +287,47 @@ export class NotesService {
       .sort((a, b) => a.mergedAt.localeCompare(b.mergedAt));
   }
 
-  private getFirstTimers(changes: PullRequest[]) {
+  private parseCredits(body: string | null): Author[] {
+    const lines = body?.match(/^credit:.*$/gim) ?? [];
+    return lines
+      .flatMap((line) => line.match(/(?<=[\s:,]@)[\w-]+/g) ?? [])
+      .map((login) => ({ login, bot: false }));
+  }
+
+  private toAuthors({ author, body }: PullRequest) {
+    return [author, ...this.parseCredits(body)];
+  }
+
+  private async getFirstTimers(changes: PullRequest[]) {
     const candidates = new Map<string, Contributor>();
 
-    for (const { author, number, mergedAt } of changes) {
-      if (!author.bot && !candidates.has(author.login)) {
-        candidates.set(author.login, { author, number, mergedAt });
+    for (const pull of changes) {
+      const { number, mergedAt } = pull;
+      for (const author of this.toAuthors(pull)) {
+        const key = author.login.toLowerCase();
+        if (!author.bot && !candidates.has(key)) {
+          candidates.set(key, { author, number, mergedAt });
+        }
       }
     }
 
-    return this.github.getFirstTimers([...candidates.values()]);
+    const firstTimers = await this.github.getFirstTimers([
+      ...candidates.values(),
+    ]);
+    const bodies = await this.github.getCreditBodies(firstTimers);
+
+    return firstTimers.filter(
+      ({ author }) =>
+        !bodies
+          .get(author.login)
+          ?.some((body) => this.isCredited(body, author)),
+    );
+  }
+
+  private isCredited(body: string, { login }: Author) {
+    return this.parseCredits(body).some(
+      (credit) => credit.login.toLowerCase() === login.toLowerCase(),
+    );
   }
 
   private render({
@@ -285,8 +353,8 @@ export class NotesService {
             : [
                 `### ${title}`,
                 ...matches.map(
-                  ({ title, author, number }) =>
-                    `* ${title} by ${this.mention(author)} in ${this.link(number)}`,
+                  (pull) =>
+                    `* ${pull.title} by ${this.byline(pull)} in ${this.link(pull.number)}`,
                 ),
               ];
         }),
@@ -318,6 +386,12 @@ export class NotesService {
 
   private mention({ login, bot }: Author) {
     return `@${login}${bot ? '[bot]' : ''}`;
+  }
+
+  private byline(pull: PullRequest) {
+    return new Intl.ListFormat('en', { type: 'conjunction' }).format(
+      this.unique(this.toAuthors(pull).map((author) => this.mention(author))),
+    );
   }
 
   private unique<T>(items: T[]) {

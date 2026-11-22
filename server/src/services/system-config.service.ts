@@ -1,6 +1,5 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { isEqual } from 'lodash-es';
-import type { ArgOf } from 'src/repositories/event.repository.js';
 import { OnEvent } from 'src/decorators.js';
 import {
   AdminConfigDto,
@@ -12,6 +11,7 @@ import {
   mapUserConfig,
 } from 'src/dtos/config.dto.js';
 import { BootstrapEventPriority } from 'src/enum.js';
+import type { ArgOf } from 'src/repositories/event.repository.js';
 import { BaseService } from 'src/services/base.service.js';
 import { clearConfigCache } from 'src/utils/config.js';
 import { toPlainObject } from 'src/utils/object.js';
@@ -59,7 +59,7 @@ export class SystemConfigService extends BaseService {
   @OnEvent({ name: 'ConfigInit', priority: -100 })
   onConfigInit({ newConfig: { logging, machineLearning } }: ArgOf<'ConfigInit'>) {
     const { logLevel: envLevel } = this.configRepository.getEnv();
-    const configLevel = logging.enabled ? logging.level : false;
+    const configLevel = logging.enabled && logging.level;
     const level = envLevel ?? configLevel;
     this.logger.setLogLevel(level);
     this.logger.log(`LogLevel=${level} ${envLevel ? '(set via IMMICH_LOG_LEVEL)' : '(set via system config)'}`);

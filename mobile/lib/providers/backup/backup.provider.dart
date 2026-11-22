@@ -8,6 +8,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:immich_mobile/constants/constants.dart';
 import 'package:immich_mobile/domain/models/album/local_album.model.dart';
 import 'package:immich_mobile/domain/models/asset/base_asset.model.dart';
+import 'package:immich_mobile/extensions/platform_extensions.dart';
 import 'package:immich_mobile/extensions/string_extensions.dart';
 import 'package:immich_mobile/platform/native_sync_api_ohos.g.dart';
 import 'package:immich_mobile/providers/infrastructure/db.provider.dart';
@@ -339,26 +340,47 @@ class BackupNotifier extends StateNotifier<BackupState> {
     _backgroundEnqueueCompleted = false;
     state = state.copyWith(error: BackupError.none);
 
-    // Re-baseline the counters against the same DB read that feeds this run's candidate list,
-    // otherwise a resume counts duplicate successes against the old baseline (#26215).
-    await getBackupStatus(userId);
-    if (Platform.isOhos || Platform.isIOS) {
-      final backupTasks = await _backgroundUploadService.getActiveTasks(kBackupGroup);
-      final livePhotoTasks = await _backgroundUploadService.getActiveTasks(kBackupLivePhotoGroup);
-      if (backupTasks.isNotEmpty || livePhotoTasks.isNotEmpty) {
-        _backgroundEnqueueCompleted = true;
-        await _startOhosBackgroundTransfer();
-        await _backgroundUploadService.resume();
-        _logger.info("Skip startForegroundBackup: resumed existing background upload tasks");
-        return;
-      }
-    }
-
+    // A pause during the recount below nulls _cancelToken, so the run keeps its own reference.
     final cancelToken = Completer<void>();
     _cancelToken = cancelToken;
-    await _startOhosBackgroundTransfer();
 
+    var stopTransfer = false;
     try {
+      // iOS cleans temporary files when foreground upload starts.
+      if (CurrentPlatform.isIOS) {
+        await _backgroundUploadService.cancel();
+      }
+
+      // Re-baseline against the same database read that feeds the candidate list.
+      await getBackupStatus(userId);
+      if (cancelToken.isCompleted) {
+        return;
+      }
+      if (Platform.isOhos || Platform.isIOS) {
+        final backupTasks = await _backgroundUploadService.getActiveTasks(kBackupGroup);
+        final livePhotoTasks = await _backgroundUploadService.getActiveTasks(kBackupLivePhotoGroup);
+        if (cancelToken.isCompleted) {
+          return;
+        }
+        if (backupTasks.isNotEmpty || livePhotoTasks.isNotEmpty) {
+          _backgroundEnqueueCompleted = true;
+          stopTransfer = true;
+          await _startOhosBackgroundTransfer();
+          if (cancelToken.isCompleted) {
+            return;
+          }
+          await _backgroundUploadService.resume();
+          stopTransfer = cancelToken.isCompleted;
+          _logger.info("Skip startForegroundBackup: resumed existing background upload tasks");
+          return;
+        }
+      }
+
+      stopTransfer = true;
+      await _startOhosBackgroundTransfer();
+      if (cancelToken.isCompleted) {
+        return;
+      }
       await _foregroundUploadService.uploadCandidates(
         userId,
         cancelToken,
@@ -370,9 +392,13 @@ class BackupNotifier extends StateNotifier<BackupState> {
         ),
       );
     } finally {
-      _cancelToken = null;
-      if (mounted) {
-        unawaited(_stopOhosBackgroundTransfer(checkActiveTasks: false));
+      if (_cancelToken == null || identical(_cancelToken, cancelToken)) {
+        if (identical(_cancelToken, cancelToken)) {
+          _cancelToken = null;
+        }
+        if (mounted && stopTransfer) {
+          unawaited(_stopOhosBackgroundTransfer(checkActiveTasks: false));
+        }
       }
     }
   }
@@ -461,8 +487,6 @@ class BackupNotifier extends StateNotifier<BackupState> {
   }
 
   void _handleForegroundBackupError(String localAssetId, String errorMessage) {
-    _logger.severe("Upload failed for $localAssetId: $errorMessage");
-
     final currentItem = state.uploadItems[localAssetId];
     if (currentItem != null) {
       state = state.copyWith(
