@@ -251,6 +251,8 @@
     "map_settings": "地图",
     "map_settings_description": "管理地图设置",
     "map_style_description": "style.json地图主题的URL",
+    "map_web_petal": "网页使用 Petal Maps",
+    "map_web_petal_description": "使用服务器的 PETALMAP_GEOCODE_KEYS 获取地图瓦片，该密钥需要开通地图服务。",
     "memory_cleanup_job": "清理回忆数据",
     "memory_generate_job": "生成回忆",
     "metadata_extraction_job": "提取元数据",

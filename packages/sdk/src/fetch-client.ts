@@ -263,6 +263,8 @@ export type AdminConfigMapDto = {
     enabled: boolean;
     /** Light map style URL */
     lightStyle: string;
+    /** Use Petal Maps tiles on the web */
+    webUsePetalTiles: boolean;
 };
 export type AdminConfigFacesDto = {
     /** Import */
@@ -1621,6 +1623,8 @@ export type UserConfigMapDto = {
     enabled: boolean;
     /** Light map style URL */
     lightStyle: string;
+    /** Use Petal Maps tiles on the web */
+    webUsePetalTiles: boolean;
 };
 export type UserConfigSmtpDto = {
     /** Whether SMTP email notifications are enabled */
@@ -2261,6 +2265,8 @@ export type PublicConfigMapDto = {
     enabled: boolean;
     /** Light map style URL */
     lightStyle: string;
+    /** Use Petal Maps tiles on the web */
+    webUsePetalTiles: boolean;
 };
 export type PublicConfigOAuthDto = {
     /** Auto launch */
@@ -5803,6 +5809,21 @@ export function getMapMarkers({ fileCreatedAfter, fileCreatedBefore, isArchived,
         withPartners,
         withSharedAlbums
     }))}`, {
+        ...opts
+    }));
+}
+/**
+ * Get a Petal Maps tile
+ */
+export function getPetalTile({ x, y, z }: {
+    x: number;
+    y: number;
+    z: number;
+}, opts?: Oazapfts.RequestOpts) {
+    return oazapfts.ok(oazapfts.fetchBlob<{
+        status: 200;
+        data: Blob;
+    }>(`/map/petal/tiles/${encodeURIComponent(z)}/${encodeURIComponent(x)}/${encodeURIComponent(y)}`, {
         ...opts
     }));
 }

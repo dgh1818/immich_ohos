@@ -8009,6 +8009,82 @@
         "x-immich-state": "Stable"
       }
     },
+    "/map/petal/tiles/{z}/{x}/{y}": {
+      "get": {
+        "description": "Retrieve a PNG tile when Petal Maps tiles are enabled. Both x and y must be less than 2 to the power of z.",
+        "operationId": "getPetalTile",
+        "parameters": [
+          {
+            "name": "x",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "y",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "z",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 20
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "image/png": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "summary": "Get a Petal Maps tile",
+        "tags": [
+          "Map"
+        ],
+        "x-immich-history": [
+          {
+            "version": "v3",
+            "state": "Added"
+          },
+          {
+            "version": "v3",
+            "state": "Alpha"
+          }
+        ],
+        "x-immich-permission": "map.read",
+        "x-immich-state": "Alpha"
+      }
+    },
     "/map/reverse-geocode": {
       "get": {
         "description": "Retrieve location information (e.g., city, country) for given latitude and longitude coordinates.",
@@ -20081,12 +20157,17 @@
             "description": "Light map style URL",
             "format": "uri",
             "type": "string"
+          },
+          "webUsePetalTiles": {
+            "description": "Use Petal Maps tiles on the web",
+            "type": "boolean"
           }
         },
         "required": [
           "darkStyle",
           "enabled",
-          "lightStyle"
+          "lightStyle",
+          "webUsePetalTiles"
         ],
         "type": "object"
       },
@@ -26990,12 +27071,17 @@
             "description": "Light map style URL",
             "format": "uri",
             "type": "string"
+          },
+          "webUsePetalTiles": {
+            "description": "Use Petal Maps tiles on the web",
+            "type": "boolean"
           }
         },
         "required": [
           "darkStyle",
           "enabled",
-          "lightStyle"
+          "lightStyle",
+          "webUsePetalTiles"
         ],
         "type": "object"
       },
@@ -34383,12 +34469,17 @@
             "description": "Light map style URL",
             "format": "uri",
             "type": "string"
+          },
+          "webUsePetalTiles": {
+            "description": "Use Petal Maps tiles on the web",
+            "type": "boolean"
           }
         },
         "required": [
           "darkStyle",
           "enabled",
-          "lightStyle"
+          "lightStyle",
+          "webUsePetalTiles"
         ],
         "type": "object"
       },

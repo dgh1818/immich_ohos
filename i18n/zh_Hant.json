@@ -247,6 +247,8 @@
     "map_settings": "地圖",
     "map_settings_description": "管理地圖設定",
     "map_style_description": "地圖主題（style.json）的網址",
+    "map_web_petal": "網頁使用 Petal Maps",
+    "map_web_petal_description": "使用伺服器的 PETALMAP_GEOCODE_KEYS 取得地圖圖磚，該金鑰需要開通地圖服務。",
     "memory_cleanup_job": "回憶清理",
     "memory_generate_job": "產生回憶",
     "metadata_extraction_job": "擷取詮釋資料",

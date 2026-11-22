@@ -11,12 +11,13 @@
 <script lang="ts">
   import OnEvents from '#lib/components/OnEvents.svelte';
   import { assetViewerManager } from '#lib/managers/asset-viewer-manager.svelte.ts';
+  import { authManager } from '#lib/managers/auth-manager.svelte.ts';
   import MapSettingsModal from '#lib/modals/MapSettingsModal.svelte';
   import { createPreloadedQuery } from '#lib/queries/client.ts';
   import { getPublicConfigQuery } from '#lib/queries/config-public.query.ts';
   import { mapSettings } from '#lib/stores/preferences.store.ts';
   import { getAssetMediaUrl, handlePromiseError } from '#lib/utils.ts';
-  import { getMapMarkers, type MapMarkerResponseDto } from '@immich/sdk';
+  import { getBaseUrl, getMapMarkers, type MapMarkerResponseDto } from '@immich/sdk';
   import { Alert, Container, Icon, Text, Theme, modalManager, themeManager } from '@immich/ui';
   import { mdiCog, mdiImageMultiple, mdiMap, mdiMapMarker } from '@mdi/js';
   import type { Feature, GeoJsonProperties, Geometry, Point } from 'geojson';
@@ -31,6 +32,7 @@
     type LngLatLike,
     type Map,
     type MapMouseEvent,
+    type StyleSpecification,
   } from 'maplibre-gl';
   import { onDestroy, onMount, tick, untrack } from 'svelte';
   import { t } from 'svelte-i18n';
@@ -115,7 +117,26 @@
   let abortController: AbortController;
 
   const mapTheme = $derived($mapSettings.allowDarkMode ? themeManager.value : Theme.Light);
-  const styleUrl = $derived(mapTheme === Theme.Dark ? publicConfig.map.darkStyle : publicConfig.map.lightStyle);
+  const petalStyle: StyleSpecification = {
+    version: 8,
+    sources: {
+      petal: {
+        type: 'raster',
+        tiles: [getBaseUrl() + '/map/petal/tiles/{z}/{x}/{y}'],
+        tileSize: 256,
+        maxzoom: 20,
+        attribution: '© Huawei',
+      },
+    },
+    layers: [{ id: 'petal', type: 'raster', source: 'petal' }],
+  };
+  const styleUrl = $derived(
+    publicConfig.map.webUsePetalTiles && authManager.authenticated && !authManager.isSharedLink
+      ? petalStyle
+      : mapTheme === Theme.Dark
+        ? publicConfig.map.darkStyle
+        : publicConfig.map.lightStyle,
+  );
 
   export function addClipMapMarker(lng: number, lat: number) {
     if (!map) {

@@ -36,6 +36,7 @@ const publicConfig = (overrides: Partial<ResponseOf<'getPublicConfig'>> = {}): R
     enabled: true,
     lightStyle: 'https://tiles.immich.cloud/v1/style/light.json',
     darkStyle: 'https://tiles.immich.cloud/v1/style/dark.json',
+    webUsePetalTiles: false,
   },
   oauth: { autoLaunch: false, buttonText: 'Login with OAuth', enabled: false },
   passkey: { enabled: true },
@@ -48,6 +49,7 @@ const userConfig = (overrides: Partial<ResponseOf<'getUserConfig'>> = {}): Respo
   ffmpeg: {
     realtime: { enabled: false, videoCodecs: [VideoCodec.H264, VideoCodec.Hevc], resolutions: [480, 720, 1080] },
   },
+  library: { useContentHash: false },
   machineLearning: {
     enabled: false,
     clip: { enabled: true },
@@ -59,6 +61,7 @@ const userConfig = (overrides: Partial<ResponseOf<'getUserConfig'>> = {}): Respo
     enabled: true,
     lightStyle: 'https://tiles.immich.cloud/v1/style/light.json',
     darkStyle: 'https://tiles.immich.cloud/v1/style/dark.json',
+    webUsePetalTiles: false,
   },
   reverseGeocoding: { enabled: true },
   oauth: { autoLaunch: false, buttonText: 'Login with OAuth', enabled: false, accountManagementUrl: '' },
@@ -214,6 +217,7 @@ const adminConfig = (overrides: Partial<ResponseOf<'getAdminConfig'>> = {}): Res
     enabled: true,
     lightStyle: 'https://tiles.immich.cloud/v1/style/light.json',
     darkStyle: 'https://tiles.immich.cloud/v1/style/dark.json',
+    webUsePetalTiles: false,
   },
   reverseGeocoding: { enabled: true },
   metadata: { faces: { import: false } },
@@ -266,7 +270,7 @@ const adminConfig = (overrides: Partial<ResponseOf<'getAdminConfig'>> = {}): Res
   },
   trash: { enabled: true, days: 30 },
   theme: { customCss: '' },
-  library: { scan: { enabled: true, cronExpression: '0 0 * * *' }, watch: { enabled: false } },
+  library: { scan: { enabled: true, cronExpression: '0 0 * * *' }, watch: { enabled: false }, useContentHash: false },
   server: { externalDomain: '', loginPageMessage: '', publicUsers: true },
   notifications: {
     smtp: {

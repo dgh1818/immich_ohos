@@ -1,5 +1,7 @@
+import { UnauthorizedException } from '@nestjs/common';
 import request from 'supertest';
 import { MapController } from 'src/controllers/map.controller.js';
+import { Permission } from 'src/enum.js';
 import { MapService } from 'src/services/map.service.js';
 import { factory } from 'test/small.factory.js';
 import { ControllerContext, controllerSetup, mockBaseService } from 'test/utils.js';
@@ -16,6 +18,34 @@ describe(MapController.name, () => {
   beforeEach(() => {
     service.resetAllMocks();
     ctx.reset();
+  });
+
+  describe('GET /map/petal/tiles/:z/:x/:y', () => {
+    it('rejects requests without authentication before fetching a tile', async () => {
+      ctx.authenticate.mockRejectedValueOnce(new UnauthorizedException());
+      const response = await request(ctx.getHttpServer()).get('/map/petal/tiles/0/0/0');
+      expect(response.status).toBe(401);
+      expect(service.getPetalTile).not.toHaveBeenCalled();
+    });
+
+    it('requires map-read authorization and serves a private PNG', async () => {
+      service.getPetalTile.mockResolvedValue(Buffer.from('tile'));
+      const response = await request(ctx.getHttpServer()).get('/map/petal/tiles/2/1/3');
+      expect(response.status).toBe(200);
+      expect(response.headers['cache-control']).toBe('private, no-store');
+      expect(response.headers['content-type']).toBe('image/png');
+      expect(response.body).toEqual(Buffer.from('tile'));
+      expect(service.getPetalTile).toHaveBeenCalledWith(2, 1, 3);
+      expect(ctx.authenticate).toHaveBeenCalledWith(
+        expect.objectContaining({ metadata: expect.objectContaining({ permission: Permission.MapRead }) }),
+      );
+    });
+
+    it.each(['1.5/0/0', '2/0x1/0', '2/0/1e0'])('rejects non-integer path syntax %s', async (coordinates) => {
+      const response = await request(ctx.getHttpServer()).get(`/map/petal/tiles/${coordinates}`);
+      expect(response.status).toBe(400);
+      expect(service.getPetalTile).not.toHaveBeenCalled();
+    });
   });
 
   describe('GET /map/reverse-geocode', () => {

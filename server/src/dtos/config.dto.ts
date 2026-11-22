@@ -278,6 +278,7 @@ const AdminConfigSchemaWithVisibility = z
         enabled: configBool.describe('Enabled').meta({ visibility: Public }),
         lightStyle: z.url().describe('Light map style URL').meta({ visibility: Public }),
         darkStyle: z.url().describe('Dark map style URL').meta({ visibility: Public }),
+        webUsePetalTiles: configBool.describe('Use Petal Maps tiles on the web').meta({ visibility: Public }),
       })
       .meta({ id: 'AdminConfigMapDto' }),
     reverseGeocoding: z
@@ -693,6 +694,7 @@ export const defaults = Object.freeze<SystemConfig>({
     enabled: true,
     lightStyle: 'https://tiles.immich.cloud/v1/style/light.json',
     darkStyle: 'https://tiles.immich.cloud/v1/style/dark.json',
+    webUsePetalTiles: false,
   },
   reverseGeocoding: {
     enabled: true,

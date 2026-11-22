@@ -257,6 +257,8 @@
     "map_settings": "Map",
     "map_settings_description": "Manage map settings",
     "map_style_description": "URL to a style.json map theme",
+    "map_web_petal": "Use Petal Maps on the web",
+    "map_web_petal_description": "Use the server's PETALMAP_GEOCODE_KEYS for map tiles. The key must have Map Kit access.",
     "memory_cleanup_job": "Memory cleanup",
     "memory_generate_job": "Memory generation",
     "metadata_extraction_job": "Extract metadata",
