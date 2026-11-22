@@ -5,7 +5,15 @@ import { vitest } from 'vitest';
 import { JOBS_LIBRARY_PAGINATION_SIZE } from 'src/constants.js';
 import { SystemConfig, defaults } from 'src/dtos/config.dto.js';
 import { mapLibrary } from 'src/dtos/library.dto.js';
-import { AssetType, ChecksumAlgorithm, CronJob, ImmichWorker, JobName, JobStatus, SystemMetadataKey } from 'src/enum.js';
+import {
+  AssetType,
+  ChecksumAlgorithm,
+  CronJob,
+  ImmichWorker,
+  JobName,
+  JobStatus,
+  SystemMetadataKey,
+} from 'src/enum.js';
 import { LibraryService } from 'src/services/library.service.js';
 import type { ILibraryBulkIdsJob, ILibraryChecksumBackfillJob, ILibraryFileJob } from 'src/types.js';
 import { AssetFactory } from 'test/factories/asset.factory.js';
@@ -1017,6 +1025,28 @@ describe(LibraryService.name, () => {
       );
 
       expect(mocks.asset.createAll).not.toHaveBeenCalled();
+    });
+
+    it('should hash a normalized path only once per import job', async () => {
+      const library = factory.library();
+      const originalPath = '/data/user1/photo.jpg';
+      mocks.systemMetadata.get.mockImplementation((key) =>
+        Promise.resolve(key === SystemMetadataKey.SystemConfig ? { library: { useContentHash: true } } : null),
+      );
+      mocks.library.get.mockResolvedValue(library);
+      mocks.crypto.hashFile.mockResolvedValue(Buffer.from('file checksum'));
+      mocks.asset.createAll.mockResolvedValue([]);
+      mocks.asset.filterNewExternalAssetPaths.mockResolvedValue([]);
+
+      await expect(
+        sut.handleSyncFiles({ libraryId: library.id, paths: [originalPath, '/data/user1/./photo.jpg'] }),
+      ).resolves.toBe(JobStatus.Success);
+
+      expect(mocks.crypto.hashFile).toHaveBeenCalledExactlyOnceWith(normalize(originalPath));
+      expect(mocks.asset.createAll).toHaveBeenCalledExactlyOnceWith([
+        expect.objectContaining({ originalPath: normalize(originalPath) }),
+      ]);
+      expect(mocks.event.emit).not.toHaveBeenCalledWith('AssetCreate', expect.anything());
     });
 
     it('should retain small insert batches when content hashing is disabled', async () => {

@@ -2,7 +2,7 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { Insertable } from 'kysely';
 import { R_OK } from 'node:constants';
 import { Stats } from 'node:fs';
-import path, { isAbsolute, parse } from 'node:path';
+import path, { isAbsolute, normalize, parse } from 'node:path';
 import picomatch from 'picomatch';
 import { JOBS_LIBRARY_PAGINATION_SIZE } from 'src/constants.js';
 import { StorageCore } from 'src/cores/storage.core.js';
@@ -33,8 +33,11 @@ import type { ArgOf } from 'src/repositories/event.repository.js';
 import { AssetSyncResult } from 'src/repositories/library.repository.js';
 import { AssetTable } from 'src/schema/tables/asset.table.js';
 import { BaseService } from 'src/services/base.service.js';
-import type { JobOf } from 'src/types.js';
-import { ExternalLibraryChecksumBackfillState, ExternalLibraryPathChecksumBackfillState } from 'src/types.js';
+import {
+  ExternalLibraryChecksumBackfillState,
+  ExternalLibraryPathChecksumBackfillState,
+  type JobOf,
+} from 'src/types.js';
 import { isAssetChecksumConstraint } from 'src/utils/database.js';
 import { mimeTypes } from 'src/utils/mime-types.js';
 import { batched, createLibraryMatcher, findOrFail, handlePromiseError } from 'src/utils/misc.js';
@@ -685,7 +688,7 @@ export class LibraryService extends BaseService {
       assetIds.push(...ids);
     };
 
-    for (const path of job.paths) {
+    for (const path of new Set(job.paths.map(normalize))) {
       try {
         const isVideo = mimeTypes.isVideo(path);
         if (useContentHash && isVideo) {

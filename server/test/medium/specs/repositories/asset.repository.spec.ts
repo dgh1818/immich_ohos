@@ -635,6 +635,64 @@ describe(AssetRepository.name, () => {
       const { sut } = setup();
       await expect(sut.createAll([])).resolves.toStrictEqual([]);
     });
+
+    it.each([ChecksumAlgorithm.sha1File, ChecksumAlgorithm.sha1Path])(
+      'should preserve an existing asset with checksum algorithm %s when its path is imported again',
+      async (checksumAlgorithm) => {
+        const { ctx, sut } = setup();
+        const library = await newExternalLibrary(ctx);
+        const create = (originalPath: string, checksum: Buffer, algorithm: ChecksumAlgorithm) =>
+          mediumFactory.assetInsert({
+            ownerId: library.ownerId,
+            libraryId: library.id,
+            isExternal: true,
+            originalPath,
+            checksum,
+            checksumAlgorithm: algorithm,
+          });
+        const originalPath = '/library/照片.jpg';
+        const checksum = Buffer.alloc(20, 1);
+        const [id] = await sut.createAll([create(originalPath, checksum, checksumAlgorithm)]);
+
+        await expect(
+          sut.createAll([create(originalPath, Buffer.alloc(20, 2), ChecksumAlgorithm.sha1Path)]),
+        ).resolves.toEqual([]);
+        await expect(
+          sut.createAll([create(originalPath, Buffer.alloc(20, 3), ChecksumAlgorithm.sha1File)]),
+        ).resolves.toEqual([]);
+        // The content checksum conflict still allows a new path to be retried with its path checksum.
+        await expect(sut.createAll([create('/library/copy.jpg', checksum, checksumAlgorithm)])).resolves.toEqual([]);
+        await expect(
+          sut.createAll([create('/library/copy.jpg', Buffer.alloc(20, 4), ChecksumAlgorithm.sha1Path)]),
+        ).resolves.toHaveLength(1);
+
+        await expect(sut.getById(id)).resolves.toMatchObject({ originalPath, checksum, checksumAlgorithm });
+        expect(await sut.getLibraryAssetCount(library.id)).toBe(2);
+      },
+    );
+
+    it('should insert the same path once across concurrent imports with different checksums', async () => {
+      const { ctx, sut } = setup();
+      const library = await newExternalLibrary(ctx);
+      const originalPath = '/library/video.mp4';
+      const asset = (value: number, checksumAlgorithm: ChecksumAlgorithm) =>
+        mediumFactory.assetInsert({
+          ownerId: library.ownerId,
+          libraryId: library.id,
+          isExternal: true,
+          originalPath,
+          checksum: Buffer.alloc(20, value),
+          checksumAlgorithm,
+        });
+
+      const inserted = await Promise.all([
+        sut.createAll([asset(1, ChecksumAlgorithm.sha1File), asset(2, ChecksumAlgorithm.sha1Path)]),
+        sut.createAll([asset(3, ChecksumAlgorithm.sha1Path)]),
+      ]);
+
+      expect(inserted.flat()).toHaveLength(1);
+      expect(await sut.getLibraryAssetCount(library.id)).toBe(1);
+    });
   });
 
   describe('detectOfflineExternalAssets', () => {

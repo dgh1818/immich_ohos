@@ -8,8 +8,8 @@ import {
   type SelectQueryBuilder,
   type Selectable,
   type ShallowDehydrateObject,
-  type Updateable,
   type SqlBool,
+  type Updateable,
 } from 'kysely';
 import { jsonArrayFrom } from 'kysely/helpers/postgres';
 import { isEmpty, isUndefined, omitBy } from 'lodash-es';
@@ -469,15 +469,61 @@ export class AssetRepository {
     if (assets.length === 0) {
       return [];
     }
-    const ids = await this.db
-      .insertInto('asset')
-      .values(assets)
-      .onConflict((oc) =>
-        oc.columns(['ownerId', 'libraryId', 'checksum']).where('libraryId', 'is not', null).doNothing(),
-      )
-      .returning('id')
-      .execute();
-    return ids.map(({ id }) => id);
+
+    const libraryId = assets[0].libraryId;
+    if (!libraryId || assets.some((asset) => asset.libraryId !== libraryId || !asset.isExternal)) {
+      throw new Error('Bulk external asset imports must target a single library');
+    }
+
+    return this.db
+      .transaction()
+      .setIsolationLevel('read committed')
+      .execute(async (tx) => {
+        // Serialize imports for this library, including retries with a different checksum.
+        // The separate path query sees rows committed by an importer that held the lock first.
+        const library = await tx
+          .selectFrom('library')
+          .select('id')
+          .where('id', '=', asUuid(libraryId))
+          .where('deletedAt', 'is', null)
+          .forNoKeyUpdate()
+          .executeTakeFirst();
+        if (!library) {
+          return [];
+        }
+
+        const existing = await tx
+          .selectFrom('asset')
+          .select('originalPath')
+          .where('libraryId', '=', asUuid(libraryId))
+          .where(
+            'originalPath',
+            'in',
+            assets.map((asset) => asset.originalPath),
+          )
+          .execute();
+        const seenPaths = new Set(existing.map(({ originalPath }) => originalPath));
+        const newAssets = assets.filter(({ originalPath }) => {
+          if (seenPaths.has(originalPath)) {
+            return false;
+          }
+          seenPaths.add(originalPath);
+          return true;
+        });
+        if (newAssets.length === 0) {
+          return [];
+        }
+
+        const ids = await tx
+          .insertInto('asset')
+          .values(newAssets)
+          .onConflict((oc) =>
+            oc.columns(['ownerId', 'libraryId', 'checksum']).where('libraryId', 'is not', null).doNothing(),
+          )
+          .returning('id')
+          .execute();
+        return ids.map(({ id }) => id);
+      });
   }
 
   /** Returns base64 checksums that already exist for the given owner */
@@ -713,7 +759,9 @@ export class AssetRepository {
   }
 
   /** Bulk update external library assets to use path-based checksum */
-  async updateAllExternalToPathHash(assets: Pick<Selectable<AssetTable>, 'id' | 'originalPath' | 'checksum'>[]): Promise<number> {
+  async updateAllExternalToPathHash(
+    assets: Pick<Selectable<AssetTable>, 'id' | 'originalPath' | 'checksum'>[],
+  ): Promise<number> {
     if (assets.length === 0) {
       return 0;
     }
