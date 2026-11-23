@@ -33,13 +33,6 @@
               bind:checked={configToEdit.map.enabled}
             />
 
-            <SettingSwitch
-              title={$t('admin.map_web_petal')}
-              subtitle={$t('admin.map_web_petal_description')}
-              disabled={disabled || !configToEdit.map.enabled}
-              bind:checked={configToEdit.map.webUsePetalTiles}
-            />
-
             <hr />
 
             <SettingInputField

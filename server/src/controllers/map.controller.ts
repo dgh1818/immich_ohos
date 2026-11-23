@@ -1,15 +1,5 @@
-import {
-  Controller,
-  Get,
-  Header,
-  HttpCode,
-  HttpStatus,
-  Param,
-  ParseIntPipe,
-  Query,
-  StreamableFile,
-} from '@nestjs/common';
-import { ApiOkResponse, ApiParam, ApiTags } from '@nestjs/swagger';
+import { Controller, Get, HttpCode, HttpStatus, Query } from '@nestjs/common';
+import { ApiTags } from '@nestjs/swagger';
 import { Endpoint, HistoryBuilder } from 'src/decorators.js';
 import type { AuthDto } from 'src/dtos/auth.dto.js';
 import {
@@ -26,28 +16,6 @@ import { MapService } from 'src/services/map.service.js';
 @Controller('map')
 export class MapController {
   constructor(private service: MapService) {}
-
-  @Get('petal/tiles/:z/:x/:y')
-  @Authenticated({ permission: Permission.MapRead })
-  @Header('Cache-Control', 'private, no-store')
-  @ApiParam({ name: 'z', schema: { type: 'integer', minimum: 0, maximum: 20 } })
-  @ApiParam({ name: 'x', schema: { type: 'integer', minimum: 0 } })
-  @ApiParam({ name: 'y', schema: { type: 'integer', minimum: 0 } })
-  @ApiOkResponse({ content: { 'image/png': { schema: { type: 'string', format: 'binary' } } } })
-  @Endpoint({
-    summary: 'Get a Petal Maps tile',
-    description:
-      'Retrieve a PNG tile when Petal Maps tiles are enabled. Both x and y must be less than 2 to the power of z.',
-    history: new HistoryBuilder().added('v3').alpha('v3'),
-  })
-  async getPetalTile(
-    @Param('z', ParseIntPipe) z: number,
-    @Param('x', ParseIntPipe) x: number,
-    @Param('y', ParseIntPipe) y: number,
-  ): Promise<StreamableFile> {
-    const tile = await this.service.getPetalTile(z, x, y);
-    return new StreamableFile(tile, { type: 'image/png' });
-  }
 
   @Get('markers')
   @Authenticated({ permission: Permission.MapRead })

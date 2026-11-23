@@ -1,6 +1,4 @@
-import { BadGatewayException, GatewayTimeoutException, Injectable, ServiceUnavailableException } from '@nestjs/common';
-import { ROOT_CONTEXT, context } from '@opentelemetry/api';
-import { suppressTracing } from '@opentelemetry/core';
+import { Injectable } from '@nestjs/common';
 import { Expression, Insertable, Kysely, NotNull, SqlBool, sql } from 'kysely';
 import { InjectKysely } from 'nestjs-kysely';
 import { createReadStream, existsSync } from 'node:fs';
@@ -44,13 +42,6 @@ interface CountryNames {
   byAlpha3: Map<string, string>;
 }
 
-const PETAL_TILE_URL = 'https://mapapi.cloud.huawei.com/mapApi/v1/mapService/getTile';
-const PETAL_TILE_TIMEOUT_MS = 5000;
-const PETAL_TILE_MAX_BYTES = 1024 * 1024;
-const PETAL_TILE_CONTEXT = suppressTracing(ROOT_CONTEXT);
-const PNG_HEADER = Buffer.from('89504e470d0a1a0a0000000d49484452', 'hex');
-const PNG_END = Buffer.from('0000000049454e44ae426082', 'hex');
-
 @Injectable()
 export class MapRepository {
   private countryNames?: Promise<CountryNames>;
@@ -62,76 +53,6 @@ export class MapRepository {
     @InjectKysely() private db: Kysely<MapDB>,
   ) {
     this.logger.setContext(MapRepository.name);
-  }
-
-  async getPetalTile(z: number, x: number, y: number): Promise<Buffer> {
-    const keys =
-      process.env.PETALMAP_GEOCODE_KEYS?.split(',')
-        .map((key) => key.trim())
-        .filter(Boolean) ?? [];
-    if (keys.length === 0) {
-      throw new ServiceUnavailableException('Petal Maps tiles are unavailable');
-    }
-
-    const signal = AbortSignal.timeout(PETAL_TILE_TIMEOUT_MS);
-
-    try {
-      const key = keys[Math.floor(Math.random() * keys.length)];
-      const url = new URL(PETAL_TILE_URL);
-      url.search = new URLSearchParams({ x: String(x), y: String(y), z: String(z), key }).toString();
-      const response = await context.with(PETAL_TILE_CONTEXT, () =>
-        fetch(url, {
-          headers: { 'Content-Type': 'application/json', Accept: 'image/png' },
-          redirect: 'error',
-          signal,
-        }),
-      );
-      if (
-        response.status !== 200 ||
-        response.headers.get('content-type')?.split(';', 1)[0].trim().toLowerCase() !== 'image/png' ||
-        Number(response.headers.get('content-length')) > PETAL_TILE_MAX_BYTES ||
-        !response.body
-      ) {
-        void response.body?.cancel().catch(() => {});
-        throw new Error('Invalid tile response');
-      }
-
-      const reader = response.body.getReader();
-      const chunks: Uint8Array[] = [];
-      let size = 0;
-      try {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) {
-            break;
-          }
-          size += value.byteLength;
-          if (size > PETAL_TILE_MAX_BYTES) {
-            throw new Error('Tile exceeds size limit');
-          }
-          chunks.push(value);
-        }
-      } finally {
-        void reader.cancel().catch(() => {});
-        reader.releaseLock();
-      }
-
-      const tile = Buffer.concat(chunks, size);
-      if (
-        tile.length < 45 ||
-        !tile.subarray(0, PNG_HEADER.length).equals(PNG_HEADER) ||
-        !tile.subarray(-PNG_END.length).equals(PNG_END)
-      ) {
-        throw new Error('Invalid PNG tile');
-      }
-      return tile;
-    } catch {
-      // Upstream errors and bodies may contain authentication details.
-      if (signal.aborted) {
-        throw new GatewayTimeoutException('Petal Maps tile request timed out');
-      }
-      throw new BadGatewayException('Unable to retrieve Petal Maps tile');
-    }
   }
 
   async init(): Promise<void> {
@@ -244,7 +165,7 @@ export class MapRepository {
 
     const data = await response.json();
 
-    if (!data?.sites?.[0]) {
+    if (!data?.sites?.[0]){
       this.logger.error(`no site found`);
       return { country: null, state: null, city: null };
     }

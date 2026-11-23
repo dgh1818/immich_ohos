@@ -1,4 +1,3 @@
-import { defaults, mapPublicConfig } from 'src/dtos/config.dto.js';
 import { MapService } from 'src/services/map.service.js';
 import { AlbumFactory } from 'test/factories/album.factory.js';
 import { AssetFactory } from 'test/factories/asset.factory.js';
@@ -14,50 +13,6 @@ describe(MapService.name, () => {
 
   beforeEach(() => {
     ({ sut, mocks } = newTestService(MapService));
-  });
-
-  describe('getPetalTile', () => {
-    it('publishes a disabled-by-default boolean without publishing a credential', () => {
-      const map = { ...defaults.map, apiKey: 'not-public' };
-      expect(mapPublicConfig({ ...defaults, map }).map).toEqual(defaults.map);
-      expect(defaults.map.webUsePetalTiles).toBe(false);
-    });
-
-    it.each([
-      { enabled: false, webUsePetalTiles: true },
-      { enabled: true, webUsePetalTiles: false },
-    ])('rejects before requesting a tile when %o', async (map) => {
-      vitest.spyOn(sut, 'getConfig').mockResolvedValue({ ...defaults, map: { ...defaults.map, ...map } });
-      await expect(sut.getPetalTile(0, 0, 0)).rejects.toMatchObject({ status: 403 });
-      expect(mocks.map.getPetalTile).not.toHaveBeenCalled();
-    });
-
-    it.each([
-      [-1, 0, 0],
-      [21, 0, 0],
-      [1.5, 0, 0],
-      [0, 1, 0],
-      [2, 0, 4],
-      [2, -1, 0],
-      [2, 0, 0.5],
-    ])('rejects out-of-range or fractional coordinates %s/%s/%s', async (z, x, y) => {
-      vitest.spyOn(sut, 'getConfig').mockResolvedValue({
-        ...defaults,
-        map: { ...defaults.map, enabled: true, webUsePetalTiles: true },
-      });
-      await expect(sut.getPetalTile(z, x, y)).rejects.toMatchObject({ status: 400 });
-      expect(mocks.map.getPetalTile).not.toHaveBeenCalled();
-    });
-
-    it('accepts the highest valid coordinates', async () => {
-      vitest.spyOn(sut, 'getConfig').mockResolvedValue({
-        ...defaults,
-        map: { ...defaults.map, enabled: true, webUsePetalTiles: true },
-      });
-      const tile = Buffer.from('tile');
-      mocks.map.getPetalTile.mockResolvedValue(tile);
-      await expect(sut.getPetalTile(20, 2 ** 20 - 1, 2 ** 20 - 1)).resolves.toBe(tile);
-    });
   });
 
   describe('getMapMarkers', () => {
